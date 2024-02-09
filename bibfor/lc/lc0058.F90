@@ -162,7 +162,11 @@ subroutine lc0058(BEHinteg, &
 
     l_greenlag = defo_comp .eq. 'GREEN_LAGRANGE'
 
-    nstran = 2*ndim
+    if (ndim==2) then
+        nstran = 5
+    else if (ndim==3) then
+        nstran = 9
+    endif
 !
 ! - Pointer to MGISBehaviour
 !
