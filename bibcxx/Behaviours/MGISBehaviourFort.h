@@ -31,7 +31,7 @@ enum AsterHypothesis {
 };
 
 // strain model
-enum AsterStrainModel { MOD_NOT_SET = 0, SMALL = 1, SIMOMIEHE = 2, TOTALLAGRANGIAN = 3 };
+enum AsterStrainModel { MOD_NOT_SET = 0, SMALL = 1, SIMOMIEHE = 2, GREENLAGRANGE = 3 };
 
 extern "C" {
 

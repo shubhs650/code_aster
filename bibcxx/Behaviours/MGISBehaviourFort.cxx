@@ -289,7 +289,7 @@ void DEFSPP( MGIS_LOAD_LIBRARY, mgis_load_library, const char *hexid, STRING_SIZ
             stress_measure = MGB::FiniteStrainBehaviourOptions::CAUCHY;
             tangent_op = MGB::FiniteStrainBehaviourOptions::DTAU_DDF;
             break;
-        case AsterStrainModel::TOTALLAGRANGIAN:
+        case AsterStrainModel::GREENLAGRANGE:
             stress_measure = MGB::FiniteStrainBehaviourOptions::PK2;
             tangent_op = MGB::FiniteStrainBehaviourOptions::DS_DEGL;
             break;
