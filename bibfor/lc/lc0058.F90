@@ -127,7 +127,7 @@ subroutine lc0058(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 !
 
-    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 6 .and. nsig .le. 6))
+    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 9 .and. nsig .le. 6))
     ASSERT(nsig .ge. 2*ndim)
     ASSERT(neps .ge. 2*ndim)
 
@@ -159,9 +159,9 @@ subroutine lc0058(BEHinteg, &
 ! - Strain model
 !
     strain_model = nint(carcri(EXTE_STRAIN))
-!   not yet supported
+
     l_greenlag = defo_comp .eq. 'GREEN_LAGRANGE'
-    ASSERT(.not. l_greenlag)
+
     nstran = 2*ndim
 !
 ! - Pointer to MGISBehaviour
