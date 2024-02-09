@@ -129,7 +129,7 @@ subroutine nmcomp(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 
     ! Controles
-    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 6 .and. nsig .le. 6))
+    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 9 .and. nsig .le. 6))
 
 !   Les paramètres optionnels
     mult_comp = ' '
