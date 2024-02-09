@@ -281,8 +281,6 @@ void MGISBehaviour::setMaterialProperties( const StateId stid, const ASTERDOUBLE
 void MGISBehaviour::setInitialState( ASTERDOUBLE dt, ASTERDOUBLE *K ) {
     _data->dt = (double)dt;
     _data->K[0] = (double)K[0];
-    _data->K[1] = (double)K[1];
-    _data->K[2] = (double)K[2];
 }
 
 int MGISBehaviour::integrate() {
@@ -429,12 +427,12 @@ void convertTensorToMgis( const ASTERDOUBLE *src, const int insize, VectorReal &
         dest[0] = src[0]; // 0, 0
         dest[1] = src[4]; // 1, 1
         dest[2] = src[8]; // 2, 2
-        dest[3] = src[1]; // 0, 1
-        dest[4] = src[3]; // 1, 0
-        dest[5] = src[2]; // 0, 2
-        dest[6] = src[6]; // 2, 0
-        dest[7] = src[5]; // 1, 2
-        dest[8] = src[7]; // 2, 1
+        dest[3] = src[3]; // 0, 1
+        dest[4] = src[1]; // 1, 0
+        dest[5] = src[6]; // 0, 2
+        dest[6] = src[2]; // 2, 0
+        dest[7] = src[7]; // 1, 2
+        dest[8] = src[5]; // 2, 1
         break;
     default:
         throw std::runtime_error(
