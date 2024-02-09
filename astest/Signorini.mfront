@@ -6,8 +6,6 @@
     Implementation of the Signorini hyperelastic behaviour
 }
 
-@AsterFiniteStrainFormulation[aster] GROT_GDEP;
-
 @MaterialProperty real C01;
 @MaterialProperty real C10;
 @MaterialProperty real C20;
