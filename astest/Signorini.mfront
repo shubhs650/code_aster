@@ -6,8 +6,6 @@
     Implementation of the Signorini hyperelastic behaviour
 }
 
-@AsterFiniteStrainFormulation[aster] GROT_GDEP;
-
 @MaterialProperty real C01;
 @MaterialProperty real C10;
 @MaterialProperty real C20;
@@ -18,7 +16,8 @@
 @Integrator {
     const auto id = Stensor::Id();
     const auto J = det( F1 );
-    const auto C = computeRightCauchyGreenTensor( F1 );
+    const auto E = computeGreenLagrangeTensor( F1 );
+    const auto C = 2*E + id;
     const auto C2 = square( C );
     /* invariants and derivatives */
     const auto I1 = trace( C );

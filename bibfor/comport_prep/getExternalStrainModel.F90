@@ -40,7 +40,7 @@ subroutine getExternalStrainModel(defo_comp, strain_model)
 ! Out strain_model     : model of (large) strains
 !                        1 - small strains
 !                        2 - Simo-Miehe
-!                        3 - TotalLagrangian - not yet used
+!                        3 - GreenLagrange
 ! --------------------------------------------------------------------------------------------------
     strain_model = MFRONT_STRAIN_UNSET
 
@@ -49,13 +49,14 @@ subroutine getExternalStrainModel(defo_comp, strain_model)
 !   Obsolete - for trace
     ASSERT(defo_comp .ne. 'GROT_GDEP')
     ASSERT(defo_comp .ne. 'SIMO_MIEHE')
-    ASSERT(defo_comp .ne. 'GREEN_LAGRANGE')
 
 !   for GDEF_LOG, prelog/poslog are called in te*
     if (defo_comp .eq. 'PETIT' .or. &
         defo_comp .eq. 'PETIT_REAC' .or. &
         defo_comp .eq. 'GDEF_LOG') then
         strain_model = MFRONT_STRAIN_SMALL
+    else if ( defo_comp .eq. 'GREEN_LAGRANGE' ) then
+        strain_model = MFRONT_STRAIN_F            
     else
         ASSERT(ASTER_FALSE)
     end if

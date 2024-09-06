@@ -112,7 +112,7 @@ subroutine nmgrla(FECell, FEBasis, FEQuad, option, typmod, &
     integer :: kpg, ipoids, ivf, idfde
     integer :: cod(MAX_QP)
     real(kind=8) :: dsidep(6, 6), coorpg(3), BGSEval(3, MAX_BS)
-    real(kind=8) :: fPrev(3, 3), fCurr(3, 3), gPrev(3, 3), gCurr(3, 3)
+    real(kind=8) :: fPrev(3, 3), fCurr(3, 3), fIncr(3, 3), gPrev(3, 3), gCurr(3, 3)
     real(kind=8) :: epsgPrev(6), epsgIncr(6), epsgCurr(6)
     real(kind=8) :: detfPrev, detfCurr
     real(kind=8) :: dispCurr(ndim*nno)
@@ -170,15 +170,31 @@ subroutine nmgrla(FECell, FEBasis, FEQuad, option, typmod, &
 
 ! ----- Compute behaviour
         sigmPost = 0
-        epsgIncr = epsgCurr-epsgPrev
+! ----- Check if the behavior law is MFRONT
+        if (compor(RELA_NAME) == 'MFRONT') then
+! --------- Compute the increment of f for MFRONT
+            fIncr = fCurr - fPrev
 
-        call nmcomp(BEHinteg, &
-                    FEQuad%fami, kpg, 1, ndim, typmod, &
-                    imate, compor, carcri, instam, instap, &
-                    6, epsgPrev, epsgIncr, 6, sigmPrep, &
-                    vim(1, kpg), option, angmas, &
-                    sigmPost, vip(1, kpg), 36, dsidep, &
-                    cod(kpg), mult_comp)
+            call nmcomp(BEHinteg, &
+                        FEQuad%fami, kpg, 1, ndim, typmod, &
+                        imate, compor, carcri, instam, instap, &
+                        9, fPrev, fIncr, 6, sigmPrep, &
+                        vim(1, kpg), option, angmas, &
+                        sigmPost, vip(1, kpg), 36, dsidep, &
+                        cod(kpg), mult_comp)
+        else
+! --------- Original behavior
+            epsgIncr = epsgCurr - epsgPrev
+
+            call nmcomp(BEHinteg, &
+                        FEQuad%fami, kpg, 1, ndim, typmod, &
+                        imate, compor, carcri, instam, instap, &
+                        6, epsgPrev, epsgIncr, 6, sigmPrep, &
+                        vim(1, kpg), option, angmas, &
+                        sigmPost, vip(1, kpg), 36, dsidep, &
+                        cod(kpg), mult_comp)
+        endif
+    
         if (cod(kpg) .eq. 1) goto 999
 !        write (6,*) 'option = ',option
 !        write (6,*) 'epsm   = ',epsgPrev

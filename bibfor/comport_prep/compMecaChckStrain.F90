@@ -196,6 +196,10 @@ subroutine compMecaChckStrain(iComp, &
                         defoComp .ne. 'GDEF_LOG') then
                         call utmess('F', 'COMPOR4_35', sk=defoComp)
                     end if
+                else if (exteDefo .eq. MFRONT_STRAIN_F) then
+                    if (defoComp .ne. 'GREEN_LAGRANGE') then
+                        call utmess('F', 'COMPOR4_35', sk=defoComp)
+                    end if                        
                 else
                     ASSERT(.false.)
                 end if

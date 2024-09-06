@@ -241,7 +241,7 @@ subroutine lc0000(BEHinteg, &
     common/tdim/ndt, ndi
 !
 ! --------------------------------------------------------------------------------------------------
-    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 6 .and. nsig .le. 6))
+    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 9 .and. nsig .le. 6))
 
     ndt = 2*ndim
     ndi = ndim
@@ -251,7 +251,7 @@ subroutine lc0000(BEHinteg, &
     read (compor(DEFO), '(A16)') defo_comp
     read (compor(REGUVISC), '(A16)') regu_visc
     read (compor(POSTINCR), '(A16)') postIncr
-    l_large = defo_comp .eq. 'SIMO_MIEHE' .or. defo_comp .eq. 'GROT_GDEP'
+    l_large = (defo_comp .eq. 'SIMO_MIEHE' .or. defo_comp .eq. 'GROT_GDEP' .or. (compor(RELA_NAME) .eq. 'MFRONT' .and. defo_comp .eq. 'GREEN_LAGRANGE'))
     l_gdef_log = defo_comp .eq. 'GDEF_LOG'
     l_defo_meca = defo_ldc .eq. 'MECANIQUE'
     l_regu_visc = regu_visc .eq. 'REGU_VISC_ELAS'

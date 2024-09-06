@@ -239,6 +239,7 @@
 !
 #define MFRONT_STRAIN_UNSET         0
 #define MFRONT_STRAIN_SMALL         1
+#define MFRONT_STRAIN_F             3
 !
 ! Maximum number of external state variables (UMAT/MFRONT)
 !
