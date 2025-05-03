@@ -103,7 +103,7 @@ class MEFA_FACE3UPSI(Element):
         ),
         OP.CHAR_MECA_VFAC_F(
             te=173,
-            para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PMATERC, LC.CMATERC), (SP.PVITEFF, LC.EVITEFF)),
+            para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PMATERC, LC.CMATERC), (SP.PVITEFF, LC.EVITEFF), (SP.PINSTR, LC.MTEMPSR)),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.MASS_MECA(

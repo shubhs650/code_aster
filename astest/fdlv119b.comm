@@ -238,100 +238,40 @@ DIRE_Y = FORMULE(VALE     = """nfy(X,Y)""",
                  );
 
 
-# ----------------------------------------------------
-# Fonction delta_{t^n}(t) = 1 si t = t^n et 0 sinon
-# ----------------------------------------------------
-def delta_tn(list_t, t, n):
-        tol = 1.0e-6
-        t_n = list_t[n]
-        if (n==0):
-                if (abs(t-t_n) < tol):
-                        return 1.0
-                else :
-                        return 0.0
-        else :
-                if (abs(t-t_n) < tol*t_n):
-                        return 1.0
-                else :
-                        return 0.0
+# ---------------------------------------------------
+# Pression et vitesse incidente en FORMULE aster 
+# ---------------------------------------------------
+vite_inc = FORMULE(VALE          = """vite_incident(X,Y,INST)""", 
+                   vite_incident = vite_incident,
+                   NOM_PARA      = ['X', 'Y','INST'],
+                   ); 
+ 
+press_inc = FORMULE(VALE       = """p_incident(X,Y,INST)""",    
+                    p_incident = p_incident,
+                    NOM_PARA   = ['X', 'Y','INST'],
+                    );
 
-# -----------------------------------------------------------
-# Fonction delta_{t^n}(t) = 1 si t = t^n et 0 sinon (ASTER)
-# -----------------------------------------------------------
-Ndt = len(list_t)
-ST  = [None]*Ndt
-for i_dt in range(0, Ndt) :
-   
-    ST[i_dt] = FORMULE(VALE     = """delta_tn(list_t, INST, i_dt)""",
-                       list_t   = list_t,
-                       i_dt     = i_dt,
-                       delta_tn = delta_tn,
-                       NOM_PARA = ['INST',],
-                       );
-
-# --------------------------------------------------------
-# Calcul les vecteurs second membre en chaque instant
-# --------------------------------------------------------
-LF = [None]*Ndt
-for i_dt in range(0,Ndt) :
-	
-	print ("i_dt, Ndt = ", i_dt, Ndt)
-	
-	# ----------------------
-	# vitesse incidente
-	# ----------------------
-	vite_inc = FORMULE(VALE          = """vite_incident(X, Y, t_curr)""",  
-	                   vite_incident = vite_incident,
-	                   t_curr        = list_t[i_dt],
-	                   NOM_PARA      = ['X', 'Y',],
-	                   );
-	
-	# ----------------------
-	# pression incidente
-	# ----------------------
-	pres_inc = FORMULE(VALE       = """p_incident(X, Y, t_curr)""",
-	                   p_incident = p_incident,
-	                   t_curr     = list_t[i_dt],
-	                   NOM_PARA      = ['X', 'Y',],
-	                   );
-	
-	# ----------------------
-	# chargement totale
-	# ----------------------
-	Ch_exp = AFFE_CHAR_MECA_F(MODELE = Model, VERI_NORM = 'NON',
-	                          PRES_REP = (_F(GROUP_MA=('surf_ifs'), PRES = pres_inc),),                                   # TERME DE LA PRESSION INCIDENTE
-	                          VITE_FACE = (_F(GROUP_MA=('surf_ifs'), VITE = vite_inc, DIRECTION=(DIRE_X,DIRE_Y)),),       # TERME DE LA VITESSE NORMALE INCIDENTE
-	                          );
-	
-	# ----------------------------------
-	# calculer le vecteur elementaire
-	# ----------------------------------
-	ElemF = CALC_VECT_ELEM(CHARGE=(Ch_exp, ), OPTION='CHAR_MECA', CHAM_MATER = MATER)
-	
-	# ----------------------------------
-	# assembler le vecteur
-	# ----------------------------------
-	LF[i_dt] = ASSE_VECTEUR(NUME_DDL=N_DDL, VECT_ELEM=(ElemF, ))
-	
-	# ----------------------------------------------------------------
-	# Detruire les conceptes pour les prochaines iterations
-	# ----------------------------------------------------------------
-	DETRUIRE(NOM = (pres_inc, vite_inc, Ch_exp, ElemF));
-	
+# -----------------------------------------------------------------
+# Chargement d'explosion pour le couplage en (U,PSI^{sca})
+# ----------------------------------------------------------------- 
+Ch_exp = AFFE_CHAR_MECA_F(MODELE = Model, VERI_NORM = 'OUI', PRES_REP  = (_F(GROUP_MA = ('surf_ifs'), PRES = press_inc),),                               # TERME DE LA PRESSION INCIDENTE
+                                                             VITE_FACE = (_F(GROUP_MA = ('surf_ifs'), VITE = vite_inc, DIRECTION = (DIRE_X, DIRE_Y) ),), # TERME DE LA VITESSE NORMALE INCIDENTE
+                         );
 	
 
 # ----------------------------------------------------
 # Resolution du problem avec l'operateur DYNA_VIBRA
 # ----------------------------------------------------
 alpha_hht = -0.1   # Parametre d'amortissement 
-LF_CURR   = [_F(VECT_ASSE = LF[i_dt], FONC_MULT = ST[i_dt]) for i_dt in range(0,Ndt)] + [_F(CHARGE = CL_DY0, COEF_MULT = 1.0)]
 RESU      = DYNA_VIBRA(TYPE_CALCUL  = 'TRAN',
                        BASE_CALCUL  = 'PHYS',
                        MATR_MASS    =  MAT_MASS,
                        MATR_RIGI    =  MAT_RIGI,
                        MATR_AMOR    =  MAT_AMOR,
                        SCHEMA_TEMPS = _F(SCHEMA='NEWMARK', BETA=0.25*(1.0-alpha_hht)*(1.0-alpha_hht), GAMMA = 0.5-alpha_hht),
-                       EXCIT        =  LF_CURR,
+                       EXCIT        =  (_F(CHARGE = Ch_exp),
+                                        _F(CHARGE = CL_DY0)
+                                        ),
                        INCREMENT    = (_F(INST_INIT = 0.0, INST_FIN = t_fin, PAS = dt,)),
                        SOLVEUR      = _F(METHODE='MUMPS',),
                        MODELE       = Model,

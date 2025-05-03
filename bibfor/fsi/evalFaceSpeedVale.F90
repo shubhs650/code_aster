@@ -64,8 +64,11 @@ subroutine evalFaceSpeedVale(lFunc, lTime, time, &
     character(len=8) :: funcName
     integer :: i_node, ldec, iret
     integer :: nbPara
-    character(len=8), parameter :: paraName(4) = (/'X   ', 'Y   ', 'Z   ', 'INST'/)
-    real(kind=8) :: paraVale(4)
+    character(len=8), parameter :: paraName2d(3) = (/'X   ', 'Y   ', 'INST'/)
+    character(len=8), parameter :: paraName3d(4) = (/'X   ', 'Y   ', 'Z   ', 'INST'/)
+    real(kind=8) :: paraVale2d(3)
+    real(kind=8) :: paraVale3d(4)
+    
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -86,21 +89,35 @@ subroutine evalFaceSpeedVale(lFunc, lTime, time, &
                 z = z+zr(jvGeom+(cellDime+1)*(i_node-1)-1+3)*zr(jvShape+ldec-1+i_node)
             end if
         end do
-
-! ----- Evaluation of function
-        nbPara = 2
-        paraVale(1) = x
-        paraVale(2) = y
-        if (cellDime .eq. 2) then
-            nbPara = 3
-            paraVale(3) = z
-        end if
-        if (lTime) then
-            nbPara = nbPara+1
-            paraVale(nbPara) = time
-        end if
+        
+! ----- Get access to the fonction 
         funcName = zk8(jvLoad)
-        call fointe('FM', funcName, nbPara, paraName, paraVale, speedVale, iret)
+        
+! ----- Evaluation of function : case 2D 
+        if (cellDime .eq. 1) then
+            nbPara = 2
+            paraVale2d(1) = x
+            paraVale2d(2) = y
+            if (lTime) then
+                nbPara = 3
+                paraVale2d(3) = time
+            end if
+            call fointe('FM', funcName, nbPara, paraName2d, paraVale2d, speedVale, iret)
+
+! -----  Evaluation of function : case 3D 
+        else if (cellDime .eq. 2) then
+             nbPara = 3
+             paraVale3d(1) = x
+             paraVale3d(2) = y
+             paraVale3d(3) = z
+             if (lTime) then
+                 nbPara = 4
+                 paraVale3d(4) = time
+             end if
+             call fointe('FM', funcName, nbPara, paraName3d, paraVale3d, speedVale, iret)
+        else 
+             ASSERT(ASTER_FALSE)
+        end if 
 
     else
         speedVale = zr(jvLoad)

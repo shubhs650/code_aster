@@ -29,7 +29,7 @@
 #define LOAD_NEUM_NBMAXIN 48
 
 ! Maximum number of Neumann loads type (mechanic)
-#define LOAD_NEUM_NBTYPE 20
+#define LOAD_NEUM_NBTYPE 21
 
 ! Identified types for Neumann loads (mechanic)
 #define LOAD_NEUM_UNKNOWN -1
