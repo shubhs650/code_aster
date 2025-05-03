@@ -133,12 +133,12 @@ MAT_AMOR = ASSE_MATRICE(MATR_ELEM = El_C,  NUME_DDL = N_DDL,)
 # ---------------------------------------------------
 # Pression et vitesse incidente en FORMULE aster 
 # ---------------------------------------------------
-vite_inc = FORMULE(VALE     = """-vinc(INST)""",     # a corriger la convention de la normal dans le calcul te384
+vite_inc = FORMULE(VALE     = """vinc(INST)""",     
                    vinc     = vinc,
                    NOM_PARA = ['INST'],
                    ); 
  
-press_inc = FORMULE(VALE     = """-pinc(INST)""",   # a corriger la convention de la normal dans le calcul te204
+press_inc = FORMULE(VALE     = """pinc(INST)""",  
                     pinc     = pinc,
                     NOM_PARA = ['INST'],
                     );

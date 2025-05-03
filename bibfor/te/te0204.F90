@@ -133,6 +133,9 @@ subroutine te0204(option, nomte)
 ! ----- Compute vector
         tx = -nx*pres-ny*cisa
         ty = -ny*pres+nx*cisa
+! ----- Normal convention is fluid -> structure
+        tx = -tx
+        ty = -ty
         do i = 1, nno
             zr(jv_vect+ndofbynode*(i-1)-1+1) = &
                 zr(jv_vect+ndofbynode*(i-1)-1+1)+tx*zr(ivf+ldec+i-1)*poids
