@@ -41,7 +41,7 @@ DEFI_BASE_REDUITE = OPER(
     ),
     b_pod=BLOC(
         condition="""(equal_to("OPERATION", 'POD'))""",
-        RESULTAT=SIMP(statut="o", typ=(evol_ther, evol_noli)),
+        RESULTAT=SIMP(statut="o", typ=(evol_ther, evol_noli, dyna_trans)),
         b_thermique=BLOC(
             condition="""is_type("RESULTAT") == evol_ther""",
             NOM_CHAM=SIMP(statut="o", typ="TXM", max=1, into=("TEMP", "FLUX_NOEU")),
@@ -50,6 +50,12 @@ DEFI_BASE_REDUITE = OPER(
             condition="""is_type("RESULTAT") == evol_noli""",
             NOM_CHAM=SIMP(
                 statut="o", typ="TXM", max=1, into=("DEPL", "SIEF_NOEU", "SIEF_ELGA", "VARI_ELGA")
+            ),
+        ),
+        b_mecanique2=BLOC(
+            condition="""is_type("RESULTAT") == dyna_trans""",
+            NOM_CHAM=SIMP(
+                statut="o", typ="TXM", max=1, defaut="DEPL", into=("DEPL", "VITE", "ACCE")
             ),
         ),
         TYPE_BASE=SIMP(statut="f", typ="TXM", defaut="3D", into=("3D", "LINEIQUE")),

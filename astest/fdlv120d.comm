@@ -1,0 +1,377 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2025 - EDF R&D - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# Anneau elastique soumis a une onde de choc d'explosion : modelisation 3D avec les elements "TETRA quadratique pour le fluide + COQUE_3D an TRIA7 pour la structure"
+# Vérification la précision de la base obtenue par DEFI_BASE_REDUITE 
+
+DEBUT(CODE=_F(NIV_PUB_WEB="INTERNET"), ERREUR=_F(ALARME="EXCEPTION"))
+
+import numpy, aster 
+
+
+
+                                                            # --------------------------------#
+                                                            #                                 #
+                                                            #  Donnees physiques du problem   #
+                                                            #                                 #
+                                                            # --------------------------------#
+# -------------------------
+# parametres du fluide
+# -------------------------
+rho_eau   = 1000.0               # masse volumique
+cele_eau  = 1500.0               # celerite du son
+
+# --------------------------------------
+# parametres du materiau elastique
+# --------------------------------------
+e_elas    = 2.0e+11              # module Young
+nu_elas   = 0.28                 # coefficient de Poisson
+rho_elas  = 7800.0               # masse volumique
+
+# -------------------------
+# Geometrie du problem
+# -------------------------
+R_ext = 1.00                    # rayon du cylindre 
+R_bgt = 3.0                     # rayon du domaine fluide spherique tronque
+
+# -----------------------------
+# Discretisation temporelle
+# -----------------------------
+dt     = 0.025*R_ext/cele_eau   # 40 pas temps pour parcourir une distance R_ext
+t_fin  = 100.0*dt               # tmax <=> onde a parcouru 2.5*R_ext
+Ndt   = int(t_fin/dt)
+if (abs(Ndt*dt-t_fin) > abs((Ndt+1)*dt-t_fin)) :
+    Ndt = Ndt + 1
+list_t = dt*numpy.arange(Ndt+1) 
+Ndt = len(list_t)
+      
+
+# ---------------------------
+# Parametre d'explosion
+# --------------------------------------------
+rho_charge = 1.52e3                                                   # la masse volumique de l'explosion
+Pc         = 1.42e9                                                   # parametre de l'explosion selon Cole[19??]
+vc         = 0.992e3                                                  # parametre de l'explosion selon Cole[19??]
+A          = 0.13                                                     # parametre de l'explosion selon Cole[19??]
+B          = 0.18                                                     # parametre de l'explosion selon Cole[19??]              
+m          = 1000.0                                                   # la masse d'explosion en TNT
+ac         = (3.0*m/(4.0*3.14159265359*rho_charge))**(1.0/3.0)        # rayon de l'explosion
+Tc         = ac/vc                                                    # le temp caracteristique 
+
+# ---------------------------
+# Position de l'explosion
+# ---------------------------
+x_exp = 100.0
+y_exp = 0.0
+z_exp = 0.0
+
+# -----------------------------------------------------------
+# Les parametres dans les fonctions double exponentielle
+# -----------------------------------------------------------
+alpha1 = 0.8251
+alpha2 = 0.1749    
+beta1  = -1.338
+beta2  = -0.1805 
+
+# ----------------------------------------------------------------------------------------
+# La fonction double exponentielle dans le profil de la pression issue de l'explosion
+# ----------------------------------------------------------------------------------------
+def fonc_F(t):
+    return alpha1*numpy.exp(beta1*t)+alpha2*numpy.exp(beta2*t)
+
+# -----------------------------------------------------------------
+# La fonction double exponentielle dans la vitesse incidente   
+# -----------------------------------------------------------------
+def fonc_G(t):
+    return (alpha1/beta1)*numpy.exp(beta1*t)+(alpha2/beta2)*numpy.exp(beta2*t)-(alpha1/beta1)-(alpha2/beta2)
+
+
+# ------------------------------------------------------
+# definition de la profil de la pression incidente
+# ------------------------------------------------------
+def prof_press_inc(r,t):
+    coef1 = Pc*((ac/r)**(1.0+A))
+    coef2 = ((ac/r)**B)*(t/Tc)
+    return coef1*fonc_F(coef2)
+
+# --------------------------------------
+# definition de la pression incidente    
+# --------------------------------------
+def p_incident(x,y,z,t):
+    dx    = x-x_exp
+    dy    = y-y_exp
+    dz    = 0.0                                               # Onde cylindrique
+    d_r   = numpy.sqrt(dx*dx+dy*dy+dz*dz)                      # distance entre le point (x,y) et l'explosion
+    d_0   = R_ext                                             # la distance entre l'onde d'explosion et le centre (0,0) a l'instant t = 0
+    dist  = numpy.sqrt(x_exp*x_exp+y_exp*y_exp+z_exp*z_exp)    # la distance entre l'onde d'explosion et le centre (0,0)
+    t_r   = (d_r-dist+d_0)/cele_eau                           # la duree neccesaire pour que l'onde arrive au point (x,y)
+    if (t < t_r):
+        return 0.0
+    else :
+        return prof_press_inc(d_r,t-t_r)
+
+# --------------------------------------
+# definition de la vitesse incidente
+# --------------------------------------
+def vite_incident(x,y,z,t):
+    dx     = x-x_exp
+    dy     = y-y_exp
+    dz     = 0.0                                              # Onde cylindrique
+    d_r   = numpy.sqrt(dx*dx+dy*dy)                            # distance entre le point (x,y,z) et l'explosion
+    d_0   = R_ext                                             # la distance entre l'onde d'explosion et le centre (0,0,0) a l'instant t = 0
+    dist  = numpy.sqrt(x_exp*x_exp+y_exp*y_exp+z_exp*z_exp)    # la distance entre l'onde d'explosion et le centre (0,0,0)
+    t_r   = (d_r-dist+d_0)/cele_eau                           # la duree neccesaire pour que l'onde arrive au point (x,y,z)
+    tau    = t-t_r                                            #
+    if (t < t_r) : 
+        return 0.0
+    else :
+        coef_G = ((ac/d_r)**B)*(tau/Tc) 
+        term1  = p_incident(x,y,z,t)*(1.0/(rho_eau*cele_eau)+tau*B/(rho_eau*d_r))
+        term2  = (Pc*Tc*(1.0+A-B)*fonc_G(coef_G)*((ac/d_r)**(1.0+A-B))/(rho_eau*d_r))
+        return term1+term2
+
+# ---------------------------------------------------------
+# Les directions de propagation de la vitesse incidente  
+# ---------------------------------------------------------
+def nfx(x,y,z):
+	dx     = x-x_exp
+	dy     = y-y_exp
+	dz     = z-z_exp
+	d_r    = numpy.sqrt(dx*dx+dy*dy+dz*dz)
+	return dx/d_r
+    
+def nfy(x,y,z):
+	dx     = x-x_exp
+	dy     = y-y_exp
+	dz     = z-z_exp
+	d_r    = numpy.sqrt(dx*dx+dy*dy+dz*dz)
+	return dy/d_r
+    
+def nfz(x,y,z):
+	dx     = x-x_exp
+	dy     = y-y_exp
+	dz     = z-z_exp
+	d_r    = numpy.sqrt(dx*dx+dy*dy+dz*dz) 
+	return dz/d_r
+
+
+
+
+                                     # ------------------------------------- #
+                                     #                                       #
+                                     #    ANALYSE DU PROBLEM AVEC ASTER      #
+                                     #                                       #
+                                     # ------------------------------------- #
+
+# -----------------
+#    Maillage
+# -----------------
+MAIL0 = LIRE_MAILLAGE(FORMAT='MED',);
+
+
+# --------------------------------------------
+# Orienter la normale  : fluide -> structure 
+# --------------------------------------------
+MAIL0 = MODI_MAILLAGE(reuse = MAIL0, MAILLAGE = MAIL0, ORIE_PEAU_3D = _F(GROUP_MA = ('surf_ifs'), GROUP_MA_VOLU = 'fluide'),);
+
+
+# ---------------------------------------------------------
+# Creer groupe de maille pour modeliser la structure 
+# ---------------------------------------------------------
+MAIL1 = CREA_MAILLAGE(MAILLAGE = MAIL0, CREA_MAILLE = (_F(NOM='struc',  GROUP_MA = 'surf_ifs'),),);                            
+
+
+# ---------------------------------------------------------------------------
+# Transformer les TRIA6 en TRIA7 pour modelisation en COQUE_3D 
+# ---------------------------------------------------------------------------
+MAIL = CREA_MAILLAGE(MAILLAGE = MAIL1, MODI_MAILLE = _F(OPTION='TRIA6_7', GROUP_MA = ('struc',)),);
+
+
+
+# -----------------------------------
+# Modele et conditions aux limites
+# -----------------------------------
+Model = AFFE_MODELE(MAILLAGE = MAIL, AFFE=(_F( GROUP_MA = ('struc',),    PHENOMENE = 'MECANIQUE', MODELISATION = 'COQUE_3D'),
+                                           _F( GROUP_MA = ('fluide',),   PHENOMENE = 'MECANIQUE', MODELISATION = '3D_FLUIDE',    FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_ifs',), PHENOMENE = 'MECANIQUE', MODELISATION = 'FLUI_STRU',    FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_bgt',), PHENOMENE = 'MECANIQUE', MODELISATION = '3D_FLUI_ABSO', FORMULATION = "U_PSI"),    # pour la condition BGT
+                                           ),
+                    VERI_NORM_IFS = 'OUI',
+                    );
+
+CL = AFFE_CHAR_CINE(MODELE = Model, MECA_IMPO = (_F(GROUP_MA = ("cl1", "cl2"), DZ = 0.0, DRX = 0.0, DRY = 0.0), _F(GROUP_MA = "cl3", DY = 0.0, DRX = 0.0, DRZ = 0.0), ))
+
+
+# -----------------------------------
+# Affection des materiaux 
+# -----------------------------------
+EAU   = DEFI_MATERIAU(FLUIDE = _F(RHO = rho_eau, CELE_R = cele_eau, LONG_CARA = 2.0*R_bgt, COEF_AMOR = 0.0),); # COEF_AMOR = a, <=> Zc = rho x c c (1+a)/(1-a) sur 2D_FLUI_ABSO
+ELAS  = DEFI_MATERIAU(ELAS = _F(E = e_elas, NU = nu_elas, RHO = rho_elas,),);
+MATER = AFFE_MATERIAU(MAILLAGE = MAIL, AFFE=(_F(GROUP_MA = ('struc',),                       MATER = ELAS,),
+                                             _F(GROUP_MA = ('fluide','surf_bgt','surf_ifs',),MATER = EAU,),
+                                            ),
+                     );
+
+# --------------------------------------------------------------
+# Caracteristique pour les elements COQUE
+# --------------------------------------------------------------
+CARELEM = AFFE_CARA_ELEM(MODELE = Model, COQUE = (_F(GROUP_MA=('struc',), EPAIS = 0.01,),),);
+
+
+# -----------------------------------
+# Calculer les matrices elementaires
+# ----------------------------------- 
+El_M  = CALC_MATR_ELEM(OPTION = 'MASS_MECA', MODELE = Model, CHAM_MATER = MATER, CARA_ELEM = CARELEM)
+El_K  = CALC_MATR_ELEM(OPTION = 'RIGI_MECA', MODELE = Model, CHAM_MATER = MATER, CARA_ELEM = CARELEM)
+El_C  = CALC_MATR_ELEM(OPTION = 'AMOR_MECA', MODELE = Model, CHAM_MATER = MATER, RIGI_MECA = El_K, MASS_MECA = El_M, CARA_ELEM = CARELEM)
+
+
+# -----------------------------------
+# Assembler les matrices 
+# -----------------------------------
+N_DDL = NUME_DDL(MODELE = Model, )
+
+MAT_MASS = ASSE_MATRICE(MATR_ELEM = El_M,  NUME_DDL = N_DDL, CHAR_CINE = CL)
+MAT_RIGI = ASSE_MATRICE(MATR_ELEM = El_K,  NUME_DDL = N_DDL, CHAR_CINE = CL)
+MAT_AMOR = ASSE_MATRICE(MATR_ELEM = El_C,  NUME_DDL = N_DDL, CHAR_CINE = CL)
+
+
+# ------------------------------------------------------------
+# Les trois directions de l'explosion en FORMULE aster
+# ------------------------------------------------------------
+DIRE_X = FORMULE(VALE = """nfx(X,Y,Z)""", nfx = nfx, NOM_PARA = ['X', 'Y', 'Z'],);
+DIRE_Y = FORMULE(VALE = """nfy(X,Y,Z)""", nfy = nfy, NOM_PARA = ['X', 'Y', 'Z'],);
+DIRE_Z = FORMULE(VALE = """nfz(X,Y,Z)""", nfz = nfz, NOM_PARA = ['X', 'Y', 'Z'],);
+
+
+# ---------------------------------------------------
+# Pression et vitesse incidente en FORMULE aster 
+# ---------------------------------------------------
+VITE_INC = FORMULE(VALE = """vite_incident(X,Y,Z,INST)""", vite_incident = vite_incident, NOM_PARA = ['X', 'Y', 'Z', 'INST'],);
+PRES_INC = FORMULE(VALE = """p_incident(X,Y,Z,INST)""",    p_incident    = p_incident,    NOM_PARA = ['X', 'Y', 'Z', 'INST'],);
+                       
+
+# -----------------------------------------------------------------
+# Chargement d'explosion pour le couplage en (U,PSI^{sca})
+# ----------------------------------------------------------------- 
+Ch_exp = AFFE_CHAR_MECA_F(MODELE = Model, VERI_NORM = 'OUI', PRES_REP  = (_F(GROUP_MA = ('surf_ifs'), PRES = PRES_INC),),                                       # TERME DE LA PRESSION INCIDENTE
+                                                             VITE_FACE = (_F(GROUP_MA = ('surf_ifs'), VITE = VITE_INC, DIRECTION = (DIRE_X, DIRE_Y, DIRE_Z) ),), # TERME DE LA VITESSE NORMALE INCIDENTE
+                         );
+	
+	
+# ----------------------------------------------------
+# Resolution du problem avec l'operateur DYNA_VIBRA
+# ----------------------------------------------------
+alpha_hht = -0.1   # Parametre d'amortissement 
+LF_CURR   = [_F(CHARGE = Ch_exp)] + [_F(CHARGE = CL)]
+RESU      = DYNA_VIBRA(TYPE_CALCUL  = 'TRAN',
+                       BASE_CALCUL  = 'PHYS',
+                       MATR_MASS    =  MAT_MASS,
+                       MATR_RIGI    =  MAT_RIGI,
+                       MATR_AMOR    =  MAT_AMOR,
+                       SCHEMA_TEMPS = _F(SCHEMA='NEWMARK', BETA=0.25*(1.0-alpha_hht)*(1.0-alpha_hht), GAMMA = 0.5-alpha_hht),
+                       EXCIT        =  LF_CURR,
+                       INCREMENT    = (_F(INST_INIT = 0.0, INST_FIN = t_fin, PAS = dt,)),
+                       SOLVEUR      = _F(METHODE='MUMPS',),
+                       MODELE       = Model,
+                       CHAM_MATER   = MATER,
+                       )
+
+
+# -----------------------------------------------
+# Calculer la base reduite par DEFI_BASE_REDUITE
+# -----------------------------------------------
+tol  = 1.0e-4
+BASE = DEFI_BASE_REDUITE(RESULTAT = RESU, INFO = 2, NOM_CHAM = "DEPL", TOLE_SVD = tol)
+
+
+# --------------------------------
+# Nombre de mode dans la base 
+# --------------------------------
+list_order = numpy.array(BASE.sdj.ORDR.get())
+list_order = numpy.delete(list_order, numpy.where(list_order == 0))
+N_mode = len(list_order)
+
+
+# ---------------------------------------------------
+# Get the nomber of ddl from a given nume_ddl 
+# ---------------------------------------------------
+def get_nbeq(NDDL):
+	Str   = NDDL.ljust(14)+".NUME.DEEQ"
+	tmp   = aster.getvectjev(Str)
+	nb_eq = int(len(tmp)/2)
+	return nb_eq
+
+nb_equa = get_nbeq(N_DDL.getName())
+
+# ---------------------------------------------------------------------------
+# Extraire la base V en list de CHAM_GD et en format array numpy de python 
+# ---------------------------------------------------------------------------
+BASE_numpy = numpy.zeros( (N_mode, nb_equa), dtype = numpy.float64)       # Initialisation de la base en format array numpy de python 
+Mode       = [None]*N_mode                                                # Initialisation de la liste des modes en CHAM_GD aster
+
+# Boucle pour transformer la base sous format python 
+for i in range(0, N_mode):
+	
+	# i-eme Mode en CHAM_GD
+	Mode[i] = CREA_CHAMP(TYPE_CHAM  ='NOEU_DEPL_R',
+                         OPERATION  ='EXTR',
+                         RESULTAT   = BASE,
+                         NUME_ORDRE = list_order[i],
+                         NOM_CHAM   = 'DEPL',
+                         )
+	
+	#  i eme Mode en numpy
+	BASE_numpy[i] = numpy.array(Mode[i].sdj.VALE.get())  
+
+
+# -------------------------------------------------------------------------------------------------------------------
+# Vérifier que nous avons bien une très bonne precision de la projection orthogonale sur la base reduite obtenue
+# -------------------------------------------------------------------------------------------------------------------
+inst_test = numpy.array([5.0*dt, 10.0*dt, 15.0*dt, t_fin])
+for i in range (0, len(inst_test)) :
+	
+	# Solution du model EF de reference pour l'instant inst_test[i]
+	SOLU_EF = CREA_CHAMP(OPERATION = "EXTR", TYPE_CHAM = "NOEU_DEPL_R", NOM_CHAM = "DEPL", RESULTAT = RESU, INST = inst_test[i])
+	
+	# Calculer sa projection orthogonale sur la base reduite 
+	solu_ef_numpy = numpy.array(SOLU_EF.sdj.VALE.get())  
+	coef_mode     = numpy.dot(BASE_numpy, solu_ef_numpy)
+	COMB_F        = [_F(CHAM_GD = Mode[i_mode], COEF_R = coef_mode[i_mode]) for i_mode in range (0, N_mode)]
+	PROJ_V        = CREA_CHAMP(TYPE_CHAM = 'NOEU_DEPL_R', OPERATION = 'COMB', COMB = COMB_F,)
+	
+	# Difference entre la solution de reference et sa projection orthogonale sur la base reduite
+	DIFF = CREA_CHAMP(TYPE_CHAM = 'NOEU_DEPL_R', OPERATION = 'COMB', COMB = (_F(CHAM_GD = SOLU_EF, COEF_R = 1.0), _F(CHAM_GD = PROJ_V, COEF_R = -1.0), ),);
+	
+	# Vérification les écarts 
+	TEST_RESU(CHAM_NO = (_F(CRITERE = "ABSOLU", REFERENCE = "AUTRE_ASTER", PRECISION = 5.0e-3, TYPE_TEST = "MIN", CHAM_GD = DIFF, VALE_CALC = 0.0, VALE_REFE = 0.0, VALE_ABS = "OUI",),
+                         _F(CRITERE = "ABSOLU", REFERENCE = "AUTRE_ASTER", PRECISION = 5.0e-3, TYPE_TEST = "MAX", CHAM_GD = DIFF, VALE_CALC = 0.0, VALE_REFE = 0.0, VALE_ABS = "OUI",),
+                         ))
+
+
+FIN();
+
+
+
+
+
+
+
+
+

@@ -73,7 +73,9 @@ subroutine dbr_calcpod_q(paraPod, base, m, n, q)
 !
     resultName = paraPod%resultDom%resultName
     resultType = paraPod%resultDom%resultType
-    ASSERT(resultType .eq. 'EVOL_THER' .or. resultType .eq. 'EVOL_NOLI')
+    if (resultType .ne. 'DYNA_TRANS') then 
+        ASSERT(resultType .eq. 'EVOL_THER' .or. resultType .eq. 'EVOL_NOLI')
+    end if 
     nbSnap = paraPod%snap%nbSnap
     ASSERT(nbSnap .gt. 0)
 !
