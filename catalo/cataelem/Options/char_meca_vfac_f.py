@@ -25,7 +25,7 @@ import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
 CHAR_MECA_VFAC_F = Option(
-    para_in=(SP.PGEOMER, SP.PMATERC, SP.PVITEFF),
+    para_in=(SP.PGEOMER, SP.PMATERC, SP.PVITEFF, SP.PINSTR),
     para_out=(SP.PVECTUR,),
     condition=(
         CondCalcul("+", ((AT.PHENO, "ME"), (AT.FLUIDE, "OUI"), (AT.BORD, "-1"))),

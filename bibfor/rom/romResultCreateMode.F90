@@ -66,7 +66,6 @@ subroutine romResultCreateMode(result, fieldName, mode)
 !
 ! - Some checks
 !
-    ASSERT(resultType .eq. 'EVOL_NOLI' .or. resultType .eq. 'EVOL_THER')
     ASSERT(nbStore .ge. 1)
 !
 ! - Select _representative_ field in result: the first one !
@@ -87,7 +86,14 @@ subroutine romResultCreateMode(result, fieldName, mode)
 !
 ! - Get informations from field
 !
-    call romFieldGetInfo(model, fieldName, fieldRefe, mode)
+    if (resultType .eq. 'EVOL_NOLI' .or. resultType .eq. 'EVOL_THER') then
+        call romFieldGetInfo(model, fieldName, fieldRefe, mode)
+    elseif (resultType .eq. 'DYNA_TRANS') then
+        call romFieldGetInfo(model, fieldName, fieldRefe, mode, l_chck_ = ASTER_FALSE)
+    else 
+        ASSERT(ASTER_FALSE)
+    end if 
+    
 !
 ! - Get components in fields
 !

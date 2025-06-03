@@ -1,0 +1,326 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2025 - EDF R&D - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# Anneau elastique soumis a une onde de choc d'explosion : modelisation 2D avec les elements "quadrangulaire quadratique"
+
+
+DEBUT(CODE=_F(NIV_PUB_WEB="INTERNET"), ERREUR=_F(ALARME="EXCEPTION"))
+
+import numpy 
+
+
+
+                                                            # --------------------------------#
+                                                            #                                 #
+                                                            #  Donnees physiques du problem   #
+                                                            #                                 #
+                                                            # --------------------------------#
+
+# ----------------------------
+# parametres du fluide
+# ----------------------------
+rho_eau   = 1000.0               # masse volumique
+cele_eau  = 1500.0               # celerite du son
+
+# -------------------------------------
+# parametres du materiau elastique
+# -------------------------------------
+e_elas    = 2.0e+11              # module Young
+nu_elas   = 0.28                 # coefficient de Poisson
+rho_elas  = 7800.0               # masse volumique
+
+# ------------------------
+# Geometrie du problem
+# ------------------------
+R_ext = 1.005                    # rayon externe du cylindre 
+R_int = 0.995                    # rayon interne du cylindre 
+R_bgt = 3.0                      # rayon du domaine fluide spherique tronque
+         
+
+# --------------------------
+# Parametre d'explosion
+# --------------------------
+rho_charge = 1.52e3                                                   # la masse volumique de l'explosion
+Pc         = 1.42e9                                                   # parametre de l'explosion selon Cole
+vc         = 0.992e3                                                  # parametre de l'explosion selon Cole
+A          = 0.13                                                     # parametre de l'explosion selon Cole
+B          = 0.18                                                     # parametre de l'explosion selon Cole              
+m          = 1000.0                                                   # la masse d'explosion en TNT
+ac         = (3.0*m/(4.0*3.14159265359*rho_charge))**(1.0/3.0)        # rayon de l'explosion
+Tc         = ac/vc                                                    # le temp caracteristique 
+
+# ----------------------------
+# Position de l'explosion
+# ----------------------------
+x_exp = 100.0
+y_exp = 0.0
+z_exp = 0.0
+
+
+# -----------------------------
+# Discretisation temporelle
+# -----------------------------
+dt     = 0.025*R_ext/cele_eau   # 40 pas temps pour parcourir une distance R_ext
+t_fin  = 100.0*dt               # tmax <=> onde a parcouru 2.5*R_ext
+Ndt   = int(t_fin/dt)
+if (abs(Ndt*dt-t_fin) > abs((Ndt+1)*dt-t_fin)) :
+    Ndt = Ndt + 1
+list_t = dt*numpy.arange(Ndt+1) 
+Ndt = len(list_t)
+
+
+# -----------------------------------------------------------
+# Les parametres dans les fonctions double exponentielle
+# -----------------------------------------------------------
+alpha1 = 0.8251
+alpha2 = 0.1749    
+beta1  = -1.338
+beta2  = -0.1805 
+
+
+# ----------------------------------------------------------------------------------------
+# La fonction double exponentielle dans le profil de la pression issue de l'explosion
+# ----------------------------------------------------------------------------------------
+def fonc_F(t):
+    return alpha1*numpy.exp(beta1*t)+alpha2*numpy.exp(beta2*t)
+
+# -----------------------------------------------------------------
+# La fonction double exponentielle dans la vitesse incidente   
+# -----------------------------------------------------------------
+def fonc_G(t):
+    return (alpha1/beta1)*numpy.exp(beta1*t)+(alpha2/beta2)*numpy.exp(beta2*t)-(alpha1/beta1)-(alpha2/beta2)
+
+
+# ------------------------------------------------------
+# definition de la profil de la pression incidente
+# ------------------------------------------------------
+def prof_press_inc(r,t):
+    coef1 = Pc*((ac/r)**(1.0+A))
+    coef2 = ((ac/r)**B)*(t/Tc)
+    return coef1*fonc_F(coef2)
+
+# -----------------------------------------
+# definition de la pression incidente    
+# -----------------------------------------
+def p_incident(x,y,t):
+    dx    = x-x_exp
+    dy    = y-y_exp
+    d_r   = numpy.sqrt(dx*dx+dy*dy)               # distance entre le point (x,y) et l'explosion
+    d_0   = R_ext                                 # la distance entre l'onde d'explosion et le centre (0,0) a l'instant t = 0
+    dist  = numpy.sqrt(x_exp*x_exp+y_exp*y_exp)   # la distance entre l'onde d'explosion et le centre (0,0)
+    t_r   = (d_r-dist+d_0)/cele_eau               # la duree neccesaire pour que l'onde arrive au point (x,y)
+    if (t < t_r):
+        return 0.0
+    else :
+        return prof_press_inc(d_r,t-t_r)
+  
+# -----------------------------------------      
+# definition de la vitesse incidente
+# -----------------------------------------
+def vite_incident(x,y,t):
+    dx     = x-x_exp
+    dy     = y-y_exp
+    d_r   = numpy.sqrt(dx*dx+dy*dy)                # distance entre le point (x,y,z) et l'explosion
+    d_0   = R_ext                                  # la distance entre l'onde d'explosion et le centre (0,0,0) a l'instant t = 0
+    dist  = numpy.sqrt(x_exp*x_exp+y_exp*y_exp)    # la distance entre l'onde d'explosion et le centre (0,0,0)
+    t_r   = (d_r-dist+d_0)/cele_eau                # la duree neccesaire pour que l'onde arrive au point (x,y,z)
+    tau    = t-t_r                                 #
+    if (t < t_r) : 
+        return 0.0
+    else :
+        coef_G = ((ac/d_r)**B)*(tau/Tc) 
+        term1  = p_incident(x,y,t)*(1.0/(rho_eau*cele_eau)+tau*B/(rho_eau*d_r))
+        term2  = (Pc*Tc*(1.0+A-B)*fonc_G(coef_G)*((ac/d_r)**(1.0+A-B))/(rho_eau*d_r))
+        return term1+term2
+
+# ---------------------------------------------------------
+# Les directions de propagation de la vitesse incidente  
+# ---------------------------------------------------------
+def nfx(x,y):
+	dx  = x-x_exp
+	dy  = y-y_exp
+	d_r = numpy.sqrt(dx*dx+dy*dy)
+	return dx/d_r
+    
+def nfy(x,y):
+	dx  = x-x_exp
+	dy  = y-y_exp
+	d_r = numpy.sqrt(dx*dx+dy*dy)
+	return dy/d_r
+
+                                     # ------------------------------------- #
+                                     #                                       #
+                                     #    ANALYSE DU PROBLEM AVEC ASTER      #
+                                     #                                       #
+                                     # ------------------------------------- #
+
+# -----------------
+#    Maillage
+# -----------------
+MAIL = LIRE_MAILLAGE(FORMAT='MED',);
+
+# --------------------------------------------
+# Orienter la normale  : fluide -> structure 
+# --------------------------------------------
+MAIL = MODI_MAILLAGE(reuse = MAIL, MAILLAGE = MAIL, ORIE_PEAU = _F(GROUP_MA_PEAU=('surf_ifs',), GROUP_MA_INTERNE = 'fluide'),);
+            
+
+# -----------------------------------
+# Modele et conditions aux limites
+# -----------------------------------
+Model = AFFE_MODELE(MAILLAGE = MAIL, AFFE=(_F( GROUP_MA = ('struc',),    PHENOMENE = 'MECANIQUE', MODELISATION = 'D_PLAN'),
+                                           _F( GROUP_MA = ('fluide',),   PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUIDE',    FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_ifs',), PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUI_STRU', FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_bgt',), PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUI_ABSO', FORMULATION = "U_PSI"),    # pour la condition BGT
+                                           ),
+                    VERI_NORM_IFS = 'OUI',
+                    );
+
+CL_DY0 = AFFE_CHAR_CINE(MODELE = Model, MECA_IMPO = (_F(GROUP_MA = "cl_dy0", DY = 0.0),))
+
+
+# -----------------------------------
+# Affection des materiaux 
+# -----------------------------------
+EAU   = DEFI_MATERIAU(FLUIDE = _F(RHO = rho_eau, CELE_R = cele_eau, LONG_CARA = 2.0*R_bgt, COEF_AMOR = 0.0),); # COEF_AMOR = a, <=> Zc = rho x c c (1+a)/(1-a) sur 2D_FLUI_ABSO
+ELAS  = DEFI_MATERIAU(ELAS = _F(E = e_elas, NU = nu_elas, RHO = rho_elas,),);
+MATER = AFFE_MATERIAU(MAILLAGE = MAIL, AFFE=(_F(GROUP_MA = ('struc',),                       MATER = ELAS,),
+                                             _F(GROUP_MA = ('fluide','surf_bgt','surf_ifs',),MATER = EAU,),
+                                            ),
+                     );
+
+
+# -----------------------------------
+# Calculer les matrices elementaires
+# ----------------------------------- 
+El_M  = CALC_MATR_ELEM(OPTION = 'MASS_MECA', MODELE = Model, CHAM_MATER = MATER, )
+El_K  = CALC_MATR_ELEM(OPTION = 'RIGI_MECA', MODELE = Model, CHAM_MATER = MATER, )
+El_C  = CALC_MATR_ELEM(OPTION = 'AMOR_MECA', MODELE = Model, CHAM_MATER = MATER, RIGI_MECA = El_K, MASS_MECA = El_M,)
+
+
+# -----------------------------------
+# Assembler les matrices 
+# -----------------------------------
+N_DDL = NUME_DDL(MODELE = Model, )
+
+MAT_MASS = ASSE_MATRICE(MATR_ELEM = El_M,  NUME_DDL = N_DDL, CHAR_CINE = CL_DY0)
+MAT_RIGI = ASSE_MATRICE(MATR_ELEM = El_K,  NUME_DDL = N_DDL, CHAR_CINE = CL_DY0)
+MAT_AMOR = ASSE_MATRICE(MATR_ELEM = El_C,  NUME_DDL = N_DDL, CHAR_CINE = CL_DY0)
+
+
+# -------------------------------------------------------
+# Les deux directions de l'explosion en FORMULE aster 
+# -------------------------------------------------------
+DIRE_X = FORMULE(VALE     = """nfx(X,Y)""",
+                 nfx      = nfx,
+                 NOM_PARA = ['X', 'Y',],
+                 );
+                 
+DIRE_Y = FORMULE(VALE     = """nfy(X,Y)""",
+                 nfy      = nfy,
+                 NOM_PARA = ['X', 'Y',],
+                 );
+
+
+# ---------------------------------------------------
+# Pression et vitesse incidente en FORMULE aster 
+# ---------------------------------------------------
+vite_inc = FORMULE(VALE          = """vite_incident(X,Y,INST)""", 
+                   vite_incident = vite_incident,
+                   NOM_PARA      = ['X', 'Y','INST'],
+                   ); 
+ 
+press_inc = FORMULE(VALE       = """p_incident(X,Y,INST)""",    
+                    p_incident = p_incident,
+                    NOM_PARA   = ['X', 'Y','INST'],
+                    );
+
+# -----------------------------------------------------------------
+# Chargement d'explosion pour le couplage en (U,PSI^{sca})
+# ----------------------------------------------------------------- 
+Ch_exp = AFFE_CHAR_MECA_F(MODELE = Model, VERI_NORM = 'OUI', PRES_REP  = (_F(GROUP_MA = ('surf_ifs'), PRES = press_inc),),                               # TERME DE LA PRESSION INCIDENTE
+                                                             VITE_FACE = (_F(GROUP_MA = ('surf_ifs'), VITE = vite_inc, DIRECTION = (DIRE_X, DIRE_Y) ),), # TERME DE LA VITESSE NORMALE INCIDENTE
+                         );
+
+
+# ----------------------------------------------------
+# Resolution du problem avec l'operateur DYNA_VIBRA
+# ----------------------------------------------------
+alpha_hht = -0.1   # Parametre d'amortissement 
+RESU      = DYNA_VIBRA(TYPE_CALCUL  = 'TRAN',
+                       BASE_CALCUL  = 'PHYS',
+                       MATR_MASS    =  MAT_MASS,
+                       MATR_RIGI    =  MAT_RIGI,
+                       MATR_AMOR    =  MAT_AMOR,
+                       SCHEMA_TEMPS = _F(SCHEMA='NEWMARK', BETA=0.25*(1.0-alpha_hht)*(1.0-alpha_hht), GAMMA = 0.5-alpha_hht),
+                       EXCIT        =  (
+                                        _F(CHARGE = Ch_exp),
+                                        _F(CHARGE = CL_DY0)
+                                        ),
+                       INCREMENT    = (_F(INST_INIT = 0.0, INST_FIN = t_fin, PAS = dt,)),
+                       SOLVEUR      = _F(METHODE='MUMPS',),
+                       MODELE       = Model,
+                       CHAM_MATER   = MATER,
+                       )
+
+
+# -----------------------------------------------------------------------------------------
+# Comparer le resultat d'aster avec la solution analytique (en deplacement selon X)
+# -----------------------------------------------------------------------------------------
+TEST_RESU(
+    RESU = ( 
+            # tester pour INST = 3.0*t_fin/5.0 <=> l'onde incidente a parcouru une distance de 1.5*R_ext
+            _F(RESULTAT = RESU, GROUP_NO = "theta0",   NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = 3.0*t_fin/5.0,  VALE_REFE = -0.003446106557849693,   VALE_CALC = -0.0033813809025404016,  REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta90",  NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = 3.0*t_fin/5.0,  VALE_REFE = -0.002097305254703248,   VALE_CALC = -0.002108408611405799,   REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta180", NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = 3.0*t_fin/5.0,  VALE_REFE = -0.0003896052823618182,  VALE_CALC = -0.0003980383984106568,  REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+            # tester pour INST = t_fin <=> l'onde incidente a parcouru une distance de 2.5*R_ext
+            _F(RESULTAT = RESU, GROUP_NO = "theta0",   NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = t_fin,          VALE_REFE = -0.004795473569501225,   VALE_CALC = -0.004704287114813567,   REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta90",  NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = t_fin,          VALE_REFE = -0.003167823844417092,   VALE_CALC = -0.0031850469202486546,  REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta180", NOM_CHAM = "DEPL", NOM_CMP = "DX", INST = t_fin,          VALE_REFE = -0.001568014062964134,   VALE_CALC = -0.0015370558158391099,  REFERENCE = 'ANALYTIQUE', PRECISION = 2.5e-2),
+           
+           )
+         )
+
+# --------------------------------------------------------------------------------------------------------------------
+# Comparer le resultat d'aster avec la solution analytique (en derivee de PSI) (Rappel : Pression = -rho_f*dot(PSI))
+# --------------------------------------------------------------------------------------------------------------------
+TEST_RESU(
+    RESU = ( 
+            # tester pour INST = 3.0*t_fin/5.0 <=> l'onde incidente a parcouru une distance de 1.5*R_ext
+            _F(RESULTAT = RESU, GROUP_NO = "theta0",   NOM_CHAM = "VITE", NOM_CMP = "PSI", INST = 3.0*t_fin/5.0,  VALE_REFE = 735.7427254804843, VALE_CALC = 716.629875215987,  REFERENCE = 'ANALYTIQUE', PRECISION = 6e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta90",  NOM_CHAM = "VITE", NOM_CMP = "PSI", INST = 3.0*t_fin/5.0,  VALE_REFE = 1247.664501524923, VALE_CALC = 1227.20411692916,  REFERENCE = 'ANALYTIQUE', PRECISION = 6e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta180", NOM_CHAM = "VITE", NOM_CMP = "PSI", INST = 3.0*t_fin/5.0,  VALE_REFE = -2000.19452562276, VALE_CALC = -1991.4376451431,  REFERENCE = 'ANALYTIQUE', PRECISION = 6e-2),
+            # tester pour INST = t_fin <=> l'onde incidente a parcouru une distance de 2.5*R_ext
+            _F(RESULTAT = RESU, GROUP_NO = "theta0",   NOM_CHAM = "VITE", NOM_CMP = "PSI", INST = t_fin,          VALE_REFE = -843.5776326611496, VALE_CALC = -797.8204243190595,  REFERENCE = 'ANALYTIQUE', PRECISION = 6e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "theta180", NOM_CHAM = "VITE", NOM_CMP = "PSI", INST = t_fin,          VALE_REFE = 1286.440100145331,  VALE_CALC =  1316.188902505652,  REFERENCE = 'ANALYTIQUE', PRECISION = 6e-2),
+           
+           )
+         )
+
+
+FIN();
+
+
+
+
+
+
+
+
+

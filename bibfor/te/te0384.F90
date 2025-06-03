@@ -139,6 +139,9 @@ subroutine te0384(option, nomte)
                                lTime_=lTime, time_=time, &
                                x_=x, y_=y)
 
+! ----- Normal convention is fluid -> structure
+        speedDire = -speedDire
+
 ! ----- Compute vector
         do i = 1, nbNode
             ii = ndofbynode*i

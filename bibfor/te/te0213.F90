@@ -152,6 +152,9 @@ subroutine te0213(option, nomte)
                                x_=x, y_=y, &
                                z_=z, nz_=nz)
 
+! ----- Normal convention is fluid -> structure
+        speedDire = -speedDire
+        
 ! ----- Compute vector
         do i = 1, nbNode
             ii = ndofbynode*i

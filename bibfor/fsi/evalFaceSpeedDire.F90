@@ -70,8 +70,10 @@ subroutine evalFaceSpeedDire(FEForm, cellDime, jvLoad, speedDire, &
     real(kind=8) :: nvx, nvy, nvz, normVect
     real(kind=8) :: nxNorm, nyNorm, nzNorm
     integer :: nbPara, iret
-    character(len=8), parameter :: paraName(4) = (/'X   ', 'Y   ', 'Z   ', 'INST'/)
-    real(kind=8) :: paraVale(4)
+    character(len=8), parameter :: paraName2d(3) = (/'X   ', 'Y   ', 'INST'/)
+    character(len=8), parameter :: paraName3d(4) = (/'X   ', 'Y   ', 'Z   ', 'INST'/)
+    real(kind=8) :: paraVale2d(3)
+    real(kind=8) :: paraVale3d(4)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -131,25 +133,38 @@ subroutine evalFaceSpeedDire(FEForm, cellDime, jvLoad, speedDire, &
         nvy = 0.d0
         nvz = 0.d0
         if (lFunc) then
-            nbPara = 2
-            paraVale(1) = x
-            paraVale(2) = y
-            if (cellDime .eq. 2) then
+! --------- Cas of 2D
+            if (cellDime .eq. 1) then 
+                nbPara = 2
+                paraVale2d(1) = x
+                paraVale2d(2) = y
+                if (lTime) then
+                    nbPara = 3
+                    paraVale2d(3) = time
+                end if
+                funcName = zk8(jvLoad-1+3)
+                call fointe('FM', funcName, nbPara, paraName2d, paraVale2d, nvx, iret)
+                funcName = zk8(jvLoad-1+4)
+                call fointe('FM', funcName, nbPara, paraName2d, paraVale2d, nvy, iret)
+! --------- Cas of 3D 
+            else if (cellDime .eq. 2) then
                 nbPara = 3
-                paraVale(3) = z
-            end if
-            if (lTime) then
-                nbPara = nbPara+1
-                paraVale(nbPara) = time
-            end if
-            funcName = zk8(jvLoad-1+3)
-            call fointe('FM', funcName, nbPara, paraname, paraVale, nvx, iret)
-            funcName = zk8(jvLoad-1+4)
-            call fointe('FM', funcName, nbPara, paraname, paraVale, nvy, iret)
-            if (cellDime .eq. 2) then
+                paraVale3d(1) = x
+                paraVale3d(2) = y
+                paraVale3d(3) = z
+                if (lTime) then
+                    nbPara = 4
+                    paraVale3d(4) = time
+                end if
+                funcName = zk8(jvLoad-1+3)
+                call fointe('FM', funcName, nbPara, paraName3d, paraVale3d, nvx, iret)
+                funcName = zk8(jvLoad-1+4)
+                call fointe('FM', funcName, nbPara, paraName3d, paraVale3d, nvy, iret)
                 funcName = zk8(jvLoad-1+5)
-                call fointe('FM', funcName, nbPara, paraname, paraVale, nvz, iret)
-            end if
+                call fointe('FM', funcName, nbPara, paraName3d, paraVale3d, nvz, iret)
+            else 
+                ASSERT(ASTER_FALSE)
+            end if 
 
         elseif (lReal) then
             nvx = zr(jvLoad-1+3)

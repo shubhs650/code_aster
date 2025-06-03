@@ -104,7 +104,7 @@ class MEFASE2UPSI(Element):
         ),
         OP.CHAR_MECA_VFAC_F(
             te=255,
-            para_in=((SP.PGEOMER, LC.EGEOM2D), (SP.PMATERC, LC.CMATERC), (SP.PVITEFF, LC.EVITEFF)),
+            para_in=((SP.PGEOMER, LC.EGEOM2D), (SP.PMATERC, LC.CMATERC), (SP.PVITEFF, LC.EVITEFF), (SP.PINSTR, LC.MTEMPSR)),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.MASS_MECA(

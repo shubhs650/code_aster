@@ -1,0 +1,210 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2025 - EDF R&D - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# Plaque de Taylor : modelisation 2D avec les elements "quadrangulaire quadratique"
+
+
+DEBUT(CODE=_F(NIV_PUB_WEB="INTERNET"), ERREUR=_F(ALARME="EXCEPTION"))
+
+import numpy as np
+
+                                         # --------------------------------#
+                                         #                                 #
+                                         #  Donnees physiques du problem   #
+                                         #                                 #
+                                         # --------------------------------#
+
+# ----------------------------
+# parametres du fluide
+# ----------------------------
+rho_eau   = 1000.0               # masse volumique
+cele_eau  = 1500.0               # celerite du son
+
+# -------------------------------------
+# parametres materiaux de la struture 
+# -------------------------------------
+e_elas    = 2.0e+11              # module Young
+nu_elas   = 0.28                 # coefficient de Poisson
+rho_elas  = 7800.0               # masse volumique
+e_s       = 0.03                 # epaisseur de la plaque  
+
+# ----------------------------------------------
+# Chargement en pression et vitesse incidente 
+# ----------------------------------------------
+P0  = 14.75e6 
+tau = 1.08e-3 
+
+def pinc(t) :
+	return P0*np.exp(-t/tau)
+	
+def vinc(t) :
+	return pinc(t)/(rho_eau*cele_eau)   # l'onde incidente est supposee plane 
+
+
+                                         # --------------------------------#
+                                         #                                 #
+                                         #       Solution analytique       #
+                                         #                                 #
+                                         # --------------------------------#
+
+def vite_plaque(t) :
+	beta = rho_eau*cele_eau*tau/(rho_elas*e_s)
+	return (2.0*P0*tau/(rho_elas*e_s*(1.0-beta)))*(np.exp(-beta*t/tau)-np.exp(-t/tau))
+
+
+
+                                         # --------------------------------#
+                                         #                                 #
+                                         #     Modelisation avec aster     #
+                                         #                                 #
+                                         # --------------------------------#
+# -----------------
+#    Maillage
+# -----------------
+MAIL = LIRE_MAILLAGE(FORMAT='MED',);
+
+# --------------------------------------------
+# Orienter la normale  : fluide -> structure 
+# --------------------------------------------
+MAIL = MODI_MAILLAGE(reuse = MAIL, MAILLAGE = MAIL, ORIE_PEAU = _F(GROUP_MA_PEAU=('surf_ifs',), GROUP_MA_INTERNE = 'fluide'),);
+            
+
+# -----------------------------------
+# Modele et conditions aux limites
+# -----------------------------------
+Model = AFFE_MODELE(MAILLAGE = MAIL, AFFE=(_F( GROUP_MA = ('struc',),     PHENOMENE = 'MECANIQUE', MODELISATION = 'D_PLAN'),
+                                           _F( GROUP_MA = ('fluide',),    PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUIDE',    FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_ifs',),  PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUI_STRU', FORMULATION = "U_PSI"),
+                                           _F( GROUP_MA = ('surf_bgt0',), PHENOMENE = 'MECANIQUE', MODELISATION = '2D_FLUI_ABSO', FORMULATION = "U_PSI"),    
+                                           ),
+                    VERI_NORM_IFS = 'OUI',
+                    );
+
+
+CL_RIGIDE = AFFE_CHAR_MECA(MODELE = Model, LIAISON_SOLIDE = _F(GROUP_MA = "struc"),)  # la structure est supposee rigide
+
+
+# -----------------------------------
+# Affection des materiaux 
+# -----------------------------------
+EAU   = DEFI_MATERIAU(FLUIDE = _F(RHO = rho_eau, CELE_R = cele_eau, COEF_AMOR = 0.0),); # Rq COEF_AMOR = a, <=> Zc = rho x c c (1+a)/(1-a) sur 2D_FLUI_ABSO
+ELAS  = DEFI_MATERIAU(ELAS = _F(E = e_elas, NU = nu_elas, RHO = rho_elas,),);
+MATER = AFFE_MATERIAU(MAILLAGE = MAIL, AFFE=(_F(GROUP_MA = ('struc',),                        MATER = ELAS,),
+                                             _F(GROUP_MA = ('fluide','surf_bgt0','surf_ifs',), MATER = EAU,),
+                                            ),
+                     );
+
+
+# -----------------------------------
+# Calculer les matrices elementaires
+# ----------------------------------- 
+El_M  = CALC_MATR_ELEM(OPTION = 'MASS_MECA', MODELE = Model, CHAM_MATER = MATER, CHARGE = CL_RIGIDE)
+El_K  = CALC_MATR_ELEM(OPTION = 'RIGI_MECA', MODELE = Model, CHAM_MATER = MATER, CHARGE = CL_RIGIDE)
+El_C  = CALC_MATR_ELEM(OPTION = 'AMOR_MECA', MODELE = Model, CHAM_MATER = MATER, RIGI_MECA = El_K, MASS_MECA = El_M, CHARGE = CL_RIGIDE)
+
+
+# -----------------------------------
+# Assembler les matrices 
+# -----------------------------------
+N_DDL = NUME_DDL(MATR_RIGI = El_K, )
+
+MAT_MASS = ASSE_MATRICE(MATR_ELEM = El_M,  NUME_DDL = N_DDL,)
+MAT_RIGI = ASSE_MATRICE(MATR_ELEM = El_K,  NUME_DDL = N_DDL,)
+MAT_AMOR = ASSE_MATRICE(MATR_ELEM = El_C,  NUME_DDL = N_DDL,)
+
+
+
+# ---------------------------------------------------
+# Pression et vitesse incidente en FORMULE aster 
+# ---------------------------------------------------
+vite_inc = FORMULE(VALE     = """vinc(INST)""",     
+                   vinc     = vinc,
+                   NOM_PARA = ['INST'],
+                   ); 
+ 
+press_inc = FORMULE(VALE     = """pinc(INST)""",  
+                    pinc     = pinc,
+                    NOM_PARA = ['INST'],
+                    );
+
+# -----------------
+# Les chargements  
+# -----------------
+Char_Pinc = AFFE_CHAR_MECA(MODELE = Model, VERI_NORM = 'OUI', PRES_REP  = (_F(GROUP_MA = ('surf_ifs'), PRES = 1.0),),);
+Char_Vinc = AFFE_CHAR_MECA(MODELE = Model, VERI_NORM = 'OUI', VITE_FACE = (_F(GROUP_MA = ('surf_ifs'), VITE = 1.0, DIRECTION = (1.0, 0.0) ),));
+
+# ------------------------------------
+# Calculer les vecteurs elementaires 
+# ------------------------------------
+ElemF1 = CALC_VECT_ELEM(OPTION="CHAR_MECA", CHARGE=Char_Pinc)
+ElemF2 = CALC_VECT_ELEM(OPTION="CHAR_MECA", CHARGE=Char_Vinc, CHAM_MATER = MATER)
+
+# --------------------------------
+# Assemblage des vecteurs
+# --------------------------------
+F1 = ASSE_VECTEUR(VECT_ELEM=ElemF1, NUME_DDL=N_DDL)
+F2 = ASSE_VECTEUR(VECT_ELEM=ElemF2, NUME_DDL=N_DDL)
+
+
+# ----------------------------------------------------
+# Resolution du problem avec l'operateur DYNA_VIBRA
+# ----------------------------------------------------
+alpha_hht = -0.01       # Parametre pour controler l'amortissement numerique 
+dt        = tau/10.0
+t_fin     = 2.0*tau    
+
+RESU = DYNA_VIBRA(TYPE_CALCUL  = 'TRAN',
+                  BASE_CALCUL  = 'PHYS',
+                  MATR_MASS    =  MAT_MASS,
+                  MATR_RIGI    =  MAT_RIGI,
+                  MATR_AMOR    =  MAT_AMOR,
+                  SCHEMA_TEMPS = _F(SCHEMA='NEWMARK', BETA=0.25*(1.0-alpha_hht)*(1.0-alpha_hht), GAMMA = 0.5-alpha_hht),
+                  EXCIT        =  (
+                                  _F(VECT_ASSE = F1, FONC_MULT = press_inc),
+                                  _F(VECT_ASSE = F2, FONC_MULT = vite_inc),
+                                  ),
+                  INCREMENT    = (_F(INST_INIT = 0.0, INST_FIN = t_fin, PAS = dt,)),
+                  SOLVEUR      = _F(METHODE='MULT_FRONT',), 
+                  MODELE       = Model,
+                  CHAM_MATER   = MATER,
+                 )    
+
+
+# -----------------------------------------------------------------
+# Comparer le resultat d'aster avec la solution analytique 
+# -----------------------------------------------------------------
+TEST_RESU(
+    RESU = (_F(RESULTAT = RESU, GROUP_NO = "Node_A", NOM_CHAM = "VITE", NOM_CMP = "DX", INST = 5.0*dt,  VALE_REFE = vite_plaque(5.0*dt),  VALE_CALC = 13.022931755826171, REFERENCE = 'ANALYTIQUE', PRECISION = 2.0e-2),
+            _F(RESULTAT = RESU, GROUP_NO = "Node_A", NOM_CHAM = "VITE", NOM_CMP = "DX", INST = 10.0*dt, VALE_REFE = vite_plaque(10.0*dt), VALE_CALC = 8.431090199780902,  REFERENCE = 'ANALYTIQUE', PRECISION = 5.0e-4),
+            _F(RESULTAT = RESU, GROUP_NO = "Node_A", NOM_CHAM = "VITE", NOM_CMP = "DX", INST = 15.0*dt, VALE_REFE = vite_plaque(15.0*dt), VALE_CALC = 5.128999350907338,  REFERENCE = 'ANALYTIQUE', PRECISION = 5.0e-4),
+            _F(RESULTAT = RESU, GROUP_NO = "Node_A", NOM_CHAM = "VITE", NOM_CMP = "DX", INST = t_fin,   VALE_REFE = vite_plaque(t_fin),   VALE_CALC = 3.1120211337202175, REFERENCE = 'ANALYTIQUE', PRECISION = 5.0e-4),
+           )
+         )
+
+FIN();
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 ! --------------------------------------------------------------------
-! Copyright (C) 1991 - 2024 - EDF R&D - www.code-aster.org
+! Copyright (C) 1991 - 2025 - EDF R&D - www.code-aster.org
 ! This file is part of code_aster.
 !
 ! code_aster is free software: you can redistribute it and/or modify
@@ -87,6 +87,7 @@ subroutine romAlgoNLSystemSolve(matr_asse, vect_2mbr, vect_cine, ds_algorom, vec
     real(kind=8), pointer :: v_vect_cine(:) => null()
     real(kind=8), pointer :: v_vect_solu(:) => null()
     character(len=24), pointer :: refa(:) => null()
+    character(len=16) :: syme
     blas_int :: b_incx, b_incy, b_n
     cbid = dcmplx(0.d0, 0.d0)
 !
@@ -132,6 +133,9 @@ subroutine romAlgoNLSystemSolve(matr_asse, vect_2mbr, vect_cine, ds_algorom, vec
     call jeveuo(matr_asse(1:19)//'.&INT', 'L', jv_matr)
     call dismoi('NB_EQUA', matr_asse, 'MATR_ASSE', repi=nbEqua_matr)
     ASSERT(nbEqua .eq. zi(jv_matr+2))
+! 
+! - Matrix is symetric ?
+    call dismoi('TYPE_MATRICE', matr_asse, 'MATR_ASSE', repk=syme)
 !
 ! - Second member correction for AFFE_CHAR_CINE
 !
@@ -159,35 +163,64 @@ subroutine romAlgoNLSystemSolve(matr_asse, vect_2mbr, vect_cine, ds_algorom, vec
 !
 ! - Compute reduced objects
 !
-    do iMode = 1, nbMode
-        call rsexch(' ', resultName, fieldName, iMode, mode, &
-                    iret)
-        call jeveuo(mode(1:19)//'.VALE', 'L', vr=v_mode)
-        b_n = to_blas_int(nbEqua)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        term1 = ddot(b_n, v_mode, b_incx, v_vect_2mbr, b_incy)
-        v_vect_rom(iMode) = term1
-        call mrmult('ZERO', jv_matr, v_mode, v_mrmult, 1, &
-                    .false._1, l_rom)
-        if (l_hrom) then
-            do iEqua = 1, nbEqua
-                if (ds_algorom%v_equa_int(iEqua) .eq. 1) then
-                    v_mrmult(iEqua) = 0.d0
-                end if
-            end do
-        end if
-        do jMode = 1, nbMode
-            call rsexch(' ', resultName, fieldName, jMode, mode, &
+    if (syme .eq. 'NON_SYM' .or. l_hrom) then
+        do iMode = 1, nbMode
+            call rsexch(' ', resultName, fieldName, iMode, mode, &
                         iret)
             call jeveuo(mode(1:19)//'.VALE', 'L', vr=v_mode)
             b_n = to_blas_int(nbEqua)
             b_incx = to_blas_int(1)
             b_incy = to_blas_int(1)
-            term2 = ddot(b_n, v_mode, b_incx, v_mrmult, b_incy)
-            v_matr_rom(nbMode*(iMode-1)+jMode) = term2
+            term1 = ddot(b_n, v_mode, b_incx, v_vect_2mbr, b_incy)
+            v_vect_rom(iMode) = term1
+            call mrmult('ZERO', jv_matr, v_mode, v_mrmult, 1, &
+                        .false._1, l_rom)
+            if (l_hrom) then
+                do iEqua = 1, nbEqua
+                    if (ds_algorom%v_equa_int(iEqua) .eq. 1) then
+                        v_mrmult(iEqua) = 0.d0
+                    end if
+                end do
+            end if
+            do jMode = 1, nbMode
+                call rsexch(' ', resultName, fieldName, jMode, mode, &
+                            iret)
+                call jeveuo(mode(1:19)//'.VALE', 'L', vr=v_mode)
+                b_n = to_blas_int(nbEqua)
+                b_incx = to_blas_int(1)
+                b_incy = to_blas_int(1)
+                term2 = ddot(b_n, v_mode, b_incx, v_mrmult, b_incy)
+                v_matr_rom(nbMode*(iMode-1)+jMode) = term2
+            end do
         end do
-    end do
+! - In case of symetric matrix, only half of coefficient of reduced matrix is computed 
+    elseif (syme .eq. 'SYMETRI') then
+        do iMode = 1, nbMode
+            call rsexch(' ', resultName, fieldName, iMode, mode, &
+                        iret)
+            call jeveuo(mode(1:19)//'.VALE', 'L', vr=v_mode)
+            b_n = to_blas_int(nbEqua)
+            b_incx = to_blas_int(1)
+            b_incy = to_blas_int(1)
+            term1 = ddot(b_n, v_mode, b_incx, v_vect_2mbr, b_incy)
+            v_vect_rom(iMode) = term1
+            call mrmult('ZERO', jv_matr, v_mode, v_mrmult, 1, &
+                        .false._1, l_rom)
+            do jMode = iMode, nbMode
+                call rsexch(' ', resultName, fieldName, jMode, mode, &
+                            iret)
+                call jeveuo(mode(1:19)//'.VALE', 'L', vr=v_mode)
+                b_n = to_blas_int(nbEqua)
+                b_incx = to_blas_int(1)
+                b_incy = to_blas_int(1)
+                term2 = ddot(b_n, v_mode, b_incx, v_mrmult, b_incy)
+                v_matr_rom(nbMode*(iMode-1)+jMode) = term2
+                v_matr_rom(nbMode*(jMode-1)+iMode) = term2
+            end do
+        end do
+    else 
+         ASSERT(ASTER_FALSE)
+    end if 
 !
 ! - Solve system
 !
