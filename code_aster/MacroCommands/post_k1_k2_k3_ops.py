@@ -167,25 +167,25 @@ def expand_values(self, tabout, liste_noeu_a_extr, titre, type_para):
     extrtabout = tabout.EXTR_TABLE()
 
     # Recuperation des points
-    points_expand = extrtabout.values()["NUM_PT"]
+    points_expand = extrtabout.data["NUM_PT"].tolist()
     # Recuperation des abscisses
-    abscisses_expand = extrtabout.values()["ABSC_CURV"]
+    abscisses_expand = extrtabout.data["ABSC_CURV"].tolist()
     # Recuperation des instants
-    instants_expand = extrtabout.values()[type_para]
+    instants_expand = extrtabout.data[type_para].tolist()
     # Recuperation des K1,K2,K3,ERR_K1,ERR_K2,ERR_K1,
     size = len(abscisses_expand)
-    K1 = extrtabout.values()["K1"]
-    ERR_K1 = extrtabout.values()["ERR_K1"]
-    K2 = extrtabout.values()["K2"]
-    ERR_K2 = extrtabout.values()["ERR_K2"]
-    K3 = extrtabout.values()["K3"]
-    ERR_K3 = extrtabout.values()["ERR_K3"]
-    G = extrtabout.values()["G"]
+    K1 = extrtabout.data["K1"].tolist()
+    ERR_K1 = extrtabout.data["ERR_K1"].tolist()
+    K2 = extrtabout.data["K2"].tolist()
+    ERR_K2 = extrtabout.data["ERR_K2"].tolist()
+    K3 = extrtabout.data["K3"].tolist()
+    ERR_K3 = extrtabout.data["ERR_K3"].tolist()
+    G = extrtabout.data["G"].tolist()
     # Recuperation de TEMP,NEUT1
     if "TEMP" in extrtabout.para:
-        TEMP = extrtabout.values()["TEMP"]
+        TEMP = extrtabout.data["TEMP"].tolist()
     if "NEUT1" in extrtabout.para:
-        NEUT1 = extrtabout.values()["NEUT1"]
+        NEUT1 = extrtabout.data["NEUT1"].tolist()
 
     for i in range(size):
         if points_expand[i] - 1 in liste_noeu_a_extr:
@@ -242,7 +242,7 @@ def expand_values(self, tabout, liste_noeu_a_extr, titre, type_para):
         ("K", "K", "I", "I", "R", "R", "K", "I", "R", "R", "R", "R"),
     ):
         if para in extrtabout.para:
-            liste.append({"LISTE_%s" % typ: extrtabout.values()[para], "PARA": para})
+            liste.append({"LISTE_%s" % typ: extrtabout.data[para].tolist(), "PARA": para})
 
     if "TEMP" in extrtabout.para:
         liste.append({"LISTE_R": TEMP, "PARA": "TEMP"})
@@ -369,14 +369,14 @@ def get_coor_libre(self, Lnoff, RESULTAT, ndim):
     )
 
     tcoorf = __NCOFON.EXTR_TABLE()
-    nbt = len(tcoorf["NOEUD"].values()["NOEUD"])
-    xs = NP.array(tcoorf["COOR_X"].values()["COOR_X"][:nbt])
-    ys = NP.array(tcoorf["COOR_Y"].values()["COOR_Y"][:nbt])
+    nbt = len(tcoorf.data["NOEUD"])
+    xs = NP.array(tcoorf.data["COOR_X"][:nbt].tolist())
+    ys = NP.array(tcoorf.data["COOR_Y"][:nbt].tolist())
     if ndim == 2:
         zs = NP.zeros(nbt)
     elif ndim == 3:
-        zs = NP.array(tcoorf["COOR_Z"].values()["COOR_Z"][:nbt])
-    ns = tcoorf["NOEUD"].values()["NOEUD"][:nbt]
+        zs = NP.array(tcoorf.data["COOR_Z"][:nbt].tolist())
+    ns = tcoorf.data["NOEUD"][:nbt].tolist()
     ns = list(map(lambda x: x.rstrip(), ns))
     l_coorf = [[ns[i], xs[i], ys[i], zs[i]] for i in range(0, nbt)]
     l_coorf = [(i[0], i[1:]) for i in l_coorf]
@@ -552,14 +552,14 @@ def get_coor_regle(self, RESULTAT, ndim, Lnoff, Lnocal, dicoS, is_symmetric, dic
 
     tcoor = __NCOOR.EXTR_TABLE().NUME_ORDRE == dico["NUME_ORDRE"][0]
 
-    nbt = len(tcoor["NOEUD"].values()["NOEUD"])
-    xs = NP.array(tcoor["COOR_X"].values()["COOR_X"][:nbt])
-    ys = NP.array(tcoor["COOR_Y"].values()["COOR_Y"][:nbt])
+    nbt = len(tcoor.data["NOEUD"])
+    xs = NP.array(tcoor.data["COOR_X"][:nbt].tolist())
+    ys = NP.array(tcoor.data["COOR_Y"][:nbt].tolist())
     if ndim == 2:
         zs = NP.zeros(nbt)
     elif ndim == 3:
-        zs = NP.array(tcoor["COOR_Z"].values()["COOR_Z"][:nbt])
-    ns = tcoor["NOEUD"].values()["NOEUD"][:nbt]
+        zs = NP.array(tcoor.data["COOR_Z"][:nbt].tolist())
+    ns = tcoor.data["NOEUD"][:nbt].tolist()
     ns = list(map(lambda x: x.rstrip(), ns))
     l_coor = [[ns[i], xs[i], ys[i], zs[i]] for i in range(nbt)]
     l_coor = [(i[0], i[1:]) for i in l_coor]
@@ -870,11 +870,11 @@ def get_liste_inst(tabsup, args):
     """retourne la liste d'instants"""
 
     l_inst = None
-    l_inst_tab = tabsup["INST"].values()["INST"]
+    l_inst_tab = tabsup.data["INST"].tolist()
     l_inst_tab = list(dict([(i, 0) for i in l_inst_tab]).keys())  # elimine les doublons
     l_inst_tab.sort()
     if args.get("LIST_ORDRE") is not None or args.get("NUME_ORDRE") is not None:
-        l_ord_tab = tabsup["NUME_ORDRE"].values()["NUME_ORDRE"]
+        l_ord_tab = tabsup.data["NUME_ORDRE"].tolist()
         l_ord_tab.sort()
         l_ord_tab = list(dict([(i, 0) for i in l_ord_tab]).keys())
         d_ord_tab = [[l_ord_tab[i], l_inst_tab[i]] for i in range(0, len(l_ord_tab))]
@@ -928,11 +928,11 @@ def get_liste_freq(tabsup, args):
     """retourne la liste des fréquences"""
 
     l_freq = None
-    l_freq_tab = tabsup["FREQ"].values()["FREQ"]
+    l_freq_tab = tabsup.data["FREQ"].tolist()
     l_freq_tab = list(dict([(i, 0) for i in l_freq_tab]).keys())  # elimine les doublons
     l_freq_tab.sort()
     if args.get("LIST_ORDRE") is not None or args.get("NUME_ORDRE") is not None:
-        l_ord_tab = tabsup["NUME_ORDRE"].values()["NUME_ORDRE"]
+        l_ord_tab = tabsup.data["NUME_ORDRE"].tolist()
         l_ord_tab.sort()
         l_ord_tab = list(dict([(i, 0) for i in l_ord_tab]).keys())
         d_ord_tab = [(l_ord_tab[i], l_freq_tab[i]) for i in range(0, len(l_ord_tab))]
@@ -950,7 +950,7 @@ def get_liste_freq(tabsup, args):
         PRECISION = 1.0e-6
         CRITERE = "ABSOLU"
     elif args.get("LIST_MODE") is not None or args.get("NUME_MODE") is not None:
-        l_mod_tab = tabsup["NUME_MODE"].values()["NUME_MODE"]
+        l_mod_tab = tabsup.data["NUME_MODE"].tolist()
         l_mod_tab.sort()
         l_mod_tab = list(dict([(i, 0) for i in l_mod_tab]).keys())
         d_mod_tab = [(l_mod_tab[i], l_freq_tab[i]) for i in range(0, len(l_mod_tab))]
@@ -1233,18 +1233,18 @@ def get_propmat_varc_xfem(
 def get_depl_sup(FOND_FISS, tabsupi, ndim, Lnofon, d_coor, ino, TYPE_MAILLAGE):
     """retourne les déplacements sup"""
 
-    abscs = getattr(tabsupi, "ABSC_CURV").values()
+    abscs = tabsupi.data["ABSC_CURV"].tolist()
 
     if FOND_FISS:
         nbval = len(abscs)
 
         if TYPE_MAILLAGE != "LIBRE":
-            coxs = NP.array(tabsupi["COOR_X"].values()["COOR_X"][:nbval])
-            coys = NP.array(tabsupi["COOR_Y"].values()["COOR_Y"][:nbval])
+            coxs = NP.array(tabsupi.data["COOR_X"][:nbval].tolist())
+            coys = NP.array(tabsupi.data["COOR_Y"][:nbval].tolist())
             if ndim == 2:
                 cozs = NP.zeros(nbval)
             elif ndim == 3:
-                cozs = NP.array(tabsupi["COOR_Z"].values()["COOR_Z"][:nbval])
+                cozs = NP.array(tabsupi.data["COOR_Z"][:nbval].tolist())
 
             Pfon = NP.array(
                 [d_coor[Lnofon[ino]][0], d_coor[Lnofon[ino]][1], d_coor[Lnofon[ino]][2]]
@@ -1256,12 +1256,12 @@ def get_depl_sup(FOND_FISS, tabsupi, ndim, Lnofon, d_coor, ino, TYPE_MAILLAGE):
 
         abscs = NP.array(abscs[:nbval])
 
-        dxs = NP.array(tabsupi["DX"].values()["DX"][:nbval])
-        dys = NP.array(tabsupi["DY"].values()["DY"][:nbval])
+        dxs = NP.array(tabsupi.data["DX"][:nbval].tolist())
+        dys = NP.array(tabsupi.data["DY"][:nbval].tolist())
         if ndim == 2:
             dzs = NP.zeros(nbval)
         elif ndim == 3:
-            dzs = NP.array(tabsupi["DZ"].values()["DZ"][:nbval])
+            dzs = NP.array(tabsupi.data["DZ"][:nbval].tolist())
 
     #     ---  CAS FISSURE X-FEM ---
     else:
@@ -1269,16 +1269,16 @@ def get_depl_sup(FOND_FISS, tabsupi, ndim, Lnofon, d_coor, ino, TYPE_MAILLAGE):
         #   on néglige les termes singuliers en interpolant le champ de déplacement
         #   compte-tenu du shift des fonctions singulières, cela revient à mettre les termes
         #   singuliers à zéro
-        H1 = getattr(tabsupi, "H1X").values()
-        nbval = len(H1)
-        H1 = complete(H1)
-        dxs = 2.0 * (H1 + NP.zeros(nbval))
-        H1 = getattr(tabsupi, "H1Y").values()
-        H1 = complete(H1)
-        dys = 2.0 * (H1 + NP.zeros(nbval))
-        H1 = getattr(tabsupi, "H1Z").values()
-        H1 = complete(H1)
-        dzs = 2.0 * (H1 + NP.zeros(nbval))
+        para = set(tabsupi.para)
+        nbval = len(tabsupi)
+        ds_arrays = []
+        for name in ("H1X", "H1Y", "H1Z"):
+            if name in para:
+                h1 = 2.0 * tabsupi.data[name].filled(0.0)
+            else:
+                h1 = NP.zeros(nbval)
+            ds_arrays.append(h1)
+        dxs, dys, dzs = ds_arrays
         abscs = NP.array(abscs[:nbval])
 
     ds = NP.asarray([dxs, dys, dzs])
@@ -1297,12 +1297,12 @@ def get_depl_inf(FOND_FISS, tabinfi, ndim, Lnofon, is_symmetric, d_coor, ino, TY
 
         nbval = len(absci)
         if TYPE_MAILLAGE != "LIBRE":
-            coxi = NP.array(tabinfi["COOR_X"].values()["COOR_X"][:nbval])
-            coyi = NP.array(tabinfi["COOR_Y"].values()["COOR_Y"][:nbval])
+            coxi = NP.array(tabinfi.data["COOR_X"][:nbval].tolist())
+            coyi = NP.array(tabinfi.data["COOR_Y"][:nbval].tolist())
             if ndim == 2:
                 cozi = NP.zeros(nbval)
             elif ndim == 3:
-                cozi = NP.array(tabinfi["COOR_Z"].values()["COOR_Z"][:nbval])
+                cozi = NP.array(tabinfi.data["COOR_Z"][:nbval].tolist())
 
             Pfon = NP.array(
                 [d_coor[Lnofon[ino]][0], d_coor[Lnofon[ino]][1], d_coor[Lnofon[ino]][2]]
@@ -1314,12 +1314,12 @@ def get_depl_inf(FOND_FISS, tabinfi, ndim, Lnofon, is_symmetric, d_coor, ino, TY
 
         absci = NP.array(absci[:nbval])
 
-        dxi = NP.array(tabinfi["DX"].values()["DX"][:nbval])
-        dyi = NP.array(tabinfi["DY"].values()["DY"][:nbval])
+        dxi = NP.array(tabinfi.data["DX"][:nbval].tolist())
+        dyi = NP.array(tabinfi.data["DY"][:nbval].tolist())
         if ndim == 2:
             dzi = NP.zeros(nbval)
         elif ndim == 3:
-            dzi = NP.array(tabinfi["DZ"].values()["DZ"][:nbval])
+            dzi = NP.array(tabinfi.data["DZ"][:nbval].tolist())
 
         di = NP.asarray([dxi, dyi, dzi])
 
@@ -1531,7 +1531,7 @@ def get_erreur(self, ndim, __tabi, type_para):
         index = 3
     py_tab = __tabi.EXTR_TABLE()
 
-    nlines = len(py_tab.values()[list(py_tab.values().keys())[0]])
+    nlines = len(py_tab.data[py_tab.para[0]])
     err = NP.zeros((index, nlines // 3))
     kmax = [0.0] * index
     kmin = [0.0] * index
@@ -1579,7 +1579,7 @@ def get_erreur(self, ndim, __tabi, type_para):
     if ndim != 3:
         __tini = CREA_TABLE(
             LISTE=(
-                _F(LISTE_R=(tuple(__tabi.EXTR_TABLE().values()["G_MIN"])), PARA="G_MIN"),
+                _F(LISTE_R=(tuple(__tabi.EXTR_TABLE().data["G_MIN"].tolist())), PARA="G_MIN"),
                 _F(LISTE_R=(tuple(err[0].tolist())), PARA="ERR_K1"),
                 _F(LISTE_R=(tuple(err[1].tolist())), PARA="ERR_K2"),
             )
@@ -1587,7 +1587,7 @@ def get_erreur(self, ndim, __tabi, type_para):
     else:
         __tini = CREA_TABLE(
             LISTE=(
-                _F(LISTE_R=(tuple(__tabi.EXTR_TABLE().values()["G_MIN"])), PARA="G_MIN"),
+                _F(LISTE_R=(tuple(__tabi.EXTR_TABLE().data["G_MIN"].tolist())), PARA="G_MIN"),
                 _F(LISTE_R=(tuple(err[0].tolist())), PARA="ERR_K1"),
                 _F(LISTE_R=(tuple(err[1].tolist())), PARA="ERR_K2"),
                 _F(LISTE_R=(tuple(err[2].tolist())), PARA="ERR_K3"),

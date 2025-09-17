@@ -204,7 +204,7 @@ class Mac3CoeurCalcul:
             CARA_ELEM=self.carael,
             MASS_INER=_F(TOUT="OUI"),
         )
-        mtot_core = MASSE_TOT.EXTR_TABLE().values()["MASSE"][0]
+        mtot_core = MASSE_TOT.EXTR_TABLE().get_value("MASSE", 0)
         UTMESS("I", "COEUR0_9", valr=mtot_core)
 
         return mtot_core

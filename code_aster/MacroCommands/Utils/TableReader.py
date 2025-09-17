@@ -89,9 +89,11 @@ class TableReader:
 
     def read_all_lines(self):
         """Loop on the lines and add values to the Table."""
+        rows = []
         for i, line in enumerate(self.lines):
             values = self.read_line_i(i, line)
-            self.tab.append(self._build_row(values))
+            rows.append(self._build_row(values))
+        self.tab.extend(rows)
 
     def read(self, nblock=None, check_para=None):
         """Read and create the Table.

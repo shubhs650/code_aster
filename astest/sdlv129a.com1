@@ -49,14 +49,14 @@ DZ = [None] * nbmode
 tdepl = TDEP.EXTR_TABLE()
 for i in range(nbmode):
     dmod = tdepl.NUME_MODE == nume_mode[i]
-    DX[i] = dmod["DX"].values()["DX"]
-    DY[i] = dmod["DY"].values()["DY"]
-    DZ[i] = dmod["DZ"].values()["DZ"]
+    DX[i] = dmod.data["DX"].tolist()
+    DY[i] = dmod.data["DY"].tolist()
+    DZ[i] = dmod.data["DZ"].tolist()
 
 # EXTRACTION DU COEFFICIENT AMIN
 AMIN = TDMG12.EXTR_TABLE()
 AMIN = AMIN.EXTREMA == "MIN"
-AMIN = AMIN["VALE"].values()["VALE"]
+AMIN = AMIN.data["VALE"].tolist()
 
 # CALCUL DU DEPLACEMENT MAXIMAL ADMISSIBLE
 DXmax = 0.0

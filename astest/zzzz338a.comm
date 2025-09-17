@@ -225,17 +225,17 @@ RES_MATR = DEFI_LIST_FREQ(
 
 
 ## Extract results
-eps_LIST = np.array(RES_LIST.EXTR_TABLE().values()["ERR_REL"])
+eps_LIST = np.array(RES_LIST.EXTR_TABLE().data["ERR_REL"].tolist())
 freq_LIST = np.array(
-    [RES_LIST.EXTR_TABLE().values()["FREQ_MIN"][0]] + RES_LIST.EXTR_TABLE().values()["FREQ_MAX"]
+    [RES_LIST.EXTR_TABLE().get_value("FREQ_MIN", 0)] + RES_LIST.EXTR_TABLE().data["FREQ_MAX"].tolist()
 )
-counts_LIST = np.array(RES_LIST.EXTR_TABLE().values()["NB_MODES"])
+counts_LIST = np.array(RES_LIST.EXTR_TABLE().data["NB_MODES"].tolist())
 
-eps_MATR = np.array(RES_MATR.EXTR_TABLE().values()["ERR_REL"])
+eps_MATR = np.array(RES_MATR.EXTR_TABLE().data["ERR_REL"].tolist())
 freq_MATR = np.array(
-    [RES_MATR.EXTR_TABLE().values()["FREQ_MIN"][0]] + RES_MATR.EXTR_TABLE().values()["FREQ_MAX"]
+    [RES_MATR.EXTR_TABLE().get_value("FREQ_MIN", 0)] + RES_MATR.EXTR_TABLE().data["FREQ_MAX"].tolist()
 )
-counts_MATR = np.array(RES_MATR.EXTR_TABLE().values()["NB_MODES"])
+counts_MATR = np.array(RES_MATR.EXTR_TABLE().data["NB_MODES"].tolist())
 
 ## Test frequency bands balancing
 test = CA.TestCase()

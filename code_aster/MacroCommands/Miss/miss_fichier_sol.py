@@ -103,7 +103,7 @@ def fichier_sol(tab, struct, param=None):
             continue
         content.append(format % row)
     # substratum
-    substr = tsubstr.rows[0]
+    substr = tsubstr.get_row_values(0)
     content.append("SUBS   MATE %8d" % substr["NUME_MATE"])
     # sources
     nb_source = len(tsol.SOURCE == "OUI")

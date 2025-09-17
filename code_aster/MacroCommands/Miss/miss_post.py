@@ -299,8 +299,8 @@ class PostMiss:
             [(k, v.getName()) for k, v in kwargs.items() if k in self._torder and v is not None]
         )
         if index > 0:
-            row = self.tab.rows[index]
-            row.update(values)
+            for k, v in values:
+                self.tab.data[index][k] = v
         else:
             row = dict(list(zip(self._tkeys, primkey)))
             row.update(values)

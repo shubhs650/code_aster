@@ -351,26 +351,26 @@ def calc_ecrevisse_ops(self, **args):
 
         # --Determination des cotes a donner a ecrevisse--
         #   a partir des resultats mecanique et thermique :
-        _l_tang = _tbl_dpl.values()["ABSC_CURV"]
-        _l_tang_b = _tbl_dpl_b.values()["ABSC_CURV"]
+        _l_tang = _tbl_dpl.data["ABSC_CURV"].tolist()
+        _l_tang_b = _tbl_dpl_b.data["ABSC_CURV"].tolist()
         try:
             _l_absz_m = list(map(lambda x, y: 0.5 * (x + y), _l_tang, _l_tang_b))
         except TypeError:
             UTMESS("F", "ECREVISSE0_40")
         #
-        _l_tang_t = _tbl_temp.values()["ABSC_CURV"]
-        _l_tang_t_b = _tbl_temp_b.values()["ABSC_CURV"]
+        _l_tang_t = _tbl_temp.data["ABSC_CURV"].tolist()
+        _l_tang_t_b = _tbl_temp_b.data["ABSC_CURV"].tolist()
         _l_absz_t = list(map(lambda x, y: 0.5 * (x + y), _l_tang_t, _l_tang_t_b))
 
         # Coordonnees des points des levres (initiales et a l instant actuel
-        _X0 = _tbl_dpl.values()["COOR_X"]
-        _Y0 = _tbl_dpl.values()["COOR_Y"]
-        _X0_b = _tbl_dpl_b.values()["COOR_X"]
-        _Y0_b = _tbl_dpl_b.values()["COOR_Y"]
-        _X = [x + y for (x, y) in zip(_tbl_dpl.values()["DX"], _X0)]
-        _Y = [x + y for (x, y) in zip(_tbl_dpl.values()["DY"], _Y0)]
-        _X_b = [x + y for (x, y) in zip(_tbl_dpl_b.values()["DX"], _X0_b)]
-        _Y_b = [x + y for (x, y) in zip(_tbl_dpl_b.values()["DY"], _Y0_b)]
+        _X0 = _tbl_dpl.data["COOR_X"].tolist()
+        _Y0 = _tbl_dpl.data["COOR_Y"].tolist()
+        _X0_b = _tbl_dpl_b.data["COOR_X"].tolist()
+        _Y0_b = _tbl_dpl_b.data["COOR_Y"].tolist()
+        _X = [x + y for (x, y) in zip(_tbl_dpl.data["DX"].tolist(), _X0)]
+        _Y = [x + y for (x, y) in zip(_tbl_dpl.data["DY"].tolist(), _Y0)]
+        _X_b = [x + y for (x, y) in zip(_tbl_dpl_b.data["DX"].tolist(), _X0_b)]
+        _Y_b = [x + y for (x, y) in zip(_tbl_dpl_b.data["DY"].tolist(), _Y0_b)]
 
         # Determination de la direction de la fissure
         (DIR_FISS, DIR_PREV, beta, theta, _xi, _yi) = dirfiss(_X, _Y, _X_b, _Y_b)
@@ -409,8 +409,8 @@ def calc_ecrevisse_ops(self, **args):
 
         # -- Calcul de la temperature sur le materiau (levres de la fissure) --
         #     on fait la moyenne des temperatures des deux levres
-        _l_t2 = _tbl_temp.values()["TEMP"]
-        _l_t2_b = _tbl_temp_b.values()["TEMP"]
+        _l_t2 = _tbl_temp.data["TEMP"].tolist()
+        _l_t2_b = _tbl_temp_b.data["TEMP"].tolist()
         _l_temp_aster = list(map(lambda x, y: 0.5 * (x + y), _l_t2_b, _l_t2))
 
         # Infos / Debug : fichier .mess ou .resu

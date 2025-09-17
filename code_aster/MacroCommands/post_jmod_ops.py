@@ -642,7 +642,7 @@ def calc_area(self, MAILAREA, nameGroupMa):
         INTEGRALE=_F(NOM_CHAM="VARI_ELGA", GROUP_MA=nameGroupMa, NOM_CMP="X1", TYPE_MAILLE="2D"),
     )
 
-    __AREA = __POST_AREA.EXTR_TABLE().values()["INTE_X1"][0]
+    __AREA = __POST_AREA.EXTR_TABLE().get_value("INTE_X1", 0)
 
     DETRUIRE(
         CONCEPT=(_F(NOM=__MODE), _F(NOM=__FIELD_AREA), _F(NOM=__RESU_AREA), _F(NOM=__POST_AREA))
@@ -1541,9 +1541,10 @@ def cal_j01(self, MODE, TMAIL, lInst, __WELAS, __GQX, __GQY, __GQZ):
         )
     )
 
-    __J01_J = __J01.EXTR_TABLE().values()["INTE_X5"]
+    j01_table = __J01.EXTR_TABLE()
+    __J01_J = j01_table.data["INTE_X5"].tolist()
 
-    volume = __J01.EXTR_TABLE().values()["VOL"]
+    volume = j01_table.data["VOL"].tolist()
 
     return (__J01_J, volume)
 
@@ -1744,7 +1745,7 @@ def cal_j02(self, MODE, TMAIL, lInst, __SIGF, __GDEPX, __GDEPY, __GDEPZ, __GQX, 
         )
     )
 
-    __J02_J = __J02.EXTR_TABLE().values()["INTE_X7"]
+    __J02_J = __J02.EXTR_TABLE().data["INTE_X7"].tolist()
 
     return __J02_J
 
@@ -1843,7 +1844,7 @@ def cal_j04(
             )
         )
 
-        __IJ04_J = __J04.EXTR_TABLE().values()["INTE_X8"]
+        __IJ04_J = __J04.EXTR_TABLE().data["INTE_X8"].tolist()
 
         if iEPS in ["EPXY", "EPXZ", "EPYZ"]:
             __IJ04_J = [iJ04 * 2.0 for iJ04 in __IJ04_J]
@@ -1915,7 +1916,7 @@ def cal_j05(self, MODE, TMAIL, lInst, __GRAD_WELAS, __QX_GAUSS, __QY_GAUSS, __QZ
         )
     )
 
-    __J05_J = __J05.EXTR_TABLE().values()["INTE_X7"]
+    __J05_J = __J05.EXTR_TABLE().data["INTE_X7"].tolist()
 
     return __J05_J
 
@@ -2022,7 +2023,7 @@ def get_result2D(
     RS_modelisation.append(nom_modelisation)
     RS_modelisation = RS_modelisation * len(liord)
 
-    RS_volume = __J01.EXTR_TABLE().values()["VOL"]
+    RS_volume = __J01.EXTR_TABLE().data["VOL"].tolist()
     RS_volume = RS_volume * len(liord)
 
     RS_contour = []
@@ -2301,12 +2302,12 @@ def post_jmod_ops(
 
             tcoorfisSup = __ncoorfisSup.EXTR_TABLE().NUME_ORDRE == dicLPfissSup["NUME_ORDRE"][0]
 
-            nbtfisSup = len(tcoorfisSup["NOEUD"].values()["NOEUD"])
-            xsfisSup = np.array(tcoorfisSup["COOR_X"].values()["COOR_X"][:nbtfisSup])
-            ysfisSup = np.array(tcoorfisSup["COOR_Y"].values()["COOR_Y"][:nbtfisSup])
+            nbtfisSup = len(tcoorfisSup.data["NOEUD"])
+            xsfisSup = np.array(tcoorfisSup.data["COOR_X"][:nbtfisSup].tolist())
+            ysfisSup = np.array(tcoorfisSup.data["COOR_Y"][:nbtfisSup].tolist())
             zsfisSup = np.zeros(nbtfisSup)
 
-            nsfisSup = tcoorfisSup["NOEUD"].values()["NOEUD"][:nbtfisSup]
+            nsfisSup = tcoorfisSup.data["NOEUD"][:nbtfisSup].tolist()
 
             l_coorfisSup = [
                 [nsfisSup[i], xsfisSup[i], ysfisSup[i], zsfisSup[i]] for i in range(nbtfisSup)
@@ -2356,12 +2357,12 @@ def post_jmod_ops(
 
             tcoorfisInf = __ncoorfisInf.EXTR_TABLE().NUME_ORDRE == dicLPfissInf["NUME_ORDRE"][0]
 
-            nbtfisInf = len(tcoorfisInf["NOEUD"].values()["NOEUD"])
-            xsfisInf = np.array(tcoorfisInf["COOR_X"].values()["COOR_X"][:nbtfisInf])
-            ysfisInf = np.array(tcoorfisInf["COOR_Y"].values()["COOR_Y"][:nbtfisInf])
+            nbtfisInf = len(tcoorfisInf.data["NOEUD"].tolist())
+            xsfisInf = np.array(tcoorfisInf.data["COOR_X"][:nbtfisInf].tolist())
+            ysfisInf = np.array(tcoorfisInf.data["COOR_Y"][:nbtfisInf].tolist())
             zsfisInf = np.zeros(nbtfisInf)
 
-            nsfisInf = tcoorfisInf["NOEUD"].values()["NOEUD"][:nbtfisInf]
+            nsfisInf = tcoorfisInf.data["NOEUD"][:nbtfisInf].tolist()
 
             l_coorfisInf = [
                 [nsfisInf[i], xsfisInf[i], ysfisInf[i], zsfisInf[i]] for i in range(nbtfisInf)
@@ -2613,7 +2614,7 @@ def post_jmod_ops(
 
             tcoorCrackTip = __ncoorCrackTip.EXTR_TABLE().NUME_ORDRE == dicLPfissSup["NUME_ORDRE"][0]
 
-            R_CrackTip = tcoorCrackTip["COOR_X"].values()["COOR_X"][0]
+            R_CrackTip = tcoorCrackTip.get_value("COOR_X", 0)
 
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # GET INSTANTS
@@ -2621,12 +2622,12 @@ def post_jmod_ops(
 
         if PropadirSup is not None:
             tinst = __ncoorfisSup.EXTR_TABLE().NUME_ORDRE == dicLPfissSup["NUME_ORDRE"]
-            tinst = tinst["INST"].values()["INST"]
+            tinst = tinst.data["INST"].tolist()
             l_inst = [tinst[i] for i in range(len(tinst)) if tinst[i] not in tinst[:i]]
 
         if (PropadirSup is None) and (PropadirInf is not None):
             tinst = __ncoorfisInf.EXTR_TABLE().NUME_ORDRE == dicLPfissInf["NUME_ORDRE"]
-            tinst = tinst["INST"].values()["INST"]
+            tinst = tinst.data["INST"].tolist()
             l_inst = [tinst[i] for i in range(len(tinst)) if tinst[i] not in tinst[:i]]
 
         liord = []
@@ -3036,7 +3037,7 @@ def post_jmod_ops(
                 )
             )
 
-            __J01_J = __J01.EXTR_TABLE().values()["INTE_X4"]
+            __J01_J = __J01.EXTR_TABLE().data["INTE_X4"].tolist()
 
             __J = -__J01_J[0]
 
@@ -3196,7 +3197,7 @@ def post_jmod_ops(
                 )
             )
 
-            __J02_J = __J02.EXTR_TABLE().values()["INTE_X16"]
+            __J02_J = __J02.EXTR_TABLE().data["INTE_X16"].tolist()
 
             __J = __J + __J02_J[0]
 
@@ -3434,7 +3435,7 @@ def post_jmod_ops(
                         )
                     )
 
-                    __IJ03_J = __J03.EXTR_TABLE().values()["INTE_X6"]
+                    __IJ03_J = __J03.EXTR_TABLE().data["INTE_X6"].tolist()
 
                     if IEPSCOMP == "EPXY":
                         __IJ03_J = [iJ03 * 2.0 for iJ03 in __IJ03_J]
@@ -3798,7 +3799,7 @@ def post_jmod_ops(
                         )
                     )
 
-                    __IJ04_J = __J04.EXTR_TABLE().values()["INTE_X6"]
+                    __IJ04_J = __J04.EXTR_TABLE().data["INTE_X6"].tolist()
 
                     if IEPSCOMP == "EPXY":
                         __IJ04_J = [iJ04 * 2.0 for iJ04 in __IJ04_J]
@@ -4015,7 +4016,7 @@ def post_jmod_ops(
                     )
                 )
 
-                __J05_J = __J05.EXTR_TABLE().values()["INTE_X5"]
+                __J05_J = __J05.EXTR_TABLE().data["INTE_X5"].tolist()
 
                 __J = __J - __J05_J[0]
 
@@ -4106,7 +4107,7 @@ def post_jmod_ops(
                     )
                 )
 
-                __J06_J = __J06.EXTR_TABLE().values()["INTE_X5"]
+                __J06_J = __J06.EXTR_TABLE().data["INTE_X5"].tolist()
 
                 __J = __J + __J06_J[0]
 
@@ -4174,7 +4175,7 @@ def post_jmod_ops(
                     )
                 )
 
-                __J07_J = __J07.EXTR_TABLE().values()["INTE_X3"]
+                __J07_J = __J07.EXTR_TABLE().data["INTE_X3"].tolist()
 
                 __J = __J - __J07_J[0]
 

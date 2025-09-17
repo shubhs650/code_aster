@@ -142,11 +142,11 @@ class OAR_EF:
         }
         for cles in contraintes:
             try:
-                contraintes[cles] = np.array(macrocr.values()[cles])
+                contraintes[cles] = np.array(macrocr.data[cles].tolist())
             except:
                 # cas axisymétriques : certaines composantes peuvent manquer.
                 # on les remplace alors par des listes nulles.
-                contraintes[cles] = np.zeros(len(macrocr.values()["ABSC_CURV"]))
+                contraintes[cles] = np.zeros(len(macrocr.data["ABSC_CURV"]))
         return contraintes
 
     def temperatures_azim(self, macroc, azimut, instant):
@@ -154,7 +154,7 @@ class OAR_EF:
         pour un azimut (intitulé) à un instant donné"""
         macroreduit = macroc.INST == instant
         macrocr = macroreduit.INTITULE == azimut
-        temperatures = np.array(macrocr.values()["TEMP"])
+        temperatures = np.array(macrocr.data["TEMP"].tolist())
         return temperatures
 
     def ecrire_preambule(self, f):

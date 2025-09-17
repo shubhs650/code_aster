@@ -59,7 +59,7 @@ def nbr_inst_pts(table):
     RECUPERE LE NOMBRE D INSTANT (SANS DOUBLON) ET LE NOMBRE DE POINT PAR INSTANT
     """
 
-    table = np.array(table.EXTR_TABLE().values()["INST"])
+    table = np.array(table.EXTR_TABLE().data["INST"].tolist())
     ninst = len(set(table))
     npoints = table.shape[0] // ninst
 
@@ -130,16 +130,17 @@ def cart_cyl(table_meca):
                     À LA BASE CYLINDRIQUE
     """
     # Contrainte dans la base cartésienne
-    sixx_values = np.array(table_meca.EXTR_TABLE().values()["SIXX"])
-    siyy_values = np.array(table_meca.EXTR_TABLE().values()["SIYY"])
-    sizz_values = np.array(table_meca.EXTR_TABLE().values()["SIZZ"])
-    sixy_values = np.array(table_meca.EXTR_TABLE().values()["SIXY"])
-    sixz_values = np.array(table_meca.EXTR_TABLE().values()["SIXZ"])
-    siyz_values = np.array(table_meca.EXTR_TABLE().values()["SIYZ"])
+    table_meca_py = table_meca.EXTR_TABLE()
+    sixx_values = np.array(table_meca_py.data["SIXX"].tolist())
+    siyy_values = np.array(table_meca_py.data["SIYY"].tolist())
+    sizz_values = np.array(table_meca_py.data["SIZZ"].tolist())
+    sixy_values = np.array(table_meca_py.data["SIXY"].tolist())
+    sixz_values = np.array(table_meca_py.data["SIXZ"].tolist())
+    siyz_values = np.array(table_meca_py.data["SIYZ"].tolist())
 
     # Coordonnees
-    coorx_values = np.array(table_meca.EXTR_TABLE().values()["COOR_X"])
-    coory_values = np.array(table_meca.EXTR_TABLE().values()["COOR_Y"])
+    coorx_values = np.array(table_meca_py.data["COOR_X"].tolist())
+    coory_values = np.array(table_meca_py.data["COOR_Y"].tolist())
 
     # r, cos(theta), sin(theta) et sin(theta)cos(theta)
     r = np.sqrt(coorx_values**2 + coory_values**2)
@@ -204,7 +205,7 @@ def calc_coef_poly(eps_mdb, eps_rev, ori_fiss, table_meca, ndim, ninst, npoints)
     if npoints != 5:
         UTMESS("F", "PREPOST_6", vali=npoints)
 
-    abs_curv = np.array(table_meca.EXTR_TABLE().values()["ABSC_CURV"])
+    abs_curv = np.array(table_meca.EXTR_TABLE().data["ABSC_CURV"].tolist())
     coef = (eps_rev + abs_curv[0:npoints]) / (eps_rev + eps_mdb)
 
     # Matrice pour résoudre les systèmes linéaires
@@ -317,11 +318,11 @@ def recup_temp(table_ther, table_meca):
                  POUR CHAQUE INSTANT MÉCANIQUE
     """
     ninst, npoints = nbr_inst_pts(table_ther)
-    table_ther = np.array(tuple(table_ther.EXTR_TABLE().values()[i] for i in ("INST", "TEMP")))
+    table_ther = np.array(tuple(table_ther.EXTR_TABLE().data[i].tolist() for i in ("INST", "TEMP")))
     table_ther = table_ther.reshape(2, ninst, npoints).T
 
     # Recuperation des instants mécanique sans doublon
-    table_meca_instant = np.array(table_meca.EXTR_TABLE().values()["INST"])
+    table_meca_instant = np.array(table_meca.EXTR_TABLE().data["INST"].tolist())
     _, unique_indices = np.unique(table_meca_instant, return_index=True)
     table_meca_instant = table_meca_instant[np.sort(unique_indices)]
 

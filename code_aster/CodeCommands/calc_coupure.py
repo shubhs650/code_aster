@@ -245,14 +245,12 @@ class CalcCoupure(object):
                 d_res = {}
                 for k, i in enumerate(L_CMP_RESU):
                     d_res[i] = ar[k].tolist()
-                d_res["NOM"] = [coupure.nom for i in range(self.nrank)]
+                d_res["NOM"] = [coupure.nom for _ in range(self.nrank)]
                 for para_rank in self.l_para_rank:
                     d_res[para_rank] = self.resultat.getAccessParameters().get(para_rank)
                 # on transforme le dictionnaire de list en liste de dictionnaires
                 # chaque dictionnaire correspond a une ligne du tableau
-                l_line = [dict(zip(d_res, t)) for t in zip(*d_res.values())]
-                for line in l_line:
-                    self.tab_resu.append(line)
+                self.tab_resu.extend([dict(zip(d_res, t)) for t in zip(*d_res.values())])
             self._calc_tout = self.tab_resu.dict_CREA_TABLE()
             self._calc_tout = CREA_TABLE(TYPE_TABLE="TABLE", **self.calcTout())
         return self._calc_tout
@@ -721,7 +719,7 @@ class CalcCoupureModSpec(CalcCoupure, ModSpec):
         Results:
             CalcModaleUnitaire object: modal-spectral analysis of a given component of the given 'coupure'
         """
-        val_mod = np.array((self.extrPyTable().NOM == nom_coupure)[cmp].values()[cmp])
+        val_mod = np.array((self.extrPyTable().NOM == nom_coupure)[cmp].data[cmp].tolist())
         if self.mode_corr is None:
             val_stat = [0, 0, 0]
         else:
@@ -730,8 +728,8 @@ class CalcCoupureModSpec(CalcCoupure, ModSpec):
                     (
                         (self.setCoupureModeCorr().extrPyTable().NOM == nom_coupure)
                         & (self.setCoupureModeCorr().extrPyTable().NUME_MODE == i)
-                    )[cmp].values()[cmp][0]
-                    for i in [1, 2, 3]
+                    )[cmp].get_value(cmp, 0)
+                    for i in (1, 2, 3)
                 ]
             )
         return CalcModaleUnitaire(self, val_mod, val_stat)

@@ -268,8 +268,8 @@ TAB_U = POST_RELEVE_T(
 )
 
 
-lF = FORCE.EXTR_TABLE().values()["DY"]
-lU = TAB_U.EXTR_TABLE().values()["DY"]
+lF = FORCE.EXTR_TABLE().data["DY"].tolist()
+lU = TAB_U.EXTR_TABLE().data["DY"].tolist()
 
 f_vs_ouv = CREA_TABLE(LISTE=(_F(LISTE_R=lU, PARA="Deplacement"), _F(LISTE_R=lF, PARA="Force")))
 

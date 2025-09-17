@@ -341,8 +341,8 @@ TBDEPL0 = CALC_TABLE(
     TABLE=TBDEPL10, ACTION=_F(OPERATION="FILTRE", NOM_PARA="ABSC_CURV", CRIT_COMP="EQ", VALE=0.0)
 )
 
-lF0 = TBREAC0.EXTR_TABLE().values()["DY"]
-lD0 = TBDEPL0.EXTR_TABLE().values()["DY"]
+lF0 = TBREAC0.EXTR_TABLE().data["DY"].tolist()
+lD0 = TBDEPL0.EXTR_TABLE().data["DY"].tolist()
 
 lF0 = [i * -b for i in lF0]
 lD0 = [i * -1000.0 for i in lD0]
@@ -443,8 +443,8 @@ TBDEPL = CALC_TABLE(
     TABLE=TBDEPL1, ACTION=_F(OPERATION="FILTRE", NOM_PARA="ABSC_CURV", CRIT_COMP="EQ", VALE=0.0)
 )
 
-lF = TBREAC.EXTR_TABLE().values()["DY"]
-lD = TBDEPL.EXTR_TABLE().values()["DY"]
+lF = TBREAC.EXTR_TABLE().data["DY"].tolist()
+lD = TBDEPL.EXTR_TABLE().data["DY"].tolist()
 
 lF = [i * -b for i in lF]
 lD = [i * -1000.0 for i in lD]

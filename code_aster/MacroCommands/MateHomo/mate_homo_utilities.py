@@ -460,7 +460,7 @@ def cross_work(RESU1, RESU2, INST, ls_group_tout):
         CHAM_GD=CH1, INST=INST, MODELE=MOD, CHAM_MATER=CHMAT, ENER_POT=_F(GROUP_MA=ls_group_tout)
     )
 
-    epot_ch1 = abs(sum(EPOT_CH1.EXTR_TABLE().values()["TOTALE"]))
+    epot_ch1 = abs(EPOT_CH1.EXTR_TABLE().data["TOTALE"].sum().item())
 
     if RESU1 is RESU2:
         work = 2 * epot_ch1
@@ -481,7 +481,7 @@ def cross_work(RESU1, RESU2, INST, ls_group_tout):
             CHAM_MATER=CHMAT,
             ENER_POT=_F(GROUP_MA=ls_group_tout),
         )
-        epot_ch2 = abs(sum(EPOT_CH2.EXTR_TABLE().values()["TOTALE"]))
+        epot_ch2 = abs(EPOT_CH2.EXTR_TABLE().data["TOTALE"].sum().item())
 
         EPOT_SOMME = POST_ELEM(
             CHAM_GD=CH1 + CH2,
@@ -490,7 +490,7 @@ def cross_work(RESU1, RESU2, INST, ls_group_tout):
             CHAM_MATER=CHMAT,
             ENER_POT=_F(GROUP_MA=ls_group_tout),
         )
-        epot_chsomme = abs(sum(EPOT_SOMME.EXTR_TABLE().values()["TOTALE"]))
+        epot_chsomme = abs(EPOT_SOMME.EXTR_TABLE().data["TOTALE"].sum().item())
 
         work = epot_chsomme - epot_ch1 - epot_ch2
 

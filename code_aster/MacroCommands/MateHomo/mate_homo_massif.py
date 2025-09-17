@@ -414,11 +414,11 @@ def calc_loimel_massif(DEPLMATE, ls_group_tout):
 
     out = {}
     out["LAME1"], out["LAME2"], out["ALPHA3K"] = [
-        LAME_INTE.EXTR_TABLE().values()[key] for key in ("INTE_X1", "INTE_X2", "INTE_X3")
+        LAME_INTE.EXTR_TABLE().data[key].tolist() for key in ("INTE_X1", "INTE_X2", "INTE_X3")
     ]
 
     out["RHO"], out["RHO_CP"], out["LAMBDA_THER"] = [
-        MATE_INTE.EXTR_TABLE().values()[key] for key in ("INTE_RHO", "INTE_RHO_CP", "INTE_LAMBDA")
+        MATE_INTE.EXTR_TABLE().data[key].tolist() for key in ("INTE_RHO", "INTE_RHO_CP", "INTE_LAMBDA")
     ]
 
     return out

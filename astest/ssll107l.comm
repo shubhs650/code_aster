@@ -30,8 +30,8 @@ TCARA = MACR_CARA_POUTRE(
 NomCarac = ["ALPHA", "EY", "EZ", "IY", "IZ", "AY", "AZ", "RY", "RZ", "IYR2", "IZR2"]
 vale_refe = {1: {}, 2: {}, 3: {}, 4: {}}
 TabTmp = TCARA.EXTR_TABLE()
-for ii in range(len(TabTmp.rows)):
-    ligne = TabTmp.rows[ii]
+for ii in range(len(TabTmp)):
+    ligne = TabTmp.data[ii]
     if ligne["LIEU"] == nom:
         for inom in NomCarac:
             vale_refe[2][inom] = ligne[inom]
@@ -102,8 +102,8 @@ for iqua in [1, 2, 3, 4]:
     # Les valeurs calculées dans le quadrant "iqua"
     TabTmp = TCARA.EXTR_TABLE()
     vale_calc = {}
-    for ii in range(len(TabTmp.rows)):
-        ligne = TabTmp.rows[ii]
+    for ii in range(len(TabTmp)):
+        ligne = TabTmp.data[ii]
         if ligne["LIEU"] == nom:
             for inom in NomCarac:
                 vale_calc[inom] = ligne[inom]

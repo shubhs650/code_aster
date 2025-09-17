@@ -428,7 +428,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             #
             #     Conversion table_sdaster > table langage Python
             tab_conv = __TABDIR.EXTR_TABLE()
-            table_vit = tab_conv.VIT.values()
+            table_vit = tab_conv.data["VIT"].tolist()
             #
             #     cas d'un fond unique
             TABLE_VIT[numfis] = table_vit
@@ -445,8 +445,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             # il est necessaire d avoir MATER mais on ne l a pas on s en passe
             tab_sif = __SIF2.EXTR_TABLE()
             # On convertit en radians pour beta
-            table_temp = tab_sif.BETA.values()
-            table_beta = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
+            table_beta = (tab_sif.data["BETA"] * pi / 180.0).tolist()
             # si seulement deux points, alors cas test extrude
             # donc on considere l angle uniforme
             # (temporaire car cas 2d non implemente pour X-FEM cohesif)
@@ -457,13 +456,13 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             # fin de l etape de lissage
             # On convertit en radians egalement pour gamma
             if "GAMMA" in tab_sif.para:
-                table_temp = tab_sif.GAMMA.values()
+                table_temp = tab_sif.data["GAMMA"].tolist()
                 table_gamma = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
             n = len(table_beta)
             #
             #     debut bloc de conversion de la table
             if "ABSC_CURV" in tab_sif.para:
-                absc = tab_sif.ABSC_CURV.values()
+                absc = tab_sif.data["ABSC_CURV"].tolist()
                 presence_colonne_absc = True
             else:
                 #       si la colonne ABSC_CURV n'existe pas, les abscisses curvilignes
@@ -523,14 +522,14 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             if ("K1" or "G" or "K2") not in __tabsif.para:
                 UTMESS("F", "RUPTURE1_44")
 
-            __table = __tabsif.values()
+            __table = __tabsif.data
 
-            if min(__table["G"]) < 0.0:
+            if __tabsif.get_min_by_column("G") < 0.0:
                 UTMESS("F", "RUPTURE1_46")
 
             # Verification que le calcul porte sur seulement un instant
             if "INST" in __tabsif.para:
-                inst_tab = __tabsif["INST"].values()["INST"]
+                inst_tab = __tabsif.data["INST"].tolist()
                 l_inst_tab = set(inst_tab)
                 if len(l_inst_tab) > 1:
                     UTMESS("F", "XFEM2_70", valk=fiss0.getName())
@@ -542,7 +541,8 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             if (
                 "NUME_FOND" in __tabsif.para
                 and (
-                    max(__table["NUME_FOND"]) != Nbfond or len(set(__table["NUME_FOND"])) != Nbfond
+                    __tabsif.get_max_by_column("NUME_FOND") != Nbfond
+                    or len(NP.unique(__table["NUME_FOND"])) != Nbfond
                 )
             ) or ("NUME_FOND" not in __tabsif.para and Nbfond != 1):
                 UTMESS("A", "XFEM_42", valk=fiss0.getName())
@@ -550,7 +550,9 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             # Calcul des angles de bifurcation, des avancees et du nombre de cycles
 
             #     copie de SIF
-            __COPIE_SIF = CALC_TABLE(TABLE=SIF, ACTION=_F(OPERATION="EXTR", NOM_PARA=__tabsif.para))
+            __COPIE_SIF = CALC_TABLE(
+                TABLE=SIF, ACTION=_F(OPERATION="EXTR", NOM_PARA=__tabsif.para)
+            )
 
             #     beta et gamma
             if not "BETA" in __tabsif.para and CRITERE_ANGLE in (
@@ -632,7 +634,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
                 tab_cumul = __TAB_CUMUL[numfis].EXTR_TABLE()
 
                 #         recuperation des vitesses Da/Dt et des angles de bifurcation beta
-                table_vit = tab_cumul.DELTA_A.values()
+                table_vit = tab_cumul.data["DELTA_A"].tolist()
             else:
                 __COPIE_SIF = POST_RUPTURE(
                     TABLE=__COPIE_SIF,
@@ -645,28 +647,24 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
                 tab_cumul = __COPIE_SIF.EXTR_TABLE()
 
             if CRITERE_ANGLE not in ["ANGLE_IMPO", "ANGLE_IMPO_GAMMA", "ANGLE_IMPO_BETA_GAMMA"]:
-                table_temp = tab_cumul.ANGLE_BETA.values()
-                table_beta = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
+                table_beta = (tab_cumul.data["ANGLE_BETA"] * pi / 180.0).tolist()
                 if calc_gamma:
-                    table_temp = tab_cumul.ANGLE_GAMMA.values()
-                    table_gamma = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
+                    table_gamma = (tab_cumul.data["ANGLE_GAMMA"] * pi / 180.0).tolist()
 
             elif CRITERE_ANGLE == "ANGLE_IMPO":
-                table_beta = __tabsif.BETA.values()
+                table_beta = __tabsif.data["BETA"].tolist()
                 if calc_gamma:
-                    table_temp = tab_cumul.ANGLE_GAMMA.values()
-                    table_gamma = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
+                    table_gamma = (tab_cumul.data["ANGLE_GAMMA"] * pi / 180.0).tolist()
                 else:
                     table_gamma = None
 
             elif CRITERE_ANGLE == "ANGLE_IMPO_GAMMA":
-                table_gamma = __tabsif.GAMMA.values()
-                table_temp = tab_cumul.ANGLE_BETA.values()
-                table_beta = [table_temp[i] * pi / 180.0 for i in range(len(table_temp))]
+                table_gamma = __tabsif.data["GAMMA"].tolist()
+                table_beta = (tab_cumul.data["ANGLE_BETA"] * pi / 180.0).tolist()
 
             elif CRITERE_ANGLE == "ANGLE_IMPO_BETA_GAMMA":
-                table_beta = __tabsif.BETA.values()
-                table_gamma = __tabsif.GAMMA.values()
+                table_beta = __tabsif.data["BETA"].tolist()
+                table_gamma = __tabsif.data["GAMMA"].tolist()
 
             n = len(table_beta)
             if OPERATION == "PROPA_COHESIF":
@@ -692,7 +690,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
                 #       par interpolation lineaire
                 if Fiss.get("NB_POINT_FOND") is not None:
                     if "ABSC_CURV" in tab_cumul.para:
-                        absc = tab_cumul.ABSC_CURV.values()
+                        absc = tab_cumul.data["ABSC_CURV"].tolist()
                         presence_colonne_absc = True
                     else:
                         #           si la colonne ABSC_CURV n'existe pas, les abscisses curvilignes
@@ -702,7 +700,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
 
                     if "NUME_FOND" in tab_cumul.para:
                         #             cas d'un fond multiple
-                        tab_nume_fond = tab_cumul.NUME_FOND.values()
+                        tab_nume_fond = tab_cumul.data["NUME_FOND"].tolist()
                         list_nume_fond = list(set(tab_nume_fond))
 
                         if calc_gamma:
@@ -758,7 +756,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
             # Si METHODE_PROPA=='MAILLAGE'
             else:
                 if "ABSC_CURV" in tab_cumul.para:
-                    absc = tab_cumul.ABSC_CURV.values()
+                    absc = tab_cumul.data["ABSC_CURV"].tolist()
                 else:
                     # si modele 3D: il faut necessairement la colonne
                     # 'ABSC_CURV'
@@ -769,7 +767,7 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
 
                 if "NUME_FOND" in tab_cumul.para:
                     #           cas d'un fond multiple
-                    tab_nume_fond = tab_cumul.NUME_FOND.values()
+                    tab_nume_fond = tab_cumul.data["NUME_FOND"].tolist()
                     list_nume_fond = list(set(tab_nume_fond))
 
                     for fond_i in list_nume_fond:
@@ -817,7 +815,9 @@ def propa_fiss_ops(self, METHODE_PROPA, INFO, **args):
                 DELTA_A_MAX=Damax,
             )
 
-            NBCYCLE = __TAB_PILO.EXTR_TABLE().DELTA_CYCLE.values()[0]
+            NBCYCLE = __TAB_PILO.EXTR_TABLE().data["DELTA_CYCLE"][0]
+            if NP.ma.is_masked(NBCYCLE):
+                NBCYCLE = None
 
     #
     # PROPAGATION

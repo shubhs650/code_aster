@@ -183,8 +183,8 @@ IMPR_FONCTION( FORMAT = 'XMGRACE',
                COURBE = (_F( LEGENDE = 'SIGMA-EPSI',
                              MARQUEUR = 0,
                              FREQ_MARQUEUR = 2,
-                             ABSCISSE = deformation.values()['DX_ECH'],
-                             ORDONNEE = contrainte.values()['SIXX_ECH'],),),)
+                             ABSCISSE = deformation.data['DX_ECH'].tolist(),
+                             ORDONNEE = contrainte.data['SIXX_ECH'].tolist(),),),)
 DEFI_FICHIER( ACTION = 'LIBERER', UNITE = 33)
 """
 

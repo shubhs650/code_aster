@@ -55,7 +55,7 @@ def verif_un_instant(tabin, OPERATION, COMPTAGE):
     # si NUME_ORDRE est present dans la table
     if "NUME_ORDRE" in tabin.para:
         # récupération de la liste des NUME_ORDRE dans un ensemble (set)
-        s = set(tabin.NUME_ORDRE.values())
+        s = set(tabin.data["NUME_ORDRE"].tolist())
         n = len(s)
         if n > 1:
             UTMESS("F", "RUPTURE1_64", valk=(COMPTAGE, tabin.getName()), vali=n)
@@ -63,7 +63,7 @@ def verif_un_instant(tabin, OPERATION, COMPTAGE):
     # si INST est present dans la table
     if "INST" in tabin.para:
         # récupération de la liste des INST dans un ensemble (set)
-        s = set(tabin.INST.values())
+        s = set(tabin.data["INST"].tolist())
         n = len(s)
         if n > 1:
             UTMESS("F", "RUPTURE1_64", valk=(COMPTAGE, tabin.getName()), vali=n)
@@ -71,7 +71,7 @@ def verif_un_instant(tabin, OPERATION, COMPTAGE):
 
 def verif_exi(tabin, col):
     """verification que la colonne col existe"""
-    if not col in tabin.para:
+    if col not in tabin.para:
         UTMESS("F", "RUPTURE1_59", valk=(tabin.getName(), col))
 
 
@@ -277,7 +277,7 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
 
         if "NUME_FOND" in tabin.para:
             # recuperation des numeros des fonds
-            contenu_nume_fond = tabin.NUME_FOND.values()
+            contenu_nume_fond = tabin.data["NUME_FOND"].tolist()
             nume_fond = list(set(contenu_nume_fond))
 
             max_absc_fond = []
@@ -285,7 +285,7 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
             for i, fond_i in enumerate(nume_fond):
                 # abscisse curviligne maximale pour le fond 'fond_i'
                 tab_fond_i = tabin.NUME_FOND == fond_i
-                max_absc_fond.append(max(tab_fond_i.ABSC_CURV.values()))
+                max_absc_fond.append(tab_fond_i.get_max_by_column("ABSC_CURV"))
 
             const_context = {
                 "max_absc_fond": max_absc_fond,
@@ -306,7 +306,7 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
             )
         else:
             # récupération de l'abscisse maximale et ajout dans l'environnement
-            smax = max(tabin.ABSC_CURV.values())
+            smax = tabin.get_max_by_column("ABSC_CURV")
 
             __NORM_ABS = FORMULE(NOM_PARA=("ABSC_CURV"), VALE="ABSC_CURV/smax", smax=smax)
 
@@ -637,13 +637,13 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
                 )
 
             tabin = __COPIE_TABIN.EXTR_TABLE()
-            contenu_nume_fond = tabin.NUME_FOND.values()
+            contenu_nume_fond = tabin.data["NUME_FOND"].tolist()
             nume_fond = list(set(contenu_nume_fond))
 
             for j, fond_j in enumerate(nume_fond):
                 # récupération du num_pt maximale pour le fond 'fond_j'
                 tab_fond_j = tabin.NUME_FOND == fond_j
-                nbpt = max(tab_fond_j.NUM_PT.values())
+                nbpt = tab_fond_j.get_max_by_column("NUM_PT")
 
                 # boucle sur les points du fond de fissure du fond 'fond_i'
                 for ipt in range(nbpt):
@@ -679,11 +679,15 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
                         )
 
                         if i == 0:
-                            nb_cycles_ref = __TABC[i].EXTR_TABLE().CYCLE.values()[-1]
+                            nb_cycles_ref = __TABC[i].EXTR_TABLE().data["CYCLE"][-1]
+                            if NP.ma.is_masked(nb_cycles_ref):
+                                nb_cycles_ref = None
                         else:
                             # verif que l'on a bien le meme nb de cycles que la
                             # 1ere quantité
-                            nb_cycles_i = __TABC[i].EXTR_TABLE().CYCLE.values()[-1]
+                            nb_cycles_i = __TABC[i].EXTR_TABLE().data["CYCLE"][-1]
+                            if NP.ma.is_masked(nb_cycles_i):
+                                nb_cycles_i = None
                             if nb_cycles_ref != nb_cycles_i:
                                 UTMESS("F", "RUPTURE1_61")
 
@@ -790,14 +794,14 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
             tabin["NUME_FOND"] = [1] * len(tabin)
         if "NUM_PT" not in tabin.para:
             tabin["NUM_PT"] = [1] * len(tabin)
-        contenu_nume_fond = tabin.NUME_FOND.values()
+        contenu_nume_fond = tabin.data["NUME_FOND"].tolist()
         nume_fond = list(set(contenu_nume_fond))
 
         for i, fond_i in enumerate(nume_fond):
             tab_fond_i = tabin.NUME_FOND == fond_i
 
             # récupération du num_pt maximale pour le fond 'fond_i'
-            nbpt = max(tab_fond_i.NUM_PT.values())
+            nbpt = tab_fond_i.get_max_by_column("NUM_PT")
 
             # boucle sur les points du fond de fissure
             for ipt in range(nbpt):
@@ -815,7 +819,7 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
 
                 # rajout de la derniere colonne : moyenne des valeurs
                 l_para.append(q)
-                da_cycle = NP.array(tab.values()[q])
+                da_cycle = NP.array(tab.data[q].tolist())
                 moy = da_cycle.mean()
                 l_vale.append(moy)
 
@@ -862,10 +866,7 @@ def post_rupture_ops(self, TABLE, OPERATION, **args):
         if DAmax_pilo:
             # récupération de l'avancee max des points des fonds pour toutes
             # les fissures
-            damax = 0
-            for tab_i in l_tabin:
-                damax = max(damax, max(tab_i.DELTA_A.values()))
-
+            damax = max(0, max(tab_i.get_max_by_column("DELTA_A") for tab_i in l_tabin))
             # increment de cycles pilo
             DN_pilo = DAmax_pilo / damax
 

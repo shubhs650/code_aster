@@ -38,28 +38,28 @@ p = "AAA"
 print("<<< TRI sur %s >>>" % p)
 t.sort(p)
 print(t)
-print(t.rows)
-assert t.rows[0][p] == 3
-assert t.rows[1][p] == 3
-assert t.rows[2][p] == 5
+print(t.data)
+assert t.data[0][p] == 3
+assert t.data[1][p] == 3
+assert t.data[2][p] == 5
 
 p = "BBB"
 print("<<< TRI sur %s >>>" % p)
 t.sort(p)
 print(t)
-print(t.rows)
-assert t.rows[0].get(p) is None
-assert t.rows[1][p] == 7
-assert t.rows[2][p] == 9
+print(t.data)
+assert t.get_value(p, 0) is None
+assert t.data[1][p] == 7
+assert t.data[2][p] == 9
 
 p = "AAA"
 print("<<< TRI sur %s >>>" % p)
 t.sort(p)
 print(t)
-print(t.rows)
-assert t.rows[0][p] == 3
-assert t.rows[1][p] == 3
-assert t.rows[2][p] == 5
+print(t.data)
+assert t.data[0][p] == 3
+assert t.data[1][p] == 3
+assert t.data[2][p] == 5
 
 # vérification de l'impression en utilisant les formats de customisation
 IMPR_TABLE(

@@ -2955,7 +2955,7 @@ def defi_sol_equi_ops(self, INFO=None, **args):
             __accxcla = POST_DYNA_ALEA(
                 INTERSPECTRE=_F(INTE_SPEC=__DSP_CL, NUME_ORDRE_I=1, NUME_ORDRE_J=1, DUREE=TSM)
             )
-            maccxcl[0] = __accxcla.EXTR_TABLE().MAX_MOY[0] / 9.81
+            maccxcl[0] = __accxcla.EXTR_TABLE().get_value("MAX_MOY", 0) / 9.81
 
         else:
             for n in range(num_dime):
@@ -3268,7 +3268,7 @@ def defi_sol_equi_ops(self, INFO=None, **args):
                     __accxa = POST_DYNA_ALEA(
                         INTERSPECTRE=_F(INTE_SPEC=__DSP, NUME_ORDRE_I=1, NUME_ORDRE_J=1, DUREE=TSM)
                     )
-                    maccx = __accxa.EXTR_TABLE().MAX_MOY[0]
+                    maccx = __accxa.EXTR_TABLE().get_value("MAX_MOY", 0)
 
                     __gamf = CALC_FONCTION(EXTRACTION=_F(FONCTION=__gam[k], PARTIE="MODULE"))
 
@@ -3286,7 +3286,7 @@ def defi_sol_equi_ops(self, INFO=None, **args):
                     __gama = POST_DYNA_ALEA(
                         INTERSPECTRE=_F(INTE_SPEC=__DSP, NUME_ORDRE_I=1, NUME_ORDRE_J=1, DUREE=TSM)
                     )
-                    mgam = __gama.EXTR_TABLE().MAX_MOY[0]
+                    mgam = __gama.EXTR_TABLE().get_value("MAX_MOY", 0)
 
                 else:
                     __accxa = CALC_FONCTION(ABS=_F(FONCTION=__axa[k]))

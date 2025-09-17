@@ -152,8 +152,8 @@ def calc_precont_ops(
     for mcabl in CABLE_BP:
         __TCAB1 = RECU_TABLE(CO=mcabl, NOM_TABLE="CABLE_GL")
         table_cable = __TCAB1.EXTR_TABLE()
-        __adher = table_cable.ADHERENT.values()[0]
-        __typ_ma = table_cable.TYPE_MAILLE.values()[0]
+        __adher = table_cable.get_value("ADHERENT", 0)
+        __typ_ma = table_cable.get_value("TYPE_MAILLE", 0)
         typ_ma.append(__typ_ma)
         if ii == 0:
             adher = __adher
@@ -272,7 +272,7 @@ def calc_precont_ops(
                 __TCA0 = RECU_TABLE(CO=mcabl, NOM_TABLE="CABLE_BP")
                 __TCA2 = RECU_TABLE(CO=mcabl, NOM_TABLE="CABLE_GL")
                 col_nom_cable = __TCA0.EXTR_TABLE().NOM_CABLE
-                __typ_ma = __TCA2.EXTR_TABLE().TYPE_MAILLE.values()[0]
+                __typ_ma = __TCA2.EXTR_TABLE().get_value("TYPE_MAILLE", 0)
                 if __typ_ma.strip() == "SEG2":
                     set_GROUP_MA_I_SEG2.update(col_nom_cable.values())
                 elif __typ_ma.strip() == "SEG3":
@@ -600,19 +600,19 @@ def calc_precont_ops(
 
             for icable in range(nb_cable):
                 __typ_ancr = (
-                    table_cable.TYPE_ANCRAGE1.values()[icable],
-                    table_cable.TYPE_ANCRAGE2.values()[icable],
+                    table_cable.get_value("TYPE_ANCRAGE1", icable),
+                    table_cable.get_value("TYPE_ANCRAGE2", icable),
                 )
-                #                __typ_noeu = (table_cable.TYPE_NOEUD1.values()[
-                #                              icable], table_cable.TYPE_NOEUD2.values()[icable])
+                #                __typ_noeu = (table_cable.get_value("TYPE_NOEUD1", icable),
+                #                              table_cable.get_value("TYPE_NOEUD2", icable))
                 __nom_noeu = (
-                    table_cable.NOM_ANCRAGE1.values()[icable],
-                    table_cable.NOM_ANCRAGE2.values()[icable],
+                    table_cable.get_value("NOM_ANCRAGE1", icable),
+                    table_cable.get_value("NOM_ANCRAGE2", icable),
                 )
-                __tension = table_cable.TENSION.values()[icable]
-                __recul = table_cable.RECUL_ANCRAGE.values()[icable]
+                __tension = table_cable.get_value("TENSION", icable)
+                __recul = table_cable.get_value("RECUL_ANCRAGE", icable)
                 __recul_exists = __recul != 0
-                __sens = table_cable.SENS.values()[icable]
+                __sens = table_cable.get_value("SENS", icable)
 
                 actif = 0
                 ancr1_passif = 1

@@ -6689,7 +6689,7 @@ import json
 #
 modes_info = {}
 for i in range(nbmodes):
-    imod = modes_table.NUME_MODE[i]
+    imod = int(modes_table.NUME_MODE[i])
     modes_info[imod] = {
         "FREQ": modes_table.FREQ[i],
         "MASS_EFFE_UN": (

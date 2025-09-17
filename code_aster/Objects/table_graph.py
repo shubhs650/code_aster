@@ -533,7 +533,6 @@ class TraceTableau(TraceGraph):
                             "les valeurs sur la première liste d'abscisses."
                         )
             # objet TablePy
-            Tab = TablePy()
             # titre / sous-titre
             tit = []
             tit.extend([self.DicForm["ccom"] + " " + line for line in g.Titre])
@@ -544,15 +543,17 @@ class TraceTableau(TraceGraph):
                 tit.extend(
                     [self.DicForm["ccom"] + " " + leg for leg in g.Legendes[i].split(os.linesep)]
                 )
-            Tab.titr = self.DicForm["cfin"].join(tit)
+            titr = self.DicForm["cfin"].join(tit)
             # noms des paramètres/colonnes
-            Tab.para.append(g.Labels[0][0])
+            para = []
+            para.append(g.Labels[0][0])
             for i in range(g.NbCourbe):
                 for lab in g.Labels[i][1:]:
-                    Tab.para.append(lab)
+                    para.append(lab)
             # types
-            Tab.type = ["R"] * len(Tab.para)
+            tab_types = ["R"] * len(para)
             # lignes de la Table
+            rows = []
             dC0 = g.Courbe(0)
             for j in range(dC0["NbPts"]):
                 row = {}
@@ -564,7 +565,9 @@ class TraceTableau(TraceGraph):
                             row[dCi["LabOrd"][k]] = dCi["Ord"][k][j]
                         except IndexError:
                             row[dCi["LabOrd"][k]] = None
-                Tab.append(row)
+                rows.append(row)
+            # TODO: replace by a record array directly
+            Tab = TablePy(rows, para, tab_types, titr)
             Tab.Impr(FICHIER=self.NomFich[0], FORMAT="TABLEAU", dform=self.DicForm)
             # erreurs ?
             if msg:

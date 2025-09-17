@@ -197,7 +197,7 @@ def impr_acce_seisme_ops(self, **args):
         UTMESS("F", "SEISME_88")
 
     if "NOM_PARA" in tab_data.para:
-        lival = tab_data.values()["NOM_PARA"]
+        lival = tab_data.data["NOM_PARA"].tolist()
         lival = [val.strip() for val in lival]
         nb_tirage = len(lival)
         # dimension
@@ -208,9 +208,9 @@ def impr_acce_seisme_ops(self, **args):
         if dim < 2:
             raise Exception("Cas non prevu")
         nb_tirage = nb_tirage // dim
-        lifonc = tab_data.values()["FONCTION"]
+        lifonc = tab_data.data["FONCTION"].tolist()
     else:
-        lifonc = tab_data.values()["FONCTION"]
+        lifonc = tab_data.data["FONCTION"].tolist()
         nb_tirage = len(lifonc)
         dim = 1
 
@@ -359,24 +359,24 @@ def impr_acce_seisme_ops(self, **args):
                 NOCI_SEISME=_F(OPTION="INTE_ARIAS", FONCTION=__F_ACCE[ii], PESANTEUR=pesant)
             )
             tab = __intea.EXTR_TABLE()
-            inte_arias.extend(tab.values()["INTE_ARIAS"])
+            inte_arias.extend(tab.data["INTE_ARIAS"].tolist())
 
             __duree = INFO_FONCTION(
                 NOCI_SEISME=_F(OPTION="DUREE_PHAS_FORT", FONCTION=__F_ACCE[ii], PESANTEUR=pesant)
             )
             tab = __duree.EXTR_TABLE()
-            duree.extend(tab.values()["DUREE_PHAS_FORT"])
+            duree.extend(tab.data["DUREE_PHAS_FORT"].tolist())
 
             __cav = INFO_FONCTION(NOCI_SEISME=_F(FONCTION=__F_ACCE[ii], OPTION="VITE_ABSO_CUMU"))
             tab = __cav.EXTR_TABLE()
-            cav.extend(tab.values()["VITE_ABSO_CUMU"])
+            cav.extend(tab.data["VITE_ABSO_CUMU"].tolist())
 
             __maxi = INFO_FONCTION(NOCI_SEISME=_F(FONCTION=__F_ACCE[ii], OPTION="MAXI"))
             tab = __maxi.EXTR_TABLE()
-            dmaxi.extend(tab.values()["DEPL_MAX"])
-            vmaxi.extend(tab.values()["VITE_MAX"])
-            amaxi.extend(tab.values()["ACCE_MAX"])
-            asv.extend(tab.values()["ACCE_SUR_VITE"])
+            dmaxi.extend(tab.data["DEPL_MAX"].tolist())
+            vmaxi.extend(tab.data["VITE_MAX"].tolist())
+            amaxi.extend(tab.data["ACCE_MAX"].tolist())
+            asv.extend(tab.data["ACCE_SUR_VITE"].tolist())
 
         # impressions de tous les acceleros
 

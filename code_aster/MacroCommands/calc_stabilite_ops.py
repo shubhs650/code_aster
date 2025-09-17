@@ -19,6 +19,8 @@
 
 from numpy import *
 from numpy.linalg import *
+import numpy as np
+
 
 import aster
 from ..Objects.table_py import Table
@@ -42,11 +44,9 @@ def calc_stabilite_ops(self, **args):
 
     mnl = args["MODE_NON_LINE"]
     t_mnl = mnl.EXTR_TABLE()
-    nbord = len(t_mnl.rows)
+    nbord = len(t_mnl)
 
     rows_tab = []
-    t_res = Table(rows=rows_tab, para=t_mnl.para, typ=t_mnl.type, titr="Table extraite")
-
     if FILTRE:
         if FILTRE[0]["NUME_ORDRE"]:
             l_ordre = FILTRE[0]["NUME_ORDRE"]
@@ -56,11 +56,11 @@ def calc_stabilite_ops(self, **args):
             prec = FILTRE[0]["PRECISION"]
             l_ordre = []
             for i in range(nbord):
-                frequence = t_mnl["FREQUENCE"].values()["FREQUENCE"][i]
+                frequence = t_mnl.get_value("FREQUENCE", i)
                 if frequence > fmin - prec and frequence < fmax + prec:
-                    l_ordre.append(t_mnl["NUME_ORDRE"].values()["NUME_ORDRE"][i])
+                    l_ordre.append(t_mnl.get_value("NUME_ORDRE", i))
     else:
-        l_ordre = t_mnl["NUME_ORDRE"].values()["NUME_ORDRE"]
+        l_ordre = t_mnl.data["NUME_ORDRE"].tolist()
 
     recup_para = 0
     for num_ordr in l_ordre:
@@ -79,23 +79,23 @@ def calc_stabilite_ops(self, **args):
 
             t_choc = __choc.EXTR_TABLE()
 
-            typ = t_choc["TYPE_CHOC"].values()["TYPE_CHOC"]
-            alpha = t_choc["RIGI_NOR"].values()["RIGI_NOR"]
-            eta = t_choc["PARA_REGUL"].values()["PARA_REGUL"]
-            jeu = t_choc["JEU"].values()["JEU"]
-            noeud1 = t_choc["NOEUD_CHOC"].values()["NOEUD_CHOC"]
-            ncmp1 = t_choc["NOM_CMP_1"].values()["NOM_CMP_1"]
-            ncmp2 = t_choc["NOM_CMP_2"].values()["NOM_CMP_2"]
-            orig1 = t_choc["ORIG_OBST_X"].values()["ORIG_OBST_X"]
-            orig2 = t_choc["ORIG_OBST_Y"].values()["ORIG_OBST_Y"]
-            orig3 = t_choc["ORIG_OBST_Z"].values()["ORIG_OBST_Z"]
+            typ = t_choc.data["TYPE_CHOC"].tolist()
+            alpha = t_choc.data["RIGI_NOR"].tolist()
+            eta = t_choc.data["PARA_REGUL"].tolist()
+            jeu = t_choc.data["JEU"].tolist()
+            noeud1 = t_choc.data["NOEUD_CHOC"].tolist()
+            ncmp1 = t_choc.data["NOM_CMP_1"].tolist()
+            ncmp2 = t_choc.data["NOM_CMP_2"].tolist()
+            orig1 = t_choc.data["ORIG_OBST_X"].tolist()
+            orig2 = t_choc.data["ORIG_OBST_Y"].tolist()
+            orig3 = t_choc.data["ORIG_OBST_Z"].tolist()
 
-            nchoc = len(t_choc.rows)
+            nchoc = len(t_choc)
             recup_para = 1
 
-        t_freq = t_mnl["FREQUENCE"].values()["FREQUENCE"]
-        t_ordre = t_mnl["NUME_ORDRE"].values()["NUME_ORDRE"]
-        t_modes = t_mnl["NB_COEF_FOURIER"].values()["NB_COEF_FOURIER"]
+        t_freq = t_mnl.data["FREQUENCE"].tolist()
+        t_ordre = t_mnl.data["NUME_ORDRE"].tolist()
+        t_modes = t_mnl.data["NB_COEF_FOURIER"].tolist()
         for ilig in range(len(t_ordre)):
             if t_ordre[ilig] == num_ordr:
                 freq = t_freq[ilig]
@@ -168,18 +168,17 @@ def calc_stabilite_ops(self, **args):
             info,
         )
 
-        i = t_mnl["NUME_ORDRE"].values()["NUME_ORDRE"].index(num_ordr)
+        i = np.where(t_mnl.data["NUME_ORDRE"] == num_ordr)[0][0]
         if stab:
-            t_mnl.rows[i]["STABILITE"] = "STABLE"
+            t_mnl.data[i]["STABILITE"] = "STABLE"
         else:
-            t_mnl.rows[i]["STABILITE"] = "INSTABLE"
-        t_res.rows.append(t_mnl.rows[i])
+            t_mnl.data[i]["STABILITE"] = "INSTABLE"
+        rows_tab.append(t_mnl.get_row_values(i))
     if args.get("reuse") is not None:
         # surcharge de la table
-        t_res.rows = []
-        for i in range(nbord):
-            t_res.rows.append(t_mnl.rows[i])
+        rows_tab = [t_mnl.get_row_values(i) for i in range(nbord)]
 
+    t_res = Table(rows=rows_tab, para=t_mnl.para, typ=t_mnl.type, titr="Table extraite")
     tab = t_res.dict_CREA_TABLE()
     t_resu = CREA_TABLE(TYPE_TABLE="TABLE_CONTAINER", **tab)
     # the TABLE is declared as reused but this is not supported by table_container objects

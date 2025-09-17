@@ -113,7 +113,7 @@ def post_decollement_ops(self, RESULTAT, NOM_CHAM, NOM_CMP, GROUP_MA, INFO, **ar
         INTEGRALE=_F(NOM_CHAM="VARI_ELGA", NOM_CMP="X1", GROUP_MA=GROUP_MA, TYPE_MAILLE="2D"),
     )
 
-    __surf = __tbSurf0.EXTR_TABLE().values()["INTE_X1"][0]
+    __surf = __tbSurf0.EXTR_TABLE().get_value("INTE_X1", 0)
 
     __linst = aster.GetResu(RESULTAT.getName(), "VARI_ACCES")["INST"]
 
@@ -139,11 +139,11 @@ def post_decollement_ops(self, RESULTAT, NOM_CHAM, NOM_CMP, GROUP_MA, INFO, **ar
             )
         )
 
-        __col = fctZeroUn(__tb1.EXTR_TABLE().values()[NOM_CMP])
+        __col = fctZeroUn(__tb1.EXTR_TABLE().data[NOM_CMP].tolist())
 
         __tb2 = CREA_TABLE(
             LISTE=(
-                _F(LISTE_K=__tb1.EXTR_TABLE().values()["NOEUD"], PARA="NOEUD"),
+                _F(LISTE_K=__tb1.EXTR_TABLE().data["NOEUD"].tolist(), PARA="NOEUD"),
                 _F(LISTE_R=__col, PARA="X1"),
             )
         )
@@ -169,7 +169,7 @@ def post_decollement_ops(self, RESULTAT, NOM_CHAM, NOM_CMP, GROUP_MA, INFO, **ar
             INTEGRALE=_F(NOM_CHAM="VARI_ELGA", NOM_CMP="X1", GROUP_MA=GROUP_MA, TYPE_MAILLE="2D"),
         )
 
-        __su2 = __tb3.EXTR_TABLE().values()["INTE_X1"][0]
+        __su2 = __tb3.EXTR_TABLE().get_value("INTE_X1", 0)
 
         __pct.append(100.0 * __su2 / __surf)
 

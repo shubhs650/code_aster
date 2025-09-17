@@ -190,14 +190,14 @@ IMPR_FONCTION( FORMAT = 'XMGRACE',
                LEGENDE_X = 'Deformation [MPa]',
                LEGENDE_Y = 'Contrainte [1e-3]',
                COURBE = (_F( LEGENDE = 'SIGMA-XX',
-                             ABSCISSE = deformation.values()['EPXX_ECH'],
-                             ORDONNEE = contrainte.values()['SIXX_ECH']),
+                             ABSCISSE = deformation.data['EPXX_ECH'].tolist(),
+                             ORDONNEE = contrainte.data['SIXX_ECH'].tolist()),
                          _F( LEGENDE = 'SIGMA-YY',
-                             ABSCISSE = deformation.values()['EPXX_ECH'],
-                             ORDONNEE = contrainte.values()['SIYY_ECH']),
+                             ABSCISSE = deformation.data['EPXX_ECH'].tolist(),
+                             ORDONNEE = contrainte.data['SIYY_ECH'].tolist()),
                          _F( LEGENDE = 'SIGMA-XY',
-                             ABSCISSE = deformation.values()['EPXX_ECH'],
-                             ORDONNEE = contrainte.values()['SIXY_ECH']),),)
+                             ABSCISSE = deformation.data['EPXX_ECH'].tolist(),
+                             ORDONNEE = contrainte.data['SIXY_ECH'].tolist()),),)
 DEFI_FICHIER( ACTION = 'LIBERER', UNITE = 33)
 """
 

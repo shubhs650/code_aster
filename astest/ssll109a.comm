@@ -131,7 +131,7 @@ POS = [0.5, 0.45, 0.4, 0.35, 0.30, 0.25, 0.2, 0.15, 0.1, 0.05]
 
 REFE = [solution(y) for y in POS]
 
-print("# CALC =", TAB_DX.EXTR_TABLE().values()["DX"][:-1])
+print("# CALC =", TAB_DX.EXTR_TABLE().data["DX"][:-1].tolist())
 CALC = [
     0.022409020093903956,
     0.01903519464264965,

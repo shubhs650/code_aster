@@ -62,13 +62,14 @@ def post_k_trans_ops(self, **args):
     # RESULTAT TRANSITOIRE
     nmodtr = RESU_TRANS.getNumberOfModes()
     # BASE MODALE
+    kgtheta_tab = __kgtheta.EXTR_TABLE() 
     if DIME == 2:
-        n_mode = len((__kgtheta.EXTR_TABLE())["K1"])
+        n_mode = len(kgtheta_tab.data["K1"])
         nbno = 1
     else:
-        n_mode = max((__kgtheta.EXTR_TABLE())["NUME_MODE"].values()["NUME_MODE"])
-        nbno = max((__kgtheta.EXTR_TABLE())["NUM_PT"].values()["NUM_PT"])
-        labsc = (__kgtheta.EXTR_TABLE())["ABSC_CURV"].values()["ABSC_CURV"][0:nbno]
+        n_mode = kgtheta_tab.get_max_by_column("NUME_MODE")
+        nbno = kgtheta_tab.get_max_by_column("NUM_PT")
+        labsc = kgtheta_tab.data["ABSC_CURV"][0:nbno].tolist()
     if nmodtr != n_mode:
         n_mode = min(nmodtr, n_mode)
         UTMESS("A", "RUPTURE0_50", valk=RESU_TRANS.getName(), vali=n_mode)

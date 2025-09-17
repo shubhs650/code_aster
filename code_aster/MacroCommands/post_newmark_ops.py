@@ -1281,9 +1281,9 @@ def post_newmark_ops(self, **args):
         ################################################################################
 
         fresu = __tabFLI.EXTR_TABLE()
-        forcex = fresu.values()["DX"]
-        forcey = fresu.values()["DY"]
-        time = fresu.values()["INST"]
+        forcex = fresu.data["DX"].tolist()
+        forcey = fresu.data["DY"].tolist()
+        time = fresu.data["INST"].tolist()
 
         accyFLI = fac_cercle * np.array(forcey) / masse
         accxFLI = fac_cercle * np.array(forcex) / masse

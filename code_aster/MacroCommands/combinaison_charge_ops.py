@@ -555,7 +555,7 @@ def combinaison_charge_ops(self, **args):
                 ACTION=_F(OPERATION="SUPPRIME", NOM_PARA="CHAM_GD"),
             )
 
-            comblist = comblist + nom_table[champ][comp].EXTR_TABLE().rows
+            comblist = comblist + list(nom_table[champ][comp].EXTR_TABLE().rows)
 
             # ---------------------------------------------------------------------------------------------------
             #                         Création et impression de la table des résultats enveloppe
@@ -597,7 +597,7 @@ def combinaison_charge_ops(self, **args):
                 TABLE=res[comp],
                 ACTION=_F(OPERATION="SUPPRIME", NOM_PARA="CHAM_GD"),
             )
-            extrlist = extrlist + res[comp].EXTR_TABLE().rows
+            extrlist = extrlist + list(res[comp].EXTR_TABLE().rows)
 
     combpara = nom_table[champ][comp].EXTR_TABLE().para
     combtype = nom_table[champ][comp].EXTR_TABLE().type
