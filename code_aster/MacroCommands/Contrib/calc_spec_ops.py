@@ -177,9 +177,9 @@ def calc_spec_ops(self, **args):
     num_mes = []
 
     if TAB_ECHANT:  # Cas TAB_ECHANT
-        num_mes_temp = tab_py["NUME_MES"].values()["NUME_MES"]
+        num_mes_temp = tab_py.data["NUME_MES"].tolist()
         max_mes = numpy.maximum.reduce(num_mes_temp)
-        num_ord_temp = tab_py["NUME_ORDRE_I"].values()["NUME_ORDRE_I"]
+        num_ord_temp = tab_py.data["NUME_ORDRE_I"].tolist()
         long_fonc = []
         for i1 in range(len(fonc_py)):
             values = fonc_py[i1].Valeurs()

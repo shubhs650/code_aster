@@ -613,8 +613,7 @@ class Tempo:
         """Extraction des instants d'etude dans la Tempo qui contient
         les temporels mesures"""
         tabl_py = self.obj.EXTR_TABLE()
-        toto = tabl_py["FONCTION"]
-        nom_fonc = toto.values()["FONCTION"][0]
+        nom_fonc = tabl_py.get_value("FONCTION", 0)
         __FONC = RECU_FONCTION(
             TABLE=self.obj,
             NOM_PARA_TABL="FONCTION",
@@ -799,9 +798,8 @@ class CalcEssaiObjects:
             type_fonc = "FONCTION"
         else:
             return
-        toto = table_py[type_fonc]
         try:
-            nom_fonc = toto.values()[type_fonc][0]
+            nom_fonc = table_py.get_value("type_fonc", 0)
         except IndexError:
             return  # deja vu : des tables avec lacolonne fonction vide...
         __FONC = RECU_FONCTION(

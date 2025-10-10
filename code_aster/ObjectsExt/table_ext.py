@@ -26,6 +26,17 @@
 import aster
 from libaster import Table, TableContainer, TableOfFunctions
 
+from typing import Any
+
+import numpy as np
+try:
+    import pandas as pd
+except ImportError:
+    HAS_PANDAS = False
+else:
+    HAS_PANDAS = True
+
+
 from ..Objects.table_py import Table as TablePy
 from ..Utilities import injector
 
@@ -96,23 +107,74 @@ class ExtendedTable:
         """Produit une liste des noms des colonnes"""
         return self.getParameters()
 
+    def to_dataframe(self, filled_columns: dict[str, Any])->"pd.DataFrame":
+        """Extract the table into a pandas DataFrame."""
+        if not HAS_PANDAS:
+            msg = (
+                "Cannot create a DataFrame because the 'pandas' library is not installed.\n"
+                "Please install it first."
+            )
+            raise ValueError(msg)
+        names = self.getParameters()
+        if not names:
+            return pd.DataFrame()
+        columns, masks = self._get_arrays(names)
+        # fill the arrays with the given values for missing data
+        for name, column, mask in zip(names, columns, masks):
+            if name not in filled_columns:
+                msg = (
+                    f"Missing fill value for column '{name}'.\n"
+                    f"Expected keys: {names}\n"
+                    f"Provided keys: {list(filled_columns.keys())}"
+                )
+                raise ValueError(msg)
+            fill_value = filled_columns[name]
+            column[mask] = fill_value
+        return pd.DataFrame({name: column for name, column in zip(names, columns)})
+
+    def to_masked_recarray(self) -> np.ma.MaskedArray:
+        """Extract the table into a masked record numpy array."""
+        l_para = self.getParameters()
+        if not l_para:
+            return np.ma.MaskedArray()
+        columns, masks = self._get_arrays(l_para)
+        return np.ma.MaskedArray(
+            np.core.records.fromarrays(columns, names=l_para),
+            mask = np.core.records.fromarrays(masks, names=l_para)
+        )
+
     def EXTR_TABLE(self, para=None):
         """Produit un objet TablePy à partir du contenu d'une table Aster.
         On peut limiter aux paramètres listés dans 'para'.
         """
-
         l_para = self.getParameters()
         if not l_para:
             return TablePy(titr=self.TITRE(), nom=self.getName())
+        columns, masks = self._get_arrays(l_para)
+        data = np.ma.MaskedArray(
+            np.core.records.fromarrays(columns, names=l_para),
+            mask = np.core.records.fromarrays(masks, names=l_para)
+        )
+        return TablePy.from_masked_array(data, titr=self.TITRE(), nom=self.getName())
 
-        l_type = [self.getColumnType(para) for para in l_para]
-        d_column = {para: self.get_column(para) for para in l_para}
-
-        l_dic_values = []
-        for i in range(self.get_nrow()):
-            l_dic_values.append({para: d_column[para][i] for para in l_para})
-
-        return TablePy(l_dic_values, l_para, l_type, self.TITRE(), self.getName())
+    def _get_arrays(self, names: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
+        """Get the arrays and their mask for each columns."""
+        columns = []
+        masks = []
+        for name in names:
+            exists, columnI, columnR, columnC, columnK = self.getValues(name)
+            typ = self.getColumnType(name)
+            if typ == "I":
+                column = np.array(columnI, dtype=np.int)
+            elif typ == "R":
+                column = np.array(columnR, dtype=np.float)
+            elif typ == "C":
+                column = np.array(columnC, dtype=np.complex)
+            else:
+                column = np.array(columnK, dtype=typ.replace("K", "U"))
+            columns.append(column)
+            masks.append(~np.array(exists, dtype=bool))
+        return columns, masks
 
 
 @injector(TableOfFunctions)

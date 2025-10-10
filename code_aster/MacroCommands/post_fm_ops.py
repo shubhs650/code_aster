@@ -224,7 +224,7 @@ def post_fm_ops(self, **kwargs):
                 NOM_CMP="TEMP",
             )
         )
-        temp.extend(__table_temp.EXTR_TABLE().values()["TEMP"])
+        temp.extend(__table_temp.EXTR_TABLE().data["TEMP"].tolist())
 
     post_fm = PostFM(resultat, inst, temp, g_elas, g_plas, group_no)
     liste = [

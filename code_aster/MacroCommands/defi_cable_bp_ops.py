@@ -123,9 +123,9 @@ def defi_cable_bp_ops(
                 __TAB = j["TABL_CABLE"].EXTR_TABLE()
                 nbcab = verif_table(__TAB)
                 for ic in range(nbcab):
-                    __gma = __TAB.GROUP_MA.values()[ic]
-                    __gno1 = __TAB.GROUP_NO1.values()[ic]
-                    __gno2 = __TAB.GROUP_NO2.values()[ic]
+                    __gma = __TAB.get_value("GROUP_MA", ic)
+                    __gno1 = __TAB.get_value("GROUP_NO1", ic)
+                    __gno2 = __TAB.get_value("GROUP_NO2", ic)
                     #              print(__gma,__gno1,__gno2)
                     dDEFI_CABLE.append(_F(GROUP_MA=__gma, GROUP_NO_ANCRAGE=(__gno1, __gno2)))
 

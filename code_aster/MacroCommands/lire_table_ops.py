@@ -59,7 +59,7 @@ def lire_table_ops(self, UNITE, FORMAT, SEPARATEUR, NUME_TABLE, **args):
     except AsterError:
         raise
 
-    UTMESS("I", "TABLE0_44", valk=("", tab.titr), vali=(len(tab.rows), len(tab.para)))
+    UTMESS("I", "TABLE0_44", valk=("", tab.titr), vali=(len(tab), len(tab.para)))
 
     # création de la table ASTER :
     motscles = tab.dict_CREA_TABLE()

@@ -38,14 +38,13 @@ def aster_table_to_array(aster_table, without_columns=()):
     Returns:
         np.array: the np.array table
     """
-    return np.array(
-        [
-            # replace None by 0.
-            [x or 0.0 for x in getattr(aster_table, name).values()]
-            for name, type_ in zip(aster_table.para, aster_table.type)
-            if type_ in ("R", "I") and (name not in without_columns)
-        ]
-    ).T
+    fields = [
+        name
+        for name, type_ in zip(aster_table.para, aster_table.type)
+        if type_ in ("R", "I") and (name not in without_columns)
+    ]
+    filled = aster_table.data[fields].filled(0)
+    return np.column_stack([filled[f] for f in fields])
 
 
 def expand_table(coefficients_table, nb_orders):
@@ -198,15 +197,7 @@ def count_nb_nodes(table, coupure_name):
     Returns:
         int : number of nodes for the coupure.
     """
-    nb_nodes_by_order = tuple(
-        set(
-            Counter(
-                rank
-                for rank, label in zip(table.values()["NUME_ORDRE"], table.values()["INTITULE"])
-                if label == coupure_name
-            ).values()
-        )
-    )
+    nb_nodes_by_order = tuple(set(Counter(table.data["NUME_ORDRE"][table.data["INTITULE"] == coupure_name]).values()))
     if len(nb_nodes_by_order) == 1:
         return nb_nodes_by_order[0]
     else:
@@ -387,19 +378,19 @@ def post_combinaison_ops(self, TABLE_COEF_FIN=None, **args):
 
         # Get the unique list of the names of the 'coupure'
         coupure_names = np.fromiter(
-            OrderedDict.fromkeys(tables_extracted[0].values()["NOM"]).keys(), dtype="<U24"
+            OrderedDict.fromkeys(tables_extracted[0].data["NOM"].tolist()).keys(), dtype="<U24"
         )
         # Check if each table has the same coupure
         for i, table in enumerate(tables_extracted):
             for coupure_name in coupure_names:
-                if coupure_name not in table.values()["NOM"]:
+                if coupure_name not in table.data["NOM"]:
                     UTMESS("F", "PCOMB_6", valk=coupure_name, vali=i + 1)
 
         nb_nodes = np.ones(len(coupure_names), dtype=int)
         # Extract ranks and orders for each table
         if "NUME_ORDRE" in column_names:
-            ranks = [np.array(table.values()["NUME_ORDRE"]) for table in tables_extracted]
-            orders = np.array(list(map(max, ranks)), dtype=int)
+            ranks = [table.data.data["NUME_ORDRE"] for table in tables_extracted]
+            orders = np.array([np.max(r) for r in ranks], dtype=int)
         else:
             ranks = [np.ones(len(table), dtype=int) for table in tables_extracted]
             orders = np.ones(len(tables_extracted), dtype=int)

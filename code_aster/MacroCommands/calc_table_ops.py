@@ -222,7 +222,7 @@ def calc_table_ops(self, TABLE, ACTION, INFO, **args):
             # Boucle de calcul pour chaque colonne
             for ipar in lpar:
                 # vérifier les vides dans la colonne
-                lval = tab[ipar].values()[ipar]
+                lval = tab.data[ipar].tolist()
 
                 # supprimer les vides
                 lval2 = [x for x in lval if x is not None]

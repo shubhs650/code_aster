@@ -149,8 +149,8 @@ class TableCoupes(Table):
     def check_path_name(self, msg=""):
         """Check if a name is used several times in the table"""
         already_set_name = []
-        for line in self.rows:
-            name = str(line[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]])
+        for i in range(len(self)):
+            name = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]][i])
             if name in already_set_name:
                 if msg == "REVO":
                     UTMESS("A", "COUPE_12", valk=name)
@@ -161,10 +161,10 @@ class TableCoupes(Table):
 
     def check_path_nb_nodes(self):
         """Check if all path have a minimal number of nodes of 2"""
-        for line in self.rows:
-            nb_nodes = int(line[TableCoupes.ALL_KEYWORDS[TableCoupes.NUMBER_OF_NODES_ID]])
+        for i in range(len(self)):
+            nb_nodes = int(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NUMBER_OF_NODES_ID]][i])
             if nb_nodes < 2:
-                UTMESS("F", "COUPE_14", valk=[line[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]]])
+                UTMESS("F", "COUPE_14", valk=[self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]]][i])
 
     def change_names(self, auto_name="NON", prefix=None, first_num=None, progression=None):
         """
@@ -173,17 +173,17 @@ class TableCoupes(Table):
         where SECTION_ID is different on each path.
         For the i-th path SECTION_ID=first_num+i*progression
         """
-        nb_coupes = len(self.rows)
+        nb_coupes = len(self)
         key_name = str(TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID])
         if auto_name == "OUI":
             max_num = int(first_num) + (nb_coupes - 1) * int(progression)
             nb_zeros = len(str(max_num))
-            for i, val in enumerate(self.rows):
+            for i in range(len(self)):
                 new_section_name = ""
                 if prefix:
                     new_section_name += prefix + "_"
                 new_section_name += str(int(first_num) + i * int(progression)).zfill(nb_zeros)
-                val[key_name] = new_section_name
+                self.data[key_name][i] = new_section_name
 
     def update_position_on_structure_skin(self, mesh):
         """
@@ -219,11 +219,11 @@ class TableCoupes(Table):
             "HEXA27": "H27",
         }
         #######################
-        for j, line in enumerate(self.rows):
-            surf_in = str(line[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_IN_ID]])
-            surf_out = str(line[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_OUT_ID]])
+        for j in range(len(self)):
+            surf_in = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_IN_ID]][j])
+            surf_out = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_OUT_ID]][j])
             direction, length = self.get_direction(j)
-            path_name = str(line[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]])
+            path_name = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]][j])
             for i in range(2):
                 found_projection = False
                 beta_old = sys.float_info.max
@@ -235,9 +235,9 @@ class TableCoupes(Table):
                     point_id = TableCoupes.SECOND_POINT_ID
                 list_elements = mesh.getCells(surf)
                 point = [
-                    line[self.para[point_id]],
-                    line[self.para[point_id + 1]],
-                    line[self.para[point_id + 2]],
+                    self.data[self.para[point_id]][j],
+                    self.data[self.para[point_id + 1]][j],
+                    self.data[self.para[point_id + 2]][j],
                 ]
 
                 for element in list_elements:
@@ -268,7 +268,7 @@ class TableCoupes(Table):
                             if not found_projection:
                                 found_projection = True
                                 for k in range(3):
-                                    line[self.para[point_id + k]] -= beta * direction[k]
+                                    self.data[self.para[point_id + k]][j] -= beta * direction[k]
                             if abs(beta_old) < 10 * (
                                 np.max(coordinates, axis=None) - np.min(coordinates, axis=None)
                             ):
@@ -285,8 +285,8 @@ class TableCoupes(Table):
                 point_in_updated = []
                 point_out_updated = []
                 for k in range(3):
-                    point_in_updated.append(line[self.para[TableCoupes.FIRST_POINT_ID + k]])
-                    point_out_updated.append(line[self.para[TableCoupes.SECOND_POINT_ID + k]])
+                    point_in_updated.append(self.data[self.para[TableCoupes.FIRST_POINT_ID + k]][j])
+                    point_out_updated.append(self.data[self.para[TableCoupes.SECOND_POINT_ID + k]][j])
 
             # Case if updated points are the same
             if np.linalg.norm(np.array(point_in_updated) - np.array(point_out_updated)) < 1e-12:
@@ -303,18 +303,17 @@ class TableCoupes(Table):
             float: length of the path
 
         """
-        line = self.rows[line_num]
         point_id = TableCoupes.FIRST_POINT_ID
         points_in = [
-            line[self.para[point_id]],
-            line[self.para[point_id + 1]],
-            line[self.para[point_id + 2]],
+            self.data[self.para[point_id]][line_num],
+            self.data[self.para[point_id + 1]][line_num],
+            self.data[self.para[point_id + 2]][line_num],
         ]
         point_id = TableCoupes.SECOND_POINT_ID
         points_out = [
-            line[self.para[point_id]],
-            line[self.para[point_id + 1]],
-            line[self.para[point_id + 2]],
+            self.data[self.para[point_id]][line_num],
+            self.data[self.para[point_id + 1]][line_num],
+            self.data[self.para[point_id + 2]][line_num],
         ]
         vect_dir = [xout - xin for xin, xout in zip(points_in, points_out)]
         length = np.linalg.norm(np.array(vect_dir))
@@ -327,10 +326,10 @@ class TableCoupes(Table):
         are well defined on the mesh
         """
         lgrma = [gr[0] for gr in mesh.LIST_GROUP_MA()]
-        for path in self.rows:
-            surf_in = str(path[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_IN_ID]])
-            surf_out = str(path[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_OUT_ID]])
-            path_name = str(path[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]])
+        for i in range(len(self)):
+            surf_in = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_IN_ID]][i])
+            surf_out = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_OUT_ID]][i])
+            path_name = str(self.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]][i])
             if surf_in not in lgrma:
                 UTMESS("F", "COUPE_2", valk=["d'entrée", surf_in, path_name])
             if surf_out not in lgrma:
@@ -379,7 +378,7 @@ class TableCoupes(Table):
         name_key = str(TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID])
         gr_in_key = str(TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_IN_ID])
         gr_out_key = str(TableCoupes.ALL_KEYWORDS[TableCoupes.MAIL_OUT_ID])
-        coupes_dico = {i: [] for i in range(len(self.rows))}
+        coupes_dico = {i: [] for i in range(len(self))}
 
         for revol in revol_list:
             filtre, filter_key = self._get_filter(revol["NOM_COUPE"], revol["GROUP_COUPE"])
@@ -396,20 +395,20 @@ class TableCoupes(Table):
 
             axe = revol["AXE"] / np.linalg.norm(revol["AXE"])
 
-            for j, line in enumerate(self.rows):
-                if filtre and line[filter_key] not in filtre:
+            for j in range(len(self)):
+                if filtre and self.data[filter_key][j] not in filtre:
                     continue
 
-                section_name = line[name_key]
+                section_name = self.data[name_key][j]
 
                 # retrieve points' coordinates
-                points = [[line[c] for c in point_keys] for point_keys in points_keys]
+                points = [[self.data[c][j] for c in point_keys] for point_keys in points_keys]
 
                 # translate points to center of rotation
                 points_transl = np.subtract(points, revol["CENTRE"])
 
                 for angle in angles:
-                    line = line.copy()
+                    line = self.get_row_values(j)
                     rot_matrix = get_rotation_matrix(axe, np.radians(angle))
                     # rotate and translate back points
                     points_rot = np.add(
@@ -427,12 +426,14 @@ class TableCoupes(Table):
                     line[gr_out_key] = revol["GROUP_MA_EXTR"]
                     coupes_dico[j].append(line)
 
+        rows = list(self.rows)
         index = 0
-        for j in range(len(self.rows)):
+        for j in range(len(rows)):
             index += 1
             for new_line in coupes_dico[j]:
-                self.rows.insert(index, new_line)
+                rows.insert(index, new_line)
                 index += 1
+        self.data = self._create_recarray(self.para, self.type, rows)
 
     def _get_filter(self, name_filter, group_filter):
         """[summary]
@@ -460,8 +461,8 @@ class TableCoupes(Table):
         """
         group_mail_list = mesh.getGroupsOfCells()
         missing_name, missing_group = None, None
-        name_list = [str(line[self.para[TableCoupes.NAMES_ID]]) for line in self.rows]
-        group_list = [str(line[self.para[TableCoupes.GROUPS_ID]]) for line in self.rows]
+        name_list = [str(self.data[self.para[TableCoupes.NAMES_ID]][i]) for i in range(len(self))]
+        group_list = [str(self.data[self.para[TableCoupes.GROUPS_ID]][i]) for i in range(len(self))]
         for revol in revol_list:
             if revol["ANGLE_MAX"] is not None and revol["ANGLE_MAX"] == 0:
                 UTMESS("F", "COUPE_13", valk="ANGLE_MAX")

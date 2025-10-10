@@ -333,15 +333,15 @@ def calc_loimel_plaque(DEPLMATE, ls_group_tout):
 
     out = {}
     out["LAME1_mm"], out["LAME2_mm"], out["ALPHA3K_mm"] = [
-        LAME_INTE.EXTR_TABLE().values()["INTE_%s" % key] for key in ("X1", "X2", "X3")
+        LAME_INTE.EXTR_TABLE().data["INTE_%s" % key].tolist() for key in ("X1", "X2", "X3")
     ]
 
     out["LAME1_ff"], out["LAME2_ff"], out["ALPHA3K_ff"] = [
-        LAME_INTE.EXTR_TABLE().values()["INTE_%s" % key] for key in ("X4", "X5", "X6")
+        LAME_INTE.EXTR_TABLE().data["INTE_%s" % key].tolist() for key in ("X4", "X5", "X6")
     ]
 
     out["RHO"], out["RHO_CP"], out["LAMBDA_THER"] = [
-        MATE_INTE.EXTR_TABLE().values()["INTE_%s" % key] for key in ("RHO", "RHO_CP", "LAMBDA")
+        MATE_INTE.EXTR_TABLE().data["INTE_%s" % key].tolist() for key in ("RHO", "RHO_CP", "LAMBDA")
     ]
 
     return out

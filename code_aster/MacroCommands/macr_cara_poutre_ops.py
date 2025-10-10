@@ -526,8 +526,8 @@ def macr_cara_poutre_ops(
         )
         #
         TabTmp = __TabTmp.EXTR_TABLE()
-        assert len(TabTmp.rows) == 1, "Erreur : Calcul de PTOC_M_(Y,Z)"
-        ligne = TabTmp.rows[0]
+        assert len(TabTmp) == 1, "Erreur : Calcul de PTOC_M_(Y,Z)"
+        ligne = TabTmp.data[0]
         # print("DBG: Traitement ligne : ", ligne)
         #
         ogy, ogz = ligne["CDG_Y_M"], ligne["CDG_Z_M"]
@@ -978,10 +978,10 @@ def macr_cara_poutre_ops(
     # Si TABLE_CARA == "OUI" et GROUP_MA la ligne est supprimée
     if not (TABLE_CARA == "OUI" and GROUP_MA):
         TabTmp = nomres.EXTR_TABLE()
-        for ii in range(len(TabTmp.rows)):
-            zz = TabTmp.rows[ii]["LIEU"]
+        for ii in range(len(TabTmp)):
+            zz = TabTmp.data["LIEU"][ii]
             if zz.strip() == NomMaillageOld:
-                TabTmp.rows[ii]["LIEU"] = NomMaillageNew
+                TabTmp.data["LIEU"][ii] = NomMaillageNew
         TabTmp = TabTmp.dict_CREA_TABLE()
     else:
         # Une ligne avec LIEU=NomMaillageOld ==> on la supprime
@@ -998,7 +998,7 @@ def macr_cara_poutre_ops(
     if GROUP_MA_BORD and not GROUP_MA:
         # print("DBG: Ajout PTOC_M_(Y,Z)")
         TabTmp = nomres.EXTR_TABLE()
-        assert len(TabTmp.rows) == 1, "Erreur : Ajout PCT_M_(Y,Z)"
+        assert len(TabTmp) == 1, "Erreur : Ajout PCT_M_(Y,Z)"
         TabTmp["PCT_M_Y"] = [ptoc_m_y]
         TabTmp["PCT_M_Z"] = [ptoc_m_z]
         TabTmp = TabTmp.dict_CREA_TABLE()
@@ -1007,14 +1007,14 @@ def macr_cara_poutre_ops(
     #
     # print("DBG: Table avant modification"); IMPR_TABLE(TABLE=nomres,UNITE=6)
     TabTmp = nomres.EXTR_TABLE()
-    for ii in range(len(TabTmp.rows)):
-        ligne = TabTmp.rows[ii]
+    for ii in range(len(TabTmp)):
+        ligne = TabTmp.data[ii]
         if LeQuadrant9 != 0:
             # print("DBG: LeQuadrant9 : Traitement ligne %d : " % ii, ligne)
             resu = TraiteQuadrant(ligne, LeQuadrant9)
             # print("DBG: LeQuadrant9 : Résultat traitement : ", resu)
             for ikey, ival in resu.items():
-                TabTmp.rows[ii][ikey] = ival
+                TabTmp.data[ii][ikey] = ival
     # On refait la table
     TabTmp = TabTmp.dict_CREA_TABLE()
     nomres = CREA_TABLE(**TabTmp)
@@ -1109,8 +1109,8 @@ def macr_cara_poutre_ops(
         #
         # Validation des résultats qui doivent toujours être >=0
         TabTmp = nomres.EXTR_TABLE()
-        for ii in range(len(TabTmp.rows)):
-            ligne = TabTmp.rows[ii]
+        for ii in range(len(TabTmp)):
+            ligne = TabTmp.data[ii]
             # on recherche la bonne ligne
             if ligne["LIEU"].strip() == NomMaillageNew:
                 paras = TabTmp.para

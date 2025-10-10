@@ -370,7 +370,7 @@ def post_mac3coeur_ops(self, **args):
                 )
             )
 
-            vals = np.stack(tuple(TMP.EXTR_TABLE().values()[i] for i in ("COOR_X", "V1")))
+            vals = np.stack(tuple(TMP.EXTR_TABLE().data[i].tolist() for i in ("COOR_X", "V1")))
             vals = np.mean(
                 vals.reshape(2, vals.shape[1] // 2, 2), axis=2
             )  # Moyenne sur les 2 noeuds du discret (qui portent tous la meme valeur)
@@ -399,7 +399,7 @@ def post_mac3coeur_ops(self, **args):
                 )
             )
 
-            vals = np.abs(np.stack(tuple(TMP.EXTR_TABLE().values()[i] for i in ("COOR_X", "N"))))
+            vals = np.abs(np.stack(tuple(TMP.EXTR_TABLE().data[i].tolist() for i in ("COOR_X", "N"))))
             vals = np.mean(
                 vals.reshape(2, vals.shape[1] // 2, 2), axis=2
             )  # Moyenne sur les 2 noeuds du discret (qui portent tous la meme valeur)
@@ -426,7 +426,7 @@ def post_mac3coeur_ops(self, **args):
                 )
             )
             # Extraction des valeurs
-            vals = np.stack(tuple(TMP.EXTR_TABLE().values()[i] for i in ("COOR_X", "DY", "DZ")))
+            vals = np.stack(tuple(TMP.EXTR_TABLE().data[i].tolist() for i in ("COOR_X", "DY", "DZ")))
             # Sort
             vals = vals[:, vals[0].argsort()]
             # Moyenne sur les discrets de la grille (qui portent tous la meme valeur)

@@ -18,6 +18,8 @@
 # --------------------------------------------------------------------
 
 
+import numpy as np
+
 import aster
 from ..Cata.Syntax import _F
 from ..CodeCommands import CALC_CHAMP, CALC_TABLE, CREA_TABLE, MACR_LIGN_COUPE
@@ -118,26 +120,17 @@ def post_coque_ops(self, RESULTAT, COOR_POINT, CHAM, NUME_ORDRE=None, INST=None,
         tab3 = tab2.INST == INST
     tab2 = tab3
 
-    tab4 = Table()
-    ilig = 0
-    for ligne in tab2:
-        ilig = ilig + 1
-        if (ilig % 2) == 0:
-            tab4.append(ligne)
-    tab4 = tab4[tab2.para]
+    tab4 = Table.from_masked_array(tab2.data[1::2].copy())
     #
     #  on cree une table(dege) bidon qu'on va surcharger
     #
     if CHAM == "DEFORMATION":
         motscles["NOM_CHAM"] = "DEGE_ELNO"
         motscles["LIGN_COUPE"] = []
-        tabz = []
-        iocc = 0
-        for m in COOR_POINT:
-            iocc = iocc + 1
+        tabz = np.zeros(len(COOR_POINT))
+        for iocc, m in enumerate(COOR_POINT):
             lst = m["COOR"]
-            z = lst[3]
-            tabz.append(z)
+            tabz[iocc]= lst[3]
             lst = lst[0:3]
             motscles["LIGN_COUPE"].append(
                 _F(TYPE="SEGMENT", NB_POINTS=2, COOR_ORIG=lst, COOR_EXTR=lst, DISTANCE_MAX=10.0)
@@ -181,27 +174,13 @@ def post_coque_ops(self, RESULTAT, COOR_POINT, CHAM, NUME_ORDRE=None, INST=None,
             tabep3 = tabep2.INST == INST
         tabep2 = tabep3
 
-        tabep4 = Table()
-        ilig = 0
-        for ligne in tabep2:
-            ilig = ilig + 1
-            if (ilig % 2) == 0:
-                tabep4.append(ligne)
-        tabep4 = tabep4[tabep2.para]
-
-        iligout = 0
-        for ligout in tabep4:
-            iligout = iligout + 1
-            iligin = 0
-            for ligin in tab4:
-                iligin = iligin + 1
-                if iligout == iligin:
-                    ligout["EPXX"] = ligin["EXX"] + ligin["KXX"] * tabz[iligout - 1]
-                    ligout["EPYY"] = ligin["EYY"] + ligin["KYY"] * tabz[iligout - 1]
-                    ligout["EPXY"] = ligin["EXY"] + ligin["KXY"] * tabz[iligout - 1]
-                    ligout["EPZZ"] = 0.0
-                    ligout["EPXZ"] = ligin["GAX"] * 0.5
-                    ligout["EPYZ"] = ligin["GAY"] * 0.5
+        tabep4 = Table.from_masked_array(tabep2.data[1::2].copy())
+        tabep4.data["EPXX"] = tab4.data["EXX"] + tab4.data["KXX"] * tabz
+        tabep4.data["EPYY"] = tab4.data["EYY"] + tab4.data["KYY"] * tabz
+        tabep4.data["EPXY"] = tab4.data["EXY"] + tab4.data["KXY"] * tabz
+        tabep4.data["EPZZ"] = 0.0
+        tabep4.data["EPXZ"] = tab4.data["GAX"] * 0.5
+        tabep4.data["EPYZ"] = tab4.data["GAY"] * 0.5
 
     if CHAM == "EFFORT":
         dprod = tab4.dict_CREA_TABLE()

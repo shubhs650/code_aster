@@ -88,32 +88,32 @@ def extr_coupe_ops(
     nb_point = []
 
     # Reading table path informations
-    for row in table_coupe.rows:
-        name = row[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]]
+    for i in range(len(table_coupe)):
+        name = table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NAMES_ID]][i]
         point_in.append(
             [
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID + 1]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID + 2]]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID + 1]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.FIRST_POINT_ID + 2]][i]),
             ]
         )
         point_out.append(
             [
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID + 1]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID + 2]]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID + 1]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.SECOND_POINT_ID + 2]][i]),
             ]
         )
         point_repere.append(
             [
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID + 1]]),
-                float(row[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID + 2]]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID + 1]][i]),
+                float(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.THIRD_POINT_ID + 2]][i]),
             ]
         )
         path_name.append(name)
-        nb_point.append(int(row[TableCoupes.ALL_KEYWORDS[TableCoupes.NUMBER_OF_NODES_ID]]))
-        path_group[name] = row[TableCoupes.ALL_KEYWORDS[TableCoupes.GROUPS_ID]].split(" ")
+        nb_point.append(int(table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.NUMBER_OF_NODES_ID]][i]))
+        path_group[name] = table_coupe.data[TableCoupes.ALL_KEYWORDS[TableCoupes.GROUPS_ID]][i].split(" ")
 
     function_param = {}
     if REPARTITION == "UNIFORME":
@@ -235,11 +235,11 @@ def modify_coordinate_system(
         modi_repere["MODI_CHAM"].append(_F(TYPE_CHAM=typeCham[len(field_cmp)], NOM_CHAM=name))
 
     if dim == 2:
-        for iPath in range(len(table_coupe.rows)):
+        for iPath in range(len(table_coupe)):
             angle = compute_nautile_angle(point_in[iPath], point_out[iPath], point_repere[iPath])
             modi_repere["AFFE"].append(_F(ANGL_NAUT=angle, GROUP_NO=path_name[iPath]))
     else:
-        for iPath in range(len(table_coupe.rows)):
+        for iPath in range(len(table_coupe)):
             vect_x, vect_y = compute_repere(point_in[iPath], point_out[iPath], point_repere[iPath])
             modi_repere["AFFE"].append(_F(VECT_X=vect_x, VECT_Y=vect_y, GROUP_NO=path_name[iPath]))
 
@@ -327,16 +327,16 @@ def line_coupe(resu, path_name, mc_mesh, mesh_aster):
     table_post = POST_RELEVE_T(**post_releve)
     table = table_post.EXTR_TABLE()
 
-    for row in table.rows:
-        path = row["INTITULE"]
-        field = row["NOM_CHAM"]
-        nume = row["NUME_ORDRE"]
-        if row["QUANTITE"] == "MOMENT_0":
-            moment_0[path][field][nume - 1] = [row[c] for c in field_cmp[field]]
-        elif row["QUANTITE"] == "MOYE_INT":
-            moye_int[path][field][nume - 1] = [row[c] for c in field_cmp[field]]
-        elif row["QUANTITE"] == "MOYE_EXT":
-            moye_ext[path][field][nume - 1] = [row[c] for c in field_cmp[field]]
+    for i in range(len(table)):
+        path = table.data["INTITULE"][i]
+        field = table.data["NOM_CHAM"][i]
+        nume = table.data["NUME_ORDRE"][i]
+        if table.data["QUANTITE"][i] == "MOMENT_0":
+            moment_0[path][field][nume - 1] = [table.data[c][i] for c in field_cmp[field]]
+        elif table.data["QUANTITE"][i] == "MOYE_INT":
+            moye_int[path][field][nume - 1] = [table.data[c][i] for c in field_cmp[field]]
+        elif table.data["QUANTITE"][i] == "MOYE_EXT":
+            moye_ext[path][field][nume - 1] = [table.data[c][i] for c in field_cmp[field]]
         else:
             pass
 
