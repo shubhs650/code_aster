@@ -98,7 +98,7 @@ subroutine nmadat(sddisc, numins, nbiter, valinc)
 ! --- PRECISION SUR LES INSTANTS
 ! --- (LIEE A CELLE DE VAL_MIN DE PAS_MINI DANS DEFI_LIST_INST.CAPY)
 !
-    prec = 1.d-12
+    prec = pasmin
 !
 ! --- ON NE FAIT DE L'ADAPTATION DE PAS DE TEMPS QU'EN GESTION AUTO
 !
