@@ -331,14 +331,7 @@ subroutine gbil3d(dudm, dvdm, dtdm, dfudm, dfvdm, &
     tini2 = 0.d0
     if (coef .gt. 1.9) then
 !       calcul de GRAD(U).GRAD(THETA)
-        do i = 1, 3
-            do j = 1, 3
-                r8tmp33(i, j) = 0.d0
-                do k = 1, 3
-                    r8tmp33(i, j) = r8tmp33(i, j)+dudm(i, k)*dtdm(k, j)
-                end do
-            end do
-        end do
+        r8tmp33 = matmul(dudm(1:3, 1:3), dtdm(1:3, 1:3))
 !       calcul du produit doublement contracte
         do i = 1, 3
             do j = 1, 3
