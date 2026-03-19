@@ -164,27 +164,17 @@ subroutine gbil3d(dudm, dvdm, dtdm, dfudm, dfvdm, &
     end do
 !
     sa21 = 0.d0
+    sa22 = 0.d0
+    sa23 = 0.d0
     do k = 1, 3
         do p = 1, 3
             sa21 = sa21+bil(k, k, k, p)*dtdm(p, k)
         end do
-    end do
-!
-    sa22 = 0.d0
-    do k = 1, 3
         do l = 1, 3
             if (l .ne. k) then
                 do p = 1, 3
                     sa22 = sa22+bil(l, l, k, p)*dtdm(p, k)
                 end do
-            end if
-        end do
-    end do
-!
-    sa23 = 0.d0
-    do k = 1, 3
-        do l = 1, 3
-            if (l .ne. k) then
                 do m = 1, 3
                     if (m .ne. k .and. m .ne. l) then
                         do p = 1, 3
@@ -236,26 +226,18 @@ subroutine gbil3d(dudm, dvdm, dtdm, dfudm, dfvdm, &
 ! - TERME FORCE VOLUMIQUE
 !
     somm1u = 0.0d0
-    do i = 1, 3
-        do j = 1, 3
-            somm1u = somm1u+0.5d0*dfudm(i, j)*dtdm(j, 4)*dvdm(i, 4)
-        end do
-    end do
-!
     somm1v = 0.0d0
     do i = 1, 3
         do j = 1, 3
+            somm1u = somm1u+0.5d0*dfudm(i, j)*dtdm(j, 4)*dvdm(i, 4)
             somm1v = somm1v+0.5d0*dfvdm(i, j)*dtdm(j, 4)*dudm(i, 4)
         end do
     end do
 !
     somm2u = 0.0d0
-    do i = 1, 3
-        somm2u = somm2u+0.5d0*dfudm(i, 4)*dvdm(i, 4)*divt
-    end do
-!
     somm2v = 0.0d0
     do i = 1, 3
+        somm2u = somm2u+0.5d0*dfudm(i, 4)*dvdm(i, 4)*divt
         somm2v = somm2v+0.5d0*dfvdm(i, 4)*dudm(i, 4)*divt
     end do
 !
@@ -265,12 +247,9 @@ subroutine gbil3d(dudm, dvdm, dtdm, dfudm, dfvdm, &
 !  - TERME THERMIQUE
 !
     ttt1u = 0.0d0
-    do j = 1, 3
-        ttt1u = ttt1u+0.5d0*tgudm(j)*dtdm(j, 4)
-    end do
-!
     ttt1v = 0.0d0
     do j = 1, 3
+        ttt1u = ttt1u+0.5d0*tgudm(j)*dtdm(j, 4)
         ttt1v = ttt1v+0.5d0*tgvdm(j)*dtdm(j, 4)
     end do
 !
