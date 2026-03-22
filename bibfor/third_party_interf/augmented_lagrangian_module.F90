@@ -23,8 +23,11 @@ module augmented_lagrangian_module
 !
 !
     use aster_petsc_module
+    use petsc_data_module, only: nomat_courant
     use saddle_point_context_type
     use augmented_lagrangian_context_type
+    use saddle_point_data_module, only: get_saddle_point_context, set_augmented_lagrangian_context, &
+                                        get_augmented_lagrangian_context, clear_augmented_lagrangian_context
 !
     implicit none
 !
@@ -38,13 +41,14 @@ module augmented_lagrangian_module
 contains
 !
     subroutine augmented_lagrangian_setup(al_pc, ierr)
-        !
-        use saddle_point_data_module, only: sp_context, sp_pc_context
-        !
         PC, intent(inout)           :: al_pc
         PetscErrorCode, intent(out) :: ierr
+        type(saddlepoint_ctxt), pointer :: sp_ctxt => null()
         !
-        sp_pc_context = new_augmented_lagrangian_context(sp_context)
+        sp_ctxt => get_saddle_point_context(nomat_courant)
+        ASSERT(associated(sp_ctxt))
+        call set_augmented_lagrangian_context(nomat_courant, &
+                                              new_augmented_lagrangian_context(sp_ctxt))
         !
         ierr = 0
         !
@@ -53,9 +57,6 @@ contains
 ! PCApply operation used for the PCShell based on the Augmented Lagrangian Method
 !
     subroutine augmented_lagrangian_apply(al_pc, x, y, ierr)
-        !
-        use saddle_point_data_module, only: sp_pc_context
-        !
         ! Dummy arguments
         !
         PC, intent(in)    :: al_pc
@@ -65,10 +66,14 @@ contains
         !
         ! Local Variables
         PetscReal :: beta
+        type(augm_lagr_ctxt), pointer :: sp_pc_ctxt => null()
         type(saddlepoint_ctxt), pointer :: sp_ctxt => null()
         !
         ! Use work space and scatter context defined in the underlying saddle_point_context
-        sp_ctxt => sp_pc_context%sp_ctxt
+        sp_pc_ctxt => get_augmented_lagrangian_context(nomat_courant)
+        ASSERT(associated(sp_pc_ctxt))
+        sp_ctxt => sp_pc_ctxt%sp_ctxt
+        ASSERT(associated(sp_ctxt))
         !
         ! Load values of  x1, x2 from x : use SCATTER_REVERSE
         !
@@ -97,7 +102,7 @@ contains
         ! y2 = -gamma*x2
         call VecCopy(sp_ctxt%x2, sp_ctxt%y2, ierr)
         ASSERT(ierr == 0)
-        beta = -sp_pc_context%gamma
+        beta = -sp_pc_ctxt%gamma
         call VecScale(sp_ctxt%y2, beta, ierr)
         ASSERT(ierr == 0)
         !
@@ -107,12 +112,12 @@ contains
         call MatMultTranspose(sp_ctxt%c_mat, sp_ctxt%x2, sp_ctxt%xtmp, ierr)
         ASSERT(ierr == 0)
         ! x1 = x1 + (2*gamma)* xtmp
-        beta = 2.0d0*sp_pc_context%gamma
+        beta = 2.0d0*sp_pc_ctxt%gamma
         call VecAXPY(sp_ctxt%x1, beta, sp_ctxt%xtmp, ierr)
         ASSERT(ierr == 0)
         !
         ! Apply pcphy
-        call PCApply(sp_pc_context%pcphy, sp_ctxt%x1, sp_ctxt%y1, ierr)
+        call PCApply(sp_pc_ctxt%pcphy, sp_ctxt%x1, sp_ctxt%y1, ierr)
         ASSERT(ierr == 0)
         !
         ! Load result to y : this time, use SCATTER_FORWARD
@@ -134,15 +139,12 @@ contains
     end subroutine augmented_lagrangian_apply
 !
     subroutine augmented_lagrangian_destroy(al_pc, ierr)
-        !
-        use saddle_point_data_module, only: sp_pc_context
-        !
         ! Dummy arguments
         !
         PC, intent(inout)    :: al_pc
         PetscErrorCode, intent(out) :: ierr
         !
-        call free_augm_lagrangian_context(sp_pc_context)
+        call clear_augmented_lagrangian_context(nomat_courant)
         !
         ierr = 0
         !
