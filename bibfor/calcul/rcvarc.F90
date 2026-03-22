@@ -20,9 +20,9 @@ subroutine rcvarc(arret, varc_name_, poum, &
                   famiZ, kpg, ksp, &
                   varc_vale, iret)
 !
-    use calcul_module, only: ca_decala_, ca_iactif_, ca_iel_, ca_iredec_, &
-                             ca_jfpgl_, ca_jvcnom_, ca_km_, ca_kp_, &
-                             ca_kr_, ca_nbcvrc_, ca_nfpg_, ca_nomte_, ca_option_, &
+    use calcul_module, only: ca_decala_, ca_iactif_, ca_iredec_, &
+                             ca_jfpgl_, ca_jvcnom_, ca_nbcvrc_, ca_nfpg_, &
+                             ca_nomte_, ca_option_, &
                              ca_td1_, ca_tf1_, ca_timed1_, ca_timef1_, &
                              ca_ctempl_, ca_ctempr_, ca_ctempm_, ca_ctempp_, &
                              ca_cpcapl_, ca_cpcapm_, ca_cpcapp_
@@ -76,18 +76,13 @@ subroutine rcvarc(arret, varc_name_, poum, &
     integer(kind=8) :: nb2vrc, k
     integer(kind=8) :: varc_indx, ibid, nbsp, kpgvrc
     integer(kind=8) :: iadzi, iazk24, kpgmat
-    integer(kind=8), save :: iprem = 0
-    integer(kind=8), save :: itabm(7), itabp(7), itabr(7)
+    integer(kind=8) :: itabm(7), itabp(7), itabr(7)
     character(len=24) :: valk(4)
-    real(kind=8) :: valvrm, valvrp
-    real(kind=8), save :: rundf
+    real(kind=8) :: rundf, valvrm, valvrp
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    if (iprem .eq. 0) then
-        rundf = r8nnem()
-        iprem = 1
-    end if
+    rundf = r8nnem()
     varc_name = varc_name_
     fami = famiZ
 !
@@ -164,41 +159,33 @@ subroutine rcvarc(arret, varc_name_, poum, &
     end if
     kpgmat = ca_decala_(k)+kpg
 !
-! - Get information about current element: using SAVE to save time if it's same element
+! - Get information about current element.
+!   Keep cache metadata local to this call so rcvarc stays reentrant.
 !
     if (poum .eq. '-' .or. (poum .eq. '+' .and. ca_iredec_ .eq. 1)) then
-        if (ca_iel_ .ne. ca_km_) then
-            if (arret .ne. ' ') then
-                call tecach('OOO', 'PVARCMR', 'L', ibid, nval=7, itab=itabm)
-            else
-                call tecach('NNN', 'PVARCMR', 'L', iret, nval=7, itab=itabm)
-                if (iret .ne. 0) goto 998
-            end if
-            ca_km_ = ca_iel_
+        if (arret .ne. ' ') then
+            call tecach('OOO', 'PVARCMR', 'L', ibid, nval=7, itab=itabm)
+        else
+            call tecach('NNN', 'PVARCMR', 'L', iret, nval=7, itab=itabm)
+            if (iret .ne. 0) goto 998
         end if
     end if
 
     if (poum .eq. '+' .or. (poum .eq. '-' .and. ca_iredec_ .eq. 1)) then
-        if (ca_iel_ .ne. ca_kp_) then
-            if (arret .ne. ' ') then
-                call tecach('OOO', 'PVARCPR', 'L', ibid, nval=7, itab=itabp)
-            else
-                call tecach('NNN', 'PVARCPR', 'L', iret, nval=7, itab=itabp)
-                if (iret .ne. 0) goto 998
-            end if
-            ca_kp_ = ca_iel_
+        if (arret .ne. ' ') then
+            call tecach('OOO', 'PVARCPR', 'L', ibid, nval=7, itab=itabp)
+        else
+            call tecach('NNN', 'PVARCPR', 'L', iret, nval=7, itab=itabp)
+            if (iret .ne. 0) goto 998
         end if
     end if
 
     if (poum .eq. 'REF') then
-        if (ca_iel_ .ne. ca_kr_) then
-            if (arret .ne. ' ') then
-                call tecach('OOO', 'PVARCRR', 'L', ibid, nval=7, itab=itabr)
-            else
-                call tecach('NNN', 'PVARCRR', 'L', iret, nval=7, itab=itabr)
-                if (iret .ne. 0) goto 998
-            end if
-            ca_kr_ = ca_iel_
+        if (arret .ne. ' ') then
+            call tecach('OOO', 'PVARCRR', 'L', ibid, nval=7, itab=itabr)
+        else
+            call tecach('NNN', 'PVARCRR', 'L', iret, nval=7, itab=itabr)
+            if (iret .ne. 0) goto 998
         end if
     end if
 !
