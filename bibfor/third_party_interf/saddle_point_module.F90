@@ -23,7 +23,9 @@ module saddle_point_module
 !
 !
     use aster_petsc_module
+    use petsc_data_module, only: nomat_courant
     use saddle_point_context_type
+    use saddle_point_data_module, only: set_saddle_point_context, get_saddle_point_context
 !
     implicit none
 !
@@ -53,12 +55,9 @@ contains
 !         ( C 0   0 )
 !         ( 0 0   I )
 ! This matrix is defined as a MATSHELL matrix.
-! K and C are stored in a context object.
+! Matrix blocks are stored in a context object kept in the module registry.
 !
     subroutine convert_mat_to_saddle_point(matrasse, a_mat)
-        !
-        use saddle_point_data_module, only: sp_context
-        !
         ! Dummy arguments
         !
         character(len=19), intent(in) :: matrasse
@@ -77,8 +76,8 @@ contains
         call asmpi_comm('GET', mpicomm)
         comm = mpicomm
         ! Init Saddle Point Context
-        sp_context = new_saddle_point_context(matrasse, distributed_data, &
-                                              a_mat)
+        call set_saddle_point_context(matrasse, &
+                                      new_saddle_point_context(matrasse, distributed_data, a_mat))
         !
         ! The old matrix and the new one  shall have the same
         ! (global and local) sizes
@@ -94,8 +93,6 @@ contains
         ASSERT(ierr == 0)
         !
         ! Create MatShell matrix
-        ! TODO  utiliser l'objet  fortran context
-        ! au lieu de PETSC_NULL_INTEGER
         call MatCreateShell(comm, m, m, mg, mg, PETSC_NULL_INTEGER, a_mat, ierr)
         ASSERT(ierr == 0)
         ! Define matrix-vector product operation
@@ -110,22 +107,25 @@ contains
 ! The routine zeroes the section of b corresponding to Lagrange 2 multipliers
 !
     subroutine convert_rhs_to_saddle_point(b)
-        !
-        use saddle_point_data_module, only: sp_context
-        !
         ! Dummy arguments
         !
         Vec, intent(inout) :: b
         !
+        ! Local variables
+        !
+        type(saddlepoint_ctxt), pointer :: sp_ctxt => null()
+        !
         ! Set to zero the Vector x3
         !
-        call VecSet(sp_context%x3, 0.d0, ierr)
+        sp_ctxt => get_saddle_point_context(nomat_courant)
+        ASSERT(associated(sp_ctxt))
+        call VecSet(sp_ctxt%x3, 0.d0, ierr)
         ASSERT(ierr == 0)
         ! And load the values of x3 to vector b
-        call VecScatterBegin(sp_context%scatter_to_lag2, sp_context%x3, b, &
+        call VecScatterBegin(sp_ctxt%scatter_to_lag2, sp_ctxt%x3, b, &
           &     INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag2, sp_context%x3, b, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag2, sp_ctxt%x3, b, &
          &         INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
         !
@@ -135,9 +135,6 @@ contains
 ! the simple Lagrange system matrix.
 !
     subroutine saddle_point_matmult(a, x, y, perr)
-        !
-        use saddle_point_data_module, only: sp_context
-        !
         ! Dummy arguments
         !
         Mat, intent(in)    :: a
@@ -145,46 +142,67 @@ contains
         Vec, intent(inout) :: y
         PetscErrorCode, intent(out) :: perr
         !
-        ! Load values of  x1, x2 from x : use SCATTER_REVERSE
-        call VecScatterBegin(sp_context%scatter_to_phys, x, sp_context%x1, &
+        ! Local variables
+        !
+        type(saddlepoint_ctxt), pointer :: sp_ctxt => null()
+        !
+        ! Load values of x1, x2 and x3 from x : use SCATTER_REVERSE
+        sp_ctxt => get_saddle_point_context(nomat_courant)
+        ASSERT(associated(sp_ctxt))
+        call VecScatterBegin(sp_ctxt%scatter_to_phys, x, sp_ctxt%x1, &
         &     INSERT_VALUES, SCATTER_REVERSE, perr)
         ASSERT(perr == 0)
-        call VecScatterEnd(sp_context%scatter_to_phys, x, sp_context%x1, &
+        call VecScatterEnd(sp_ctxt%scatter_to_phys, x, sp_ctxt%x1, &
             &    INSERT_VALUES, SCATTER_REVERSE, perr)
         ASSERT(perr == 0)
         !
-        call VecScatterBegin(sp_context%scatter_to_lag1, x, sp_context%x2, &
+        call VecScatterBegin(sp_ctxt%scatter_to_lag1, x, sp_ctxt%x2, &
             &    INSERT_VALUES, SCATTER_REVERSE, perr)
         ASSERT(perr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag1, x, sp_context%x2, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag1, x, sp_ctxt%x2, &
+            &    INSERT_VALUES, SCATTER_REVERSE, perr)
+        ASSERT(perr == 0)
+        call VecScatterBegin(sp_ctxt%scatter_to_lag2, x, sp_ctxt%x3, &
+            &    INSERT_VALUES, SCATTER_REVERSE, perr)
+        ASSERT(perr == 0)
+        call VecScatterEnd(sp_ctxt%scatter_to_lag2, x, sp_ctxt%x3, &
             &    INSERT_VALUES, SCATTER_REVERSE, perr)
         ASSERT(perr == 0)
         !
         ! Do the Mat Mult :
         ! y1 = k_mat * x1 + c_mat^T * x2
-        ! y2 = c_mat * x2
+        ! y2 = c_mat * x1
+        ! y3 = x3
         !
-        call MatMult(sp_context%k_mat, sp_context%x1, sp_context%xtmp, perr)
+        call MatMult(sp_ctxt%k_mat, sp_ctxt%x1, sp_ctxt%xtmp, perr)
         ASSERT(perr == 0)
-        call MatMultTransposeAdd(sp_context%c_mat, sp_context%x2, &
-           &    sp_context%xtmp, sp_context%y1, perr)
+        call MatMultTransposeAdd(sp_ctxt%c_mat, sp_ctxt%x2, &
+           &    sp_ctxt%xtmp, sp_ctxt%y1, perr)
         ASSERT(perr == 0)
-        call MatMult(sp_context%c_mat, sp_context%x1, sp_context%y2, perr)
+        call MatMult(sp_ctxt%c_mat, sp_ctxt%x1, sp_ctxt%y2, perr)
+        ASSERT(perr == 0)
+        call VecCopy(sp_ctxt%x3, sp_ctxt%y3, perr)
         ASSERT(perr == 0)
         !
         ! Load result to y : this time, use SCATTER_FORWARD
         !
-        call VecScatterBegin(sp_context%scatter_to_phys, sp_context%y1, y, &
+        call VecScatterBegin(sp_ctxt%scatter_to_phys, sp_ctxt%y1, y, &
            &      INSERT_VALUES, SCATTER_FORWARD, perr)
         ASSERT(perr == 0)
-        call VecScatterEnd(sp_context%scatter_to_phys, sp_context%y1, y, &
+        call VecScatterEnd(sp_ctxt%scatter_to_phys, sp_ctxt%y1, y, &
            &      INSERT_VALUES, SCATTER_FORWARD, perr)
         ASSERT(perr == 0)
         !
-        call VecScatterBegin(sp_context%scatter_to_lag1, sp_context%y2, y, &
+        call VecScatterBegin(sp_ctxt%scatter_to_lag1, sp_ctxt%y2, y, &
            &      INSERT_VALUES, SCATTER_FORWARD, perr)
         ASSERT(perr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag1, sp_context%y2, y, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag1, sp_ctxt%y2, y, &
+           &      INSERT_VALUES, SCATTER_FORWARD, perr)
+        ASSERT(perr == 0)
+        call VecScatterBegin(sp_ctxt%scatter_to_lag2, sp_ctxt%y3, y, &
+           &      INSERT_VALUES, SCATTER_FORWARD, perr)
+        ASSERT(perr == 0)
+        call VecScatterEnd(sp_ctxt%scatter_to_lag2, sp_ctxt%y3, y, &
            &      INSERT_VALUES, SCATTER_FORWARD, perr)
         ASSERT(perr == 0)
         !
@@ -203,9 +221,6 @@ contains
 !    and returned in x(islag1) and x(islag2)
 !
     subroutine update_double_lagrange(x)
-        !
-        use saddle_point_data_module, only: sp_context
-        !
         ! Dummy arguments
         !
         Vec, intent(inout)    :: x
@@ -213,34 +228,39 @@ contains
         ! Local variables
         !
         PetscScalar :: alpha
+        type(saddlepoint_ctxt), pointer :: sp_ctxt => null()
         !
         ! Load values of x2 (containing simple lagrange value ) from x : use SCATTER_REVERSE
         !
-        call VecScatterBegin(sp_context%scatter_to_lag1, x, sp_context%x2, &
+        sp_ctxt => get_saddle_point_context(nomat_courant)
+        ASSERT(associated(sp_ctxt))
+        call VecScatterBegin(sp_ctxt%scatter_to_lag1, x, sp_ctxt%x2, &
              &     INSERT_VALUES, SCATTER_REVERSE, ierr)
         ASSERT(ierr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag1, x, sp_context%x2, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag1, x, sp_ctxt%x2, &
              &    INSERT_VALUES, SCATTER_REVERSE, ierr)
         ASSERT(ierr == 0)
         !
         ! l1 = l2 = l/2,
         ! Scale lagrange multipliers ( x 0.5)
         alpha = 0.5d0
-        call VecScale(sp_context%x2, alpha, ierr)
+        call VecScale(sp_ctxt%x2, alpha, ierr)
+        ASSERT(ierr == 0)
+        call VecCopy(sp_ctxt%x2, sp_ctxt%x3, ierr)
         ASSERT(ierr == 0)
         !
         ! Load result to lag1 and lag2 sections of x : this time, use SCATTER_FORWARD
         !
-        call VecScatterBegin(sp_context%scatter_to_lag1, sp_context%x2, x, &
+        call VecScatterBegin(sp_ctxt%scatter_to_lag1, sp_ctxt%x2, x, &
              &     INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag1, sp_context%x2, x, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag1, sp_ctxt%x2, x, &
              &    INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
-        call VecScatterBegin(sp_context%scatter_to_lag2, sp_context%x3, x, &
+        call VecScatterBegin(sp_ctxt%scatter_to_lag2, sp_ctxt%x3, x, &
              &    INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
-        call VecScatterEnd(sp_context%scatter_to_lag2, sp_context%x3, x, &
+        call VecScatterEnd(sp_ctxt%scatter_to_lag2, sp_ctxt%x3, x, &
              &    INSERT_VALUES, SCATTER_FORWARD, ierr)
         ASSERT(ierr == 0)
         !
