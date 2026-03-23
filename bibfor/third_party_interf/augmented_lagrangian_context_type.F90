@@ -212,8 +212,6 @@ contains
         ASSERT(ierr == 0)
         call PCDestroy(ctxt%pcphy, ierr)
         ASSERT(ierr == 0)
-        ! TODO compteur de référence
-        call free_saddle_point_context(ctxt%sp_ctxt)
         nullify (ctxt%sp_ctxt)
         !
     end subroutine free_augm_lagrangian_context
