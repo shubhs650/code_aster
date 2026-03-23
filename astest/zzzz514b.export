@@ -1,0 +1,8 @@
+P memory_limit 256
+P ncpus 1
+P mpi_nbcpu 1
+P mpi_nbnoeud 1
+P testlist verification sequential
+P time_limit 30
+F comm zzzz514b.comm D 1
+F mail zzzz514b.mail D 20

@@ -121,6 +121,7 @@ subroutine posipr(nomte, efge, sipo)
         xiz = xiz/xxz
         xiy2 = xiy2/xxy
         xiz2 = xiz2/xxz
+!       les inerties equivalentes portent deja l'effet d'INDI_SIGM
     end if
 !
 !   caracteristiques des sections cercle et rectangle
@@ -184,13 +185,5 @@ subroutine posipr(nomte, efge, sipo)
         sipo(11) = efge(11)/xiy2*rz2
         sipo(12) = -efge(12)/xiz2*ry2
     end if
-!
-!   On doit corriger dans le cas du coude, si pas de coude les coeffs sont =1
-    xxy = xsiy/xfly
-    xxz = xsiz/xflz
-    sipo(5) = sipo(5)*xxy
-    sipo(6) = sipo(6)*xxz
-    sipo(11) = sipo(11)*xxy
-    sipo(12) = sipo(12)*xxz
 !
 end subroutine
