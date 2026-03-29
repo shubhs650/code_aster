@@ -1,0 +1,163 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.Commands import *
+from code_aster import CA
+
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="ALARME"))
+
+test = CA.TestCase()
+
+MA = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+MA = MODI_MAILLAGE(reuse=MA, DEFORME=_F(ALEA=1.0e-8, OPTION="TRAN"), MAILLAGE=MA)
+MAIL = CREA_MAILLAGE(MAILLAGE=MA, MODI_MAILLE=_F(OPTION="QUAD8_9", TOUT="OUI"))
+
+MOEL = AFFE_MODELE(
+    AFFE=_F(MODELISATION="COQUE_3D", PHENOMENE="MECANIQUE", TOUT="OUI"),
+    MAILLAGE=MAIL,
+    VERI_NORM_IFS="OUI",
+)
+
+CAEL = AFFE_CARA_ELEM(
+    COQUE=_F(ANGL_REP=(90.0, 0.0), A_CIS=9000.0, EPAIS=0.00045, GROUP_MA="TOUT_ELT"), MODELE=MOEL
+)
+
+MATERIAU = DEFI_MATERIAU(ELAS=_F(E=200000000000.0, NU=0.3))
+CHAM_MAT = AFFE_MATERIAU(AFFE=_F(MATER=MATERIAU, TOUT="OUI"), MAILLAGE=MAIL)
+
+fonc = DEFI_FONCTION(NOM_PARA="INST", VALE=(0.0, 0.0, 10.0, 10.0))
+listinst = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=1.0, NOMBRE=10))
+
+CON_LI = AFFE_CHAR_MECA(
+    DDL_IMPO=(
+        _F(DX=0.0, DY=0.0, GROUP_NO="O_PRIME"),
+        _F(DY=0.0, GROUP_NO="E"),
+        _F(DZ=0.0, GROUP_NO="CONTOUR"),
+    ),
+    MODELE=MOEL,
+)
+
+CHAR_EDGE = AFFE_CHAR_MECA(MODELE=MOEL, FORCE_ARETE=_F(FZ=-0.025, GROUP_MA="ARETE"))
+CHAR_PRES = AFFE_CHAR_MECA(MODELE=MOEL, FORCE_COQUE=_F(GROUP_MA="CYLINDRE", PRES=-1.0))
+
+RES = MECA_STATIQUE(
+    CARA_ELEM=CAEL,
+    CHAM_MATER=CHAM_MAT,
+    EXCIT=(_F(CHARGE=CON_LI), _F(CHARGE=CHAR_EDGE), _F(CHARGE=CHAR_PRES)),
+    MODELE=MOEL,
+    SOLVEUR=_F(NPREC=9, POSTTRAITEMENTS="MINI"),
+)
+
+SIG = CREA_CHAMP(
+    NOM_CHAM="SIEF_ELGA", NUME_ORDRE=1, OPERATION="EXTR", RESULTAT=RES, TYPE_CHAM="ELGA_SIEF_R"
+)
+
+ASSEMBLAGE(
+    CARA_ELEM=CAEL,
+    CHAM_MATER=CHAM_MAT,
+    CHARGE=(CON_LI,),
+    MATR_ASSE=(
+        _F(MATRICE=CO("MAS_RI_M"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MAS_RI_G_BASE"), OPTION="RIGI_GEOM", SIEF_ELGA=SIG),
+        _F(
+            MATRICE=CO("MAS_RI_G_SUIV"),
+            OPTION="RIGI_GEOM",
+            SIEF_ELGA=SIG,
+            EXCIT=(_F(CHARGE=CHAR_PRES, TYPE_CHARGE="SUIV"),),
+        ),
+    ),
+    MODELE=MOEL,
+    NUME_DDL=CO("NU"),
+)
+
+RESULT_BASE = CALC_MODES(
+    CALC_CHAR_CRIT=_F(NMAX_CHAR_CRIT=1),
+    MATR_RIGI=MAS_RI_M,
+    MATR_RIGI_GEOM=MAS_RI_G_BASE,
+    OPTION="PLUS_PETITE",
+    SOLVEUR=_F(NPREC=9),
+    SOLVEUR_MODAL=_F(COEF_DIM_ESPACE=8, METHODE="SORENSEN"),
+    TYPE_RESU="MODE_FLAMB",
+    VERI_MODE=_F(SEUIL=2.5e-08),
+)
+
+RESULT_SUIV = CALC_MODES(
+    CALC_CHAR_CRIT=_F(NMAX_CHAR_CRIT=1),
+    MATR_RIGI=MAS_RI_M,
+    MATR_RIGI_GEOM=MAS_RI_G_SUIV,
+    OPTION="PLUS_PETITE",
+    SOLVEUR=_F(NPREC=9),
+    SOLVEUR_MODAL=_F(COEF_DIM_ESPACE=8, METHODE="SORENSEN"),
+    TYPE_RESU="MODE_FLAMB",
+    VERI_MODE=_F(SEUIL=2.5e-08),
+)
+
+RES_NL = STAT_NON_LINE(
+    CARA_ELEM=CAEL,
+    CHAM_MATER=CHAM_MAT,
+    COMPORTEMENT=_F(DEFORMATION="PETIT", RELATION="ELAS", TOUT="OUI"),
+    CONVERGENCE=_F(ITER_GLOB_MAXI=300),
+    CRIT_STAB=_F(NMAX_CHAR_CRIT=1, TYPE="FLAMBEMENT"),
+    EXCIT=(
+        _F(CHARGE=CHAR_EDGE, FONC_MULT=fonc, TYPE_CHARGE="FIXE_CSTE"),
+        _F(CHARGE=CHAR_PRES, FONC_MULT=fonc, TYPE_CHARGE="SUIV"),
+        _F(CHARGE=CON_LI, TYPE_CHARGE="FIXE_CSTE"),
+    ),
+    INCREMENT=_F(LIST_INST=listinst),
+    MODELE=MOEL,
+    NEWTON=_F(MATRICE="TANGENTE", PREDICTION="TANGENTE", REAC_INCR=1, REAC_ITER=1),
+)
+
+
+def first_char_crit(result):
+    table = RECU_TABLE(CO=result, NOM_PARA="CHAR_CRIT").EXTR_TABLE()
+    return abs(list(table.CHAR_CRIT.values())[0])
+
+
+def first_char_crit_nl(result):
+    table = RECU_TABLE(CO=result, NOM_TABLE="ANALYSE_MODALE").EXTR_TABLE()
+    return abs(list(table.CHAR_CRIT.values())[0])
+
+
+char_crit_base = first_char_crit(RESULT_BASE)
+char_crit_suiv = first_char_crit(RESULT_SUIV)
+char_crit_nl = first_char_crit_nl(RES_NL)
+
+rel_fixed = abs(char_crit_suiv - char_crit_nl) / char_crit_nl
+rel_base = abs(char_crit_base - char_crit_nl) / char_crit_nl
+
+test.assertTrue(
+    rel_fixed < 5.0e-4,
+    msg=(
+        f"Follower-load buckling mismatch: linear={char_crit_suiv:.8f}, "
+        f"nonlinear={char_crit_nl:.8f}, rel={rel_fixed:.6e}"
+    ),
+)
+test.assertTrue(
+    rel_base > 1.0e-2,
+    msg=(
+        f"Baseline geometric matrix unexpectedly close to follower result: "
+        f"base={char_crit_base:.8f}, nonlinear={char_crit_nl:.8f}, rel={rel_base:.6e}"
+    ),
+)
+
+test.printSummary()
+
+FIN()

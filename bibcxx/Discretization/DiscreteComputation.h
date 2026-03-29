@@ -264,6 +264,16 @@ class DiscreteComputation {
         const VectorString &groupOfCells = VectorString() ) const;
 
     /**
+     * @brief Compute follower-load stiffness contributions for mechanical buckling.
+     */
+    ElementaryMatrixDisplacementRealPtr
+    getMechanicalFollowerLoadStiffnessMatrix( const FieldOnNodesRealPtr displ = nullptr,
+                                              const ASTERDOUBLE &time_curr = 0.0,
+                                              const ASTERINTEGER &modeFourier = 0,
+                                              const VectorString &groupOfCells =
+                                                  VectorString() ) const;
+
+    /**
      * @brief Compute elementary matrices for rotational mechanical stiffness (RIGI_ROTA)
      */
     ElementaryMatrixDisplacementRealPtr

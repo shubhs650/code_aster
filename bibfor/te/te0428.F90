@@ -65,9 +65,9 @@ subroutine te0428(option, nomte)
     if (option .eq. 'RIGI_GEOM') then
 !     --------------------------------------
 !
-        if ((nomte .eq. 'MEDKTR3') .or. (nomte .eq. 'MEDKTG3')) then
+        if ((nomte .eq. 'MEDKTR3') .or. (nomte .eq. 'MEDKTG3') .or. (nomte .eq. 'MET3TR3')) then
             call dktrge(nomte, xyzl, pgl, matloc)
-        else if ((nomte .eq. 'MEDKQU4') .or. (nomte .eq. 'MEDKQG4')) then
+        else if ((nomte .eq. 'MEDKQU4') .or. (nomte .eq. 'MEDKQG4') .or. (nomte .eq. 'MEQ4QU4')) then
             call dkqrge(nomte, xyzl, pgl, matloc)
         else
 ! type d element invalide

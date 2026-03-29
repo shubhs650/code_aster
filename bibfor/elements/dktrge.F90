@@ -97,7 +97,7 @@ subroutine dktrge(nomte, xyzl, pgl, rig)
 !
 !     -- nombre de couches :
 !
-    if (nomte .eq. 'MEDKTR3') then
+    if (nomte .eq. 'MEDKTR3' .or. nomte .eq. 'MET3TR3') then
         call jevech('PNBSP_I', 'L', j2)
         nbcou = zi(j2)
     end if
@@ -111,14 +111,14 @@ subroutine dktrge(nomte, xyzl, pgl, rig)
     nbsp = jtab(7)
     npgh = 3
 !
-    if (nomte .eq. 'MEDKTR3') then
+    if (nomte .eq. 'MEDKTR3' .or. nomte .eq. 'MET3TR3') then
         ASSERT(nbsp .eq. nbcou*npgh)
         ASSERT(jtab(2) .eq. nbsig*npg)
     end if
 !
 ! ---     passage des contraintes dans le repere intrinseque :
 !
-    if (nomte .eq. 'MEDKTR3') then
+    if (nomte .eq. 'MEDKTR3' .or. nomte .eq. 'MET3TR3') then
         call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', &
                     jsigm, 'S')
     else if (nomte .eq. 'MEDKTG3') then
@@ -151,7 +151,7 @@ subroutine dktrge(nomte, xyzl, pgl, rig)
 !
         poids = zr(ipoids+ipg-1)*cara(7)
 !
-        if (nomte .eq. 'MEDKTR3') then
+        if (nomte .eq. 'MEDKTR3' .or. nomte .eq. 'MET3TR3') then
 !       -- boucle sur les couches :
             hb = -h/2
             do icou = 1, nbcou

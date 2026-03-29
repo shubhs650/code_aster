@@ -661,9 +661,26 @@ void exportDiscreteComputationToPython( py::module_ &mod ) {
                     If it empty, the full model is used
             Returns:
                 ElementaryMatrixComplex: elementary geometric rigidity matrix
-            )",
+        )",
               py::arg( "sief_elga" ), py::arg( "strx_elga" ) = nullptr,
               py::arg( "displ" ) = nullptr, py::arg( "modeFourier" ) = -1,
+              py::arg( "groupOfCells" ) = VectorString() )
+
+        .def( "getMechanicalFollowerLoadStiffnessMatrix",
+              &DiscreteComputation::getMechanicalFollowerLoadStiffnessMatrix, R"(
+            Return follower-load stiffness contributions for mechanical buckling.
+
+            Arguments:
+                displ (FieldOnNodesReal) : displacement field used to reactualize geometry
+                time_curr (float): current time for function loads
+                modeFourier (int): Fourier mode
+                groupOfCells (list[str]): compute matrices on given groups of cells.
+                    If it empty, the full model is used
+            Returns:
+                ElementaryMatrixReal: elementary follower-load stiffness matrix
+            )",
+              py::arg( "displ" ) = nullptr, py::arg( "time_curr" ) = 0.0,
+              py::arg( "modeFourier" ) = 0,
               py::arg( "groupOfCells" ) = VectorString() )
 
         .def( "getRotationalStiffnessMatrix", &DiscreteComputation::getRotationalStiffnessMatrix,

@@ -95,7 +95,7 @@ subroutine dkqrge(nomte, xyzl, pgl, rig)
 !
 ! ------- nombre des couches
 !
-    if (nomte .eq. 'MEDKQU4') then
+    if (nomte .eq. 'MEDKQU4' .or. nomte .eq. 'MEQ4QU4') then
         call jevech('PNBSP_I', 'L', j2)
         nbcou = zi(j2)
     end if
@@ -109,14 +109,14 @@ subroutine dkqrge(nomte, xyzl, pgl, rig)
     nbsp = jtab(7)
     npgh = 3
 !
-    if (nomte .eq. 'MEDKQU4') then
+    if (nomte .eq. 'MEDKQU4' .or. nomte .eq. 'MEQ4QU4') then
         ASSERT(nbsp .eq. nbcou*npgh)
         ASSERT(jtab(2) .eq. nbsig*npg)
     end if
 !
 ! ---     passage des contraintes dans le repere intrinseque :
 !
-    if (nomte .eq. 'MEDKQU4') then
+    if (nomte .eq. 'MEDKQU4' .or. nomte .eq. 'MEQ4QU4') then
         call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', &
                     jsigm, 'S')
     else if (nomte .eq. 'MEDKQG4') then
@@ -150,7 +150,7 @@ subroutine dkqrge(nomte, xyzl, pgl, rig)
         nyy = 0.d0
         nxy = 0.d0
 !
-        if (nomte .eq. 'MEDKQU4') then
+        if (nomte .eq. 'MEDKQU4' .or. nomte .eq. 'MEQ4QU4') then
 !
 !       -- boucle sur les couches :
             hb = -h/2

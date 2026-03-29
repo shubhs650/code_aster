@@ -298,10 +298,25 @@ class MEDKQU4(Element):
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_F(
-            te=580, para_in=((SP.PPRESSF, CPRESSF),), para_out=((SP.PVECTUR, MVECTUR),)
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSF, CPRESSF),
+                (SP.PINSTR, LC.MTEMPSR),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_R(
-            te=580, para_in=((SP.PPRESSR, EPRESNO),), para_out=((SP.PVECTUR, MVECTUR),)
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_SECH_R(
             te=312,
@@ -878,12 +893,28 @@ class MEDKQU4(Element):
             ),
             para_out=((SP.PMATUUC, MMATUUC),),
         ),
-        #       -- te0580 : ne resout que les cas triviaux : 0.
         OP.RIGI_MECA_PRSU_F(
-            te=580, para_in=((SP.PPRESSF, CPRESSF),), para_out=((SP.PMATUNS, MMATUNS),)
+            te=55,
+            para_in=(
+                (SP.PCACOQU, CCACOQU),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSF, CPRESSF),
+                (SP.PINSTR, LC.MTEMPSR),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
         ),
         OP.RIGI_MECA_PRSU_R(
-            te=580, para_in=((SP.PPRESSR, EPRESNO),), para_out=((SP.PMATUNS, MMATUNS),)
+            te=55,
+            para_in=(
+                (SP.PCACOQU, CCACOQU),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
         ),
         OP.RIGI_MECA_SFCO3D(
             te=580, para_in=((SP.PFFCO3D, CFORCEF),), para_out=((SP.PMATUNS, MMATUNS),)

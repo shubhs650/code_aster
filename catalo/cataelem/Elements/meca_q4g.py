@@ -356,10 +356,25 @@ class MEQ4QU4(Element):
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_F(
-            te=580, para_in=((SP.PPRESSF, CPRESSF),), para_out=((SP.PVECTUR, MVECTUR),)
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PPRESSF, CPRESSF),
+                (SP.PINSTR, CTEMPSR),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_R(
-            te=580, para_in=((SP.PPRESSR, EPRESNO),), para_out=((SP.PVECTUR, MVECTUR),)
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_SECH_R(
             te=312,
@@ -741,7 +756,16 @@ class MEQ4QU4(Element):
         ),
         OP.RIGI_MECA_ELAS(te=-1),
         OP.RIGI_MECA_TANG(te=-1),
-        OP.RIGI_GEOM(te=-1),
+        OP.RIGI_GEOM(
+            te=428,
+            para_in=(
+                (SP.PCACOQU, CCACOQU),
+                (OP.RIGI_GEOM.PCONTRR, ECONTPG),
+                (SP.PGEOMER, NGEOMER),
+                (OP.RIGI_GEOM.PNBSP_I, ENBSP_I),
+            ),
+            para_out=((SP.PMATUUR, MMATUUR),),
+        ),
         OP.RIGI_MECA_HYST(
             te=50,
             para_in=(
@@ -752,12 +776,28 @@ class MEQ4QU4(Element):
             ),
             para_out=((SP.PMATUUC, MMATUUC),),
         ),
-        #       -- te0580 : ne resout que les cas triviaux : 0.
         OP.RIGI_MECA_PRSU_F(
-            te=580, para_in=((SP.PPRESSF, CPRESSF),), para_out=((SP.PMATUNS, MMATUNS),)
+            te=55,
+            para_in=(
+                (SP.PCACOQU, CCACOQU),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PPRESSF, CPRESSF),
+                (SP.PINSTR, CTEMPSR),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
         ),
         OP.RIGI_MECA_PRSU_R(
-            te=580, para_in=((SP.PPRESSR, EPRESNO),), para_out=((SP.PMATUNS, MMATUNS),)
+            te=55,
+            para_in=(
+                (SP.PCACOQU, CCACOQU),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
         ),
         OP.RIGI_MECA_SFCO3D(
             te=580, para_in=((SP.PFFCO3D, CFORCEF),), para_out=((SP.PMATUNS, MMATUNS),)
@@ -875,7 +915,7 @@ class MET3TR3(MEQ4QU4):
         OP.FULL_MECA(te=-1),
         OP.RAPH_MECA(te=-1),
         OP.RIGI_MECA_TANG(te=-1),
-        OP.RIGI_GEOM(te=-1),
+        OP.RIGI_GEOM(te=428),
         OP.VARI_ELNO(te=-1),
         OP.MASS_MECA_EXPLI(te=-1),
         OP.COOR_ELGA_MATER(te=-1),
