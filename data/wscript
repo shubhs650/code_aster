@@ -261,6 +261,8 @@ def build(self):
     else:
         src.extend(["profile.bat.tmpl", "config-win.txt.tmpl"])
         tgt.extend(["profile.bat", "config.txt"])
+        if self.env.ASTER_PLATFORM_MSYS2:
+            src[-1] = "config-msys2.txt.tmpl"
 
     srcbin = ["execute_codeaster.tmpl", "create_install_script"]
     tgtbin = ["execute_codeaster", "create_install_script"]
@@ -272,6 +274,7 @@ def build(self):
     dict_conv["BASE_PREFIX"] = osp.basename(self.env.PREFIX)
     dict_conv["PROGRAMS_YAML"] = to_cfg(cfgext, self.env["EXTERNAL_PROGRAMS"])
     dict_conv["CONFIG_YAML"] = to_cfg(cfgext, self.env["CONFIG_PARAMETERS"])
+    dict_conv["CONFIG_PYTHON"] = self.env["CONFIG_PARAMETERS"]["python"]
     change_tests(dict_conv, self.env.install_tests)
     self(
         features="subst",
@@ -296,7 +299,9 @@ def build(self):
         self.symlink_as("${PREFIX}/share/aster/image", self.env.singularityimage)
 
     # without substitution
-    scripts = ["run_aster" + shext, "run_ctest" + shext]
+    scripts = ["run_ctest" + shext]
+    if not self.env.ASTER_PLATFORM_MSYS2:
+        scripts.append("run_aster" + shext)
     shared = ["run_aster_for_ctest" + shext, "ddt_wrapper.tmpl"]
     if self.env.ASTER_PLATFORM_POSIX:
         shared.append("post_install")
@@ -305,6 +310,12 @@ def build(self):
     self.install_files(
         self.env.BINDIR, [self.path.get_src().find_node(src) for src in scripts], chmod=Utils.O755
     )
+    if self.env.ASTER_PLATFORM_MSYS2:
+        self.install_as(
+            osp.join(self.env.BINDIR, "run_aster.bat"),
+            self.path.get_src().find_node("run_aster_env.bat"),
+            chmod=Utils.O755,
+        )
     self.install_files(
         self.env.ASTERDATADIR,
         [self.path.get_src().find_node(src) for src in shared],
@@ -519,7 +530,8 @@ def check_config(self):
     cfg["addmem"] = addmem
     cfg["version_tag"] = ".".join([str(i) for i in self.env.ASTER_VERSION[0]])
     cfg["version_sha1"] = self.env.ASTER_VERSION[1]
-    cfg["python"] = pyenv_abspath(self, "python3")
+    python_cmd = "python" if self.env.ASTER_PLATFORM_MSYS2 else "python3"
+    cfg["python"] = pyenv_abspath(self, python_cmd)
     _check_prog(self, "IPYTHON", ["ipython3", "ipython"], mandatory=False, var_prefix="")
     cfg["python_interactive"] = (
         pyenv_abspath(self, "ipython3") if self.env.IPYTHON else cfg["python"]

@@ -1,0 +1,20 @@
+# Configuration file created by waf using data/wscript
+# Libraries, compilers are not relevant
+#
+BUILD_TYPE     | env     | -     | waf nocopy nosuperv noresu use_numthreads orbinitref
+ENV_SH         | env     | -     | profile.bat
+ADDMEM         | memory  | -     | @addmem@
+DEFS           | defined | -     | @DEFINES@
+#
+PYTHON         | python  | -     | @CONFIG_PYTHON@
+#
+BIN_NODBG      | bin     | -     | @CONFIG_PYTHON@
+BIN_DBG        | bin     | -     | @CONFIG_PYTHON@
+#
+# for as_run --messages, --get, --show..., and astout
+SRCPY          | src     | -     | $ASTER_ROOT\@BASE_PREFIX@\lib\aster\code_aster\Utilities
+SRCTEST        | src     | -     | $ASTER_ROOT\@BASE_PREFIX@\share\aster\tests
+#
+REPOUT         | exec    | -     | $ASTER_ROOT\outils
+REPMAT         | exec    | -     | $ASTER_VERSION_DIR\materiau
+REPDEX         | exec    | -     | $ASTER_VERSION_DIR\datg
