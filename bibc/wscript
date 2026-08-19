@@ -74,6 +74,7 @@ def configure(self):
     if self.env.ASTER_PLATFORM_MSYS2:
         self.check_cc(lib="gfortran", uselib_store="GFORTRAN")
         self.check_cc(lib="dbghelp", uselib_store="DBGHELP")
+        self.check_cc(lib="quadmath", uselib_store="QUADMATH")
 
 
 @Configure.conf
@@ -205,6 +206,7 @@ def build_libaster(self, env):
     if self.env.ASTER_PLATFORM_MSYS2:
         use.append("GFORTRAN")
         use.append("DBGHELP")
+        use.append("QUADMATH")
     if env.BUILD_MFRONT:
         use.append("astermfront")
 
