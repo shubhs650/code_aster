@@ -327,14 +327,23 @@ class mfront2cxx(Task.Task):
             msg = "The behaviour name is too long, max. 16 characters: '%s'" % name
             raise Errors.WafError(msg)
         wrkdir = wrknode.abspath()
-        cmd = "%s --interface=generic --search-path=%s %s" % (
+        search_path = mfrdir.get_src().abspath()
+        source_path = self.inputs[0].abspath()
+        if self.env.ASTER_PLATFORM_MINGW:
+            # MFront embeds the source path in generated C++ strings. Native
+            # Windows backslashes would be interpreted as escape sequences
+            # (for example ``\N`` in ``NLH_CSRM``), so keep forward slashes.
+            search_path = search_path.replace("\\", "/")
+            source_path = source_path.replace("\\", "/")
+        cmd = [
             self.env.MFRONT[0],
-            mfrdir.get_src().abspath(),
-            self.inputs[0].abspath(),
-        )
+            "--interface=generic",
+            "--search-path=" + search_path,
+            source_path,
+        ]
         if self.env.ASTER_PLATFORM_MSYS2:
             # Temporary workaround for MSYS2
-            cmd = cmd + " --debug"
+            cmd.append("--debug")
         # self.generator.bld.cmd_and_log(cmd, cwd=wrkdir, quiet=Context.STDOUT)
         self.exec_command(cmd, cwd=wrkdir)
 

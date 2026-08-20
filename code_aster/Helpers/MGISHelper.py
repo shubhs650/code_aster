@@ -43,9 +43,11 @@ class MGISBuilder:
         Arguments:
             behaviour_name (str): Name of the behaviour.
         """
-        libpath = osp.join(
-            os.environ["ASTER_LIBDIR"], "lib" + config["ASTER_BEHAVIOUR_LIB"] + ".so"
-        )
+        if os.name == "nt":
+            libname = config["ASTER_BEHAVIOUR_LIB"] + ".dll"
+        else:
+            libname = "lib" + config["ASTER_BEHAVIOUR_LIB"] + ".so"
+        libpath = osp.join(os.environ["ASTER_LIBDIR"], libname)
         return MGISBuilder.from_library(behaviour_name, libpath)
 
     @classmethod
@@ -104,14 +106,16 @@ class MGISBuilder:
     def compile(self, flags=None):
         """Compile a '.mfront' source file."""
         if not self._lib:
-            self._lib = tempfile.NamedTemporaryFile(prefix="libMGIS", suffix=".so", dir=".").name
+            suffix = ".dll" if os.name == "nt" else ".so"
+            fd, self._lib = tempfile.mkstemp(prefix="libMGIS", suffix=suffix, dir=".")
+            os.close(fd)
         cmd = [ExecutionParameter().get_option("prog:mfront"), "--build", "--interface=generic"]
         cmd.extend(flags or [])
         cmd.append(self._src)
         logger.debug("Execute command %r", cmd)
         try:
             call(cmd)
-            libname = "libBehaviour.so"
+            libname = "libBehaviour.dll" if os.name == "nt" else "libBehaviour.so"
             filename = osp.join("src", libname)
             if not osp.exists(filename):
                 UTMESS("F", "MFRONT_4", valk=libname)

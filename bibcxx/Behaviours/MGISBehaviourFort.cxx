@@ -30,7 +30,10 @@
 #ifdef ASTER_HAVE_MGIS
 inline MGISBehaviour *getPtr( const std::string &hexid ) {
     AS_ASSERT( strip( hexid ) != "" && strip( hexid ) != "VIDE" );
-    ASTERINTEGER addr = (ASTERINTEGER)std::stol( hexid, nullptr, 16 );
+    // Win64 uses the LLP64 data model: ``long`` remains 32-bit although
+    // pointers and ASTERINTEGER are 64-bit.  std::stol therefore overflows
+    // for normal heap addresses (typically 0x000002...) on Windows.
+    ASTERINTEGER addr = (ASTERINTEGER)std::stoll( hexid, nullptr, 16 );
     return (MGISBehaviour *)( addr );
 }
 
