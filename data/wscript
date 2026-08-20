@@ -300,7 +300,10 @@ def build(self):
         self.symlink_as("${PREFIX}/share/aster/image", self.env.singularityimage)
 
     # without substitution
-    scripts = ["run_aster" + shext, "run_ctest" + shext]
+    # Under MSYS2, run_aster.bat is provided by run_aster_env.bat below.
+    # Do not install the legacy run_aster.bat first: both tasks otherwise
+    # target the same file and the result depends on Waf's execution order.
+    scripts = ["run_ctest" + shext]
     if not self.env.ASTER_PLATFORM_MSYS2:
         scripts.append("run_aster" + shext)
     shared = ["run_aster_for_ctest" + shext, "ddt_wrapper.tmpl", "run_aster_extract" + shext]
@@ -737,7 +740,10 @@ def _call_cmd(self, msg, cmd):
 
 @Configure.conf
 def check_external_programs(self):
-    bat = ".bat" if self.env.ASTER_PLATFORM_MINGW else ""
+    # Sous Windows, Waf parcourt déjà PATHEXT (.exe, .com, .bat, ...).
+    # Ajouter explicitement `.bat` au nom conduit sa recherche à tester une
+    # double extension et empêche la détection du lanceur MISS3D.
+    bat = ""
     _check_prog(
         self, "gmsh", ["gmsh"], mandatory=self.options.with_prog_gmsh, add_paths=["${GMSH_BIN_DIR}"]
     )
