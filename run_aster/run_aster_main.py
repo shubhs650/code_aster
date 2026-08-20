@@ -506,6 +506,8 @@ def main(argv=None):
         if RUNASTER_PLATFORM == "linux":
             opts["tee"] = not args.only_proc0 or procid == args.proc0id
         else:
+            # Direct executions are streamed by the native Windows tee in
+            # utils.py. CTest already redirects each testcase to its .mess.
             opts["tee"] = not args.ctest
         opts["interactive"] = args.interactive
         opts["savedb"] = args.save_db

@@ -264,11 +264,12 @@ def parse_args(argv):
 
 
 def _run(cmd, shell=False):
-    print("execute:", " ".join(cmd))
     return run(cmd, shell=shell, check=False)
 
 
 def _rmtree(dirpath):
+    if not osp.exists(dirpath):
+        return
     if RUNASTER_PLATFORM == "linux":
         _run(["rm", "-rf", dirpath])
     else:
@@ -282,6 +283,7 @@ def main(argv=None):
         argv (list): List of command line arguments.
     """
     args, ctest_args = parse_args(argv or sys.argv[1:])
+    initial_cwd = os.getcwd()
     # options passed through environment
     os.environ["FACMTPS"] = str(args.timefactor)
     if args.only_failed_results:
@@ -361,6 +363,8 @@ def main(argv=None):
         report.read_ctest()
         report.write_xml("run_testcases.xml")
     else:
+        # Windows can not remove the current working directory.
+        os.chdir(initial_cwd)
         _rmtree(resutest)
     return proc.returncode
 
