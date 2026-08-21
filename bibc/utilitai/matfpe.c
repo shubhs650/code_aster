@@ -68,7 +68,7 @@ void DEFP( MATFPE, matfpe, ASTERINTEGER *enable ) {
         /* avant de reactiver le controle des FPE, on abaisse les flags */
 #if defined ASTER_PLATFORM_MINGW
         _clearfp();
-        _controlfp( _EM_UNDERFLOW | _EM_DENORMAL | _EM_INEXACT, _MCW_EM );
+        _controlfp( _EM_INVALID | _EM_UNDERFLOW | _EM_DENORMAL | _EM_INEXACT, _MCW_EM );
 #else
         feclearexcept( ASTER_SIGFPE );
         feenableexcept( ASTER_SIGFPE );
