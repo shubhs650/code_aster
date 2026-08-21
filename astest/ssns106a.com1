@@ -26,6 +26,7 @@
 #            CHARGEMENT   : CYCLIQUE TRACTION - COMPRESSION
 #            REMARQUE 1   : ON TESTE DEFI_GLRC
 
+import code_aster
 import aster
 from code_aster.Commands import *
 
