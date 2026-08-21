@@ -235,7 +235,8 @@ contains
         call eiangl(ndim, nbNode, zr(jvCamass+1), anglNautPg)
         materPara%lcsPara%lcsType = MATER_LCS_PG
         materPara%lcsPara%lcsAngle = r8nnem()
-        materPara%lcsPara%lcsAnglePg = anglNautPg
+        materPara%lcsPara%lcsAnglePg = 0.d0
+        materPara%lcsPara%lcsAnglePg(1:3*nbNode) = anglNautPg
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
