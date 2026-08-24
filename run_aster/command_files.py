@@ -107,7 +107,10 @@ print(f"CA.basedir: {CA.basedir}")
 """
     subst = r"""
 import code
-import readline
+try:
+    import readline
+except ImportError:
+    readline = None
 import rlcompleter
 
 from code_aster import CA
@@ -115,12 +118,16 @@ from code_aster import CA
 print("\\n# CA.basedir is the directory containing the export file")
 print(f"CA.basedir: {CA.basedir}")
 
-readline.parse_and_bind('tab: complete')
-code.interact(local=locals(),
+if readline is not None:
+    readline.parse_and_bind('tab: complete')
+try:
+    code.interact(local=locals(),
                 banner=('Entering in interactive mode\\n'
                         'Use exit() or Ctrl-D (i.e. EOF) to continue '
                         'with \g<cmd>...)'),
                 exitmsg='Use exit() or Ctrl-D (i.e. EOF) to exit')
+except SystemExit:
+    pass
 
 \g<cmd>"""
     if last:

@@ -184,8 +184,9 @@ def _run_with_windows_output(cmd, logfile=None, live=False):
     """Run a command with an exact return code and optional output capture.
 
     No command shell is involved: drive-letter paths and ``--link`` arguments
-    are passed unchanged to the child process.  In live mode, each line is
-    both displayed and appended to ``logfile``.
+    are passed unchanged to the child process.  In live mode, each output
+    fragment is both displayed and appended to ``logfile``.  Reading fragments
+    is required for prompts such as ``>>> `` that have no trailing newline.
     """
     env = os.environ.copy()
     env.setdefault("PYTHONUNBUFFERED", "1")
@@ -208,7 +209,7 @@ def _run_with_windows_output(cmd, logfile=None, live=False):
     console = getattr(sys.stdout, "buffer", None)
     try:
         with open(logfile, "ab") as flog:
-            for chunk in iter(proc.stdout.readline, b""):
+            for chunk in iter(lambda: os.read(proc.stdout.fileno(), 4096), b""):
                 flog.write(chunk)
                 flog.flush()
                 if console is not None:
