@@ -148,6 +148,8 @@ MMATUUC = ArrayOfComponents(phys=PHY.MDEP_C, locatedComponents=NDEPLAC)
 
 MMATUUR = ArrayOfComponents(phys=PHY.MDEP_R, locatedComponents=DDL_MECA)
 
+MMATUNS = ArrayOfComponents(phys=PHY.MDNS_R, locatedComponents=DDL_MECA)
+
 
 # ------------------------------------------------------------
 class MEDKQG4(Element):
@@ -249,6 +251,27 @@ class MEDKQG4(Element):
         OP.CHAR_MECA_PRES_R(
             te=32,
             para_in=((SP.PCACOQU, LC.CSHLDKT), (SP.PGEOMER, LC.EGEOM3D), (SP.PPRESSR, EPRESNO)),
+            para_out=((SP.PVECTUR, MVECTUR),),
+        ),
+        OP.CHAR_MECA_PRSU_F(
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSF, EPRESNF),
+                (SP.PINSTR, LC.MTEMPSR),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
+        ),
+        OP.CHAR_MECA_PRSU_R(
+            te=55,
+            para_in=(
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSR, EPRESNO),
+            ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_SECH_R(
@@ -673,6 +696,29 @@ class MEDKQG4(Element):
                 (OP.RIGI_MECA_HYST.PVARCPR, LC.ZVARCPG),
             ),
             para_out=((SP.PMATUUC, MMATUUC),),
+        ),
+        OP.RIGI_MECA_PRSU_F(
+            te=55,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLDKT),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSF, EPRESNF),
+                (SP.PINSTR, LC.MTEMPSR),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
+        ),
+        OP.RIGI_MECA_PRSU_R(
+            te=55,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLDKT),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PMATUNS, MMATUNS),),
         ),
         OP.RIGI_MECA_TANG(
             te=409,

@@ -66,6 +66,18 @@ subroutine vpbosc(typres, nbmode, nbvect, omeshi, valpro, &
         valpro(i) = valpro(i)+omeshi
     end do
 !
+! MODE_FLAMB stores real critical loads; do not discard a complex root's imaginary part.
+    if (typres .eq. 'MODE_FLAMB') then
+        tole = sqrt(r8prem())
+        do i = 1, nbmode
+            if (abs(dimag(valpro(i))) .gt. tole*abs(valpro(i))) then
+                valr(1) = -dble(valpro(i))
+                valr(2) = -dimag(valpro(i))
+                call utmess('F', 'ALGELINE4_97', nr=2, valr=valr)
+            end if
+        end do
+    end if
+!
     vpinf = dble(valpro(1))
     vpmax = dble(valpro(1))
     do i = 2, nbmode

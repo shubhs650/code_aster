@@ -190,6 +190,97 @@ ElementaryMatrixDisplacementRealPtr DiscreteComputation::getGeometricStiffnessMa
     return elemMatr;
 };
 
+ElementaryMatrixDisplacementRealPtr DiscreteComputation::getMechanicalFollowerLoadStiffnessMatrix(
+    const FieldOnNodesRealPtr displ, const ASTERDOUBLE &time_curr,
+    const ASTERINTEGER &modeFourier,
+    const VectorString &groupOfCells ) const {
+
+    AS_ASSERT( _phys_problem->getModel()->isMechanical() );
+
+    const auto model = _phys_problem->getModel();
+    const auto listOfLoads = _phys_problem->getListOfLoads();
+    const auto currElemChara = _phys_problem->getElementaryCharacteristics();
+    const std::string option( "RIGI_GEOM" );
+
+    auto elemMatr = std::make_shared< ElementaryMatrixDisplacementReal >( model, option );
+
+    FieldOnNodesRealPtr zeroDispl = nullptr;
+    if ( displ ) {
+        zeroDispl = std::make_shared< FieldOnNodesReal >( displ->getDescription() );
+    } else if ( _phys_problem->getDOFNumbering() ) {
+        zeroDispl = std::make_shared< FieldOnNodesReal >( _phys_problem->getDOFNumbering() );
+    } else {
+        zeroDispl = std::make_shared< FieldOnNodesReal >( model );
+    }
+    zeroDispl->setValues( 0.0 );
+
+    const auto displ_prev = zeroDispl;
+    const auto displ_step = displ ? displ : zeroDispl;
+
+    auto addFollowerTerms = [&]( const auto &loads, const auto &types, const std::string &pressOpt,
+                                 const std::string &pressParam, const std::string &shellOpt,
+                                 const std::string &shellParam, const bool withTime ) {
+        AS_ASSERT( loads.size() == types.size() );
+        std::size_t pos = 0;
+        for ( const auto &load : loads ) {
+            const bool isFollower = types[pos] == "SUIV";
+            ++pos;
+            if ( !isFollower ) {
+                continue;
+            }
+
+            if ( !load->hasLoadField( "PRESS" ) && !load->hasLoadField( "FCO3D" ) ) {
+                raiseAsterError( "Unsupported follower load in RIGI_GEOM: " + load->getName() );
+            }
+
+            // A single load may contain both pressure and shell-force fields.
+            for ( const std::string fieldName : { "PRESS", "FCO3D" } ) {
+                if ( !load->hasLoadField( fieldName ) ) {
+                    continue;
+                }
+                const bool isPressure = fieldName == "PRESS";
+                const auto &loadOption = isPressure ? pressOpt : shellOpt;
+                const auto &loadParam = isPressure ? pressParam : shellParam;
+                const auto loadField = load->getConstantLoadField( fieldName );
+
+                auto calcul = std::make_unique< Calcul >( loadOption );
+                if ( groupOfCells.empty() ) {
+                    calcul->setModel( model );
+                } else {
+                    calcul->setGroupsOfCells( model, groupOfCells );
+                }
+
+                calcul->addInputField( "PGEOMER", model->getMesh()->getCoordinates() );
+                calcul->addInputField( "PDEPLMR", displ_prev );
+                calcul->addInputField( "PDEPLPR", displ_step );
+                calcul->addInputField( loadParam, loadField );
+                if ( currElemChara ) {
+                    calcul->addElementaryCharacteristicsField( currElemChara );
+                }
+                calcul->addFourierModeField( modeFourier );
+                if ( withTime ) {
+                    calcul->addTimeField( "PINSTR", time_curr );
+                }
+                calcul->addOutputElementaryTerm( "PMATUNS", std::make_shared< ElementaryTermReal >() );
+
+                calcul->compute();
+                if ( calcul->hasOutputElementaryTerm( "PMATUNS" ) ) {
+                    elemMatr->addElementaryTerm( calcul->getOutputElementaryTermReal( "PMATUNS" ) );
+                }
+            }
+        }
+    };
+
+    addFollowerTerms( listOfLoads->getMechanicalLoadsReal(), listOfLoads->getListOfMechaTyp(),
+                      "RIGI_MECA_PRSU_R", "PPRESSR", "RIGI_MECA_SRCO3D", "PFRCO3D", false );
+    addFollowerTerms( listOfLoads->getMechanicalLoadsFunction(),
+                      listOfLoads->getListOfMechaFuncTyp(), "RIGI_MECA_PRSU_F", "PPRESSF",
+                      "RIGI_MECA_SFCO3D", "PFFCO3D", true );
+
+    elemMatr->build();
+    return elemMatr;
+};
+
 ElementaryMatrixDisplacementRealPtr
 DiscreteComputation::getFluidStructureStiffnessMatrix( const ASTERINTEGER &modeFourier,
                                                        const FieldOnCellsRealPtr varc_curr,

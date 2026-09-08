@@ -128,6 +128,14 @@ CALC_MATR_ELEM = MACRO(
         CARA_ELEM=SIMP(statut="f", typ=cara_elem),
         STRX_ELGA=SIMP(statut="f", typ=cham_elem),
         DEPL=SIMP(statut="f", typ=cham_no_sdaster),
+        EXCIT=FACT(
+            statut="f",
+            max="**",
+            CHARGE=SIMP(statut="o", typ=char_meca),
+            TYPE_CHARGE=SIMP(
+                statut="f", typ="TXM", defaut="FIXE_CSTE", into=("FIXE_CSTE", "SUIV")
+            ),
+        ),
         CHAM_MATER=SIMP(statut="f", typ=cham_mater),
         MODE_FOURIER=SIMP(statut="f", typ="I", defaut=0),
     ),

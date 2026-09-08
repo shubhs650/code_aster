@@ -1,0 +1,178 @@
+# coding=utf-8
+
+from pathlib import Path
+from math import cos, sin, pi
+
+from code_aster.Commands import *
+from code_aster import CA
+
+
+DEBUT(CODE="OUI", ERREUR=_F(ERREUR_F="EXCEPTION"), DEBUG=_F(SDVERI="NON"))
+
+test = CA.TestCase()
+
+RADIUS = 2.54
+WIDTH = 0.0254
+THICKNESS = 0.0254
+YOUNG = 206.8e9
+POISSON = 0.0
+SECTOR_DEG = 45.0
+NTHETA = 8
+
+_NEXT_UNIT = 90
+
+
+def _new_unit():
+    global _NEXT_UNIT
+    unit = _NEXT_UNIT
+    _NEXT_UNIT += 1
+    return unit
+
+
+def build_ring_sector_mesh():
+    unit = _new_unit()
+    mail_path = Path(f"fort.{unit}")
+    theta_vals = [pi * SECTOR_DEG / 180.0 * i / NTHETA for i in range(NTHETA + 1)]
+    z_vals = [-0.5 * WIDTH, 0.5 * WIDTH]
+
+    lines = [" TITRE", " FOLLOWER RING DKT", " FINSF", " %", " COOR_3D"]
+    for i, theta in enumerate(theta_vals):
+        for j, z in enumerate(z_vals):
+            x = RADIUS * cos(theta)
+            y = RADIUS * sin(theta)
+            lines.append(f" N{i}_{j}    {x: .14E} {y: .14E} {z: .14E}")
+    lines.extend([" FINSF", " %", " QUAD4"])
+    for i in range(NTHETA):
+        lines.append(f" Q{i}    N{i}_0    N{i+1}_0    N{i+1}_1    N{i}_1")
+    lines.extend([" FINSF", " %", " GROUP_MA", " SHELL"])
+    for i in range(NTHETA):
+        lines.append(f" Q{i}")
+    lines.extend([" FINSF", " %"])
+
+    for name, nodes in (
+        ("THETA0", [f"N0_{j}" for j in range(2)]),
+        ("THETA45", [f"N{NTHETA}_{j}" for j in range(2)]),
+        ("PIN", ["N0_0"]),
+    ):
+        lines.extend([" GROUP_NO", f" {name}"])
+        for node in nodes:
+            lines.append(f" {node}")
+        lines.extend([" FINSF", " %"])
+
+    lines.extend([" FIN", ""])
+    mail_path.write_text("\n".join(lines), encoding="ascii")
+    return LIRE_MAILLAGE(FORMAT="ASTER", UNITE=unit)
+
+
+def critical_pressure(use_follower, reference_pressure=1.0):
+    mesh = build_ring_sector_mesh()
+    model = AFFE_MODELE(
+        MAILLAGE=mesh,
+        AFFE=_F(TOUT="OUI", MODELISATION="DKT", PHENOMENE="MECANIQUE"),
+    )
+    cara = AFFE_CARA_ELEM(MODELE=model, COQUE=_F(GROUP_MA="SHELL", EPAIS=THICKNESS))
+    mater = DEFI_MATERIAU(ELAS=_F(E=YOUNG, NU=POISSON))
+    chmat = AFFE_MATERIAU(AFFE=_F(TOUT="OUI", MATER=mater), MODELE=model)
+
+    bc_load = AFFE_CHAR_MECA(
+        MODELE=model,
+        DDL_IMPO=_F(GROUP_NO="THETA0", DY=0.0, DRX=0.0, DRZ=0.0),
+        LIAISON_OBLIQUE=(
+            _F(GROUP_NO="THETA45", DY=0.0, DRX=0.0, DRZ=0.0, ANGL_NAUT=(SECTOR_DEG, 0.0, 0.0)),
+            _F(GROUP_NO="PIN", DZ=0.0, ANGL_NAUT=(0.0, 0.0, 0.0)),
+        ),
+    )
+
+    bc_buck = AFFE_CHAR_MECA(
+        MODELE=model,
+        DDL_IMPO=_F(GROUP_NO="THETA0", DY=0.0, DRX=0.0, DRZ=0.0),
+        LIAISON_OBLIQUE=(
+            _F(GROUP_NO="THETA45", DX=0.0, DZ=0.0, DRY=0.0, ANGL_NAUT=(SECTOR_DEG, 0.0, 0.0)),
+            _F(GROUP_NO="PIN", DZ=0.0, ANGL_NAUT=(0.0, 0.0, 0.0)),
+        ),
+    )
+
+    pressure = AFFE_CHAR_MECA(
+        MODELE=model, PRES_REP=_F(GROUP_MA="SHELL", PRES=reference_pressure)
+    )
+
+    stat = MECA_STATIQUE(
+        MODELE=model,
+        CHAM_MATER=chmat,
+        CARA_ELEM=cara,
+        EXCIT=(_F(CHARGE=bc_load), _F(CHARGE=pressure)),
+        OPTION="SANS",
+        SOLVEUR=_F(METHODE="LDLT"),
+    )
+    stat = CALC_CHAMP(reuse=stat, RESULTAT=stat, CONTRAINTE=("SIEF_ELGA",))
+
+    sig = CREA_CHAMP(
+        OPERATION="EXTR",
+        TYPE_CHAM="ELGA_SIEF_R",
+        RESULTAT=stat,
+        NUME_ORDRE=1,
+        NOM_CHAM="SIEF_ELGA",
+    )
+
+    k_elem = CALC_MATR_ELEM(
+        OPTION="RIGI_MECA",
+        MODELE=model,
+        CHAM_MATER=chmat,
+        CARA_ELEM=cara,
+        CHARGE=bc_buck,
+    )
+
+    kwargs = dict(
+        OPTION="RIGI_GEOM",
+        MODELE=model,
+        CARA_ELEM=cara,
+        SIEF_ELGA=sig,
+    )
+    if use_follower:
+        kwargs["EXCIT"] = (_F(CHARGE=pressure, TYPE_CHARGE="SUIV"),)
+    kg_elem = CALC_MATR_ELEM(**kwargs)
+
+    nume = NUME_DDL(MATR_RIGI=k_elem)
+    k_asse = ASSE_MATRICE(MATR_ELEM=k_elem, NUME_DDL=nume)
+    kg_asse = ASSE_MATRICE(MATR_ELEM=kg_elem, NUME_DDL=nume)
+
+    modes = CALC_MODES(
+        MATR_RIGI=k_asse,
+        MATR_RIGI_GEOM=kg_asse,
+        TYPE_RESU="MODE_FLAMB",
+        OPTION="PLUS_PETITE",
+        CALC_CHAR_CRIT=_F(NMAX_CHAR_CRIT=1),
+        SOLVEUR=_F(METHODE="LDLT"),
+        SOLVEUR_MODAL=_F(METHODE="SORENSEN", COEF_DIM_ESPACE=8),
+    )
+
+    table = RECU_TABLE(CO=modes, NOM_PARA="CHAR_CRIT").EXTR_TABLE()
+    return reference_pressure * list(table.CHAR_CRIT.values())[0]
+
+
+pcr_base = critical_pressure(False)
+pcr_follow = critical_pressure(True)
+pcr_follow_scaled = critical_pressure(True, reference_pressure=2.0)
+
+test.assertAlmostEqual(
+    pcr_follow_scaled / pcr_follow, 1.0, delta=1.0e-8,
+    msg="Critical pressure must not depend on reference-load normalization",
+)
+
+print(f"DKT baseline={pcr_base:.6f} Pa follower={pcr_follow:.6f} Pa")
+
+test.assertTrue(pcr_base > 0.0 and pcr_follow > 0.0, msg="Buckling loads must be positive")
+test.assertTrue(
+    pcr_follow < 0.85 * pcr_base,
+    msg=f"Follower stiffness did not lower DKT buckling load enough: base={pcr_base}, follow={pcr_follow}",
+)
+test.assertAlmostEqual(
+    pcr_follow,
+    51928.349042,
+    delta=1200.0,
+    msg=f"Unexpected DKT follower buckling load: {pcr_follow}",
+)
+
+test.printSummary()
+
+FIN()

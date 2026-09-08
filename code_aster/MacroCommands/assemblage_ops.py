@@ -136,6 +136,8 @@ def assemblage_ops(self, MODELE, NUME_DDL, INFO, **args):
                 motscles["INST"] = INST
             if "SIEF_ELGA" in m:
                 motscles["SIEF_ELGA"] = m["SIEF_ELGA"]
+            if "EXCIT" in m:
+                motscles["EXCIT"] = m["EXCIT"]
             if "MODE_FOURIER" in m:
                 motscles["MODE_FOURIER"] = m["MODE_FOURIER"]
             if "GROUP_MA" in m:

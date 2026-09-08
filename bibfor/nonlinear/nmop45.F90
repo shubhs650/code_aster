@@ -76,7 +76,7 @@ subroutine nmop45(eigsol, l_hpp, mod45, modes, modes2, ds_posttimestep_, nfreq_c
     character(len=4)  :: mod45b
     character(len=8)  :: method
     character(len=16) :: typcon, typco2, k16bid
-    character(len=19) :: matopa, solveu, raide
+    character(len=19) :: matopa, matpsc, solveu, raide
     character(len=24) :: k24bid, vecblo, veclag, vecrer, vecrei, vecrek, vecvp, vecstb
     character(len=24) :: vecedd, vecsdd
     aster_logical     :: lcomod, checksd
@@ -124,7 +124,9 @@ subroutine nmop45(eigsol, l_hpp, mod45, modes, modes2, ds_posttimestep_, nfreq_c
     vecblo = '&&NMOP45.POSITION.DDL'
     veclag = '&&NMOP45.DDL.BLOQ.CINE'
     matopa = '&&NMOP45.DYN_FAC_C '
-    call vpini1(eigsol, modes, solveu, typcon, vecblo, veclag, k24bid, matopa, matopa, iret, &
+! vpini1 clears the unused scalar-product matrix for a nonsymmetric GEP.
+    matpsc = '&&NMOP45.MAT_PSC'
+    call vpini1(eigsol, modes, solveu, typcon, vecblo, veclag, k24bid, matpsc, matopa, iret, &
                 nblagr, neqact, npivot, ibid, omemax, omemin, omeshi, cbid, mod45, nfreq_calibr)
 
     if (present(nfreq_calibr_)) then
@@ -173,7 +175,7 @@ subroutine nmop45(eigsol, l_hpp, mod45, modes, modes2, ds_posttimestep_, nfreq_c
         call vppost(vecrer, vecrei, vecrek, vecvp, nbpark, &
                     nbpari, nbparr, mxresf, nconv, nblagr, &
                     ibid, modes, typcon, k16bid, eigsol, &
-                    matopa, matopa, solveu, vecblo, veclag, &
+                    matopa, matpsc, solveu, vecblo, veclag, &
                     flage, ibid, ibid, mpibid, mpibid, &
                     omemax, omemin, vpinf, vpmax, lcomod, mod45b)
 
@@ -228,7 +230,7 @@ subroutine nmop45(eigsol, l_hpp, mod45, modes, modes2, ds_posttimestep_, nfreq_c
         call vppost(vecrer, vecrei, vecrek, vecvp, nbpark, &
                     nbpari, nbparr, mxresf, nconv, nblagr, &
                     ibid, modes, typcon, k16bid, eigsol, &
-                    matopa, matopa, solveu, vecblo, veclag, &
+                    matopa, matpsc, solveu, vecblo, veclag, &
                     flage, ibid, ibid, mpibid, mpibid, &
                     omemax, omemin, vpinf, vpmax, lcomod, mod45b)
         if (nsta .ne. 0) then
@@ -241,7 +243,7 @@ subroutine nmop45(eigsol, l_hpp, mod45, modes, modes2, ds_posttimestep_, nfreq_c
             call vppost(vecrer, vecrei, vecrek, vecstb, nbpark, &
                         nbpari, nbparr, un, un, nblagr, &
                         ibid, modes2, typco2, k16bid, eigsol, &
-                        matopa, matopa, solveu, vecblo, veclag, &
+                        matopa, matpsc, solveu, vecblo, veclag, &
                         flage, ibid, ibid, mpibid, mpibid, &
                         omemax, omemin, vpinf, vpmax, lcomod, mod45b)
         end if

@@ -142,7 +142,6 @@ subroutine vpvers(eigsol, modes, checksd)
         if (.not. lkr) call utmess('F', 'ALGELINE5_70', sk=matra)
         if (optiof(1:5) .eq. 'BANDE') call utmess('F', 'ALGELINE4_39')
         if (modrig(1:11) .eq. 'MODE_RIGIDE') call utmess('F', 'ALGELINE4_40')
-        if (typres(1:10) .eq. 'MODE_FLAMB') call utmess('F', 'ALGELINE4_41')
     end if
 !
 ! --  TRAITEMENT PARTICULIER LIE A L'OPTION PLUS GRANDE

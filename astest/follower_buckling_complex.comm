@@ -1,0 +1,50 @@
+# coding=utf-8
+
+from pathlib import Path
+
+from code_aster.Commands import *
+from code_aster import CA
+
+DEBUT(CODE="OUI", ERREUR=_F(ERREUR_F="EXCEPTION"))
+test = CA.TestCase()
+
+Path("fort.90").write_text(
+    "TITRE\nComplex buckling pencil\nFINSF\n"
+    "COOR_3D\nN1 0 0 0\nN2 1 0 0\nFINSF\n"
+    "POI1\nP1 N1\nP2 N2\nFINSF\nGROUP_MA\nPOINTS\nP1 P2\nFINSF\nFIN\n",
+    encoding="ascii",
+)
+mesh = LIRE_MAILLAGE(FORMAT="ASTER", UNITE=90)
+model = AFFE_MODELE(
+    MAILLAGE=mesh, AFFE=_F(TOUT="OUI", MODELISATION="DIS_T", PHENOMENE="MECANIQUE")
+)
+identity = AFFE_CARA_ELEM(
+    MODELE=model, DISCRET=_F(GROUP_MA="POINTS", CARA="K_T_D_N", VALE=(1.0, 1.0, 1.0))
+)
+k_elem = CALC_MATR_ELEM(OPTION="RIGI_MECA", MODELE=model, CARA_ELEM=identity)
+numbering = NUME_DDL(MATR_RIGI=k_elem)
+k = ASSE_MATRICE(MATR_ELEM=k_elem, NUME_DDL=numbering)
+
+# Each 3x3 block has eigenvalues -1 +/- 2i and -0.01.
+# The first two roots of K + lambda * B are 0.2 +/- 0.4i, not real loads 0.2.
+coupling = AFFE_CARA_ELEM(
+    MODELE=model,
+    DISCRET=_F(
+        GROUP_MA="POINTS", CARA="K_T_N", SYME="NON",
+        VALE=(-1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 0.0, 0.0, -0.01),
+    ),
+)
+b_elem = CALC_MATR_ELEM(OPTION="RIGI_MECA", MODELE=model, CARA_ELEM=coupling)
+b = ASSE_MATRICE(MATR_ELEM=b_elem, NUME_DDL=numbering)
+
+for method, option in (("SORENSEN", "PLUS_PETITE"), ("QZ", "TOUT")):
+    with test.assertRaisesRegex(CA.AsterError, "ALGELINE4_97"):
+        CALC_MODES(
+            MATR_RIGI=k, MATR_RIGI_GEOM=b, TYPE_RESU="MODE_FLAMB", OPTION=option,
+            CALC_CHAR_CRIT=_F(NMAX_CHAR_CRIT=1),
+            SOLVEUR_MODAL=_F(METHODE=method),
+            SOLVEUR=_F(METHODE="LDLT"),
+        )
+
+test.printSummary()
+FIN()

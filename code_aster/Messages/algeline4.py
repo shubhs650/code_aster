@@ -425,4 +425,12 @@ Contactez le support technique.
  On le ramène à la valeur : %(r2)f.
 """
     ),
+    97: _(
+        """
+ MODE_FLAMB a obtenu une charge critique complexe : %(r1)g + i * %(r2)g.
+ Sa partie imaginaire n'est pas négligeable. Elle ne peut pas être enregistrée
+ comme une charge critique réelle dans CHAR_CRIT.
+ Ce calcul de flambement ne permet pas de conclure sur une instabilité dynamique.
+"""
+    ),
 }

@@ -129,6 +129,14 @@ ASSEMBLAGE = MACRO(
         b_rigi_geom=BLOC(
             condition="""equal_to("OPTION", 'RIGI_GEOM')""",
             SIEF_ELGA=SIMP(statut="o", typ=cham_elem),
+            EXCIT=FACT(
+                statut="f",
+                max="**",
+                CHARGE=SIMP(statut="o", typ=char_meca),
+                TYPE_CHARGE=SIMP(
+                    statut="f", typ="TXM", defaut="FIXE_CSTE", into=("FIXE_CSTE", "SUIV")
+                ),
+            ),
             MODE_FOURIER=SIMP(statut="f", typ="I", defaut=0),
         ),
         b_rigi_ther=BLOC(
