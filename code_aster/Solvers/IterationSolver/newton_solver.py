@@ -195,8 +195,15 @@ class NewtonSolver(BaseIterationSolver, EventSource):
         self._update_contact_geometry()
         # Get scaling for Lagrange (j'aimerais bien m'en débarasser de là)
         scaling = self.oper.getLagrangeScaling(matrix_type)
-        # Compute residual
-        residuals = self._compute_residuals(scaling)
+        # compute residual (only when iterNewton <= 1 or _line_search is not activated)
+        if (self._line_search.isEnabled()) :
+            if (self.current_incr > 1) :
+                residuals = self._line_search.residuals  
+            else :
+                residuals = self._compute_residuals(scaling)
+                self._line_search.residuals = residuals
+        else :
+            residuals = self._compute_residuals(scaling)
         # Evaluate convergence
         resi_fields = self._converg.evalNormResidual(residuals)
         # Preparation of the linear system : compute jacobian if only "not yet" converged 

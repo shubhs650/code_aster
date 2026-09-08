@@ -55,6 +55,7 @@ class BaseLineSearch(ABC, ContextMixin):
     __needs__ = ("keywords", "state", "oper")
     linesearch_type = LineSearchType.Unset
     _cached_limits = None
+    residuals = None
     __setattr__ = no_new_attributes(object.__setattr__)
 
     @classmethod
@@ -77,6 +78,7 @@ class BaseLineSearch(ABC, ContextMixin):
     def __init__(self):
         super().__init__()
         self._cached_limits = None
+        self.residuals = None
 
     def _get(self, keyword=None, default=None):
         return self.get_keyword("RECH_LINEAIRE", keyword, default)
@@ -90,6 +92,7 @@ class BaseLineSearch(ABC, ContextMixin):
         self.state.deltaU += rho * solution
         # compute residual
         resi_state = self.oper.getResidual(scaling)
+        self.residuals = resi_state
         self.state.deltaU -= rho * solution
         return -resi_state.resi.dot(solution)
 
@@ -229,7 +232,7 @@ class SecantLineSearch(BaseLineSearch):
         f0 = self.compute_f(rho0, solution)
         logger.debug("fonctionnelle initiale %.6f", f0)
         f1 = self.compute_f(rho1, solution)
-        tol = 1.0e-12 * self.oper.getResidual().resi.norm() * solution.norm()
+        tol = 1.0e-12 * self.residuals.resi.norm() * solution.norm()
         if abs(f0) <= tol and abs(f1) <= tol:
             UTMESS("A", "MECANONLINE5_49")
             return solution
