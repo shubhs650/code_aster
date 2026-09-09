@@ -195,7 +195,7 @@ subroutine mmveri(mesh, ds_contact, time_curr, nt_ncomp_poin, &
 !
 ! ------------- Coordinates of projection
 !
-                call mcopco(mesh, newgeo, model_ndim, elem_mast_nume, ksipr1, &
+                call mcopco(mesh, newgeo, elem_mast_nume, ksipr1, &
                             ksipr2, node_coor_proj)
 !
 ! ------------- Contact point name

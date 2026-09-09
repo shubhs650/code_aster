@@ -29,6 +29,7 @@ subroutine xmifis(ndim, ndime, elrefp, geom, lsn, &
 #include "asterfort/xelrex.h"
 #include "asterfort/xnewto.h"
 #include "asterfort/xnormv.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: ndim, ndime, n(3), ip1, ip2, exit(2)
     character(len=8) :: elrefp
     real(kind=8) :: mifis(ndim), pinref(*), miref(ndime), geom(*), lsn(*)
@@ -55,7 +56,7 @@ subroutine xmifis(ndim, ndime, elrefp, geom, lsn, &
 !     ----------------------------------------------------------------
 !
     integer(kind=8) :: nno, j, ia, ib, ic
-    real(kind=8) :: x(81), ksi(ndime), bc(ndime), ba(ndime), ff(27)
+    real(kind=8) :: x(3*MT_NNOMAX3D), ksi(ndime), bc(ndime), ba(ndime), ff(MT_NNOMAX)
     real(kind=8) :: epsmax, rbid, ip1ip2(ndime), ptxx(2*ndime)
     real(kind=8) :: vect(ndime), k, k1, k2, alpha, dekker(4*ndime)
     real(kind=8) :: pta(ndime), ptb(ndime), ptc(ndime), newpt(ndime)

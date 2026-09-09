@@ -18,8 +18,8 @@
 ! aslint: disable=W1504
 !
 subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
-                          p1, dp1, p2, dp2, satur, tbiot, nl, &
-                          j_mater, ndim, typmod, carcri, &
+                          nl, &
+                          ndim, typmod, carcri, &
                           addeme, adcome, addep1, addep2, &
                           dimdef, dimcon, &
                           defgem, deps, &
@@ -29,22 +29,21 @@ subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
                           dsde, ther_meca, retcom)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/utmess.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/dsipdp.h"
 #include "asterfort/lchbr2.h"
 #include "asterfort/mxwell_mt.h"
+#include "asterfort/utmess.h"
 !
     type(THM_DS), intent(in) :: ds_thm
     character(len=16), intent(in) :: option, meca
     aster_logical, intent(in) :: lMatr
-    integer(kind=8), intent(in) :: j_mater
-    real(kind=8), intent(in) :: p1, dp1, p2, dp2, satur, tbiot(6), nl
+    real(kind=8), intent(in) :: nl
     character(len=8), intent(in) :: typmod(2)
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8), intent(in) :: ndim, dimdef, dimcon
     integer(kind=8), intent(in) :: addeme, adcome, addep1, addep2
     real(kind=8), intent(in) :: vintm(*)
@@ -74,7 +73,6 @@ subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
 ! In  satur            : saturation
 ! In  tbiot            : tensor of Biot
 ! In  nl               : Eulerian porosity
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  typmod           : type of modelization (TYPMOD2)
 ! In  carcri           : parameters for comportment
@@ -98,7 +96,7 @@ subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i, j
+    integer(kind=8) :: i, j, jvMaterCode
     real(kind=8) :: alpha0, young, nu
     aster_logical :: l_dspdp2
     real(kind=8) :: dsdeme(6, 6), dsidp1(6), dsidp2(6), dspdp1, dspdp2
@@ -118,15 +116,18 @@ subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
     nu = ds_thm%ds_material%elas%nu
     alpha0 = ds_thm%ds_material%ther%alpha
 
+    jvMaterCode = ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode
+
     if (meca .eq. 'HOEK_BROWN_TOT') then
 ! ----- Preparation for HOEK_BROWN_TOT
         call dsipdp(ds_thm, &
                     adcome, addep1, addep2, &
                     dimcon, dimdef, dsde, &
                     dspdp1, dspdp2, l_dspdp2)
+
 ! ----- Compute behaviour
         sipm = congem(adcome+6)
-        call lchbr2(typmod, option, j_mater, carcri, &
+        call lchbr2(typmod, option, jvMaterCode, carcri, &
                     congem(adcome), defgem(addeme+ndim), deps, vintm, &
                     vintp, dspdp1, dspdp2, congep(adcome+6), congep(adcome), &
                     dsdeme, dsidp1, dsidp2, retcom)
@@ -155,7 +156,7 @@ subroutine thmMecaSpecial(ds_thm, option, lMatr, meca, &
         end if
     elseif (meca .eq. 'VISC_MAXWELL_MT') then
 ! ----- Compute behaviour
-        call mxwell_mt(ndim, typmod, j_mater, time_prev, time_curr, nl, &
+        call mxwell_mt(ndim, typmod, jvMaterCode, time_prev, time_curr, nl, &
                        deps, congem(adcome), vintm, option, &
                        congep(adcome), vintp, dsdeme, retcom)
 ! ----- Add mecanic matrix

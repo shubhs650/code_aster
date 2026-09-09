@@ -15,25 +15,22 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcumfp(fami, kpg, ksp, ndim, typmod,&
-                      imate, compor, tinstm, tinstp, epsm,&
-                      deps, sigm, vim, option, rela_plas,&
+    subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
+                      imate, tinstm, tinstp, epsm, &
+                      deps, sigm, vim, option, relaPlas, &
                       sigp, vip, dsidep)
         integer(kind=8), intent(in) :: ndim
         integer(kind=8), intent(in) :: imate
         integer(kind=8), intent(in) :: kpg
         integer(kind=8), intent(in) :: ksp
         character(len=8), intent(in) :: typmod(*)
-        character(len=16), intent(in) :: compor(*)
-        character(len=16), intent(in) :: rela_plas
+        character(len=16), intent(in) :: relaPlas
         character(len=16), intent(in) :: option
         character(len=*), intent(in) :: fami
         real(kind=8) :: tinstm, tinstp
         real(kind=8) :: epsm(*), deps(*), sigm(*), sigp(*), vim(*), vip(*)
-        real(kind=8) :: dsidep(6, 6), tbid(36)
+        real(kind=8) :: dsidep(6, 6)
     end subroutine lcumfp
 end interface

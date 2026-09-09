@@ -20,19 +20,16 @@ subroutine caarle(numeDofZ, iocc, listRelaZ, loadZ)
 !
     implicit none
 #include "jeveux.h"
-#include "asterc/getfac.h"
 #include "asterfort/arlcou.h"
 #include "asterfort/arllec.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/getvid.h"
-#include "asterfort/getvtx.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jelira.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jenuno.h"
 #include "asterfort/jexnum.h"
-#include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
 !
     character(len=*), intent(in) :: numeDofZ

@@ -18,21 +18,19 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine coeihm(ds_thm, option,&
-                      lSigm, lVari, lMatr, lVect,&
-                      j_mater,&
-                      time_prev, time_curr, nomail,&
+    subroutine coeihm(ds_thm, &
+                      lSigm, lVari, lMatr, lVect, &
+                      option, &
+                      time_prev, time_curr, &
                       ndim, dimdef, dimcon, nbvari, &
-                      addeme, adcome,&
-                      addep1, adcp11, adcp12, addlh1, adcop1,&
-                      addep2, adcp21, adcp22, addete, adcote,&
-                      defgem, defgep, kpi, npg, npi,&
-                      sigm, sigp, varim, varip, res,&
+                      addeme, adcome, &
+                      addep1, adcp11, adcp12, addlh1, adcop1, &
+                      addep2, adcp21, adcp22, addete, adcote, &
+                      defgem, defgep, kpi, npg, npi, &
+                      sigm, sigp, varim, varip, res, &
                       drde, retcom)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        character(len=8), intent(in) :: nomail
         character(len=16), intent(in) :: option
         integer(kind=8), intent(in) :: dimdef, dimcon, npg, kpi, npi, ndim
         integer(kind=8), intent(in) :: nbvari

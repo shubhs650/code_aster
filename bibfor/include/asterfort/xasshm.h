@@ -16,24 +16,27 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine xasshm(ds_thm,&
-                      nno, npg, npi, ipoids, ivf,&
-                      idfde, igeom, geom, carcri, deplm,&
-                      deplp, contm, contp, varim,&
-                      varip, defgem, defgep, drds,&
-                      drdsr, dsde, b, dfdi, dfdi2,&
-                      r, sigbar, c, ck, cs,&
-                      matuu, vectu, rinstm, rinstp, option,&
-                      j_mater, mecani, press1, press2, tempe,&
-                      dimdef, dimcon, dimuel, nbvari, nddls,&
-                      nddlm, nmec, np1, ndim,&
-                      compor, axi, modint, codret,&
-                      nnop, nnops, nnopm, enrmec,&
-                      dimenr, heavt, lonch, cnset, jpintt,&
-                      jpmilt, jheavn, angmas,dimmat, enrhyd,&
-                      nfiss, nfh, jfisno, work1, work2,&
+    subroutine xasshm(ds_thm, &
+                      nno, npg, npi, ipoids, ivf, &
+                      idfde, igeom, geom, carcri, &
+                      deplm, deplp, contm, contp, &
+                      varim, varip, defgem, defgep, &
+                      drds, drdsr, dsde, &
+                      b, dfdi, dfdi2, &
+                      r, sigbar, c, ck, cs, &
+                      matuu, vectu, &
+                      timePrev, timeCurr, option, &
+                      mecani, press1, press2, tempe, &
+                      dimdef, dimcon, dimuel, &
+                      nbvari, nddls, nddlm, nmec, &
+                      np1, ndim, compor, axi, modint, codret, &
+                      nnop, nnops, nnopm, enrmec, &
+                      dimenr, heavt, lonch, cnset, jpintt, &
+                      jpmilt, jheavn, dimmat, enrhyd, &
+                      nfiss, nfh, jfisno, work1, work2, &
                       lVect, lMatr, lVari, lSigm)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
@@ -53,7 +56,6 @@ interface
         integer(kind=8) :: idfde
         integer(kind=8) :: igeom
         real(kind=8) :: geom(ndim, nnop)
-        real(kind=8) :: carcri(*)
         real(kind=8) :: deplm(dimuel)
         real(kind=8) :: deplp(dimuel)
         real(kind=8) :: contm(*)
@@ -75,10 +77,11 @@ interface
         real(kind=8) :: cs(dimenr)
         real(kind=8) :: matuu(dimuel*dimuel)
         real(kind=8) :: vectu(dimuel)
-        real(kind=8) :: rinstm
-        real(kind=8) :: rinstp
-        character(len=16) :: option
-        integer(kind=8) :: j_mater
+        real(kind=8) :: timePrev
+        real(kind=8) :: timeCurr
+        character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        aster_logical, intent(in) :: lVect, lMatr, lVari, lSigm
         integer(kind=8) :: mecani(5)
         integer(kind=8) :: press1(7)
         integer(kind=8) :: press2(7)
@@ -88,7 +91,6 @@ interface
         integer(kind=8) :: nddlm
         integer(kind=8) :: nmec
         integer(kind=8) :: np1
-        character(len=16) :: compor(*)
         aster_logical :: axi
         character(len=3) :: modint
         integer(kind=8) :: codret
@@ -100,13 +102,11 @@ interface
         integer(kind=8) :: jpintt
         integer(kind=8) :: jpmilt
         integer(kind=8) :: jheavn
-        real(kind=8) :: angmas(3)
         integer(kind=8) :: enrhyd(3)
         integer(kind=8) :: nfiss
         integer(kind=8) :: nfh
         integer(kind=8) :: jfisno
         real(kind=8) :: work1(dimcon, dimuel)
         real(kind=8) :: work2(dimenr, dimuel)
-        aster_logical, intent(in) :: lVect, lMatr, lVari, lSigm
     end subroutine xasshm
 end interface

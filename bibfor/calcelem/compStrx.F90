@@ -16,34 +16,34 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine compStrx(modelz, ligrel, compor, &
-                    chdispz, chgeom, chmate, chcara, &
-                    chvarc, chvref, &
-                    basez, chelemz, codret, &
-                    l_poux_, load_d_, coef_type_, coef_real_, coef_cplx_)
+subroutine compStrx(modelZ, materCodeZ, caraElemZ, comporZ, &
+                    dispZ, chgeomZ, &
+                    chvarcZ, chvrefZ, &
+                    lPoux, loadPres, coefMultR, &
+                    ligrelZ, jvBaseZ, strxZ, codret)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/ajchca.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/exisd.h"
+#include "asterfort/exixfe.h"
+#include "asterfort/jedetc.h"
 #include "asterfort/jeexin.h"
 #include "asterfort/meceuc.h"
-#include "asterfort/utmess.h"
 #include "asterfort/mechpo.h"
-#include "asterfort/jedetc.h"
+#include "asterfort/setStructFields.h"
+#include "asterfort/utmess.h"
 !
-    character(len=*), intent(in) :: modelz, ligrel, compor
-    character(len=*), intent(in) :: chdispz, chgeom, chmate
-    character(len=*), intent(in) :: chcara(*)
-    character(len=*), intent(in) :: chvarc, chvref
-    character(len=*), intent(in) :: chelemz, basez
+    character(len=*), intent(in) :: modelZ, materCodeZ, caraElemZ, comporZ
+    character(len=*), intent(in) :: dispZ, chgeomZ
+    character(len=*), intent(in) :: chvarcZ, chvrefZ
+    aster_logical, intent(in) :: lPoux
+    character(len=*), intent(in) :: loadPres
+    real(kind=8), intent(in) :: coefMultR
+    character(len=*), intent(in) :: ligrelZ, strxZ, jvBaseZ
     integer(kind=8), intent(out) :: codret
-    aster_logical, intent(in), optional :: l_poux_
-    character(len=*), intent(in), optional :: load_d_, coef_type_
-    real(kind=8), intent(in), optional :: coef_real_
-    complex(kind=8), intent(in), optional :: coef_cplx_
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -53,99 +53,91 @@ subroutine compStrx(modelz, ligrel, compor, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: option = 'STRX_ELGA'
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=24) :: lchin(nbFieldInMax), lchout(nbFieldOut)
 !
-! --------------------------------------------------------------------------------------------------
-!
-    integer(kind=8), parameter :: maxin = 65, maxout = 1
-    character(len=8) :: lpain(maxin), lpaout(maxout)
-    character(len=24) :: lchin(maxin), lchout(maxout)
-    character(len=1) :: base
-    character(len=8) :: model, cara_elem
-    character(len=16) :: option
+    integer(kind=8) :: nbFieldIn
+    character(len=1) :: jvBase
+    character(len=8) :: model, caraElem
     character(len=24) :: chdisp, chelem, chdynr, suropt
-    integer(kind=8) :: iret, ifiss
-    integer(kind=8) :: nbin, nbout, nbopt
-    aster_logical :: l_poux, l_xfem
+    integer(kind=8) :: iret, nbFieldAdd
+    aster_logical ::  lXFEM
+    character(len=1), parameter :: coefType = "R"
+    complex(kind=8), parameter :: coefMultC = (0.d0, 0.d0)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    cara_elem = chcara(1)
-    chdisp = chdispz
-    chelem = chelemz
+    caraElem = caraElemZ
+    chdisp = dispZ
+    chelem = strxZ
     codret = 0
-    base = basez
-    model = modelz
-    option = 'STRX_ELGA'
-    lpain(:) = ' '
-    lchin(:) = ' '
+    jvBase = jvBaseZ
+    model = modelZ
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
     chdynr = ' '
     suropt = ' '
-    l_poux = ASTER_FALSE
-    if (present(l_poux_)) then
-        l_poux = l_poux_
-    end if
-!
+
 ! - XFEM
-!
-    call jeexin(modelz(1:8)//'.FISS', ifiss)
-    l_xfem = ifiss .gt. 0
-    if (l_xfem) then
+    call exixfe(model, iret)
+    lXFEM = iret .ne. 0
+    if (lXFEM) then
         codret = 1
         call utmess('A', 'CALCCHAMP_7')
         goto 99
     end if
-!
-! - Output field
-!
-    nbout = 1
+
+! - Add input fields
+    lpain(1) = 'PDEPLAR'
+    lchin(1) = chdisp
+    lpain(2) = 'PCOMPOR'
+    lchin(2) = comporZ
+    lpain(3) = 'PGEOMER'
+    lchin(3) = chgeomZ
+    lpain(4) = 'PMATERC'
+    lchin(4) = materCodeZ
+    lpain(5) = 'PVARCRR'
+    lchin(5) = chvrefZ
+    lpain(6) = 'PVARCPR'
+    lchin(6) = chvarcZ
+    nbFieldIn = 6
+
+! - Add field for beams
+    if (lPoux) then
+        call mechpo('&&MECHPO', loadPres, model, chdisp, chdynr, &
+                    suropt, lpain(nbFieldIn+1), lchin(nbFieldIn+1), nbFieldAdd, &
+                    coefType, coefMultR, coefMultC)
+        nbFieldIn = nbFieldIn+nbFieldAdd
+    end if
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Set output field
     lchout(1) = chelem
     lpaout(1) = 'PSTRXRR'
-!
-! - Add input fields
-!
-    nbin = 1
-    lchin(1) = chdisp
-    lpain(1) = 'PDEPLAR'
-!
-! - Fields for structural elements
-!
-    call ajchca('PNBSP_I', cara_elem//'.CANBSP', lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PFIBRES', cara_elem//'.CAFIBR', lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PCAGNPO', chcara(6), lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PCAORIE', chcara(1), lpain, lchin, nbin, maxin, 'N')
-!
-! - Other fields
-!
-    call ajchca('PCOMPOR', compor, lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PGEOMER', chgeom, lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PMATERC', chmate, lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PVARCRR', chvref, lpain, lchin, nbin, maxin, 'N')
-    call ajchca('PVARCPR', chvarc, lpain, lchin, nbin, maxin, 'N')
-!
-! - For beams
-!
-    if (l_poux) then
-        call mechpo('&&MECHPO', load_d_, model, chdisp, chdynr, &
-                    suropt, lpain(nbin+1), lchin(nbin+1), nbopt, coef_type_, &
-                    coef_real_, coef_cplx_)
-        nbin = nbin+nbopt
-    end if
-!
+
 ! - Computation (with preparation for COMPLEX fields)
-!
-    call meceuc('C', option, cara_elem, ligrel, &
-                nbin, lchin, lpain, &
-                nbout, lchout, lpaout, base)
+    call meceuc('C', option, caraElem, ligrelZ, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, jvBase)
     call exisd('CHAMP_GD', lchout(1), iret)
     if (iret .eq. 0) then
         codret = 1
         call utmess('A', 'CALCCHAMP_89', sk=option)
     end if
-!
+
 ! - Clean
-!
     call detrsd('CHAM_ELEM_S', chelem)
-    if (l_poux) then
+    if (lPoux) then
         call jedetc('V', '&&MECHPO', 1)
     end if
 !

@@ -72,7 +72,7 @@ subroutine te0299(option, nomte)
     real(kind=8) :: coefk
     real(kind=8) :: guv, guv1, guv2, k1, k2, g, poids, ray, puls
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(4), elrefp
     character(len=16) :: nomres(3)
     character(len=32) :: phenom

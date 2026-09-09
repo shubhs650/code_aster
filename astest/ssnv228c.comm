@@ -1,0 +1,264 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+E = 200000.0
+Nu = 0.3
+coef = E / 100
+# =====================================================================
+#                 MAILLAGE
+# =====================================================================
+MA = LIRE_MAILLAGE(FORMAT="MED")
+
+MA = DEFI_GROUP(
+    reuse=MA,
+    MAILLAGE=MA,
+    CREA_GROUP_NO=(
+        _F(GROUP_MA="M_L_SA", NOM="N_M_L_SA"),
+        _F(INTERSEC=("N_SCJB", "N_M_L_SA"), NOM="N_ISA"),
+        _F(INTERSEC=("N_SCJB", "N_M_L_AA"), NOM="N_IAA"),
+        _F(DIFFE=("N_M_L_AA", "N_SCEG", "N_SCGE"), NOM="N_ILAA"),
+    ),
+)
+
+MA = MODI_MAILLAGE(
+    reuse=MA,
+    MAILLAGE=MA,
+    ORIE_PEAU=_F(GROUP_MA_PEAU=("M_TUB", "M_INT", "SCBJ", "SCJB", "M_L_AA", "M_L_SA")),
+)
+
+# =====================================================================
+#                 MODELE ET MATERIAU
+# =====================================================================
+MO_ME = AFFE_MODELE(MAILLAGE=MA, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="3D"))
+
+MAT = DEFI_MATERIAU(ELAS=_F(E=E, NU=Nu))
+
+CHMTM = AFFE_MATERIAU(MAILLAGE=MA, MODELE=MO_ME, AFFE=_F(TOUT="OUI", MATER=MAT))
+
+# =====================================================================
+#                 CONDITIONS AUX LIMITES
+# =====================================================================
+# Blocage suivant z du deplacement du dessous du goujon, M_GOU, et du joint,M_JOI.
+# Conditions de symetrie : blocage lateral (face laterale, N_ILAA, avec alesage).
+# Conditions de symetrie : blocage lateral (face laterale, M_L_SA, sans alesage).
+# Condition de planeite de la face de coupe du tube, M_TUB.
+# Serrage ecrou/goujon (N_SCEG/N_SCGE).
+# Pression sur M_INT.
+CL = AFFE_CHAR_MECA(
+    MODELE=MO_ME,
+    DDL_IMPO=(_F(GROUP_MA=("M_GOU", "M_JOI"), DZ=0.0), _F(GROUP_NO="N_ILAA", DY=0.0)),
+    FACE_IMPO=_F(GROUP_MA="M_L_SA", DNOR=0.0),
+    LIAISON_UNIF=_F(GROUP_MA=("M_TUB"), DDL="DZ"),
+    LIAISON_GROUP=(
+        _F(
+            GROUP_NO_1="N_SCEG",
+            GROUP_NO_2="N_SCGE",
+            DDL_1="DX",
+            COEF_MULT_1=1.0,
+            DDL_2="DX",
+            COEF_MULT_2=-1.0,
+            COEF_IMPO=0.0,
+        ),
+        _F(
+            GROUP_NO_1="N_SCEG",
+            GROUP_NO_2="N_SCGE",
+            DDL_1="DY",
+            COEF_MULT_1=1.0,
+            DDL_2="DY",
+            COEF_MULT_2=-1.0,
+            COEF_IMPO=0.0,
+        ),
+    ),
+    PRES_REP=_F(GROUP_MA="M_INT", PRES=1.0),
+)
+
+# =====================================================================
+#                 CONTACT JOINT/BRIDE
+# =====================================================================
+CON_BJ = DEFI_CONTACT(
+    MODELE=MO_ME,
+    FORMULATION="CONTINUE",
+    ALGO_RESO_GEOM="NEWTON",
+    ZONE=_F(
+        GROUP_MA_MAIT=("SCBJ",),
+        GROUP_MA_ESCL=("SCJB",),
+        SANS_GROUP_NO=("N_ISA", "N_IAA"),
+        CONTACT_INIT="INTERPENETRE",
+    ),
+)
+
+
+CON_BJ = DEFI_CONT(
+    MODELE=MO_ME,
+    INFO=1,
+    ZONE=(
+        _F(
+            GROUP_MA_MAIT="SCBJ",  # "SCJB",
+            GROUP_MA_ESCL="SCJB",  # "SCBJ",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="OUI",
+            AIRE_TOLE=1e-15,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+    ),
+)
+
+
+# =====================================================================
+#                 CHARGEMENT
+# =====================================================================
+# Contrainte moyenne dans le du goujon = 30 MPa
+# Recherche par tatonnement du DEPL_R correspondant
+# DEPL_R : deplacement relatif suivant z entre N_SCEG et N_SCGE
+# ATTENTION : 1/2 section de modelisee
+
+
+SIG_PRET = 30.0
+R_GOUJON = 6.0
+F_RESULT = -SIG_PRET * 3.14 * R_GOUJON * R_GOUJON / 2.0
+#
+DEPL_R = 0.008
+#
+F_PRET = DEFI_FONCTION(
+    NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, -DEPL_R), PROL_DROITE="CONSTANT", PROL_GAUCHE="CONSTANT"
+)
+
+CHAR = AFFE_CHAR_MECA_F(
+    MODELE=MO_ME,
+    LIAISON_GROUP=_F(
+        GROUP_NO_1="N_SCEG",
+        GROUP_NO_2="N_SCGE",
+        DDL_1="DZ",
+        COEF_MULT_1=1.0,
+        DDL_2="DZ",
+        COEF_MULT_2=-1.0,
+        COEF_IMPO=F_PRET,
+    ),
+)
+
+# =====================================================================
+#                 RESOLUTION
+# =====================================================================
+LR = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=1.0, NOMBRE=1))
+
+
+RESU = MECA_NON_LINE(
+    MODELE=MO_ME,
+    CHAM_MATER=CHMTM,
+    EXCIT=(_F(CHARGE=CL), _F(CHARGE=CHAR)),
+    CONTACT=_F(DEFINITION=CON_BJ, ALGO_RESO_GEOM="NEWTON"),
+    NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
+    COMPORTEMENT=_F(RELATION="ELAS"),
+    INCREMENT=_F(LIST_INST=LR),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=50),
+    INFO=1,
+)
+
+# =====================================================================
+#                 POST-TRAITEMENT
+# =====================================================================
+RESU = CALC_CHAMP(reuse=RESU, RESULTAT=RESU, FORCE="REAC_NODA")
+
+REACF = POST_RELEVE_T(
+    ACTION=(
+        _F(
+            INTITULE="FZ_GOU",
+            OPERATION="EXTRACTION",
+            INST=1.0,
+            RESULTAT=RESU,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DZ",
+            GROUP_NO="N_M_GOU",
+        ),
+        _F(
+            INTITULE="FZ_CEG",
+            OPERATION="EXTRACTION",
+            INST=1.0,
+            RESULTAT=RESU,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DZ",
+            GROUP_NO="N_SCEG",
+        ),
+        _F(
+            INTITULE="FZ_CGE",
+            OPERATION="EXTRACTION",
+            INST=1.0,
+            RESULTAT=RESU,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DZ",
+            GROUP_NO="N_SCGE",
+        ),
+        _F(
+            INTITULE="FZ_CBJ",
+            OPERATION="EXTRACTION",
+            INST=1.0,
+            RESULTAT=RESU,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DZ",
+            GROUP_NO="N_SCBJ",
+        ),
+        _F(
+            INTITULE="FZ_CJB",
+            OPERATION="EXTRACTION",
+            INST=1.0,
+            RESULTAT=RESU,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DZ",
+            GROUP_NO="N_SCJB",
+        ),
+    )
+)
+
+# =====================================================================
+#                 TEST_RESU
+# =====================================================================
+# Test par rapport a la valeur cible : F_result
+# Test sur une surface d'application de DEPL_R
+TEST_TABLE(
+    REFERENCE="ANALYTIQUE",
+    PRECISION=5.0e-2,
+    VALE_CALC=-1764.0763948302774,
+    VALE_REFE=-1695.6000000000001,
+    NOM_PARA="DZ",
+    TABLE=REACF,
+    FILTRE=_F(NOM_PARA="INTITULE", VALE_K="FZ_CEG"),
+)
+
+# Test de non-regression sur differentes surfaces
+ForceS = 1764.0763948302774
+# surfaces GOUJON/ECROU , ECROU/GOUJON, GOUJON, BRIDE/JOINT, JOINT/BRIDE
+SurfNom = ["FZ_CEG", "FZ_CGE", "FZ_GOU", "FZ_CBJ", "FZ_CJB"]
+SurfForce = [-ForceS, ForceS, -ForceS, ForceS, -ForceS]
+
+for ii in range(len(SurfNom)):
+    TEST_TABLE(
+        VALE_CALC=SurfForce[ii],
+        NOM_PARA="DZ",
+        TABLE=REACF,
+        FILTRE=_F(NOM_PARA="INTITULE", VALE_K=SurfNom[ii]),
+    )
+
+
+FIN()

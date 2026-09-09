@@ -28,13 +28,14 @@ subroutine tail_reel(l3, vss33, dim3, ndim, ifour)
 #include "asterc/r8prem.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecael.h"
+#include "MeshTypes_type.h"
 !-----------------------------------------------------------------------
     integer(kind=8) :: i, j, k
 !-----------------------------------------------------------------------
 !
 !
     integer(kind=8) :: ima, nbno, iadzi, iazk24, a, IGEOM, ndim, ifour
-    real(kind=8) :: coorproj(27), s, maxi, mini, maximu, l3(3), dim3
+    real(kind=8) :: coorproj(MT_NNOMAX), s, maxi, mini, maximu, l3(3), dim3
     real(kind=8) :: vss33(3, 3)
 !
     maxi = 0.d0

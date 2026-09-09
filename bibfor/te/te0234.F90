@@ -19,157 +19,160 @@
 ! => real zero (affect here)
 !
 subroutine te0234(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/defgen.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/effi.h"
-#include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/moytpg.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
-    character(len=16) :: option, nomte
+#include "jeveux.h"
 !
-!     CALCUL DES OPTIONS DES ELEMENTS DE COQUE 1D
+    character(len=16), intent(in) :: option, nomte
 !
-!     OPTION : FORC_NODA (REPRISE)
-!          -----------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
+! Elementary computation
 !
-    integer(kind=8) :: nbres, jnbspi, nbsp, itab(7)
+! Elements: COQUE_AXIS
+! Option: FORC_NODA
 !
-    integer(kind=8) :: nbcou, npge, jvSief, jvDisp, ivectu, icou, inte, kpki, k1
+! --------------------------------------------------------------------------------------------------
 !
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: eps = 1.d-3
+    real(kind=8), parameter :: zero = 0.d0, un = 1.d0, deux = 2.d0
+    integer(kind=8), parameter :: npge = 3
+    integer(kind=8), parameter :: nbProp = 2
+    character(len=16), parameter :: propName(nbProp) = (/'E ', 'NU'/)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8), parameter :: nbPara = 1
+    character(len=8), parameter :: paraName(nbPara) = (/'TEMP'/)
+    real(kind=8) ::  paraVale(nbPara)
+    integer(kind=8) :: nno, npg, nbsp, itab(7), nbLayer
+    integer(kind=8) :: jvGeom, jvMaterc, jvSief, jvDisp, jvVect
+    integer(kind=8) :: iLayer, inte, kpki, k1, i, iret, kpg
     real(kind=8) :: cisail, zic, coef, rhos, rhot, epsx3, gsx3, sgmsx3
-!
-!---- DECLARATIONS LOCALES ( RAMENEES DE TE0239.F FULL_MECA )
-!
-    parameter(nbres=2)
-    character(len=8) :: elrefe
-    character(len=16) :: nomres(nbres)
-    integer(kind=8) :: icodre(nbres)
-    real(kind=8) :: valres(nbres)
-    real(kind=8) :: dfdx(3), zero, un, deux
-    real(kind=8) :: test, test2, eps, nu, h, cosa, sina, cour, r, tpg
+    real(kind=8) :: dfdx(3)
+    real(kind=8) :: test, test2, nu, h, cosa, sina, cour, r
     real(kind=8) :: jacp, kappa, correc
     real(kind=8) :: eps2d(4), sigtdi(5), sigmtd(5)
     real(kind=8) :: x3
-    integer(kind=8) :: nno, nnos, jgano, ndim, kp, npg, i, k, icaco, iret
-    integer(kind=8) :: ipoids, ivf, idfdk, igeom, imate
+    integer(kind=8) :: ipoids, ivf, idfdk
     aster_logical :: testl1, testl2
-    real(kind=8) :: zmin, hic
+    real(kind=8) :: zmin, hLayer
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
-    data zero, un, deux/0.d0, 1.d0, 2.d0/
-!
-!-- SHIFT POUR LES COURBURES
-    call elref1(elrefe)
-    eps = 1.d-3
-!
-!DEB
-!
-!
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfdk, jgano=jgano)
-!
-!
-!-- LECTURE DU COMPORTEMENT
-    call jevech('PNBSP_I', 'L', jnbspi)
-    nbcou = zi(jnbspi-1+1)
-    if (nbcou .le. 0) then
+    call elrefe_info(fami='RIGI', nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfdk)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get plate properties
+    nbLayer = plateCara%nbLayer
+    if (nbLayer .le. 0) then
         call utmess('F', 'ELEMENTS_12')
     end if
-    if (nbcou .gt. 30) then
+    if (nbLayer .gt. 30) then
         call utmess('F', 'ELEMENTS3_50')
     end if
-!
-    npge = 3
-!
-!---- LECTURES STANDARDS ( RAMENEES DE TE0239.F FULL_MECA )
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PCACOQU', 'L', icaco)
-    h = zr(icaco)
-    kappa = zr(icaco+1)
-    correc = zr(icaco+2)
-!---- COTE MINIMALE SUR L'EPAISSEUR
-!
+    h = plateCara%thick
+    kappa = plateCara%shearCoef
+    correc = plateCara%metric
     zmin = -h/2.d0
-!---- EPAISSEUR DE CHAQUE COUCHE
-!
-    hic = h/nbcou
-    call jevech('PMATERC', 'L', imate)
-    nomres(1) = 'E'
-    nomres(2) = 'NU'
-    call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, &
-                itab=itab)
+    hLayer = h/nbLayer
+
+! - Material properties
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Get stress
+    call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, itab=itab)
     jvSief = itab(1)
     nbsp = itab(7)
-    if (nbsp .ne. npge*nbcou) then
+    if (nbsp .ne. npge*nbLayer) then
         call utmess('F', 'ELEMENTS_4')
     end if
-!
+
+! - Get displacements
     call jevech('PDEPLAR', 'L', jvDisp)
-!---- INITIALISATION DU VECTEUR FORCE INTERNE
-!
-    call jevech('PVECTUR', 'E', ivectu)
+
+! - INITIALISATION DU VECTEUR FORCE INTERNE
+    call jevech('PVECTUR', 'E', jvVect)
     do i = 1, 3*nno
-        zr(ivectu+i-1) = 0.d0
+        zr(jvVect+i-1) = 0.d0
     end do
 !
     kpki = 0
-    do kp = 1, npg
-!-- BOUCLE SUR LES POINTS D'INTEGRATION SUR LA SURFACE
-!
-        k = (kp-1)*nno
-        call dfdm1d(nno, zr(ipoids+kp-1), zr(idfdk+k), zr(igeom), dfdx, &
+    do kpg = 1, npg
+        call dfdm1d(nno, zr(ipoids+kpg-1), zr(idfdk+(kpg-1)*nno), zr(jvGeom), dfdx, &
                     cour, jacp, cosa, sina)
-!
-        call r8inir(5, 0.d0, sigmtd, 1)
         r = zero
-        call moytpg('RIGI', kp, npge, '+', tpg, &
-                    iret)
-!
         do i = 1, nno
-            r = r+zr(igeom+2*i-2)*zr(ivf+k+i-1)
+            r = r+zr(jvGeom+2*i-2)*zr(ivf+(kpg-1)*nno+i-1)
         end do
-!
-        call rcvala(zi(imate), ' ', 'ELAS', 1, 'TEMP', &
-                    [tpg], 2, nomres, valres, icodre, &
-                    1)
-        nu = valres(2)
-        cisail = valres(1)/(un+nu)
-        if (nomte .eq. 'MECXSE3') jacp = jacp*r
+        jacp = jacp*r
+
+! ----- Get temperature
+        call moytpg('RIGI', kpg, npge, '+', paraVale(1), iret)
+
+! ----- Get elasticity parameters
+        call rcvala(zi(jvMaterc), ' ', 'ELAS', &
+                    nbPara, paraName, paraVale, &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        nu = propVale(2)
+        cisail = propVale(1)/(un+nu)
+
+! ----- MODI_METRIQUE ?
         test = abs(h*cour/deux)
         if (test .ge. un) correc = zero
         test2 = abs(h*cosa/(deux*r))
         if (test2 .ge. un) correc = zero
 !
         testl1 = (test .le. eps .or. correc .eq. zero)
-        testl2 = ( &
-                 test2 .le. eps .or. correc .eq. zero .or. abs(cosa) .le. eps .or. abs(cour*r) &
-                 .le. eps .or. abs(cosa-cour*r) .le. eps &
-                 )
+        testl2 = (test2 .le. eps .or. correc .eq. zero .or. &
+                  abs(cosa) .le. eps .or. abs(cour*r) .le. eps .or. &
+                  abs(cosa-cour*r) .le. eps)
 !
-        do icou = 1, nbcou
+        sigmtd = zero
+        do iLayer = 1, nbLayer
             do inte = 1, npge
                 if (inte .eq. 1) then
-                    zic = zmin+(icou-1)*hic
+                    zic = zmin+(iLayer-1)*hLayer
                     coef = 1.d0/3.d0
                 else if (inte .eq. 2) then
-                    zic = zmin+hic/2.d0+(icou-1)*hic
+                    zic = zmin+hLayer/2.d0+(iLayer-1)*hLayer
                     coef = 4.d0/3.d0
                 else
-                    zic = zmin+hic+(icou-1)*hic
+                    zic = zmin+hLayer+(iLayer-1)*hLayer
                     coef = 1.d0/3.d0
                 end if
                 x3 = zic
-!
+
+! ------------- Apply MODI_METRIQUE (or not !)
                 if (testl1) then
                     rhos = 1.d0
                 else
@@ -180,49 +183,33 @@ subroutine te0234(option, nomte)
                 else
                     rhot = 1.d0+x3*cosa/r
                 end if
-!
-!-- CALCULS DES COMPOSANTES DE DEFORMATIONS TRIDIMENSIONNELLES :
-!-- EPSSS, EPSTT, EPSSX3
-!-- (EN FONCTION DES DEFORMATIONS GENERALISEES :ESS,KSS,ETT,KTT,GS)
-!-- DE L'INSTANT PRECEDANT ET DES DEFORMATIONS INCREMENTALES
-!-- DE L'INSTANT PRESENT
-!
+
+! ------------- CALCUL DES COMPOSANTES DE DEFORMATIONS TRIDIMENSIONNELLES EPSSS, EPSTT, EPSSX3
                 call defgen(testl1, testl2, nno, r, x3, &
-                            sina, cosa, cour, zr(ivf+k), dfdx, &
+                            sina, cosa, cour, zr(ivf+(kpg-1)*nno), dfdx, &
                             zr(jvDisp), eps2d, epsx3)
-!
-!
-!-- CONSTRUCTION DE LA DEFORMATION GSX3 ET DE LA CONTRAINTE SGMSX3
-!
+
+! ------------- CONSTRUCTION DE LA DEFORMATION GSX3 ET DE LA CONTRAINTE SGMSX3
                 gsx3 = 2.d0*epsx3
                 sgmsx3 = cisail*kappa*gsx3/2.d0
-!-- JEU D'INDICES DANS LA BOUCLE SUR LES POINTS D'INTEGRATION
-!                                  DE LA SURFACE MOYENNE
-!
+
+! ------------- CALCUL DES CONTRAINTES TILDE
                 kpki = kpki+1
                 k1 = 4*(kpki-1)
-!-- CALCUL DES CONTRAINTES TILDE, ON A REMPLACE ICONTP PAR ICONTM
-!
-
                 sigtdi(1) = zr(jvSief-1+k1+1)/rhos
                 sigtdi(2) = x3*zr(jvSief-1+k1+1)/rhos
                 sigtdi(3) = zr(jvSief-1+k1+2)/rhot
                 sigtdi(4) = x3*zr(jvSief-1+k1+2)/rhot
                 sigtdi(5) = sgmsx3/rhos
-
-!
                 do i = 1, 5
-                    sigmtd(i) = sigmtd(i)+sigtdi(i)*0.5d0*hic*coef
+                    sigmtd(i) = sigmtd(i)+sigtdi(i)*0.5d0*hLayer*coef
                 end do
-!
             end do
         end do
-!
-!-- CALCUL DES EFFORTS INTERIEURS
-!
-        call effi(nomte, sigmtd, zr(ivf+k), dfdx, jacp, &
-                  sina, cosa, r, zr(ivectu))
-!
+
+! ----- CALCUL DES EFFORTS INTERIEURS
+        call effi(nomte, sigmtd, zr(ivf+(kpg-1)*nno), dfdx, jacp, &
+                  sina, cosa, r, zr(jvVect))
     end do
 !
 end subroutine

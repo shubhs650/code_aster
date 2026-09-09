@@ -15,18 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine cosiro(nomte, param, loue, sens, goun,&
-                      jtens, sour)
-        character(len=16) :: nomte
-        character(len=*) :: param
-        character(len=1) :: loue
-        character(len=2) :: sens
-        character(len=1) :: goun
-        integer(kind=8) :: jtens
-        character(len=1) :: sour
+    subroutine cosiro(plateCara, plateOrie, &
+                      paraNameZ, loue, sens, goun, &
+                      jtens_)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=*), intent(in) :: paraNameZ
+        character(len=1), intent(in) :: loue
+        character(len=2), intent(in) :: sens
+        character(len=1), intent(in) :: goun
+        integer(kind=8), optional, intent(out) :: jtens_
     end subroutine cosiro
 end interface

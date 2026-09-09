@@ -24,9 +24,10 @@ interface
                       tau1  , tau2  ,&
                       norm  , mprojn, mprojt,&
                       geome , geomm )
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: ndim, nne, nnm
         real(kind=8), intent(in) :: ffe(9), ffm(9)
-        real(kind=8), intent(in) :: elem_slav_coor(9, 3), elem_mast_coor(9, 3)
+        real(kind=8), intent(in) :: elem_slav_coor(3,MT_NNOMAX2D), elem_mast_coor(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: tau1(3), tau2(3)
         real(kind=8), intent(out) :: norm(3), mprojn(3, 3), mprojt(3, 3)
         real(kind=8), intent(out) :: geomm(3), geome(3)

@@ -54,7 +54,7 @@ contains
 !
         type(FE_Quadrature), intent(in) :: FEQuad
         type(FE_Basis), intent(in) :: FEBasis
-        real(kind=8), intent(out) :: mass(MAX_BS, MAX_BS)
+        real(kind=8), intent(out) :: mass(MAX_BS_CG, MAX_BS_CG)
         real(kind=8), intent(in), optional :: ValuesQP(MAX_QP)
 ! --------------------------------------------------------------------------------------------------
 !   HHO
@@ -69,7 +69,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: ipg
-        real(kind=8), dimension(MAX_BS) :: BSEval
+        real(kind=8), dimension(MAX_BS_CG) :: BSEval
         real(kind=8) :: coeff
         blas_int :: b_incx, b_lda, b_n
 !
@@ -89,7 +89,7 @@ contains
             end if
             b_n = to_blas_int(FEBasis%size)
             b_incx = to_blas_int(1)
-            b_lda = to_blas_int(MAX_BS)
+            b_lda = to_blas_int(MAX_BS_CG)
             call dsyr('U', b_n, coeff, BSEval, b_incx, &
                       mass, b_lda)
         end do

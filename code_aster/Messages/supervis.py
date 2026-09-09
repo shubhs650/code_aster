@@ -20,7 +20,6 @@
 from ..Utilities import _
 
 cata_msg = {
-    1: _("""<INFO> Activation du mode parallélisme distribué."""),
     2: _(
         """
 Les commandes DEBUT et POURSUITE doivent être appelées une fois et une seule.
@@ -69,11 +68,6 @@ Conseils :
 - si vous avez un besoin impérieux de cette fonctionnalité,
   rapprochez-vous de votre correspondant Club utilisateur ou de l'équipe de développement.
 
-"""
-    ),
-    10: _(
-        """
-    Si le mot-clé TOUT est donné sous MASSIF, il ne peut y avoir qu'une seule occurrence du mot-clé facteur MASSIF.
 """
     ),
     11: _("""Les alarmes ne sont pas **encore** aggravées en Erreur sur cette plate-forme."""),

@@ -15,155 +15,124 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine d1ma3d(fami, mater, instan, poum, kpg, &
-                  ksp, angl, d1)
-!.======================================================================
+!
+subroutine d1ma3d(materPara, poum, time, d1)
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
+!
+#include "asterc/r8vide.h"
+#include "asterfort/assert.h"
+#include "asterfort/d1pa3d.h"
+#include "asterfort/ElasticityMaterial_type.h"
+#include "asterfort/MaterialPara_type.h"
+#include "asterfort/rcvalb.h"
+#include "asterfort/utbtab.h"
+#include "asterfort/utmess.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=*), intent(in) :: poum
+    real(kind=8), intent(in) :: time
+    real(kind=8), intent(out) :: d1(6, 6)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     D1MA3D  --   CALCUL DE L'INVERSE DE LA MATRICE DE HOOKE
 !                  POUR LES ELEMENTS MASSIFS EN 3D OU EN SERIE DE
 !                  FOURIER POUR DES MATERIAUX ISOTROPE, ORTHOTROPE
 !                  ET ISOTROPE TRANSVERSE
 !
-!   ARGUMENT        E/S  TYPE         ROLE
-!    FAMI           IN     K*       FAMILLE DU POINT DE GAUSS
-!    MATER          IN     I        MATERIAU
-!    INSTAN         IN     R        INSTANT DE CALCUL (0 PAR DEFAUT)
-!    POUM           IN     K1       T ou T+DT
-!    KPG            IN     I        POINT DE GAUSS
-!    KSP            IN     I        SOUS-POINT DE GAUSS
-!    ANGL(3)        IN     R        ANGLES NAUTIQUES DEFINISSANT LE REPERE
-!                                   D'ORTHOTROPIE
-!    D1(6,6)        OUT    R        INVERSE DE LA MATRICE DE HOOKE
+! --------------------------------------------------------------------------------------------------
 !
-!
-!
-!.========================= DEBUT DES DECLARATIONS ====================
-! -----  ARGUMENTS
-#include "asterc/r8vide.h"
-#include "asterfort/assert.h"
-#include "asterfort/d1pa3d.h"
-#include "asterfort/rccoma.h"
-#include "asterfort/rcvalb.h"
-#include "asterfort/utbtab.h"
-#include "asterfort/utmess.h"
-    character(len=*) :: poum, fami
-    integer(kind=8) :: kpg, ksp
-    real(kind=8) :: angl(3), d1(6, 6), instan
-! -----  VARIABLES LOCALES
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, irep, j, mater, nbres, nbv
-    real(kind=8) :: coef1, coef2, coef3, deux, e, e1, e2
-    real(kind=8) :: e3, un, zero
-!-----------------------------------------------------------------------
-    parameter(nbres=9)
-!
-    integer(kind=8) :: icodre(nbres)
-    character(len=8) :: nompar(2)
-    character(len=16) :: nomres(nbres)
-    character(len=32) :: phenom
-!
-    real(kind=8) :: valres(nbres), valpar(1)
+    real(kind=8), parameter :: zero = 0.d0, un = 1.d0, deux = 2.d0
+    integer(kind=8), parameter :: nbPropMaxi = 9
+    integer(kind=8) :: nbProp
+    integer(kind=8) :: propCode(nbPropMaxi)
+    character(len=16) :: propName(nbPropMaxi)
+    real(kind=8) :: propVale(nbPropMaxi)
+    integer(kind=8), parameter :: nbParaMaxi = 1
+    integer(kind=8) :: nbPara
+    character(len=8) :: paraName(nbParaMaxi)
+    real(kind=8) :: paraVale(nbParaMaxi)
+    integer(kind=8) :: i, irep, j
+    real(kind=8) :: coef1, coef2, coef3, e, e1, e2
+    real(kind=8) :: e3
     real(kind=8) :: passag(6, 6), d1orth(6, 6), work(6, 6)
     real(kind=8) :: nu, nu12, nu21, nu13, nu23, nu31, nu32
-    integer(kind=8) :: nbpar
-!.========================= DEBUT DU CODE EXECUTABLE ==================
 !
-! ---- INITIALISATIONS
-!      ---------------
-    zero = 0.0d0
-    un = 1.0d0
-    deux = 2.0d0
+! --------------------------------------------------------------------------------------------------
 !
-    if (instan .eq. r8vide()) then
-        nbpar = 0
+    d1 = zero
+!
+    if (time .eq. r8vide()) then
+        nbPara = 0
     else
-        nbpar = 1
-        nompar(1) = 'INST'
-        valpar(1) = instan
+        nbPara = 1
+        paraName(1) = 'INST'
+        paraVale(1) = time
     end if
+    ASSERT(nbPara .le. nbParaMaxi)
 !
-    do i = 1, 6
-        do j = 1, 6
-            d1(i, j) = zero
-            d1orth(i, j) = zero
-            work(i, j) = zero
-        end do
-    end do
-!
-! ---- RECUPERATION DU TYPE DU MATERIAU DANS PHENOM
-!      --------------------------------------------
-    call rccoma(mater, 'ELAS', 1, phenom, icodre(1))
-!
-!      ------------
-! ---- CAS ISOTROPE
-!      ------------
-    if (phenom .eq. 'ELAS') then
-!
-        nomres(1) = 'E'
-        nomres(2) = 'NU'
-        nbv = 2
-!
-! ----   INTERPOLATION DES COEFFICIENTS EN FONCTION DE LA TEMPERATURE
-! ----   ET DU TEMPS
-!        -----------
-        call rcvalb(fami, kpg, ksp, poum, mater, &
-                    ' ', phenom, nbpar, nompar, [valpar], &
-                    nbv, nomres, valres, icodre, 1)
-!
-        e = valres(1)
-        nu = valres(2)
-!
+    d1orth = zero
+    work = zero
+
+    if (materPara%elasID == ELAS_ISOT) then
+        propName(1) = 'E'
+        propName(2) = 'NU'
+        nbProp = 2
+        call rcvalb(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    poum, &
+                    materPara%jvMaterCode, ' ', materPara%elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, propCode, 1)
+        e = propVale(1)
+        nu = propVale(2)
         coef1 = un/e
         coef2 = -nu/e
         coef3 = deux*(un+nu)/e
-!
         d1(1, 1) = coef1
         d1(1, 2) = coef2
         d1(1, 3) = coef2
-!
         d1(2, 1) = coef2
         d1(2, 2) = coef1
         d1(2, 3) = coef2
-!
         d1(3, 1) = coef2
         d1(3, 2) = coef2
         d1(3, 3) = coef1
-!
         d1(4, 4) = coef3
         d1(5, 5) = coef3
         d1(6, 6) = coef3
-!
-!      --------------
-! ---- CAS ORTHOTROPE
-!      --------------
-    else if (phenom .eq. 'ELAS_ORTH') then
-!
-        nomres(1) = 'E_L'
-        nomres(2) = 'E_T'
-        nomres(3) = 'E_N'
-        nomres(4) = 'NU_LT'
-        nomres(5) = 'NU_LN'
-        nomres(6) = 'NU_TN'
-        nomres(7) = 'G_LT'
-        nomres(8) = 'G_LN'
-        nomres(9) = 'G_TN'
-        nbv = 9
-!
-! ----   INTERPOLATION DES COEFFICIENTS EN FONCTION DE LA TEMPERATURE
-! ----   ET DU TEMPS
-!        -----------
-        call rcvalb(fami, kpg, ksp, poum, mater, &
-                    ' ', phenom, nbpar, nompar, [valpar], &
-                    nbv, nomres, valres, icodre, 1)
-!
-        e1 = valres(1)
-        e2 = valres(2)
-        e3 = valres(3)
-        nu12 = valres(4)
-        nu13 = valres(5)
-        nu23 = valres(6)
+
+    else if (materPara%elasID == ELAS_ORTH) then
+        if (.not. chckLCSDefine(materPara%lcsPara)) then
+            call utmess("F", "ALGORITH8_20")
+        end if
+        propName(1) = 'E_L'
+        propName(2) = 'E_T'
+        propName(3) = 'E_N'
+        propName(4) = 'NU_LT'
+        propName(5) = 'NU_LN'
+        propName(6) = 'NU_TN'
+        propName(7) = 'G_LT'
+        propName(8) = 'G_LN'
+        propName(9) = 'G_TN'
+        nbProp = 9
+        call rcvalb(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    poum, &
+                    materPara%jvMaterCode, ' ', materPara%elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, propCode, 1)
+        e1 = propVale(1)
+        e2 = propVale(2)
+        e3 = propVale(3)
+        nu12 = propVale(4)
+        nu13 = propVale(5)
+        nu23 = propVale(6)
         nu21 = e2*nu12/e1
         nu31 = e3*nu13/e1
         nu32 = e3*nu23/e2
@@ -178,14 +147,14 @@ subroutine d1ma3d(fami, mater, instan, poum, kpg, &
         d1orth(3, 1) = d1orth(1, 3)
         d1orth(3, 2) = d1orth(2, 3)
 !
-        d1orth(4, 4) = un/valres(7)
-        d1orth(5, 5) = un/valres(8)
-        d1orth(6, 6) = un/valres(9)
+        d1orth(4, 4) = un/propVale(7)
+        d1orth(5, 5) = un/propVale(8)
+        d1orth(6, 6) = un/propVale(9)
 !
 ! ----   CALCUL DE LA MATRICE DE PASSAGE DU REPERE D'ORTHOTROPIE AU
 ! ----   REPERE GLOBAL POUR L'INVERSE DE LA MATRICE DE HOOKE
 !        ---------------------------------------------------
-        call d1pa3d(angl, irep, passag)
+        call d1pa3d(materPara%lcsPara%lcsAngle, irep, passag)
 !
 ! ----   'INVERSE' DU TENSEUR D'ELASTICITE DANS LE REPERE GLOBAL :
 ! ----    D1_GLOB = PASSAG_T * D1_ORTH * PASSAG
@@ -194,8 +163,7 @@ subroutine d1ma3d(fami, mater, instan, poum, kpg, &
 !        ----------------------------------
         ASSERT((irep .eq. 1) .or. (irep .eq. 0))
         if (irep .eq. 1) then
-            call utbtab('ZERO', 6, 6, d1orth, passag, &
-                        work, d1)
+            call utbtab('ZERO', 6, 6, d1orth, passag, work, d1)
         else if (irep .eq. 0) then
             do i = 1, 6
                 do j = 1, 6
@@ -203,30 +171,33 @@ subroutine d1ma3d(fami, mater, instan, poum, kpg, &
                 end do
             end do
         end if
-!
-!      -----------------------
-! ---- CAS ISOTROPE-TRANSVERSE
-!      -----------------------
-    else if (phenom .eq. 'ELAS_ISTR') then
-!
-        nomres(1) = 'E_L'
-        nomres(2) = 'E_N'
-        nomres(3) = 'NU_LT'
-        nomres(4) = 'NU_LN'
-        nomres(5) = 'G_LN'
-        nbv = 5
+
+    else if (materPara%elasID == ELAS_ISTR) then
+        if (.not. chckLCSDefine(materPara%lcsPara)) then
+            call utmess("F", "ALGORITH8_20")
+        end if
+        propName(1) = 'E_L'
+        propName(2) = 'E_N'
+        propName(3) = 'NU_LT'
+        propName(4) = 'NU_LN'
+        propName(5) = 'G_LN'
+        nbProp = 5
 !
 ! ----   INTERPOLATION DES COEFFICIENTS EN FONCTION DE LA TEMPERATURE
 ! ----   ET DU TEMPS
 !        -----------
-        call rcvalb(fami, kpg, ksp, poum, mater, &
-                    ' ', phenom, nbpar, nompar, [valpar], &
-                    nbv, nomres, valres, icodre, 1)
+        call rcvalb(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    poum, &
+                    materPara%jvMaterCode, ' ', materPara%elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, propCode, 1)
 !
-        e1 = valres(1)
-        e3 = valres(2)
-        nu12 = valres(3)
-        nu13 = valres(4)
+        e1 = propVale(1)
+        e3 = propVale(2)
+        nu12 = propVale(3)
+        nu13 = propVale(4)
         nu31 = e3*nu13/e1
 !
         d1orth(1, 1) = un/e1
@@ -239,13 +210,13 @@ subroutine d1ma3d(fami, mater, instan, poum, kpg, &
         d1orth(3, 2) = d1orth(2, 3)
         d1orth(3, 3) = un/e3
         d1orth(4, 4) = deux*(un+nu12)/e1
-        d1orth(5, 5) = un/valres(5)
+        d1orth(5, 5) = un/propVale(5)
         d1orth(6, 6) = d1orth(5, 5)
 !
 ! ----   CALCUL DE LA MATRICE DE PASSAGE DU REPERE D'ORTHOTROPIE AU
 ! ----   REPERE GLOBAL POUR L'INVERSE DE LA MATRICE DE HOOKE
 !        ---------------------------------------------------
-        call d1pa3d(angl, irep, passag)
+        call d1pa3d(materPara%lcsPara%lcsAngle, irep, passag)
 !
 ! ----   'INVERSE' DU TENSEUR D'ELASTICITE DANS LE REPERE GLOBAL :
 ! ----    D_GLOB = PASSAG_T * D_ORTH * PASSAG
@@ -263,9 +234,9 @@ subroutine d1ma3d(fami, mater, instan, poum, kpg, &
                 end do
             end do
         end if
-!
+
     else
-        call utmess('F', 'ELEMENTS_15', sk=phenom)
+        call utmess('F', 'ELEMENTS_15', sk=materPara%elasKeyword)
     end if
-!.============================ FIN DE LA ROUTINE ======================
+!
 end subroutine

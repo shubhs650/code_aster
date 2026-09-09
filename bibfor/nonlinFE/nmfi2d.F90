@@ -18,18 +18,18 @@
 ! aslint: disable=W1306,W1504
 !
 subroutine nmfi2d(BEHInteg, &
-                  npg, lgpg, mate, option, geom, &
+                  npg, lgpg, option, geom, &
                   deplm, ddepl, sigmo, sigma, fint, &
-                  ktan, vim, vip, tm, tp, &
-                  carcri, compor, typmod, lMatr, lVect, lSigm, &
+                  kTang, vim, vip, &
+                  tm, tp, &
+                  carcri, compor, typmod, &
+                  lMatr, lVect, lSigm, &
                   codret)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
-#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
@@ -40,15 +40,14 @@ subroutine nmfi2d(BEHInteg, &
 #include "asterfort/nmfisa.h"
 #include "jeveux.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
-    integer(kind=8) :: mate, npg, lgpg, codret
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8) :: npg, lgpg, codret
     real(kind=8) :: geom(2, 4), deplm(8), ddepl(8), tm, tp
-    real(kind=8) :: fint(8), ktan(8, 8), sigmo(6, npg), sigma(6, npg)
+    real(kind=8) :: fint(8), kTang(8, 8), sigmo(6, npg), sigma(6, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
     character(len=8), intent(in) :: typmod(2)
     character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-    real(kind=8) :: angmas(3)
     aster_logical, intent(in) :: lMatr, lVect, lSigm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -74,12 +73,11 @@ subroutine nmfi2d(BEHInteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = "RIGI"
     aster_logical :: axi
     integer(kind=8) :: cod(9), i, j, q, s, kpg
-    integer(kind=8) :: ndim, nno, nnos, ipoids, ivf, idfde, jgano
-!     COORDONNEES POINT DE GAUSS + POIDS : X,Y,W => 1ER INDICE
+    integer(kind=8) :: ndim, nno, ipoids, ivf, idfde
     real(kind=8) :: coopg(3, npg)
     real(kind=8) :: dsidep(6, 6), b(2, 8), sigmPost(6)
     real(kind=8) :: sum(2), dsu(2), poids
@@ -88,24 +86,20 @@ subroutine nmfi2d(BEHInteg, &
 !
     cod = 0
     axi = typmod(1) .eq. 'AXIS'
-
-! - Don't use orientation (MASSIF in AFFE_CARA_ELEM)
-    angmas = r8vide()
-!
     if (lVect) then
         fint = 0.d0
     end if
     if (lMatr) then
-        ktan = 0.d0
+        kTang = 0.d0
     end if
 
 ! - Get element parameters
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-!
-!     CALCUL DES COORDONNEES DES POINTS DE GAUSS
-    call gedisc(2, nno, npg, zr(ivf), geom, &
-                coopg)
+    call elrefe_info(fami=BEHInteg%materPara%schemePara%fami, &
+                     ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
+
+!   CALCUL DES COORDONNEES DES POINTS DE GAUSS
+    call gedisc(2, nno, npg, zr(ivf), geom, coopg)
 
 ! - Loop on Gauss points
     do kpg = 1, npg
@@ -132,17 +126,20 @@ subroutine nmfi2d(BEHInteg, &
         end if
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
-        BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:2) = coopg(1:2, kpg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
+        BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:2) = coopg(1:2, kpg)
 
 ! ----- Integrator
         sigmPost = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, tm, tp, &
-                    2, sum, dsu, 2, sigmo(:, kpg), &
-                    vim(:, kpg), option, angmas, &
-                    sigmPost, vip(:, kpg), 36, dsidep, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    tm, tp, &
+                    compor, carcri, multComp, &
+                    2, sum, dsu, &
+                    2, sigmo(:, kpg), &
+                    vim(:, kpg), &
+                    sigmPost, vip(:, kpg), &
+                    36, dsidep, cod(kpg))
         if (cod(kpg) .eq. 1) goto 900
 
 ! ----- Stresses
@@ -168,7 +165,7 @@ subroutine nmfi2d(BEHInteg, &
                 do j = 1, 8
                     do q = 1, 2
                         do s = 1, 2
-                            ktan(i, j) = ktan(i, j)+poids*b(q, i)*dsidep(q, s)*b(s, j)
+                            kTang(i, j) = kTang(i, j)+poids*b(q, i)*dsidep(q, s)*b(s, j)
                         end do
                     end do
                 end do

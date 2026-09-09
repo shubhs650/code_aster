@@ -15,92 +15,82 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxsit3(nomte, mater, pgl, sigma)
+!
+subroutine dxsit3(plateCara, plateOrie, &
+                  jvMaterCode, sigma)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/dxmate.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
+#include "asterfort/plate_type.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
-    integer(kind=8) :: mater
-    real(kind=8) :: pgl(3, *), sigma(*)
-    character(len=16) :: nomte
+#include "jeveux.h"
 !
-!     BUT:
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: jvMaterCode
+    real(kind=8), intent(out) :: sigma(*)
+!
+! --------------------------------------------------------------------------------------------------
+!
 !       CALCUL DES CONTRAINTES VRAIES
 !        (==SIGMA_MECA - SIGMA_THER).
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ndim, nnoel, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: i, j, icou, icpg, igauh, ipg, ipgh, nbcmp, nbcou
+    integer(kind=8), parameter :: nbcmp = 6
+    character(len=8), parameter :: fami = "RIGI"
+    integer(kind=8) :: npg
+    integer(kind=8) :: i, j, iLayer, icpg, igauh, kpg, ipgh, nbLayer
     integer(kind=8) :: npgh
-    integer(kind=8) :: jnbspi, multic, jcaco
-!
+    integer(kind=8) :: multic
     real(kind=8) :: zero, epsth(2)
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
     real(kind=8) :: h(3, 3), d(4, 4)
-    real(kind=8) :: t2iu(4), t2ui(4), t1ve(9), epais
+    real(kind=8) ::  epais
+    aster_logical :: coupmf
 !
-    character(len=4) :: fami
+! --------------------------------------------------------------------------------------------------
 !
-    aster_logical :: dkg, coupmf
-!
-! ----------------------------------------------------------------------
-!
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nnoel, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
-!
-    zero = 0.0d0
-!
-    dkg = .false.
-!
-    nbcmp = 6
-!
-    if ((nomte .eq. 'MEDKTG3') .or. (nomte .eq. 'MEDKQG4')) then
-        dkg = .true.
-    end if
-!
-! --- RECUPERATION DU NOMBRE DE COUCHE ET DE SOUS-POINT
-!     -------------------------------------------------
-    if (dkg) then
-        nbcou = 1
+    call elrefe_info(fami=fami, npg=npg)
+    zero = 0.d0
+
+! - Get parameters of shell
+    epais = plateCara%thick
+
+! - Get layers of shell
+    nbLayer = plateCara%nbLayer
+    if (plateCara%type .eq. PLATE_DKTG) then
+        ASSERT(nbLayer .eq. 1)
         npgh = 1
     else
-        call jevech('PNBSP_I', 'L', jnbspi)
         npgh = 3
-        nbcou = zi(jnbspi-1+1)
-        if (nbcou .le. 0) then
-            call utmess('F', 'ELEMENTS_46')
-        end if
     end if
+    ASSERT(nbLayer .ge. 1)
 
-!   ----- CARACTERISTIQUES DES MATERIAUX --------
-    call dxmate(fami, df, dm, dmf, dc, &
-                dci, dmc, dfc, nnoel, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
-!   ----- CALCUL DE LA MATRICE DE HOOKE EN MEMBRANE ---------------
-    if (multic .eq. 0) then
-        call jevech('PCACOQU', 'L', jcaco)
-        epais = zr(jcaco)
-        do i = 1, 3
-            do j = 1, 3
-                h(i, j) = dm(i, j)/epais
-            end do
+! - CARACTERISTIQUES DES MATERIAUX
+    call dxmate(plateCara, plateOrie, &
+                fami, df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
+
+! - CALCUL DE LA MATRICE DE HOOKE EN MEMBRANE
+    ASSERT(multic .eq. 0)
+    do i = 1, 3
+        do j = 1, 3
+            h(i, j) = dm(i, j)/epais
         end do
-    else
-        ASSERT(.false.)
-    end if
+    end do
 
-!   ---- passage a la matrice de hooke complete
-    d(:, :) = 0.d0
+! - passage a la matrice de hooke complete
+    d = 0.d0
     d(1:2, 1:2) = h(1:2, 1:2)
     d(1, 4) = h(1, 3)
     d(2, 4) = h(2, 3)
@@ -108,25 +98,20 @@ subroutine dxsit3(nomte, mater, pgl, sigma)
     d(4, 1) = h(3, 1)
     d(4, 2) = h(3, 2)
 !
-! --- BOUCLE SUR LES POINTS DE GAUSS DE LA SURFACE:
-!     ---------------------------------------------
-    do ipg = 1, npg
-        do icou = 1, nbcou
+    do kpg = 1, npg
+        do iLayer = 1, nbLayer
             do igauh = 1, npgh
-                icpg = nbcmp*npgh*nbcou*(ipg-1)+nbcmp*npgh*(icou-1)+ &
+                icpg = nbcmp*npgh*nbLayer*(kpg-1)+ &
+                       nbcmp*npgh*(iLayer-1)+ &
                        nbcmp*(igauh-1)
-!
+
 !         -- INTERPOLATION DE ALPHA EN FONCTION DE LA TEMPERATURE
-!         ----------------------------------------------------
-                ipgh = npgh*(icou-1)+igauh
-                call verift('RIGI', ipg, ipgh, '+', mater, &
+                ipgh = npgh*(iLayer-1)+igauh
+                call verift('RIGI', kpg, ipgh, '+', jvMaterCode, &
                             epsth_=epsth(1))
-!
                 epsth(2) = epsth(1)
-!
+
 !           -- CALCUL DES CONTRAINTES VRAIES (==SIGMA_MECA - SIGMA_THER)
-!           -- AU POINT D'INTEGRATION COURANT
-!           ------------------------------------------------------------
                 do i = 1, 4
                     do j = 1, 2
                         sigma(icpg+i) = sigma(icpg+i)-epsth(j)*d(i, j)

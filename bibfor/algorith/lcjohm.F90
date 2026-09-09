@@ -17,56 +17,62 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine lcjohm(imate, lSigm, lMatr, lVari, kpi, npg, &
-                  nomail, addeme, advico, ndim, dimdef, &
+subroutine lcjohm(materParaFPG1, &
+                  lSigm, lMatr, lVari, &
+                  kpg, npg, &
+                  addeme, advico, ndim, dimdef, &
                   dimcon, nbvari, defgem, defgep, varim, &
                   varip, sigm, sigp, drde, ouvh, &
                   retcom)
 !
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 !
-    integer(kind=8) :: imate, kpi, npg, addeme, advico, ndim, dimdef, dimcon, nbvari
+    type(Material_Para), intent(in) :: materParaFPG1
+    integer(kind=8) :: kpg, npg, addeme, advico, ndim, dimdef, dimcon, nbvari
     real(kind=8) :: defgem(dimdef), varim(nbvari), sigm(dimcon)
-    character(len=8) :: nomail
     aster_logical, intent(in) :: lSigm, lMatr, lVari
     integer(kind=8) :: retcom
     real(kind=8) :: defgep(dimdef), varip(nbvari), sigp(dimcon)
     real(kind=8) :: drde(dimdef, dimdef), ouvh
 !
-! - VARIABLES LOCALES
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i, kpg, spt
-    real(kind=8) :: kni, umc, gamma, kt, clo, para(4), valr(2), tmecn, tmecs
-    character(len=8) :: fami, poum
-    integer(kind=8) :: icodre(18)
-    character(len=8), parameter :: ncra1(4) = (/'K    ', 'DMAX ', 'GAMMA', 'KT   '/)
+    character(len=8), parameter :: poum = "+"
+    integer(kind=8) :: i
+    real(kind=8) :: kni, umc, gamma, kt, clo, valr(2), tmecn, tmecs
+    integer(kind=8), parameter :: nbProp = 4
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=8), parameter :: propName(nbProp) = (/'K    ', 'DMAX ', 'GAMMA', 'KT   '/)
 !
-! - RECUPERATION DES PARAMETRES MATERIAU
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
+! --------------------------------------------------------------------------------------------------
 !
-    call rcvalb(fami, kpg, spt, poum, imate, &
-                ' ', 'JOINT_BANDIS', 0, ' ', [0.d0], &
-                4, ncra1, para, icodre, 1)
-    kni = para(1)
-    umc = para(2)
-    gamma = para(3)
-    kt = para(4)
-!
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, &
+                ' ', 'JOINT_BANDIS', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    kni = propVale(1)
+    umc = propVale(2)
+    gamma = propVale(3)
+    kt = propVale(4)
+
 ! - MISE A JOUR FERMETURE
     clo = 0.d0
     ouvh = varim(advico)
     clo = umc-ouvh
     clo = clo-defgep(addeme)+defgem(addeme)
-!
+
 ! - Internal state variable
-!
     if (lVari) then
         ouvh = umc-clo
         varip(advico) = ouvh
@@ -78,7 +84,7 @@ subroutine lcjohm(imate, lSigm, lMatr, lVari, kpi, npg, &
         if ((clo .gt. umc) .or. (clo .lt. -1.d-3)) then
             valr(1) = clo
             valr(2) = umc
-            call utmess('A', 'ALGORITH17_11', sk=nomail, nr=2, valr=valr)
+            call utmess('A', 'ALGORITH17_11', nr=2, valr=valr)
             retcom = 1
             goto 999
         end if
@@ -91,10 +97,8 @@ subroutine lcjohm(imate, lSigm, lMatr, lVari, kpi, npg, &
         end do
     end if
 
-!
 ! - CALCUP OPERATEUR TANGENT
-!
-    if (lMatr .and. (kpi .le. npg)) then
+    if (lMatr .and. (kpg .le. npg)) then
         tmecn = kni/(1-clo/umc)**gamma
         tmecs = kt
         drde(addeme, addeme) = tmecn

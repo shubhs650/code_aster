@@ -16,15 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine lclbr2(fami, kpg, ksp, imate, compor, &
-                  ndim, epsm, t, e, sigmt, &
+subroutine lclbr2(fami, kpg, ksp, imate, &
+                  t, e, sigmt, &
                   sigmc, epsic, compn, gamma)
     implicit none
 #include "asterfort/rcvalb.h"
-    character(len=16) :: compor(*)
     character(len=*) :: fami
-    integer(kind=8) :: imate, ndim, t(3, 3), kpg, ksp
-    real(kind=8) :: epsm(6), e, sigmt, sigmc, gamma, compn, epsic
+    integer(kind=8) :: imate, t(3, 3), kpg, ksp
+    real(kind=8) :: e, sigmt, sigmc, gamma, compn, epsic
 ! ----------------------------------------------------------------------
 !     LOI DE COMPORTEMENT BETON REGLEMENTAIRE : INITIALISATION
 !

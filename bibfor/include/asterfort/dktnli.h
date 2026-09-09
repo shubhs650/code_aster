@@ -17,13 +17,21 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine dktnli(option,&
-                      xyzl  , pgl   , uml   , dul,&
-                      btsig , ktan  , codret)
+    subroutine dktnli(plateCara, plateOrie, &
+                      BEHInteg, option, typmod, &
+                      instm, instp, &
+                      xyzl, uml, dul, &
+                      btsig, ktan, codret)
+        use Behaviour_type
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
         character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: typmod(2)
+        real(kind=8), intent(in) :: instm, instp
         real(kind=8), intent(in) :: xyzl(3, 4), uml(6, 4), dul(6, 4)
-        real(kind=8), intent(in) :: pgl(3, 3)
-        real(kind=8), intent(out) :: ktan(300), btsig(6,4)
-        integer(kind=8) , intent(out) :: codret
+        real(kind=8), intent(out) :: ktan(576), btsig(6, 4)
+        integer(kind=8), intent(out) :: codret
     end subroutine dktnli
 end interface

@@ -63,6 +63,7 @@ MODI_MAILLAGE = OPER(
             "DEFORME",
             "ORIE_PEAU",
             "ORIE_NORM_COQUE",
+            "ORIE_INTERF_POU",
             "MODI_MAILLE",
             "TRANSLATION",
             "ROTATION",
@@ -73,22 +74,59 @@ MODI_MAILLAGE = OPER(
             "ABSC_CURV",
         ),
         PRESENT_ABSENT(
-            "ORIE_FISSURE", "DEFORME", "ORIE_PEAU", "ORIE_NORM_COQUE", "MODI_MAILLE", "ORIE_LIGNE"
+            "ORIE_FISSURE",
+            "DEFORME",
+            "ORIE_PEAU",
+            "ORIE_NORM_COQUE",
+            "MODI_MAILLE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
         ),
         PRESENT_ABSENT(
-            "DEFORME", "ORIE_FISSURE", "ORIE_PEAU", "ORIE_NORM_COQUE", "MODI_MAILLE", "ORIE_LIGNE"
+            "DEFORME",
+            "ORIE_FISSURE",
+            "ORIE_PEAU",
+            "ORIE_NORM_COQUE",
+            "MODI_MAILLE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
         ),
         PRESENT_ABSENT(
-            "ORIE_PEAU", "ORIE_FISSURE", "DEFORME", "ORIE_NORM_COQUE", "MODI_MAILLE", "ORIE_LIGNE"
+            "ORIE_PEAU",
+            "ORIE_FISSURE",
+            "DEFORME",
+            "ORIE_NORM_COQUE",
+            "MODI_MAILLE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
         ),
         PRESENT_ABSENT(
-            "ORIE_NORM_COQUE", "ORIE_FISSURE", "DEFORME", "ORIE_PEAU", "MODI_MAILLE", "ORIE_LIGNE"
+            "ORIE_NORM_COQUE",
+            "ORIE_FISSURE",
+            "DEFORME",
+            "ORIE_PEAU",
+            "MODI_MAILLE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
+        ),
+        PRESENT_ABSENT("ORIE_INTERF_POU", "ORIE_FISSURE", "DEFORME", "MODI_MAILLE"),
+        PRESENT_ABSENT(
+            "ORIE_FISSURE",
+            "DEFORME",
+            "ORIE_PEAU",
+            "ORIE_NORM_COQUE",
+            "MODI_MAILLE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
         ),
         PRESENT_ABSENT(
-            "ORIE_FISSURE", "DEFORME", "ORIE_PEAU", "ORIE_NORM_COQUE", "MODI_MAILLE", "ORIE_LIGNE"
-        ),
-        PRESENT_ABSENT(
-            "MODI_MAILLE", "ORIE_FISSURE", "DEFORME", "ORIE_PEAU", "ORIE_NORM_COQUE", "ORIE_LIGNE"
+            "MODI_MAILLE",
+            "ORIE_FISSURE",
+            "DEFORME",
+            "ORIE_PEAU",
+            "ORIE_NORM_COQUE",
+            "ORIE_LIGNE",
+            "ORIE_INTERF_POU",
         ),
         EXCLUS("ROTATION", "MODI_BASE"),
         EXCLUS("SYMETRIE", "ROTATION"),
@@ -120,6 +158,12 @@ MODI_MAILLAGE = OPER(
         GROUP_MA=SIMP(statut="o", typ=grma, validators=NoRepeat(), max="**"),
         VECT_NORM=SIMP(statut="f", typ="R", max=3),
         b_vect_norm=BLOC(condition="""exists("VECT_NORM")""", GROUP_NO=SIMP(statut="f", typ=grno)),
+    ),
+    ORIE_INTERF_POU=FACT(
+        statut="f",
+        max="**",
+        GROUP_MA=SIMP(statut="o", typ=grma, validators=NoRepeat(), max="**"),
+        VECT_ORIE=SIMP(statut="o", typ="R", max=3),
     ),
     ORIE_LIGNE=FACT(
         statut="f",

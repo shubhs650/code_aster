@@ -38,6 +38,7 @@ subroutine te0365(option, nomte)
 #include "asterfort/mmvape.h"
 #include "asterfort/mmvfpe.h"
 #include "asterfort/mmvppe.h"
+#include "MeshTypes_type.h"
 #include "asterfort/writeVector.h"
 !
     character(len=16), intent(in) :: option, nomte
@@ -74,8 +75,8 @@ subroutine te0365(option, nomte)
     real(kind=8) :: mprt1n(3, 3), mprt2n(3, 3)
     real(kind=8) :: mprt11(3, 3), mprt12(3, 3), mprt21(3, 3), mprt22(3, 3)
     real(kind=8) :: kappa(2, 2)
-    real(kind=8) :: ffe(9), ffm(9), ffl(9)
-    real(kind=8) :: ddffm(3, 9), dffm(2, 9)
+    real(kind=8) :: ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), ffl(MT_NNOMAX2D)
+    real(kind=8) :: ddffm(3, MT_NNOMAX2D), dffm(2, MT_NNOMAX2D)
     real(kind=8) :: alpha_cont
     real(kind=8) :: dnepmait1, dnepmait2, taujeu1, taujeu2
     real(kind=8) :: xpc, ypc, xpr, ypr

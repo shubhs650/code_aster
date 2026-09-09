@@ -114,8 +114,8 @@ class Coeur:
         "RHO_EAU307",
     ]
 
-    _time = ("T0", "T0b", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T8b", "T9")
-    _subtime = ("N0", "N0b", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N8b", "N9")
+    _inst_name = ("T0", "T0b", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T8b", "T9")
+    _subd_name = ("N0", "N0b", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N8b", "N9")
     _type_coeur = None
     _is_multi_rod = False
     _has_corner_mesh = False
@@ -169,9 +169,9 @@ class Coeur:
         self.factory = ACFactory(datg)
         self.collAC = CollectionMAC3("AC")
         self._mateAC = {}
-        self.temps_simu = {}.fromkeys(self._time)
+        self.temps_simu = {}.fromkeys(self._inst_name)
         self.temps_archiv = None
-        self.sub_temps_simu = {}.fromkeys(self._subtime)
+        self.sub_temps_simu = {}.fromkeys(self._subd_name)
         self._para = {}
         self._keys = {}.fromkeys(self.required_parameters)
         self._init_from_attrs()
@@ -189,6 +189,8 @@ class Coeur:
             "GC_EH": self.nb_cr_mesh,
             "MNT": self.len_mnt,
         }
+        if self.has_corner_mesh:
+            update_materials["DIL"] = 2.0 - 2.0**0.5
 
         self.load_materials(update_materials)
 
@@ -714,7 +716,7 @@ class Coeur:
         self._len_mnt = round(max(mnt_x) - min(mnt_x), 8)
 
         self._is_multi_rod = len([i for i in gnodes if i.startswith("CREIBAS_")]) > 0
-        self._has_corner_mesh = len([i for i in gnodes if i.startswith("RES_COIN")]) > 0
+        self._has_corner_mesh = len([i for i in gcells if i.startswith("RES_COIN")]) > 0
 
         for ac in self.collAC:
             id_cr = "CR_%s" % ac.pos_aster
@@ -819,7 +821,7 @@ class Coeur:
 
         return _MODELE
 
-    def definition_time(self, fluence, subdivis, nbSubdEchec=10):
+    def definition_time(self, fluence=0.0, subdivis=1, nbSubdEchec=10):
         """Return the list of timesteps"""
         _LI = self.definition_time_arch(fluence, subdivis)
 
@@ -835,6 +837,7 @@ class Coeur:
                         SUBD_METHODE="MANUEL",
                         SUBD_PAS=4,
                         SUBD_NIVEAU=nbSubdEchec,
+                        SUBD_PAS_MINI=1.0e-8,
                     ),
                     _F(
                         EVENEMENT="DIVE_RESI",
@@ -842,6 +845,7 @@ class Coeur:
                         SUBD_METHODE="MANUEL",
                         SUBD_PAS=4,
                         SUBD_NIVEAU=nbSubdEchec,
+                        SUBD_PAS_MINI=1.0e-8,
                     ),
                 ),
             )
@@ -850,21 +854,16 @@ class Coeur:
     def definition_time_arch(self, fluence, subdivis):
         """Return the list of timesteps"""
 
-        def m_time(a):
+        def m_time(iname, sname):
             # for debugging use NOMBRE=1
-            m_time = (
-                _F(
-                    JUSQU_A=self.temps_simu[self._time[a]],
-                    NOMBRE=int(self.sub_temps_simu[self._subtime[a]]),
-                ),
-            )
+            m_time = (_F(JUSQU_A=self.temps_simu[iname], NOMBRE=int(self.sub_temps_simu[sname])),)
             return m_time
 
         self.init_temps_simu(fluence, subdivis)
 
         _list = []
-        for _time in range(len(self._time)):
-            _list.extend(m_time(_time))
+        for iname, sname in zip(self._inst_name, self._subd_name):
+            _list.extend(m_time(iname, sname))
 
         _LI = DEFI_LIST_REEL(DEBUT=-1, INTERVALLE=_list)
         return _LI
@@ -895,7 +894,7 @@ class Coeur:
         self.sub_temps_simu["N6"] = 2 * subdivis
         self.sub_temps_simu["N7"] = 2 * subdivis
         self.sub_temps_simu["N8"] = 2
-        self.sub_temps_simu["N8b"] = 2 * subdivis * 2
+        self.sub_temps_simu["N8b"] = 4 * subdivis
         self.sub_temps_simu["N9"] = 1
 
     def definition_fluence(self, fluence, MAILLAGE, fluence_cycle, lame=False):
@@ -1736,7 +1735,7 @@ class CoeurFactory(Mac3Factory):
         core.init_from_mesh(mesh)
         gfibre = core.definition_geom_fibre()
         carael = core.definition_cara_coeur(model, gfibre)
-        timeline = core.definition_time(fluence_level, 1.0)
+        timeline = core.definition_time(fluence_level)
         fluence = core.definition_fluence(fluence_level, mesh, 0.0)
         tempfield = core.definition_champ_temperature(mesh)
         mater = core.definition_materiau(mesh, gfibre, fluence, tempfield, CONTACT=contact)

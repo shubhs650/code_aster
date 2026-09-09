@@ -19,26 +19,26 @@
 subroutine xcalme(ds_thm, &
                   option, ndim, dimenr, &
                   dimcon, addeme, adcome, congep, &
-                  dsde, deps, angl_naut)
+                  dsde, deps)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/thmTherElas.h"
+!
 ! **********************************************************************
 ! ROUTINE CALC_MECA
 ! CALCULE LES CONTRAINTES GENERALISEES ET LA MATRICE TANGENTE MECANIQUES
 ! ======================================================================
 !
     type(THM_DS), intent(in) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3)
 
     integer(kind=8) :: ndim, dimenr, dimcon, addeme
     integer(kind=8) :: adcome
     real(kind=8) :: congep(dimcon)
-    real(kind=8) :: dsde(dimcon, dimenr), rac2
+    real(kind=8) :: dsde(dimcon, dimenr)
+    real(kind=8), parameter :: rac2 = sqrt(2.0d0)
     character(len=16) :: option
 ! ======================================================================
 ! --- VARIABLES LOCALES ------------------------------------------------
@@ -47,23 +47,12 @@ subroutine xcalme(ds_thm, &
     real(kind=8) :: deps(6)
     real(kind=8) :: depstr(6)
     real(kind=8) :: mdal(6), dalal
-    character(len=8) :: fami, poum
-    integer(kind=8) :: spt, kpg
-    character(len=16) :: meca
-!
-! - Initializations
-!
-    fami = 'XFEM'
-    kpg = 1
-    spt = 1
-    poum = '+'
-    rac2 = sqrt(2.0d0)
-!
-! - Get storage parameters for behaviours
-!
-    meca = ds_thm%ds_behaviour%rela_meca
+    character(len=16) :: relaMeca
 
-    if ((meca .eq. 'ELAS')) then
+! - Get storage parameters for behaviours
+    relaMeca = ds_thm%ds_behaviour%rela_meca
+
+    if ((relaMeca .eq. 'ELAS')) then
 !
 !   DANS LE CAS ELASTIQUE ON REPASSE AUX CONTRAINTES RELLES POUR APPLIQU
 !  LA MATRICE DE ROTATION DANS LE CAS ANISOTROPE
@@ -76,11 +65,9 @@ subroutine xcalme(ds_thm, &
                 congep(adcome+i-1) = congep(adcome+i-1)/rac2
             end do
         end if
-!
+
 ! ----- Compute thermic quantities
-!
-        call thmTherElas(ds_thm, angl_naut, mdal, dalal)
-!
+        call thmTherElas(ds_thm, mdal, dalal)
         if ((option(1:9) .eq. 'RIGI_MECA') .or. (option(1:9) .eq. 'FULL_MECA')) then
             do i = 1, 3
                 do j = 1, 3

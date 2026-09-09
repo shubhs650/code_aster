@@ -37,6 +37,7 @@ subroutine arlcpl(zocc, nbma1, nbma2, mail, nomo, &
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnum.h"
+#include "MeshTypes_type.h"
 !
     character(len=24) :: typmai
     character(len=8) :: mail, nomo
@@ -64,7 +65,7 @@ subroutine arlcpl(zocc, nbma1, nbma2, mail, nomo, &
 !
 !
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX)
     integer(kind=8) :: nliai, nddl
     parameter(nliai=12, nddl=nliai*nliai)
     aster_logical :: proj

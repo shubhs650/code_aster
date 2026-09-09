@@ -16,8 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine te0401(optioz, nomtz)
+subroutine te0401(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterfort/assert.h"
@@ -29,64 +33,69 @@ subroutine te0401(optioz, nomtz)
 #include "asterfort/tranlg.h"
 #include "asterfort/utvtsv.h"
 #include "asterfort/vdxrig.h"
-    character(len=*) :: optioz, nomtz
-    character(len=16) :: option, nomte
-!     ----------------------------------------------------------------
-!     CALCUL DES OPTIONS DES ELEMENTS DE COQUE : COQUE_3D
-!     ----------------------------------------------------------------
 !
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+!     CALCUL DES OPTIONS DES ELEMENTS DE COQUE : COQUE_3D
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: indm, indf
     integer(kind=8) :: nb1, nb2, nddlet
     integer(kind=8) :: lzr
-    integer(kind=8) :: jgeom, jener
+    integer(kind=8) :: jvGeom, jener
     integer(kind=8) :: i, j, kompt
-    integer(kind=8) :: iu, imatuu
-    real(kind=8) :: matloc(51, 51), plg(9, 3, 3)
+    integer(kind=8) :: jvDisp, imatuu
+    real(kind=8) :: matrRigiLoca(51, 51), plg(9, 3, 3)
     real(kind=8) :: vrs(1326)
     real(kind=8) :: bsigth(51), enerth
-    aster_logical :: indith
-! DEB
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    option = optioz
-    nomte = nomtz
+! --------------------------------------------------------------------------------------------------
 !
     enerth = 0.0d0
-!
-    call jevech('PGEOMER', 'L', jgeom)
-!
-    if (option .eq. 'RIGI_MECA') call jevech('PMATUUR', 'E', imatuu)
-!
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
+
+! - Access to static objects of COQUE_3D
+    call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
+
+! - Compute elastic matrix
     if (option .eq. 'RIGI_MECA' .or. option .eq. 'EPOT_ELEM') then
-!
-        call vdxrig(nomte, zr(jgeom), matloc, nb1, 0, &
-                    0)
-!
-!     CONSTRUCTION DE LA MATRICE DE PASSAGE REPERE GLOBAL REPERE LOCAL
-!
-        call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
-!
+        indm = 0
+        indf = 0
+        call vdxrig(plateCara, plateOrie, &
+                    nomte, zr(jvGeom), matrRigiLoca, nb1, &
+                    indm, indf)
+
+! ----- Get matrix
         nb2 = nb1+1
         call matpgl(nb2, zr(lzr), plg)
-!
-        call r8inir(1326, 0.d0, vrs, 1)
-!
+
+! ----- Frame modification of matrix
         nddlet = 6*nb1+3
-!
-        call tranlg(nb1, 51, nddlet, plg, matloc, &
-                    vrs)
+        vrs = 0.d0
+        call tranlg(nb1, 51, nddlet, plg, matrRigiLoca, vrs)
 !
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
 !
 !
     if (option .eq. 'RIGI_MECA') then
-!
-!--------- STOCKAGE
-!
-!--------- COMPTEUR DE POSITION
-!
+        call jevech('PMATUUR', 'E', imatuu)
         kompt = 0
-!
         do j = 1, 6*nb1+3
             do i = 1, j
                 kompt = kompt+1
@@ -95,79 +104,57 @@ subroutine te0401(optioz, nomtz)
         end do
 !
     end if
-!
+
 !---- ENERGIES DE DEFORMATION ELASTIQUE
-!
     if (option .eq. 'EPOT_ELEM') then
-!
-!------- LECTURE DE L'ADRESSE
-!
         call jevech('PENERDR', 'E', jener)
-!
-!------- ADRESSE DES DEPLACEMENTS
-!
-        call jevech('PDEPLAR', 'L', iu)
-!
-!
-!------- ENERGIE DE DEFORMATION TOTALE
-!
-        call utvtsv('ZERO', 6*nb1+3, vrs, zr(iu), zr(jener))
+        call jevech('PDEPLAR', 'L', jvDisp)
+
+!------ ENERGIE DE DEFORMATION TOTALE
+        call utvtsv('ZERO', 6*nb1+3, vrs, zr(jvDisp), zr(jener))
 !
         zr(jener) = 0.5d0*zr(jener)
+
 !
-        call bsthco(nomte, bsigth, indith)
+        call bsthco(plateCara, plateOrie, &
+                    nomte, bsigth)
 !
-        if (indith) then
-            do i = 1, 6*nb1+3
-                enerth = enerth+bsigth(i)*zr(iu+i-1)
-            end do
-            zr(jener) = zr(jener)-enerth
-        end if
+        do i = 1, 6*nb1+3
+            enerth = enerth+bsigth(i)*zr(jvDisp+i-1)
+        end do
+        zr(jener) = zr(jener)-enerth
 !
         if (abs(zr(jener)) .gt. 1.d-6) then
-!
 !--------- ENERGIE DE DEFORMATION DE MEMBRANE
-!
-            call vdxrig(nomte, zr(jgeom), matloc, nb1, 1, &
-                        0)
-!
-            call r8inir(1326, 0.d0, vrs, 1)
-!
-            call tranlg(nb1, 51, nddlet, plg, matloc, &
-                        vrs)
-!
-            call utvtsv('ZERO', 6*nb1+3, vrs, zr(iu), zr(jener+1))
-!
+            indm = 1
+            indf = 0
+            call vdxrig(plateCara, plateOrie, &
+                        nomte, zr(jvGeom), matrRigiLoca, nb1, &
+                        indm, indf)
+
+            vrs = 0.d0
+            call tranlg(nb1, 51, nddlet, plg, matrRigiLoca, vrs)
+            call utvtsv('ZERO', 6*nb1+3, vrs, zr(jvDisp), zr(jener+1))
             zr(jener+1) = 0.5d0*zr(jener+1)
-!
-!
+
 !--------- ENERGIE DE DEFORMATION DE FLEXION
-!
-            call vdxrig(nomte, zr(jgeom), matloc, nb1, 0, &
-                        1)
-!
+            indm = 0
+            indf = 1
+            call vdxrig(plateCara, plateOrie, &
+                        nomte, zr(jvGeom), matrRigiLoca, nb1, &
+                        indm, indf)
             call r8inir(1326, 0.d0, vrs, 1)
-!
-            call tranlg(nb1, 51, nddlet, plg, matloc, &
-                        vrs)
-!
-            call utvtsv('ZERO', 6*nb1+3, vrs, zr(iu), zr(jener+2))
+            vrs = 0.d0
+            call tranlg(nb1, 51, nddlet, plg, matrRigiLoca, vrs)
+            call utvtsv('ZERO', 6*nb1+3, vrs, zr(jvDisp), zr(jener+2))
 !
             zr(jener+2) = 0.5d0*zr(jener+2)
-!
-!--------- VALEURS RELATIVES
-!
             zr(jener+1) = zr(jener+1)/zr(jener)
             zr(jener+2) = zr(jener+2)/zr(jener)
 !
         else
-!
             call r8inir(2, 0.d0, zr(jener+1), 1)
-!
         end if
-!
-!
     end if
-!
 !
 end subroutine

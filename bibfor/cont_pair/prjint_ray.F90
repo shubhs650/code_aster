@@ -28,6 +28,7 @@ subroutine prjint_ray(proj_tole, dist_ratio, elem_dime, &
 #include "asterfort/apinte_weight.h"
 #include "asterfort/assert.h"
 #include "asterfort/cfadju.h"
+#include "MeshTypes_type.h"
 #include "asterfort/lcodrm.h"
 #include "asterfort/projMaAndCheck.h"
 #include "asterfort/interNodesInside.h"
@@ -37,13 +38,13 @@ subroutine prjint_ray(proj_tole, dist_ratio, elem_dime, &
     real(kind=8), intent(in) :: proj_tole, dist_ratio
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_slav_code
-    real(kind=8), intent(out) :: poin_inte_ma(elem_dime-1, 8)
-    real(kind=8), intent(out) :: poin_inte_es(elem_dime-1, 8)
+    real(kind=8), intent(out) :: poin_inte_ma(2, 8)
+    real(kind=8), intent(out) :: poin_inte_es(2, 8)
     real(kind=8), intent(out) :: inte_weight
     integer(kind=8), intent(out) :: nb_poin_inte
     integer(kind=8), optional, intent(inout) :: inte_neigh_(4)
@@ -76,11 +77,11 @@ subroutine prjint_ray(proj_tole, dist_ratio, elem_dime, &
 !
     aster_logical, parameter :: debug = ASTER_FALSE
     aster_logical :: error
-    real(kind=8) :: proj_coop(elem_dime-1, 9), coor_test(elem_dime-1)
+    real(kind=8) :: proj_coop(2, 9), coor_test(2)
     integer(kind=8) :: i_node, iret, nb_node_proj, test
     integer(kind=8) :: inte_neigh(4), nb_poin_inte_ma, nb_poin_inte_es
-    real(kind=8) :: poin_inte_ma_tmp(elem_dime-1, 16)
-    real(kind=8) :: poin_inte_es_tmp(elem_dime-1, 16)
+    real(kind=8) :: poin_inte_ma_tmp(2, 16)
+    real(kind=8) :: poin_inte_es_tmp(2, 16)
     character(len=8) :: elin_mast_code
     integer(kind=8) :: elin_mast_nbnode
 !
@@ -168,6 +169,7 @@ subroutine prjint_ray(proj_tole, dist_ratio, elem_dime, &
 ! - All nodes have to be inside slave cell
 !
     nb_poin_inte = nb_poin_inte_es
+    ASSERT(nb_poin_inte <= 8)
     do i_node = 1, nb_poin_inte
         poin_inte_es(1, i_node) = poin_inte_es_tmp(1, i_node)
         poin_inte_ma(1, i_node) = poin_inte_ma_tmp(1, i_node)
@@ -196,7 +198,7 @@ subroutine prjint_ray(proj_tole, dist_ratio, elem_dime, &
 !
 ! - Compute weight of intersection
 !
-    call apinte_weight(elem_dime, nb_poin_inte, poin_inte_es, inte_weight)
+    call apinte_weight(elem_dime, nb_poin_inte, poin_inte_es_tmp, inte_weight)
 !
 ! - Error
 !

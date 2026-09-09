@@ -1,12 +1,12 @@
 [project]
 name = "codeaster-src"
 dynamic = ["version"]
-requires-python = "~=3.11.13"
+requires-python = "~=3.11.14"
 dependencies = [
-    "numpy==1.24.*",
-    "scipy>=1.15.2,<2",
+    "numpy==1.26.4",
+    "scipy==1.16.2",
     "ipython>=9.0.2,<10",
-    "medcoupling~=9.11.0",
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]
@@ -23,9 +23,16 @@ dev = [
 ]
 
 [project.optional-dependencies]
-sympy = ["sympy>=1.14.0,<2"]
-gmsh = ["gmsh>=4.13.1,<5"]
-all = ["codeaster-src[sympy]", "codeaster-src[gmsh]"]
+gmsh = ["gmsh"]
+matplotlib = ["matplotlib"]
+pandas = ["pandas"]
+sympy = ["sympy"]
+all = [
+    "codeaster-src[gmsh]",
+    "codeaster-src[matplotlib]",
+    "codeaster-src[pandas]",
+    "codeaster-src[sympy]",
+]
 
 [build-system]
 requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
@@ -82,7 +89,8 @@ test-push = { cmd = [
 
 [tool.pixi.dependencies]
 mpi4py = "4.0.*"
-numpy = "1.24.*"
+numpy = "==1.26.4"
+scipy = "==1.16.2"
 # compilers
 gcc = ">=12.0,<13"
 gfortran = ">=12.0,<13"

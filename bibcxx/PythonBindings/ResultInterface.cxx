@@ -692,6 +692,14 @@ Returns:
     Table: Table stored with the given identifier.
         )",
               py::arg( "identifier" ) )
+        .def( "setTable", &ListOfTables::setTable, R"(
+Set a Table to the datastructure.
+
+Arguments:
+    identifier (str): Table identifier.
+    Table: Table to be stored with the given identifier.
+        )",
+              py::arg( "identifier" ), py::arg( "table" ) )
         .def( "getFieldsNames", &Result::getFieldsNames, R"(
 Return the list of names of stored fields
 

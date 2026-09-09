@@ -27,7 +27,6 @@ subroutine ccpara(option, &
 #include "jeveux.h"
 #include "asterc/r8nnem.h"
 #include "asterfort/dismoi.h"
-#include "asterfort/getvtx.h"
 #include "asterfort/jenonu.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"

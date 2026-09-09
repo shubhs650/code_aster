@@ -17,17 +17,20 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
-                  tlogCurr, fPrev, lgpg, vip, ndim, &
-                  fCurr, kpg, dtde, sigm, cplan, &
-                  fami, mate, instp, angmas, gn, &
+subroutine poslog(BEHInteg, &
+                  lCorr, lMatr, lSigm, lVari, &
+                  tlogPrev, tlogCurr, fPrev, &
+                  lgpg, vip, ndim, &
+                  fCurr, dtde, sigm, cplan, &
+                  instp, gn, &
                   lamb, logl, sigmCurr, dsidep, pk2Prev, &
                   pk2Curr, codret)
 !
+    use Behaviour_type
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
 #include "asterfort/d1macp.h"
 #include "asterfort/deflg2.h"
 #include "asterfort/deflg3.h"
@@ -37,6 +40,7 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
 !
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     aster_logical, intent(in) :: lCorr, lMatr, lSigm, lVari
     aster_logical, intent(in) :: cplan
     real(kind=8), intent(in) :: tlogPrev(6)
@@ -46,13 +50,9 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: lgpg
     real(kind=8), intent(out) :: vip(lgpg)
-    integer(kind=8), intent(in) :: kpg
     real(kind=8), intent(in) :: dtde(6, 6)
     real(kind=8), intent(in) :: sigm(2*ndim)
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: mate
     real(kind=8), intent(in) :: instp
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(in) :: gn(3, 3)
     real(kind=8), intent(in) :: lamb(3)
     real(kind=8), intent(in) :: logl(3)
@@ -80,7 +80,6 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
 ! in  ndim    : dimension de l'espace
 ! in  fCurr      : gradient transformation en t+
 ! in  pes     : operateur de transformation tlogPrev (ou tlogCurr) en pk2
-! in  kpg       : numero du points de gauss
 ! in  dtde    : operateur tangent issu de nmcomp (6,6)
 ! in  sigm    : contrainte de cauchy en t-
 ! in  gn      : termes utiles au calcul de tl dans poslog
@@ -126,8 +125,7 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
     if (cplan) then
         epse = 0.d0
         if (lCorr) then
-            call d1macp(fami, mate, instp, '+', kpg, &
-                        1, angmas(1), d1)
+            call d1macp(BEHInteg%materPara, "+", instp, d1)
             do i = 1, 4
                 do j = 1, 4
                     epse(i) = epse(i)+d1(i, j)*tlogCurr(j)
@@ -135,8 +133,7 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
             end do
             epse(3) = d1(1, 2)*(tlogCurr(1)+tlogCurr(2))
         else
-            call d1macp(fami, mate, instp, '-', kpg, &
-                        1, angmas(1), d1)
+            call d1macp(BEHInteg%materPara, "-", instp, d1)
             do i = 1, 4
                 do j = 1, 4
                     epse(i) = epse(i)+d1(i, j)*tlogPrev(j)
@@ -193,7 +190,6 @@ subroutine poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
 !
 ! - On stocke TP comme variable interne
     if (lVari) then
-        vip(lgpg-1:lgpg) = 0.d0
         b_n = to_blas_int(2*ndim)
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)

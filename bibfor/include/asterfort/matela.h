@@ -15,14 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine matela(icodma, materi, itemp, temp, e,&
+    subroutine matela(jvMaterCode, materPoin, itemp, temp, e, &
                       nu)
-        integer(kind=8) :: icodma
-        character(len=*) :: materi
+        integer(kind=8) :: jvMaterCode
+        character(len=*) :: materPoin
         integer(kind=8) :: itemp
         real(kind=8) :: temp
         real(kind=8) :: e

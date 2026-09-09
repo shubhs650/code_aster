@@ -19,8 +19,9 @@
 !
 !
 interface
-    subroutine nmdocn(ds_conv)
+    subroutine nmdocn(ds_conv, mesh)
         use NonLin_Datastructure_type
         type(NL_DS_Conv), intent(inout) :: ds_conv
+        character(len=8), optional:: mesh
     end subroutine nmdocn
 end interface

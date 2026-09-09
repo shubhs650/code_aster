@@ -21,7 +21,6 @@ from cataelem.Tools.base_objects import InputParameter, OutputParameter
 from cataelem.Tools.base_objects import objects_from_context
 import cataelem.Commons.physical_quantities as PHY
 
-
 # Parametres 'In' :
 # -----------------
 
@@ -73,13 +72,7 @@ PCACABL = InputParameter(
 )
 
 PCACOQU = InputParameter(
-    phys=PHY.CACOQU_R,
-    container="CARA!.CARCOQUE",
-    comment=""" PCACOQU :  PROPRIETES COQUES
-    Champ de caracteristiques pour les coques. Concept CARA_ELEM
-        PCACOQU : CARACTERISTIQUE DE COQUE,
-    NECESSITE DE FOURNIR LE CONCEPT PRODUIT PAR AFFE_CARA_ELEM
-""",
+    phys=PHY.CACOQU_R, container="ORIE!.CARCOQUE", comment="""Parameters for shells and plates."""
 )
 
 PCADISA = InputParameter(phys=PHY.CADISA_R, comment="""""")
@@ -151,19 +144,13 @@ PCALCI = InputParameter(
 
 PCAMASS = InputParameter(
     phys=PHY.CAMA_R,
-    container="CARA!.CARMASSI",
-    comment=""" CARACTERISTIQUES ANGLE_MASSIF (ELEMENTS ANISOTROPES)
-  PCAMASS : CARACTERISTIQUE DE MASSIF,
-           NECESSITE DE FOURNIR LE CONCEPT PRODUIT PAR AFFE_CARA_ELEM
-  PCAMASS : CARACTERISTIQUE DE MASSIF
- PCAMASS : CARACTERISTIQUE DE MASSIF
+    container="ORIE!.CARMASSI",
+    comment="""Parameters for anistoropic material.
 """,
 )
 
 PCAORIE = InputParameter(
-    phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
-    comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
+    phys=PHY.CAORIE_R, container="ORIE!.CARORIEN", comment="""Parameters for beams and pipes."""
 )
 
 
@@ -771,8 +758,6 @@ PFRCO2D = InputParameter(phys=PHY.FORC_R, comment="""""")
 
 PFRCO3D = InputParameter(phys=PHY.FORC_R, comment="""""")
 
-PFRELEC = InputParameter(phys=PHY.FLAP_R, comment="""""")
-
 PFREQR = InputParameter(
     phys=PHY.FREQ_R,
     container="VOLA!&&CCPARA.FREQ",
@@ -1033,9 +1018,15 @@ PRAYONF = InputParameter(phys=PHY.RAYO_F, comment="""""")
 
 PRAYONR = InputParameter(phys=PHY.RAYO_R, comment="""""")
 
-PREFCO = InputParameter(
-    phys=PHY.PREC_R,
-    comment="""  PREFCO :  REFERENCE DE CONTRAINTE
+PRESICMP = InputParameter(
+    phys=PHY.RESICMP,
+    comment="""  PRESICMP : VALEURS DES GRANDEURS DE REFERENCE POUR LE RESIDU
+""",
+)
+
+PRESIREF = InputParameter(
+    phys=PHY.RESIREF,
+    comment="""  PRESIREF : NOMS DES GRANDEURS DE REFERENCE POUR LE RESIDU
 """,
 )
 
@@ -1404,6 +1395,10 @@ XXXXXX = InputParameter(phys=PHY.SIEF_R, container="RESU!SIGM_ELNO!N", comment="
 # ------------------
 
 PDEPLGA = OutputParameter(phys=PHY.DEPL_R, type="ELGA", comment="""Déplacements aux sous-points""")
+
+PDEPSGA = OutputParameter(
+    phys=PHY.DEPL_R, type="ELGA", comment="""Saut de déplacements aux points de Gauss"""
+)
 
 PCAFI_R = OutputParameter(phys=PHY.CAFI_R, type="ELEM", comment="""""")
 
@@ -1789,9 +1784,11 @@ PMATUND = OutputParameter(
 """,
 )
 
-PNEU1_R = OutputParameter(phys=PHY.NEUT_R, type="ELEM", comment="""""")
+PNEUT_R = OutputParameter(phys=PHY.NEUT_R, type="ELEM", comment="""""")
 
 PNEUT_I = OutputParameter(phys=PHY.NEUT_I, type="ELEM", comment="""""")
+
+PNEUT_F = OutputParameter(phys=PHY.NEUT_F, type="ELEM", comment="""""")
 
 PNEUMAT = OutputParameter(phys=PHY.NEUT_R, type="ELGA", comment="""""")
 

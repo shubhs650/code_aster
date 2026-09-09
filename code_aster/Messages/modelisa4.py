@@ -287,7 +287,10 @@ Aucune des mailles sélectionnées n'est affectée par un élément fini.
     ),
     72: _(
         """
- maille dégénérée
+    DEFI_CABLE_BP n'a pas réussi à identifier la maille 3D dans laquelle est inclus le noeud de câble de coordonnées (%(r1).3e, %(r2).3e, %(r3).3e).
+    Ce problème peut avoir plusieurs sources :
+     - Présence de mailles dégénérées dans le maillage 3D.
+     - Le noeud de câble est situé à l'interface de plusieurs mailles 3D. Le déplacer d'une petite distance pourrait permettre de régler le problème.
 """
     ),
     76: _(

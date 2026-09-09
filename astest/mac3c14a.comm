@@ -192,7 +192,14 @@ U_ADH = STAT_NON_LINE(
         _F(GROUP_MA=("GR_CR_R", "GR_CR_B"), RELATION="DIS_CHOC"),
     ),
     INCREMENT=_F(LIST_INST=LINST),
-    CONVERGENCE=_F(RESI_REFE_RELA=1.0, SIGM_REFE=1.0e-6, EFFORT_REFE=1.0e-3, MOMENT_REFE=1.0e-3),
+    CONVERGENCE=_F(RESI_REFE_RELA=1.0),
+    CONVERGENCE_REFE=(
+        _F(GROUP_MA=("TG", "GR_TG", "CR", "BAS_CR"), EFFORT=1.0e-3, MOMENT=1.0e-3),
+        _F(
+            GROUP_MA=("NGR1", "NGR2", "NGR3", "NGR4", "NGR5", "NGR6", "NGR7", "GR_CR_R", "GR_CR_B"),
+            EFFORT=1.0e-3,
+        ),
+    ),
     SOLVEUR=_F(METHODE="MUMPS"),
 )
 
@@ -216,7 +223,14 @@ U_GLIS = STAT_NON_LINE(
         _F(GROUP_MA=("GR_CR_R", "GR_CR_B"), RELATION="DIS_CHOC"),
     ),
     INCREMENT=_F(LIST_INST=LINST),
-    CONVERGENCE=_F(RESI_REFE_RELA=1.0, SIGM_REFE=1.0e-6, EFFORT_REFE=1.0e-3, MOMENT_REFE=1.0e-3),
+    CONVERGENCE=_F(RESI_REFE_RELA=1.0),
+    CONVERGENCE_REFE=(
+        _F(GROUP_MA=("TG", "GR_TG", "CR", "BAS_CR"), EFFORT=1.0e-3, MOMENT=1.0e-3),
+        _F(
+            GROUP_MA=("NGR1", "NGR2", "NGR3", "NGR4", "NGR5", "NGR6", "NGR7", "GR_CR_R", "GR_CR_B"),
+            EFFORT=1.0e-3,
+        ),
+    ),
     SOLVEUR=_F(METHODE="MUMPS", NPREC=10),
 )
 

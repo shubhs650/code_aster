@@ -15,14 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
     subroutine caurtg(nomte, ncmp, sigmau, sigrtg)
-        integer(kind=8) :: ncmp
-        character(len=16) :: nomte
-        real(kind=8) :: sigmau(ncmp, 1)
-        real(kind=8) :: sigrtg(ncmp, 1)
+        use plate_type
+        integer(kind=8), intent(in) :: ncmp
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: sigmau(ncmp, 1)
+        real(kind=8), intent(out) :: sigrtg(ncmp, 1)
     end subroutine caurtg
 end interface

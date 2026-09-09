@@ -15,15 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine w155ce(nomres, resu, nbordr, liordr)
-! ======================================================================
-!     COMMANDE :  POST_CHAMP / COQU_EXCENT
-! ----------------------------------------------------------------------
+!
+subroutine w155ce(resultOut, resultIn, nbStore, listStore)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/getfac.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/detrsd.h"
@@ -39,131 +38,164 @@ subroutine w155ce(nomres, resu, nbordr, liordr)
 #include "asterfort/rslesd.h"
 #include "asterfort/rsnoch.h"
 #include "asterfort/utmess.h"
-    character(len=8) :: nomres, resu
-    integer(kind=8) :: nbordr, liordr(nbordr)
+#include "jeveux.h"
 !
+    character(len=8), intent(in) :: resultOut, resultIn
+    integer(kind=8), intent(in) :: nbStore, listStore(nbStore)
+!
+! --------------------------------------------------------------------------------------------------
+!
+!     COMMANDE :  POST_CHAMP / COQU_EXCENT
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: factorKeyw = 'COQU_EXCENT'
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
     integer(kind=8) :: ifm, niv
-    integer(kind=8) :: iret, i, nuordr, ibid, nocc, iocc
-    character(len=8) :: modele, carele, mplan
-    character(len=8) :: modeav, lpain(2), lpaout(1)
-    character(len=4) :: tsca
-    character(len=16) :: motfac, nomsym
-    character(len=19) :: chin, chextr, ligrel, resu19, lchin(2), lchout(1)
+    integer(kind=8) :: iret, iStore, numeStore, ibid, nocc, iocc
+    character(len=8) :: model, caraElem, mplan, modelSave
+    character(len=4) :: physQuanScal
+    character(len=16) :: fieldName
+    character(len=19) :: fieldIn, fieldOut, ligrel
     integer(kind=8) :: vali(2), iexi
     aster_logical :: lreel, lnoeu, ldetli, lvide
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
-!
     call infmaj()
     call infniv(ifm, niv)
-    resu19 = resu
+
 !
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
 !
 !
 !     -- 1. : Y-A-T-IL QUELQUE CHOSE A FAIRE ?
 !     ----------------------------------------
     call getfac('COQU_EXCENT', nocc)
-    if (nocc .eq. 0) goto 30
+    if (nocc .eq. 0) then
+        goto 30
+    end if
     ASSERT(nocc .lt. 10)
 !
 !
-    modeav = ' '
-    ldetli = .false.
-    lvide = .true.
+    modelSave = ' '
+    ldetli = ASTER_FALSE
+    lvide = ASTER_TRUE
     do iocc = 1, nocc
 !
 !     -- 2.  : NOMSYM, MPLAN :
 !     --------------------------------------------------
-        motfac = 'COQU_EXCENT'
-        call getvtx(motfac, 'NOM_CHAM', iocc=iocc, scal=nomsym, nbret=ibid)
-        ASSERT(nomsym .eq. 'EFGE_ELNO' .or. nomsym .eq. 'EFGE_ELGA')
-        call getvtx(motfac, 'MODI_PLAN', iocc=iocc, scal=mplan, nbret=ibid)
+
+        call getvtx(factorKeyw, 'NOM_CHAM', iocc=iocc, scal=fieldName, nbret=ibid)
+        ASSERT(fieldName .eq. 'EFGE_ELNO' .or. fieldName .eq. 'EFGE_ELGA')
+        call getvtx(factorKeyw, 'MODI_PLAN', iocc=iocc, scal=mplan, nbret=ibid)
         ASSERT(mplan .eq. 'OUI')
-        lnoeu = nomsym .eq. 'EFGE_ELNO'
+        lnoeu = fieldName .eq. 'EFGE_ELNO'
 !
 !
 !     -- 3. : BOUCLE SUR LES NUMERO D ORDRE
 !     --------------------------------------------------
-        do i = 1, nbordr
-            nuordr = liordr(i)
-            call rsexch(' ', resu19, nomsym, nuordr, chin, &
-                        iret)
+        do iStore = 1, nbStore
+            numeStore = listStore(iStore)
+            call rsexch(' ', resultIn, fieldName, numeStore, fieldIn, iret)
             if (iret .eq. 0) then
 !
 !         -- 3.1 : MODELE, CARELE, LIGREL :
-                call rslesd(resu, nuordr, model_=modele, cara_elem_=carele)
-                if (modele .ne. modeav) then
-                    if (ldetli) call detrsd('LIGREL', ligrel)
-                    call exlima(' ', 1, 'G', modele, ligrel)
-                    modeav = modele
-!             -- SI ON CREE UN LIGREL, IL FAUT VERIFIER QUE L'ON S'EN
-!                SERT VRAIMENT. SINON, IL FAUT LE DETRUIRE:
-                    ldetli = .false.
-                    if (ligrel(1:8) .ne. modele) ldetli = .true.
+                call rslesd(resultIn, numeStore, model_=model, cara_elem_=caraElem)
+                if (model .ne. modelSave) then
+                    if (ldetli) then
+                        call detrsd('LIGREL', ligrel)
+                    end if
+                    call exlima(' ', 1, 'G', model, ligrel)
+                    modelSave = model
+                    ldetli = ASTER_FALSE
+                    if (ligrel(1:8) .ne. model) then
+                        ldetli = ASTER_TRUE
+                    end if
                 end if
 !
-                call rsexch(' ', nomres, nomsym, nuordr, chextr, &
-                            iret)
+                call rsexch(' ', resultOut, fieldName, numeStore, fieldOut, iret)
                 ASSERT(iret .eq. 100)
 !
-                call jelira(chin//'.CELV', 'TYPE', cval=tsca)
-                if (tsca .eq. 'R') then
-                    lreel = .true.
-                else if (tsca .eq. 'C') then
-                    lreel = .false.
+                call jelira(fieldIn//'.CELV', 'TYPE', cval=physQuanScal)
+                if (physQuanScal .eq. 'R') then
+                    lreel = ASTER_TRUE
+                else if (physQuanScal .eq. 'C') then
+                    lreel = ASTER_FALSE
                 else
-                    ASSERT(.false.)
+                    ASSERT(ASTER_FALSE)
                 end if
-!
+
+! ------------- Add input fields
+                nbFieldIn = 1
                 if (lnoeu) then
                     if (lreel) then
-                        lpain(1) = 'PEFFONR'
+                        lpain(nbFieldIn) = 'PEFFONR'
+                    else
+                        lpain(nbFieldIn) = 'PEFFONC'
+                    end if
+                else
+                    if (lreel) then
+                        lpain(nbFieldIn) = 'PEFFOGR'
+                    else
+                        lpain(nbFieldIn) = 'PEFFOGC'
+                    end if
+                end if
+                lchin(nbFieldIn) = fieldIn
+
+! ------------- Add fields for orientation
+                call setOrieFields(nbFieldInMax, lpain, lchin, &
+                                   nbFieldIn, caraElem)
+
+! ------------- Set output fields
+                if (lnoeu) then
+                    if (lreel) then
                         lpaout(1) = 'PEFFOENR'
                     else
-                        lpain(1) = 'PEFFONC'
                         lpaout(1) = 'PEFFOENC'
                     end if
                 else
                     if (lreel) then
-                        lpain(1) = 'PEFFOGR'
                         lpaout(1) = 'PEFFOEGR'
                     else
-                        lpain(1) = 'PEFFOGC'
                         lpaout(1) = 'PEFFOEGC'
                     end if
                 end if
-!
-                lchin(1) = chin
-                lchout(1) = chextr
-!
-                lpain(2) = 'PCACOQU'
-                lchin(2) = carele//'.CARCOQUE'
-!
-                call calcul('C', 'EFGE_EXCENT', ligrel, 2, lchin, &
-                            lpain, 1, lchout, lpaout, 'G', &
-                            'OUI')
+                lchout(1) = fieldOut
+
+! ------------- Compute
+                call calcul('C', 'EFGE_EXCENT', ligrel, &
+                            nbFieldIn, lchin, lpain, &
+                            nbFieldOut, lchout, lpaout, &
+                            'G', 'OUI')
 !
                 call jeexin(lchout(1)//'.CELV', iexi)
                 if (iexi .eq. 0) then
                     vali(1) = iocc
-                    vali(2) = nuordr
+                    vali(2) = numeStore
                     call utmess('A', 'CALCULEL2_19', ni=2, vali=vali)
                 else
-                    ldetli = .false.
-                    lvide = .false.
-                    call rsnoch(nomres, nomsym, nuordr)
+                    ldetli = ASTER_FALSE
+                    lvide = ASTER_FALSE
+                    call rsnoch(resultOut, fieldName, numeStore)
                 end if
             end if
         end do
     end do
 !
-    if (ldetli) call detrsd('LIGREL', ligrel)
+    if (ldetli) then
+        call detrsd('LIGREL', ligrel)
+    end if
     if (lvide) then
         call utmess('F', 'CALCULEL2_20')
     end if
-!
 !
 30  continue
     call jedema()

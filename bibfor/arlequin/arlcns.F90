@@ -23,6 +23,7 @@ subroutine arlcns(nummai, connex, loncum, nbno, cxno)
 !
 #include "jeveux.h"
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: nummai, connex(*), loncum(*)
     integer(kind=8) :: nbno
@@ -52,7 +53,7 @@ subroutine arlcns(nummai, connex, loncum, nbno, cxno)
 !
     jdec = loncum(nummai)
 !
-    if ((nbno < 1) .or. (nbno > 27)) then
+    if ((nbno < 1) .or. (nbno > MT_NNOMAX)) then
         ASSERT(.false.)
     end if
 !

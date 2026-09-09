@@ -16,8 +16,8 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, option, &
-                             materi, sigp, vip, dsde)
+subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, &
+                             sigp, vip, dsde)
 !
     implicit none
 !
@@ -31,11 +31,11 @@ subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, optio
 #include "asterfort/rk5adp.h"
 #include "asterfort/utmess.h"
 !
-    character(len=*)  :: fami, materi
-    integer(kind=8)           :: kpg, ksp, imate
+    character(len=*)  :: fami
+    integer(kind=8) :: kpg, ksp, imate
     real(kind=8)      :: sigm, epsm, deps, vim(*)
     real(kind=8)      :: sigp, vip(*), dsde
-    character(len=16) :: option
+
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -64,7 +64,7 @@ subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, optio
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8)      :: jtp, jtm, icarcr, iret0, iret1
+    integer(kind=8)      :: jtp, jtm, jvCarcri, iret0, iret1
     real(kind=8) :: temper0, temper1
 
 !   Pour la loi de comportement
@@ -95,11 +95,11 @@ subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, optio
     temps1 = zr(jtp)
     dtemps = temps1-temps0
 !   contrôle de rk5 : découpage successif, erreur maximale
-    call jevech('PCARCRI', 'L', icarcr)
+    call jevech('PCARCRI', 'L', jvCarcri)
 !   nombre d'itérations maxi (ITER_INTE_MAXI=-20 par défaut)
-    nbdecp = abs(nint(zr(icarcr)))
+    nbdecp = abs(nint(zr(jvCarcri)))
 !   tolérance de convergence (RESI_INTE)
-    errmax = zr(icarcr+2)
+    errmax = zr(jvCarcri+2)
 !   Température à t-
     call rcvarc(' ', 'TEMP', '-', fami, kpg, ksp, temper0, iret0)
     if (iret0 .ne. 0) then

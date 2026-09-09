@@ -16,7 +16,8 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_read_exte(keywf, i_comp, libr_name, subr_name, nb_vari_umat)
+subroutine comp_read_exte(factorKeyword, iFactorKeyword, &
+                          librNameUMAT, subrNameUMAT, nbVariUMAT)
 !
     implicit none
 !
@@ -24,11 +25,11 @@ subroutine comp_read_exte(keywf, i_comp, libr_name, subr_name, nb_vari_umat)
 #include "asterfort/getvis.h"
 #include "asterfort/getvtx.h"
 !
-    character(len=16), intent(in) :: keywf
-    integer(kind=8), intent(in) :: i_comp
-    character(len=255), intent(out) :: libr_name
-    character(len=255), intent(out) :: subr_name
-    integer(kind=8), intent(out) :: nb_vari_umat
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
+    character(len=255), intent(out) :: librNameUMAT
+    character(len=255), intent(out) :: subrNameUMAT
+    integer(kind=8), intent(out) :: nbVariUMAT
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -38,23 +39,20 @@ subroutine comp_read_exte(keywf, i_comp, libr_name, subr_name, nb_vari_umat)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  keywf            : factor keyword to read (COMPORTEMENT)
-! In  i_comp           : factor keyword index
-! Out libr_name        : name of library if UMAT or MFront
-! Out subr_name        : name of comportement in library if UMAT or MFront
-! Out nb_vari_umat     : number of internal variables for UMAT
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
+! Out librNameUMAT     : name of library
+! Out subrNameUMAT     : name of behaviour in library
+! Out nbVariUMAT       : number of internal variables
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    libr_name = ' '
-    subr_name = ' '
-    nb_vari_umat = 0
-!
-! - Get parameters
-!
-    ASSERT(i_comp .ne. 0)
-    call getvtx(keywf, 'LIBRAIRIE', iocc=i_comp, scal=libr_name)
-    call getvtx(keywf, 'NOM_ROUTINE', iocc=i_comp, scal=subr_name)
-    call getvis(keywf, 'NB_VARI', iocc=i_comp, scal=nb_vari_umat)
+    librNameUMAT = ' '
+    subrNameUMAT = ' '
+    nbVariUMAT = 0
+    ASSERT(iFactorKeyword .ne. 0)
+    call getvtx(factorKeyword, 'LIBRAIRIE', iocc=iFactorKeyword, scal=librNameUMAT)
+    call getvtx(factorKeyword, 'NOM_ROUTINE', iocc=iFactorKeyword, scal=subrNameUMAT)
+    call getvis(factorKeyword, 'NB_VARI', iocc=iFactorKeyword, scal=nbVariUMAT)
 !
 end subroutine

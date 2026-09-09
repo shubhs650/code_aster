@@ -22,7 +22,11 @@ from ..Utilities import _
 cata_msg = {
     1: _("""On ne trouve pas les paramètres thermiques dans le matériau."""),
     2: _(
-        """On ne trouve pas la variable de commande TEMP. Elle est nécessaire pour les calculs de séchage.    
+        """On ne trouve pas la variable de commande TEMP. Elle est nécessaire pour les calculs de séchage.
+"""
+    ),
+    3: _(
+        """On ne trouve pas le repère local d'anisotropie alors que le matériau l'est.
 """
     ),
 }

@@ -15,14 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dstedg(xyzl, option, pgl, depl, edgl)
+    subroutine dstedg(plateCara, plateOrie, &
+                      xyzl, option, depl, edgl)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         real(kind=8) :: xyzl(3, *)
         character(len=16) :: option
-        real(kind=8) :: pgl(3, *)
         real(kind=8) :: depl(*)
         real(kind=8) :: edgl(*)
     end subroutine dstedg

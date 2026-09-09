@@ -18,40 +18,39 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine assthm(ds_thm   , option   , j_mater  ,&
-                      lMatr    , lSigm    , lVect    ,&
-                      lVari    , lMatrPred, l_axi    ,&
-                      typmod   , inte_type, angl_naut,&
-                      ndim     , nbvari   ,&
-                      nno      , nnos     , npg      , npi      ,&
-                      nddls    , nddlm    , nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
-                      dimdef   , dimcon   , dimuel   ,&
-                      mecani   , press1   , press2   , tempe  , second, &
-                      compor   , carcri   ,&
-                      jv_poids , jv_poids2,&
-                      jv_func  , jv_func2 ,&
-                      jv_dfunc , jv_dfunc2,&
-                      elem_coor,&
-                      dispm    , dispp    ,&
-                      congem   , congep   ,&
-                      vintm    , vintp    ,&
-                      time_prev, time_curr,&
-                      matuu    , vectu    , codret)
+    subroutine assthm(ds_thm, &
+                      lMatr, lSigm, lVect, &
+                      lVari, lMatrPred, l_axi, &
+                      option, typmod, inte_type, &
+                      ndim, nbvari, &
+                      nno, nnos, npg, npi, &
+                      nddls, nddlm, nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
+                      dimdef, dimcon, dimuel, &
+                      mecani, press1, press2, tempe, second, &
+                      compor, carcri, &
+                      jv_poids, jv_poids2, &
+                      jv_func, jv_func2, &
+                      jv_dfunc, jv_dfunc2, &
+                      elem_coor, &
+                      dispm, dispp, &
+                      congem, congep, &
+                      vintm, vintp, &
+                      time_prev, time_curr, &
+                      matuu, vectu, codret)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        character(len=16), intent(in) :: option
-        integer(kind=8), intent(in) :: j_mater
+
         aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred, lVect
         aster_logical, intent(in)  :: l_axi
+        character(len=16), intent(in) :: option
         character(len=8), intent(in) :: typmod(2)
         character(len=3), intent(in) :: inte_type
-        real(kind=8), intent(in)  :: angl_naut(3)
         integer(kind=8), intent(in) :: nbvari, ndim
         integer(kind=8), intent(in) :: nno, nnos
         integer(kind=8), intent(in) :: npg, npi
         integer(kind=8), intent(in) :: nddls, nddlm, nddl_meca, nddl_p1, nddl_p2, nddl_2nd
         integer(kind=8), intent(in) :: dimuel, dimdef, dimcon
-        integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5) 
+        integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
         character(len=16), intent(in)  :: compor(*)
         real(kind=8), intent(in) :: carcri(*)
         integer(kind=8), intent(in) :: jv_poids, jv_poids2

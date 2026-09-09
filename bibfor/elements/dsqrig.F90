@@ -16,12 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
-                  ener)
+subroutine dsqrig(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  rig, ener)
+!
+    use plate_type
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8gaem.h"
+#include "asterf_types.h"
 #include "asterfort/bsthpl.h"
 #include "asterfort/dsqbfa.h"
 #include "asterfort/dsqbfb.h"
@@ -45,18 +48,20 @@ subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
 #include "asterfort/utdtab.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    type(plateCara_Para), intent(in) :: plateCara
     real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
-    character(len=16) :: option, nomte
+    character(len=16) :: option
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     MATRICE DE RIGIDITE DE L'ELEMENT DE PLAQUE DSQ (AVEC CISAILLEMENT)
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT RIG    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_POT (EPOT_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: i, int, j, jcoqu, jdepg, k, multic
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: i, int, j, jdepg, k, multic
     real(kind=8) :: wgt, depl(24)
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
@@ -84,13 +89,14 @@ subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
     real(kind=8) :: kfcg11(12, 4), kfc21(4, 4), kmc(8, 4), kmapb(8, 12)
     real(kind=8) :: bcmbcb(8, 12), kma(8, 4), kmb(8, 12)
     real(kind=8) :: kmpmt(8, 8), kmpm(8, 8), membcf(8, 8), bcapm(2, 8)
-    real(kind=8) :: bsigth(24), enerth, ctor, un, zero, eta, excent, qsi
-    real(kind=8) :: jacob(5), caraq4(25), t2iu(4), t2ui(4), t1ve(9)
-    aster_logical :: coupmf, exce, indith, ismultic
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-!     ------------------------------------------------------------------
+    real(kind=8) :: enerth, ctor, un, zero, eta, excent, qsi
+    real(kind=8) :: jacob(5), caraq4(25)
+    aster_logical :: coupmf, exce, ismultic
+    integer(kind=8) :: ndim, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
                      jgano=jgano)
 !
@@ -117,23 +123,24 @@ subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
     call r8inir(64, zero, kmpm, 1)
     call r8inir(96, zero, kmapb, 1)
     call r8inir(16, zero, bcapm, 1)
-!
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-!
-    exce = .false.
-    if (abs(excent) .gt. un/r8gaem()) exce = .true.
+
+! - Get parameters
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+
+! - Flags
+    exce = (abs(excent) .gt. un/r8gaem())
     ismultic = .false.
-!
+
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
     call gquad4(xyzl, caraq4)
 !
 !     ----- CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION,
 !           MEMBRANE ET CISAILLEMENT INVERSEE --------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 
 !   VERIFICATION CAS EXCENTREMENT MULTICOUCHES
     if (multic .gt. 0) ismultic = .true.
@@ -452,7 +459,6 @@ subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
             end do
 !
         end if
-!
     end do
 !
     if (option .eq. 'RIGI_MECA') then
@@ -463,13 +469,15 @@ subroutine dsqrig(nomte, xyzl, option, pgl, rig, &
         call utpvgl(4, 6, pgl, zr(jdepg), depl)
         call dxqloe(flex, memb, mefl, ctor, coupmf, &
                     depl, ener)
-        call bsthpl(nomte, bsigth, indith)
-        if (indith) then
-            do i = 1, 24
-                enerth = enerth+depl(i)*bsigth(i)
-            end do
-            ener(1) = ener(1)-enerth
-        end if
+        ! call bsthpl(plateCara, plateOrie, &
+        !             jvGeom, nomte, xyzl, &
+        !             bsigth)
+        ! if (indith) then
+        !     do i = 1, 24
+        !         enerth = enerth+depl(i)*bsigth(i)
+        !     end do
+        !     ener(1) = ener(1)-enerth
+        ! end if
     end if
 !
 end subroutine

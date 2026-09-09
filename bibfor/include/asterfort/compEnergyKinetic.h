@@ -18,16 +18,15 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine compEnergyKinetic(modelz , ligrel , l_modal,&
-                                 chdispz, chvitez, chfreqz, chgeom , chmate,&
-                                 chcara , chmasd , chvarc , &
-                                 basez  , chelemz, codret)
-        character(len=*), intent(in) :: modelz, ligrel
-        aster_logical, intent(in) :: l_modal
-        character(len=*), intent(in) :: chdispz, chvitez, chgeom, chmate, chmasd
-        character(len=*), intent(in) :: chcara(*), chfreqz
-        character(len=*), intent(in) :: chvarc
-        character(len=*), intent(in) :: chelemz, basez
+    subroutine compEnergyKinetic(lModal, modelZ, materCodeZ, caraElemZ, &
+                                 dispZ, viteZ, chFreqZ, chgeomZ, &
+                                 chmasdZ, chvarcZ, &
+                                 ligrelZ, jvBaseZ, ecinElemZ, codret)
+        aster_logical, intent(in) :: lModal
+        character(len=*), intent(in) :: modelZ, materCodeZ, caraElemZ
+        character(len=*), intent(in) :: dispZ, viteZ, chgeomZ, chmasdZ
+        character(len=*), intent(in) :: chFreqZ, chvarcZ
+        character(len=*), intent(in) :: ligrelZ, jvBaseZ, ecinElemZ
         integer(kind=8), intent(out) :: codret
     end subroutine compEnergyKinetic
 end interface

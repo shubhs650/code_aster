@@ -16,17 +16,36 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nm1dco(fami, kpg, ksp, option, imate, &
-                  materi, e, sigm, epsm, deps, &
-                  vim, sigp, vip, dsde, crildc, &
+subroutine nm1dco(materPara, option, carcri, &
+                  materPoin, &
+                  e, sigm, epsm, deps, &
+                  vim, sigp, vip, dsde, &
                   codret)
 !
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-! ----------------------------------------------------------------------
+!
+#include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/rcvalb.h"
+#include "asterfort/rcvarc.h"
+#include "asterfort/utmess.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=*), intent(in) :: materPoin
+    real(kind=8) :: e, sigm, epsm, deps, vim(*), vip(*)
+    real(kind=8) :: sigp, dsde
+    integer(kind=8) :: codret
+!
+! --------------------------------------------------------------------------------------------------
+!
 !          PLASTICITE VON MISES ISOTROPE BILINEAIRE MONODIM
 !          ON PEUT AVOIR T0 DIFF TREF
 !
+! --------------------------------------------------------------------------------------------------
 !
 ! IN  T        : TEMPERATURE PLUS
 ! IN  TM       : TEMPERATURE MOINS
@@ -45,64 +64,93 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
 ! OUT EPSP    : DEFORMATION  PLASTIQUE PLUS
 ! OUT P       : DEFORMATION  PLASTIQUE CUMULEE PLUS
 ! OUT DSDE    : DSIG/DEPS
-!     ------------------------------------------------------------------
-!     ARGUMENTS
-!     ------------------------------------------------------------------
-#include "asterf_types.h"
-#include "asterfort/rcvalb.h"
-#include "asterfort/rcvarc.h"
-#include "asterfort/utmess.h"
-    real(kind=8) :: sigm, deps, pm, vim(*), vip(*), epspm, corrm
-    real(kind=8) :: sigp, dsde, resi, crildc(*)
-    character(len=16) :: option
-    character(len=*) :: fami, materi
-    integer(kind=8) :: imate, codret, kpg, ksp
-!     ------------------------------------------------------------------
-!     VARIABLES LOCALES
-!     ------------------------------------------------------------------
-    real(kind=8) :: epsm
-    integer(kind=8) :: codres(1)
-    real(kind=8) :: e, sy, dc, v, k, m
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbProp = 1
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: epspm, corrm, pm, resi
+    real(kind=8) :: sy, dc, v, k, m
     real(kind=8) :: epsilf, epsd, epsc, d, p, epsp, ecr, fplas, indi
     real(kind=8) :: dfds, dfpds, dfdecr, difecr, lambp, fd, var1
-    real(kind=8) :: var2, var3, rv, fini, fplas2, b, val(1)
+    real(kind=8) :: var2, var3, rv, fini, fplas2, b
     aster_logical :: dconv, pconv, melas
     integer(kind=8) :: iter, itemax, i, j, ibid
+!
+! --------------------------------------------------------------------------------------------------
+!
     pm = vim(1)
     epspm = vim(1)
     d = vim(2)
     codret = 0
     indi = 0.d0
+
+! - CARACTERISTIQUES ECROUISSAGE LINEAIRE
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'CORR_ACIER', &
+                0, ' ', [0.d0], &
+                1, 'D_CORR', propVale, &
+                propCode, 1)
+    dc = propVale(1)
+
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'CORR_ACIER', &
+                0, ' ', [0.d0], &
+                1, 'ECRO_K', propVale, &
+                propCode, 1)
+    k = propVale(1)
+
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'CORR_ACIER', &
+                0, ' ', [0.d0], &
+                1, 'ECRO_M', propVale, &
+                propCode, 1)
+    m = propVale(1)
+
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'CORR_ACIER', &
+                0, ' ', [0.d0], &
+                1, 'SY', propVale, &
+                propCode, 1)
+    sy = propVale(1)
+
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'ELAS', &
+                0, ' ', [0.d0], &
+                1, 'NU', propVale, &
+                propCode, 1)
+    v = propVale(1)
+
+! - PARAMETRES DE CONVERGENCE
+    resi = carcri(3)
+    itemax = nint(carcri(1))
 !
-!
-! --- CARACTERISTIQUES ECROUISSAGE LINEAIRE
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'CORR_ACIER', 0, ' ', [0.d0], &
-                1, 'D_CORR', val, codres, 1)
-    dc = val(1)
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'CORR_ACIER', 0, ' ', [0.d0], &
-                1, 'ECRO_K', val, codres, 1)
-    k = val(1)
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'CORR_ACIER', 0, ' ', [0.d0], &
-                1, 'ECRO_M', val, codres, 1)
-    m = val(1)
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'CORR_ACIER', 0, ' ', [0.d0], &
-                1, 'SY', val, codres, 1)
-    sy = val(1)
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'ELAS', 0, ' ', [0.d0], &
-                1, 'NU', val, codres, 1)
-    v = val(1)
-!
-! --- PARAMETRES DE CONVERGENCE
-    resi = crildc(3)
-    itemax = nint(crildc(1))
-!
-    call rcvarc('F', 'CORR', '-', fami, kpg, &
-                ksp, corrm, ibid)
+    call rcvarc('F', 'CORR', '-', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                corrm, ibid)
     if (corrm .le. 15.d0) then
         epsc = 2.345d-1-(1.11d-2*corrm)
     else
@@ -121,11 +169,10 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
     epsp = epspm
     p = pm
     sigp = sigm
-    dconv = .false.
-    melas = (option .eq. 'RIGI_MECA_ELAS') .or.&
-     &      (option .eq. 'FULL_MECA_ELAS')
+    dconv = ASTER_FALSE
+    melas = (option .eq. 'RIGI_MECA_ELAS') .or. &
+            (option .eq. 'FULL_MECA_ELAS')
     if ((option .eq. 'FULL_MECA') .or. (option .eq. 'RAPH_MECA')) then
-!
         iter = 0
         do i = 1, itemax
             if (.not. dconv) then
@@ -140,10 +187,10 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
                 fplas = fini
                 if (fini .le. 0.d0) then
                     vip(3) = 0.d0
-                    dconv = .true.
+                    dconv = ASTER_TRUE
                 else
                     vip(3) = 1.d0
-                    pconv = .false.
+                    pconv = ASTER_FALSE
 !
 !    ******PLASTICITE**********************
                     do j = 1, itemax
@@ -176,7 +223,7 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
 !    *****ENDOMMAGEMENT*********************
             fd = epsp-epsd
             if (fd .le. 0.d0) then
-                dconv = .true.
+                dconv = ASTER_TRUE
                 goto 142
             else
                 d = (dc*((rv*epsp)-epsd))/(epsc-epsd)
@@ -190,7 +237,7 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
                 end if
             end if
             if (d .gt. 0.99d0) then
-                dconv = .true.
+                dconv = ASTER_TRUE
                 sigp = 0.d0
                 goto 142
             end if
@@ -227,19 +274,11 @@ subroutine nm1dco(fami, kpg, ksp, option, imate, &
             end if
         else
             if (option .eq. 'RIGI_MECA_TANG') then
-                dsde = ( &
-                       ( &
-                       k*(1.d0/m)*(p**((1.d0/m)-1.d0)))/(1.d0+(((k*(1.d0/m))/e)*(p**((1.d0/m)-1&
-                       &.d0))) &
-                       ) &
-                       )
+                dsde = ((k*(1.d0/m)*(p**((1.d0/m)-1.d0)))/ &
+                        (1.d0+(((k*(1.d0/m))/e)*(p**((1.d0/m)-1.d0)))))
             else
-                dsde = ( &
-                       ( &
-                       k*(1.d0/m)*(p**((1.d0/m)-1.d0)))/(1.d0+(((k*(1.d0/m))/e)*(p**((1.d0/m)-1&
-                       &.d0))) &
-                       ) &
-                       )
+                dsde = ((k*(1.d0/m)*(p**((1.d0/m)-1.d0)))/ &
+                        (1.d0+(((k*(1.d0/m))/e)*(p**((1.d0/m)-1.d0)))))
             end if
         end if
 !

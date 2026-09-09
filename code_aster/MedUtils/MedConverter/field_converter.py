@@ -236,7 +236,7 @@ def fromMedFileField1TSNodes(mc_field, astermesh):
     if not tname in ("MEDCouplingFieldDouble",):
         raise TypeError(f"Invalid argument type '{tname}'")
 
-    if mc_field.getTypeOfField() != medc.ON_NODES:
+    if mc_field.getTypeOfField() not in (medc.ON_NODES, medc.ON_NODES_FE):
         raise RuntimeError("Field is not defined on nodes.")
 
     src, target = mc_field.getMesh().getNumberOfNodes(), astermesh.getNumberOfNodes()

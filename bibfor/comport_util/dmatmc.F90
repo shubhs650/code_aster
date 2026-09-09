@@ -17,9 +17,10 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306
 !
-subroutine dmatmc(fami, materCodeJv, time, poum, ipg, &
-                  ispg, anglNaut, nbsig, dr_, &
-                  l_modi_cp, di_)
+subroutine dmatmc(materPara, poum, time, &
+                  tensSize, dr_, l_modi_cp, di_)
+!
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -29,14 +30,11 @@ subroutine dmatmc(fami, materCodeJv, time, poum, ipg, &
 #include "asterfort/dmatdp.h"
 #include "asterfort/lteatt.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: materCodeJv
-    real(kind=8), intent(in) :: time
+    type(Material_Para), intent(in) :: materPara
     character(len=*), intent(in) :: poum
-    integer(kind=8), intent(in) :: ipg, ispg
-    real(kind=8), intent(in) :: anglNaut(3)
-    integer(kind=8), intent(in) :: nbsig
-    real(kind=8), optional, intent(out) :: dr_(nbsig, nbsig), di_(nbsig, nbsig)
+    real(kind=8), intent(in) :: time
+    integer(kind=8), intent(in) :: tensSize
+    real(kind=8), optional, intent(out) :: dr_(tensSize, tensSize), di_(tensSize, tensSize)
     aster_logical, optional, intent(in) :: l_modi_cp
 !
 ! --------------------------------------------------------------------------------------------------
@@ -47,79 +45,64 @@ subroutine dmatmc(fami, materCodeJv, time, poum, ipg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
-! In  materCodeJv      : coded material address
-! In  time             : current time
+! In  materPara        : parameters of material
 ! In  poum             : '-' or '+' for parameters evaluation (previous or current temperature)
-! In  ipg              : current point gauss
-! In  ispg             : current "sous-point" gauss
-! In  anglNaut         : nautical angles for definition of basis for non-isotropic elasticity
-! In  nbsig            : number of components for stress
+! In  time             : current time
 ! Out dr               : real Hooke matrix
 ! Out di               : imaginary Hooke matrix
 ! In  l_modi_cp        : using plane strain Hooke matrix for plane stress case
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: di(nbsig, nbsig)
-    real(kind=8) :: dr(nbsig, nbsig)
+    real(kind=8) :: di(tensSize, tensSize)
+    real(kind=8) :: dr(tensSize, tensSize)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     if (lteatt('DIM_TOPO_MAILLE', '3')) then
-        ASSERT(nbsig .eq. 6)
+        ASSERT(tensSize .eq. 6)
         if (present(di_)) then
-            call dmat3d(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, di_=di)
+            call dmat3d(materPara, poum, time, di_=di)
         end if
         if (present(dr_)) then
-            call dmat3d(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, dr_=dr)
+            call dmat3d(materPara, poum, time, dr_=dr)
         end if
 
     else if (lteatt('FOURIER', 'OUI')) then
-        ASSERT(nbsig .eq. 6)
+        ASSERT(tensSize .eq. 6)
         if (present(di_)) then
-            call dmat3d(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, di_=di)
+            call dmat3d(materPara, poum, time, di_=di)
         end if
         if (present(dr_)) then
-            call dmat3d(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, dr_=dr)
+            call dmat3d(materPara, poum, time, dr_=dr)
         end if
 
     else if (lteatt('C_PLAN', 'OUI')) then
-        ASSERT(nbsig .eq. 4)
+        ASSERT(tensSize .eq. 4)
         if (present(l_modi_cp)) then
             ASSERT(l_modi_cp)
             if (present(di_)) then
-                call dmatdp(fami, materCodeJv, time, poum, ipg, &
-                            ispg, anglNaut, di_=di)
+                call dmatdp(materPara, poum, time, di_=di)
             end if
             if (present(dr_)) then
-                call dmatdp(fami, materCodeJv, time, poum, ipg, &
-                            ispg, anglNaut, dr_=dr)
+                call dmatdp(materPara, poum, time, dr_=dr)
             end if
         else
             if (present(di_)) then
-                call dmatcp(fami, materCodeJv, time, poum, ipg, &
-                            ispg, anglNaut, di_=di)
+                call dmatcp(materPara, poum, time, di_=di)
             end if
             if (present(dr_)) then
-                call dmatcp(fami, materCodeJv, time, poum, ipg, &
-                            ispg, anglNaut, dr_=dr)
+                call dmatcp(materPara, poum, time, dr_=dr)
             end if
         end if
 
     else if (lteatt('D_PLAN', 'OUI') .or. lteatt('AXIS', 'OUI')) then
-        ASSERT(nbsig .eq. 4)
+        ASSERT(tensSize .eq. 4)
         if (present(di_)) then
-            call dmatdp(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, di_=di)
+            call dmatdp(materPara, poum, time, di_=di)
         end if
         if (present(dr_)) then
-            call dmatdp(fami, materCodeJv, time, poum, ipg, &
-                        ispg, anglNaut, dr_=dr)
+            call dmatdp(materPara, poum, time, dr_=dr)
         end if
 
     else

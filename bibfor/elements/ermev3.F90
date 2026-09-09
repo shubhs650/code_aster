@@ -53,8 +53,9 @@ subroutine ermev3(nno, ipg, ivf, isig, nbcmp, &
 !
     implicit none
 #include "jeveux.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: nno, ipg, ivf, isig, nbcmp
-    real(kind=8) :: dfdx(27), dfdy(27), dfdz(27), dsx, dsy, dsz, norme
+    real(kind=8) :: dfdx(MT_NNOMAX3D), dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D), dsx, dsy, dsz, norme
 !
 !
 !

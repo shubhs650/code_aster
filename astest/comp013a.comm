@@ -1,0 +1,121 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------------
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distribute ET  FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+#     ELASTICITE INCREMENTALE ELAS_ISOT_INCR ET ENERGETIQUE ELAS_ENER
+#
+# =====================================================================
+
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+
+Tref = 0.0
+Tmin = 20.0
+Tmax = 120.0
+Xmin = 0.0
+Xmax = 1.0
+Cref = 500.0
+Cmin = 500.0
+Cmax = 300.0
+
+Emin = 1.0e5
+Emax = 2.0e5
+alpha = 1.0e-5
+beta = 1.0e-5
+k = 1.0e-5
+
+epsmin = 1.0e-3
+epsmax = 3.0e-3
+sig_init = 1.0e2
+
+# Solution
+sigmax = sig_init / Emin * Emax + Emax * (
+    epsmax - epsmin - alpha * (Tmax - Tmin) + beta * (Xmax - Xmin) - k * (Cmax - Cmin)
+)
+
+young = DEFI_FONCTION(NOM_PARA="TEMP", ABSCISSE=(Tmin, Tmax), ORDONNEE=(Emin, Emax))
+
+temp = DEFI_FONCTION(NOM_PARA="INST", NOM_RESU="TEMP", ABSCISSE=(0, 2), ORDONNEE=(Tmin, Tmax))
+
+
+hydr = DEFI_FONCTION(NOM_PARA="INST", NOM_RESU="HYDR", ABSCISSE=(0, 2), ORDONNEE=(Xmin, Xmax))
+
+sech = DEFI_FONCTION(NOM_PARA="INST", NOM_RESU="SECH", ABSCISSE=(0, 2), ORDONNEE=(Cmin, Cmax))
+
+
+eps = DEFI_FONCTION(NOM_PARA="INST", ABSCISSE=(0, 2), ORDONNEE=(0, epsmax))
+
+
+mat = DEFI_MATERIAU(
+    ELAS_FO=_F(
+        E=young,
+        NU=DEFI_CONSTANTE(VALE=0.3),
+        ALPHA=DEFI_CONSTANTE(VALE=1.0e-5),
+        B_ENDOGE=beta,
+        K_DESSIC=k,
+        TEMP_DEF_ALPHA=Tref,
+    )
+)
+
+
+time = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=2, NOMBRE=2))
+
+
+evol = SIMU_POINT_MAT(
+    COMPORTEMENT=_F(RELATION="ELAS_ISOT_INCR"),
+    MATER=mat,
+    SUPPORT="POINT",
+    AFFE_VARC=(
+        _F(NOM_VARC="TEMP", VALE_FONC=temp, VALE_REF=Tref),
+        _F(NOM_VARC="HYDR", VALE_FONC=hydr),
+        _F(NOM_VARC="SECH", VALE_FONC=sech, VALE_REF=Cref),
+    ),
+    INCREMENT=_F(LIST_INST=time),
+    EPSI_IMPOSE=_F(EPXX=eps),
+    SIGM_INIT=_F(SIXX=sig_init),
+    EPSI_INIT=_F(EPXX=epsmin, EPYY=0, EPZZ=0, EPXY=0, EPXZ=0, EPYZ=0),
+    INFO=1,
+)
+
+
+TEST_TABLE(
+    TABLE=evol,
+    NOM_PARA="SIXX",
+    VALE_CALC=sigmax,
+    VALE_REFE=sigmax,
+    FILTRE=_F(NOM_PARA="INST", VALE=2),
+    REFERENCE="ANALYTIQUE",
+)
+
+
+FIN()

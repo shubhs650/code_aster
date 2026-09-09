@@ -18,10 +18,10 @@
 !
 subroutine te0169(option, nomte)
 ! SUPPRESSION D'INSTRUCTIONS INUTILES
+    use resi_refe_module, only: RESI_REFE
     implicit none
 #include "jeveux.h"
 #include "asterfort/jevech.h"
-#include "asterfort/terefe.h"
 #include "blas/ddot.h"
 !
     character(len=16) :: option, nomte
@@ -38,12 +38,15 @@ subroutine te0169(option, nomte)
     integer(kind=8) :: jefint, jvSief, igeom, jvDisp, ivectu, nno, nc
     integer(kind=8) :: ino, i, kc
     blas_int :: b_incx, b_incy, b_n
+    type(RESI_REFE):: refe
 ! ----------------------------------------------------------------------
 !
     if (option .eq. 'REFE_FORC_NODA') then
         nno = 3
         nc = 3
-        call terefe('EFFORT_REFE', 'MECA_POULIE', forref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        call refe%Check()
         call jevech('PVECTUR', 'E', ivectu)
         do ino = 1, nno
             do i = 1, nc

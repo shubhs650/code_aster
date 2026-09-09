@@ -19,9 +19,11 @@
 subroutine te0586(option, nomte)
 !
     use pipeElem_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "asterfort/assert.h"
+#include "asterfort/jevech.h"
 #include "asterfort/pipeElem_type.h"
 #include "asterfort/tufull.h"
 #include "jeveux.h"
@@ -43,14 +45,27 @@ subroutine te0586(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = 'RIGI'
     integer(kind=8) :: nbFourier, nbDof, nbNode
+    type(Material_Para) :: materPara
+    integer(kind=8) :: jvMaterc
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call pipeGetDime(nomte, 'RIGI', &
+    call pipeGetDime(nomte, fami, &
                      nbNode, nbFourier, nbDof)
 
+! - Material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+!   Angle du mot clef MASSIF de AFFE_CARA_ELEM, initialisé à 0, nécessaire pour les LdC
+! - LEMAITRE_IRRA et VISC_IRRA_LOG (voir ssnl121c)
+    call initLCSZero(materPara)
+
 ! - Compute option
-    call tufull(option, nbFourier, nbDof)
+    call tufull(materPara, option, nbFourier, nbDof)
 !
 end subroutine

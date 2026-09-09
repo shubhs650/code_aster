@@ -1,0 +1,279 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+import numpy as np
+
+DEBUT(CODE="OUI")
+
+MA = LIRE_MAILLAGE()
+
+MA = DEFI_GROUP(reuse=MA, MAILLAGE=MA, CREA_GROUP_NO=_F(TOUT_GROUP_MA="OUI"))
+
+MOD = AFFE_MODELE(MAILLAGE=MA, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="D_PLAN"))
+
+mate = DEFI_MATERIAU(ELAS=_F(E=1, NU=0, RHO=1, ALPHA=0.1))
+E_L = 1
+E_T = 1000 * E_L
+mate = DEFI_MATERIAU(
+    ELAS_ORTH=_F(
+        E_L=E_L,
+        E_T=E_T,
+        E_N=E_T,
+        NU_LT=0.0,
+        NU_LN=0.0,
+        NU_TN=0.0,
+        G_LN=E_T / 2,
+        G_LT=E_T / 2,
+        G_TN=E_T / 2,
+        RHO=1,
+    )
+)
+CHMAT = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=mate))
+
+MPC = AFFE_CHAR_MECA(
+    MODELE=MOD, DDL_IMPO=(_F(GROUP_NO="Left", DX=0.0), _F(GROUP_NO="Right", DX=0.0))
+)
+
+BLOQ = AFFE_CHAR_CINE(
+    MODELE=MOD, MECA_IMPO=(_F(GROUP_MA="E0", DX=0, DY=0), _F(GROUP_MA="Surf", DY=0))
+)
+
+# -----------------------------------------------------------------------------------
+#
+#  ASSEMBLAGES
+#
+# -----------------------------------------------------------------------------------
+
+ASSEMBLAGE(
+    CHAM_MATER=CHMAT,
+    CHAR_CINE=(BLOQ,),
+    CHARGE=(MPC,),
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGIDITE"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASSE"), OPTION="MASS_MECA"),
+    ),
+    VECT_ASSE=_F(VECTEUR=CO("FASS"), OPTION="CHAR_MECA", CHARGE=MPC),
+    MODELE=MOD,
+    NUME_DDL=CO("NUME"),
+)
+
+eq = NUME.getEquationNumbering()
+
+# -----------------------------------------------------------------------------------
+#
+#  ANALYSE MODALE
+#
+# -----------------------------------------------------------------------------------
+
+dynaModesC = CALC_MODES(
+    # OPTION="BANDE",
+    # CALC_FREQ=_F(
+    #     FREQ=(
+    #         1.0,
+    #         2.0,
+    #         4.0,
+    #     ),
+    #     NIVEAU_PARALLELISME="PARTIEL",
+    # ),
+    OPTION="PLUS_PETITE",
+    CALC_FREQ=_F(NMAX_FREQ=8),
+    MATR_MASS=MASSE,
+    MATR_RIGI=RIGIDITE,
+    STOP_BANDE_VIDE="NON",
+    TYPE_RESU="DYNAMIQUE",
+    VERI_MODE=_F(STOP_ERREUR="NON", STURM="NON"),
+    SOLVEUR_MODAL=_F(COEF_DIM_ESPACE=8),
+)
+# -----------------------------------------------------------------------------------
+#
+#  MODE STATIQUE
+#
+# -----------------------------------------------------------------------------------
+
+RIGIDITE = FACTORISER(reuse=RIGIDITE, MATR_ASSE=RIGIDITE)
+
+rhs = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:DX"], ["Left"])[-1]:
+    rhs[i] = 1.0
+
+vect_sta_left_dx = RESOUDRE(MATR=RIGIDITE, CHAM_NO=rhs)
+
+rhs = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:DX"], ["Right"])[-1]:
+    rhs[i] = 1.0
+
+vect_sta_right_dx = RESOUDRE(MATR=RIGIDITE, CHAM_NO=rhs)
+
+statModes = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="MODE_MECA",
+    MATR_RIGI=RIGIDITE,
+    AFFE=(
+        _F(CHAM_GD=vect_sta_left_dx, NOM_CHAM="DEPL", NUME_MODE=1),
+        _F(CHAM_GD=vect_sta_right_dx, NOM_CHAM="DEPL", NUME_MODE=2),
+    ),
+)
+
+L_FREQ = DEFI_LIST_REEL(DEBUT=0, INTERVALLE=_F(JUSQU_A=5.0, NOMBRE=1000))
+
+# -----------------------------------------------------------------------------------
+#
+#  PROJECTIONS
+#
+# -----------------------------------------------------------------------------------
+
+for nmode in range(4, dynaModesC.getNumberOfIndexes() + 1, 2):
+    # Définition de la base modale
+    # ----------------------------
+
+    BASE = DEFI_BASE_MODALE(
+        RITZ=(_F(MODE_MECA=dynaModesC, NMAX_MODE=nmode), _F(MODE_INTF=statModes))
+    )
+    nume_gene = NUME_DDL_GENE(BASE=BASE, STOCKAGE="PLEIN")
+    massGen = PROJ_MATR_BASE(BASE=BASE, MATR_ASSE=MASSE, NUME_DDL_GENE=nume_gene)
+    rigiGen = PROJ_MATR_BASE(BASE=BASE, MATR_ASSE=RIGIDITE, NUME_DDL_GENE=nume_gene)
+
+    char_gene = AFFE_CHAR_GENE(
+        NUME_DDL_GENE=nume_gene,
+        LIAISON=_F(NUME_MODE=(nmode + 1, nmode + 2), COEF_MULT=(1.0, -1.0), COEF_IMPO=0.1),
+    )
+
+    # Calcul
+    # ------
+
+    dyna_harm_gene = DYNA_VIBRA(
+        TYPE_CALCUL="HARM",
+        BASE_CALCUL="GENE",
+        MATR_MASS=massGen,
+        MATR_RIGI=rigiGen,
+        LIST_FREQ=L_FREQ,
+        CHAR_GENE=char_gene,
+    )
+
+    # Post traitement
+    # ---------------
+
+    REP = RECU_FONCTION(
+        RESU_GENE=dyna_harm_gene, NOM_CHAM="ACCE", NOM_CMP="DX", GROUP_NO="Ext", LIST_FREQ=L_FREQ
+    )
+    rep = CALC_FONCTION(EXTRACTION=_F(FONCTION=REP, PARTIE="MODULE"))
+    cmp = "DX"
+    IMPR_FONCTION(
+        FORMAT="XMGRACE",
+        COURBE=_F(FONCTION=rep, MARQUEUR=0, LEGENDE=f"Acc {cmp} - nmode {nmode}"),
+        ECHELLE_Y="LOG",
+        LEGENDE_X="Freq (Hz)",
+        LEGENDE_Y="Amplitude",
+        UNITE=29,
+    )
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(
+            VALE_CALC=0.0,
+            VALE_REFE=0.0,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=0.0,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=32.566697,
+            VALE_REFE=32.566697,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=0.2,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=6.6805503e-05,
+            VALE_REFE=6.6805503e-05,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=0.335,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=2122.3712,
+            VALE_REFE=2122.3712,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=0.61,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=1775.726,
+            VALE_REFE=1775.726,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=1.525,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=0.0054144678,
+            VALE_REFE=0.0054144678,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=1.875,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=888.68153,
+            VALE_REFE=888.68153,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=2.06,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=6009.4043,
+            VALE_REFE=6009.4043,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=2.62,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=0.21648241,
+            VALE_REFE=0.21648241,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=2.8,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=6093.2863,
+            VALE_REFE=6093.2863,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=3.105,
+            FONCTION=rep,
+        ),
+        _F(
+            VALE_CALC=6.1153706,
+            VALE_REFE=6.1153706,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=5.0,
+            FONCTION=rep,
+        ),
+    )
+)
+
+FIN()

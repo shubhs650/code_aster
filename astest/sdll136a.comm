@@ -1,0 +1,1255 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+#
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+MAILLAGE = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+MODELE = AFFE_MODELE(
+    MAILLAGE=MAILLAGE, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="POU_D_T")
+)
+
+CARELEM = AFFE_CARA_ELEM(
+    MODELE=MODELE,
+    POUTRE=(
+        _F(GROUP_MA=("AB", "BC", "CD"), SECTION="RECTANGLE", CARA=("HY", "HZ"), VALE=(0.1, 0.1)),
+    ),
+)
+
+MATER = DEFI_MATERIAU(ELAS=_F(E=2.1e11, NU=0.3, RHO=7800.0))
+
+CHMAT = AFFE_MATERIAU(MAILLAGE=MAILLAGE, AFFE=_F(TOUT="OUI", MATER=MATER))
+
+# ----------------------------------------------------------------------
+#    PB PLAN --- POINTS A ET D ENCASTRES
+
+CL = AFFE_CHAR_MECA(
+    MODELE=MODELE,
+    DDL_IMPO=(_F(GROUP_NO="ENCAS", DX=0.0, DY=0.0, DZ=0.0, DRX=0.0, DRY=0.0, DRZ=0.0)),
+)
+
+# -----------------------------------------------------------------------------
+#    L O A D I N G    S P E C T R A
+# -----------------------------------------------------------------------------
+#
+# TRI-AXIAL SPECTRA BASED ON DISTINCT DIRECTIONAL SPECTRA
+
+SPEC_X2 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=21,
+)
+SPEC_X10 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=22,
+)
+SPEC_Y2 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=23,
+)
+SPEC_Y10 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=24,
+)
+SPEC_Z2 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=25,
+)
+SPEC_Z10 = LIRE_FONCTION(
+    NOM_PARA="FREQ",
+    SEPARATEUR=",",
+    PROL_GAUCHE="LINEAIRE",
+    PROL_DROITE="CONSTANT",
+    INTERPOL="LOG",
+    UNITE=26,
+)
+
+#
+NAP_DIRX = DEFI_NAPPE(
+    NOM_PARA="AMOR",
+    NOM_RESU="ACCE",
+    PARA=[0.02, 0.1],
+    PROL_DROITE="CONSTANT",
+    PROL_GAUCHE="LINEAIRE",
+    INTERPOL=("LIN", "LOG"),
+    FONCTION=(SPEC_X2, SPEC_X10),
+)
+#
+NAP_DIRY = DEFI_NAPPE(
+    NOM_PARA="AMOR",
+    NOM_RESU="ACCE",
+    PARA=[0.02, 0.1],
+    PROL_DROITE="CONSTANT",
+    PROL_GAUCHE="LINEAIRE",
+    INTERPOL=("LIN", "LOG"),
+    FONCTION=(SPEC_Y2, SPEC_Y10),
+)
+#
+NAP_DIRZ = DEFI_NAPPE(
+    NOM_PARA="AMOR",
+    NOM_RESU="ACCE",
+    PARA=[0.02, 0.1],
+    PROL_DROITE="CONSTANT",
+    PROL_GAUCHE="LINEAIRE",
+    INTERPOL=("LIN", "LOG"),
+    FONCTION=(SPEC_Z2, SPEC_Z10),
+)
+#
+
+# # --------------------------------------------------------------------
+
+ASSEMBLAGE(
+    MODELE=MODELE,
+    CHAM_MATER=CHMAT,
+    CARA_ELEM=CARELEM,
+    CHARGE=(CL,),
+    NUME_DDL=CO("NUMEDDL"),
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGIDITE"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASSE"), OPTION="MASS_MECA"),
+    ),
+)
+
+MODES = CALC_MODES(
+    MATR_RIGI=RIGIDITE,
+    MATR_MASS=MASSE,
+    OPTION="PLUS_PETITE",
+    # SOLVEUR=_F(METHODE='MULT_FRONT'),
+    CALC_FREQ=_F(NMAX_FREQ=20),
+    IMPRESSION=_F(CUMUL="OUI", CRIT_EXTR="MASS_EFFE_UN"),
+)
+
+#  TEST DEV COMB_SISM_MODAL CQC SIGNE
+CQCsigne = COMB_SISM_MODAL(
+    MODE_MECA=MODES,
+    TYPE_ANALYSE="MONO_APPUI",
+    AMOR_REDUIT=0.02,
+    SPECTRE=(
+        _F(LIST_AXE=("X",), SPEC_OSCI=NAP_DIRX, ECHELLE=9.81, NATURE="ACCE"),
+        _F(LIST_AXE=("Y",), SPEC_OSCI=NAP_DIRY, ECHELLE=9.81, NATURE="ACCE"),
+        _F(LIST_AXE=("Z",), SPEC_OSCI=NAP_DIRZ, ECHELLE=9.81, NATURE="ACCE"),
+    ),
+    COMB_MODE=_F(TYPE="CQC_SIGNE", NUME_MODE_X=2, NUME_MODE_Y=1, NUME_MODE_Z=4),
+    COMB_DIRECTION="NEWMARK",
+    OPTION=("DEPL",),
+    TYPE_RESU=(_F(TYPE="VALE_TOTA", NEWMARK="OUI"),),
+)
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_1",
+            VALE_CALC=1.0566065699e-03,
+            VALE_REFE=0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_2",
+            VALE_CALC=1.0566065699e-03,
+            VALE_REFE=0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_3",
+            VALE_CALC=1.0566065699e-03,
+            VALE_REFE=0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_4",
+            VALE_CALC=1.0566065699e-03,
+            VALE_REFE=0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_5",
+            VALE_CALC=-1.0566065699e-03,
+            VALE_REFE=-0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_6",
+            VALE_CALC=-1.0566065699e-03,
+            VALE_REFE=-0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_7",
+            VALE_CALC=-1.0566065699e-03,
+            VALE_REFE=-0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_8",
+            VALE_CALC=-1.0566065699e-03,
+            VALE_REFE=-0.001056606,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_9",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_10",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_11",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_12",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_13",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_14",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_15",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_16",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_17",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_18",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_19",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_20",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_21",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_22",
+            VALE_CALC=4.2264262794e-04,
+            VALE_REFE=0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_23",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DX",
+            NOM_CAS="NEWM_24",
+            VALE_CALC=-4.2264262794e-04,
+            VALE_REFE=-0.000422642,
+        ),
+    )
+),
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_1",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_2",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_3",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_4",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_5",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_6",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_7",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_8",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_9",
+            VALE_CALC=1.3624633165e-03,
+            VALE_REFE=0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_10",
+            VALE_CALC=1.3624633165e-03,
+            VALE_REFE=0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_11",
+            VALE_CALC=1.3624633165e-03,
+            VALE_REFE=0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_12",
+            VALE_CALC=1.3624633165e-03,
+            VALE_REFE=0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_13",
+            VALE_CALC=-1.3624633165e-03,
+            VALE_REFE=-0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_14",
+            VALE_CALC=-1.3624633165e-03,
+            VALE_REFE=-0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_15",
+            VALE_CALC=-1.3624633165e-03,
+            VALE_REFE=-0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_16",
+            VALE_CALC=-1.3624633165e-03,
+            VALE_REFE=-0.001362462,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_17",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_18",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_19",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_20",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_21",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_22",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_23",
+            VALE_CALC=5.4498532658e-04,
+            VALE_REFE=0.000544985,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DY",
+            NOM_CAS="NEWM_24",
+            VALE_CALC=-5.4498532658e-04,
+            VALE_REFE=-0.000544985,
+        ),
+    )
+),
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_1",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_2",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_3",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_4",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_5",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_6",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_7",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_8",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_9",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_10",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_11",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_12",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_13",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_14",
+            VALE_CALC=7.7139184682e-05,
+            VALE_REFE=0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_15",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_16",
+            VALE_CALC=-7.7139184682e-05,
+            VALE_REFE=-0.000077133,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_17",
+            VALE_CALC=1.9284796170e-04,
+            VALE_REFE=0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_18",
+            VALE_CALC=1.9284796170e-04,
+            VALE_REFE=0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_19",
+            VALE_CALC=1.9284796170e-04,
+            VALE_REFE=0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_20",
+            VALE_CALC=1.9284796170e-04,
+            VALE_REFE=0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_21",
+            VALE_CALC=-1.9284796170e-04,
+            VALE_REFE=-0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_22",
+            VALE_CALC=-1.9284796170e-04,
+            VALE_REFE=-0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_23",
+            VALE_CALC=-1.9284796170e-04,
+            VALE_REFE=-0.000192831,
+        ),
+    )
+),
+
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="AUTRE_ASTER",
+            RESULTAT=CQCsigne,
+            NOM_CHAM="DEPL",
+            GROUP_NO="E",
+            NOM_CMP="DZ",
+            NOM_CAS="NEWM_24",
+            VALE_CALC=-1.9284796170e-04,
+            VALE_REFE=-0.000192831,
+        ),
+    )
+),
+FIN()

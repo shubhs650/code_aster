@@ -53,8 +53,8 @@ contains
 !
         type(FE_Basis), intent(in) :: FEBasis
         real(kind=8), intent(in) :: point(3)
-        real(kind=8), intent(in), dimension(3, MAX_BS) :: BGSEval
-        real(kind=8), intent(out) :: matFB(6, MAX_BS, 3)
+        real(kind=8), intent(in), dimension(3, MAX_BS_CG) :: BGSEval
+        real(kind=8), intent(out) :: matFB(6, MAX_BS_CG, 3)
         real(kind=8), intent(in) :: f(3, 3)
 ! --------------------------------------------------------------------------------------------------
 !
@@ -67,7 +67,7 @@ contains
 !
         integer(kind=8) :: i, i_dim
         real(kind=8), parameter :: rac2 = sqrt(2.d0)
-        real(kind=8) :: funcEF(MAX_BS), r
+        real(kind=8) :: funcEF(MAX_BS_CG), r
 !
         matFB = 0.d0
 !
@@ -117,8 +117,8 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in) :: FEBasis
-        real(kind=8), intent(in), dimension(3, MAX_BS) :: BGSEval
-        real(kind=8), intent(out) :: matBB(6, MAX_BS, MAX_BS)
+        real(kind=8), intent(in), dimension(3, MAX_BS_CG) :: BGSEval
+        real(kind=8), intent(out) :: matBB(6, MAX_BS_CG, MAX_BS_CG)
 ! --------------------------------------------------------------------------------------------------
 !
 !
@@ -181,8 +181,8 @@ contains
 !
         type(FE_Basis), intent(in) :: FEBasis
         real(kind=8), intent(in) :: point(3)
-        real(kind=8), intent(in), dimension(3, MAX_BS) :: BGSEval
-        real(kind=8), intent(out) :: matB(6, MAX_BS, 3)
+        real(kind=8), intent(in), dimension(3, MAX_BS_CG) :: BGSEval
+        real(kind=8), intent(out) :: matB(6, MAX_BS_CG, 3)
 ! --------------------------------------------------------------------------------------------------
 !
 !
@@ -198,7 +198,7 @@ contains
 !
         integer(kind=8) :: i
         real(kind=8), parameter :: rac2 = sqrt(2.d0)
-        real(kind=8) :: funcEF(MAX_BS), r
+        real(kind=8) :: funcEF(MAX_BS_CG), r
 !
         matB = 0.d0
 !

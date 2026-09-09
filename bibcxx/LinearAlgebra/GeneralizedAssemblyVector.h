@@ -29,6 +29,8 @@
 #include "DataStructures/DataStructure.h"
 #include "MemoryManager/JeveuxCollection.h"
 #include "MemoryManager/JeveuxVector.h"
+#include "Numbering/ForwardGeneralizedDOFNumbering.h"
+#include "Results/ForwardModeResult.h"
 #include "Supervis/ResultNaming.h"
 
 /**
@@ -37,11 +39,15 @@
  * @author Nicolas Sellenet
  */
 class GenericGeneralizedAssemblyVector : public DataStructure {
-  private:
+  protected:
     /** @brief Objet Jeveux '.DESC' */
     JeveuxVectorLong _desc;
     /** @brief Objet Jeveux '.REFE' */
     JeveuxVectorChar24 _refe;
+    /** @brief ModeResult */
+    ForwardModeResultPtr _mecaModeC;
+    /** @brief GeneralizedDOFNumbering */
+    ForwardGeneralizedDOFNumberingPtr _dofNum;
 
   public:
     /**
@@ -50,7 +56,9 @@ class GenericGeneralizedAssemblyVector : public DataStructure {
     GenericGeneralizedAssemblyVector( const std::string name )
         : DataStructure( name, 19, "VECT_ASSE_GENE" ),
           _desc( JeveuxVectorLong( getName() + ".DESC" ) ),
-          _refe( JeveuxVectorChar24( getName() + ".REFE" ) ) {};
+          _refe( JeveuxVectorChar24( getName() + ".REFE" ) ),
+          _dofNum( nullptr ),
+          _mecaModeC( nullptr ) {};
 };
 
 /**
@@ -83,6 +91,47 @@ class GeneralizedAssemblyVector : public GenericGeneralizedAssemblyVector {
     GeneralizedAssemblyVector( const std::string name )
         : GenericGeneralizedAssemblyVector( name ),
           _vale( JeveuxVector< ValueType >( getName() + ".VALE" ) ) {};
+
+    /**
+     * @brief Set GeneralizedDOFNumbering
+     */
+    bool setGeneralizedDOFNumbering( const GeneralizedDOFNumberingPtr &dofNum ) {
+        if ( dofNum != nullptr ) {
+            _dofNum = dofNum;
+            return true;
+        }
+        return false;
+    };
+
+    /**
+     * @brief Set ModeResult
+     */
+    bool setModalBasis( const ModeResultPtr &mecaModeC ) {
+        if ( mecaModeC != nullptr ) {
+            _mecaModeC = mecaModeC;
+            return true;
+        }
+        return false;
+    };
+
+    /**
+     * @brief Allocate the vector
+     */
+    void allocate() {
+        if ( _mecaModeC.getPointer() == nullptr )
+            throw std::runtime_error( "Unable to allocate, ModalBasis is not set" );
+        if ( _dofNum.getPointer() == nullptr )
+            throw std::runtime_error( "Unable to allocate, GeneralizedDOFNumbering is not set" );
+        ASTERINTEGER size = _mecaModeC.getNumberOfIndexes();
+        _desc->allocate( 3 );
+        _refe->allocate( 2 );
+        _vale->allocate( size );
+        ( *_desc )[0] = 1;
+        ( *_desc )[1] = size;
+        ( *_desc )[2] = 2;
+        ( *_refe )[0] = _mecaModeC.getName();
+        ( *_refe )[1] = _dofNum.getName();
+    };
 
     /**
      * @brief Get values of the field

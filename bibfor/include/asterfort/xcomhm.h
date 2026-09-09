@@ -16,16 +16,16 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine xcomhm(ds_thm,&
-                      option, j_mater, time_curr,&
-                      ndim, dimdef, dimcon, nbvari,&
-                      addeme, adcome, addep1, adcp11,&
-                      addep2, addete, defgem,&
-                      defgep, congem, congep, vintm,&
-                      vintp, dsde, gravity, retcom, kpi,&
-                      npg, dimenr,&
-                      angl_naut, yaenrh, adenhy, nfh)
+interface
+    subroutine xcomhm(ds_thm, &
+                      option, time_curr, &
+                      ndim, dimdef, dimcon, nbvari, &
+                      addeme, adcome, addep1, adcp11, &
+                      addep2, addete, defgem, &
+                      defgep, congem, congep, vintm, &
+                      vintp, dsde, gravity, retcom, &
+                      kpg, npg, dimenr, &
+                      yaenrh, adenhy, nfh)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
         integer(kind=8) :: dimenr
@@ -34,7 +34,6 @@ interface
         integer(kind=8) :: dimdef
         integer(kind=8) :: ndim
         character(len=16) :: option
-        integer(kind=8) :: j_mater
         real(kind=8) :: time_curr
         integer(kind=8) :: addeme
         integer(kind=8) :: adcome
@@ -51,12 +50,10 @@ interface
         real(kind=8) :: dsde(1:dimcon, 1:dimenr)
         real(kind=8) :: gravity(3)
         integer(kind=8) :: retcom
-        integer(kind=8) :: kpi
-        integer(kind=8) :: npg
+        integer(kind=8) :: kpg, npg
         integer(kind=8) :: idecpg
-        real(kind=8) :: angl_naut(3)
         integer(kind=8) :: yaenrh
         integer(kind=8) :: adenhy
         integer(kind=8) :: nfh
     end subroutine xcomhm
-end interface 
+end interface

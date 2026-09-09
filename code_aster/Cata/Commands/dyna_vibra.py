@@ -422,7 +422,10 @@ DYNA_VIBRA = OPER(
     #       A. Harmonic case, reduced basis
     b_excit_harm_gene=BLOC(
         condition="""equal_to("TYPE_CALCUL", 'HARM') and equal_to("BASE_CALCUL", 'GENE')""",
-        regles=(AU_MOINS_UN("EXCIT", "EXCIT_RESU"),),
+        regles=(
+            AU_MOINS_UN("EXCIT", "EXCIT_RESU", "CHAR_GENE"),
+            PRESENT_ABSENT("CHAR_GENE", "EXCIT", "EXCIT_RESU"),
+        ),
         EXCIT=FACT(
             statut="f",
             max="**",
@@ -441,6 +444,7 @@ DYNA_VIBRA = OPER(
             RESULTAT=SIMP(statut="o", typ=(harm_gene,)),
             COEF_MULT_C=SIMP(statut="o", typ="C"),
         ),
+        CHAR_GENE=SIMP(statut="f", typ=char_gene),
     ),  # end b_excit_harm_gene
     ##########################################################################################
     #       B. Transient case, physical basis

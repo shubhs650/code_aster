@@ -16,13 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine meamme(modelz, &
-                  matez, matecoz, caraElemz, &
-                  time, basez, &
-                  matrRigiz, matrMassz, &
+subroutine meamme(modelZ, &
+                  materFieldZ, materCodeZ, caraElemZ, &
+                  time, jvBaseZ, &
+                  matrRigiZ, matrMassZ, &
                   matrElemz, &
-                  variz, comporz, sddyna)
+                  variZ, comporZ, sddyna)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -42,14 +43,15 @@ subroutine meamme(modelz, &
 #include "asterfort/ndynkk.h"
 #include "asterfort/reajre.h"
 #include "asterfort/redetr.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/vrcins.h"
 !
-    character(len=*), intent(in) :: modelz
-    character(len=*), intent(in) :: matez, matecoz, caraElemz
+    character(len=*), intent(in) :: modelZ
+    character(len=*), intent(in) :: materFieldZ, materCodeZ, caraElemZ
     real(kind=8), intent(in) :: time
-    character(len=*), intent(in) :: basez
-    character(len=*), intent(in) :: matrRigiz, matrMassz, matrElemz
-    character(len=*), intent(in) :: variz, comporz
+    character(len=*), intent(in) :: jvBaseZ
+    character(len=*), intent(in) :: matrRigiZ, matrMassZ, matrElemz
+    character(len=*), intent(in) :: variZ, comporZ
     character(len=19), intent(in) :: sddyna
 !
 ! --------------------------------------------------------------------------------------------------
@@ -64,39 +66,39 @@ subroutine meamme(modelz, &
 ! In  model            : name of model
 ! In  nbLoad           : number of loads
 ! In  listLoadK24      : pointer to the name of loads
-! In  mate             : name of material characteristics (field)
-! In  mateco           : name of coded material
+! In  materField       : name of material characteristics (field)
+! In  materCode        : name of coded material
 ! In  caraElem         : name of elementary characteristics (field)
 ! In  time             : current time
-! In  base             : JEVEUX base to create matrElem
+! In  jvBase           : JEVEUX base to create matrElem
 ! In  matrRigi         : elementary rigidity matrix
 ! In  matrMass         : elementary rigidity mass
 ! In  listElemCalc     : list of element (LIGREL) where matrElem is computed
 ! In  matrElem         : elementary matrix
-! In  modeFourier      : index of Fourier mode
+! In  numeHarm         : index of Fourier mode
 ! In  vari             : internal state variables
 ! In  compor           : field of behaviour (non-linear cases)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nbFieldInMax = 16, nbFieldOutMax = 2
+    character(len=16), parameter :: option = 'AMOR_MECA'
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
     character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
     character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
 !
-    character(len=16), parameter :: option = 'AMOR_MECA'
     integer(kind=8) :: nbFieldIn, nbFieldOut
     character(len=2) :: codret
     integer(kind=8) :: iret
-    integer(kind=8), parameter :: modeFourier = 0
+    integer(kind=8), parameter :: numeHarm = 0
     character(len=24), parameter :: chvarc = '&&MEAMME.CHVARC'
     character(len=24) :: compor, vari
     character(len=8) :: physQuantityName
     character(len=24) :: matrRigi, matrMass
     character(len=24) :: resuElemRigi, resuElemMass
-    character(len=24) :: chgeom, chcara(18), chharm
-    character(len=1) :: base
+    character(len=24) :: chgeom, chharm
+    character(len=1) :: jvBase
     character(len=8) :: model, caraElem, mesh
-    character(len=24) :: mate, mateco, amor_flui
+    character(len=24) :: materField, materCode, amor_flui
     character(len=19) :: matrElem
     integer(kind=8) :: nbResuElem, iResuElem, idxResuElemRigi
     integer(kind=8) :: nbSubstruct
@@ -112,16 +114,16 @@ subroutine meamme(modelz, &
     call jemarq()
 
 ! - Initializations
-    model = modelz
-    caraElem = caraElemz
-    mate = matez
-    mateco = matecoz
+    model = modelZ
+    caraElem = caraElemZ
+    materField = materFieldZ
+    materCode = materCodeZ
     matrElem = matrElemz
-    base = basez
-    matrRigi = matrRigiz
-    matrMass = matrMassz
-    compor = comporz
-    vari = variz
+    jvBase = jvBaseZ
+    matrRigi = matrRigiZ
+    matrMass = matrMassZ
+    compor = comporZ
+    vari = variZ
     lpain = ' '
     lchin = ' '
     lpaout = ' '
@@ -133,8 +135,8 @@ subroutine meamme(modelz, &
     call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
 
 ! - Preparation of input fields
-    call mecham(option, model, caraElem, modeFourier, chgeom, &
-                chcara, chharm, iret)
+    call mecham(option, model, numeHarm, &
+                chgeom, chharm, iret)
 
 ! - Special map for non-linear cases
     call jedetr(nonLinearMap)
@@ -145,7 +147,7 @@ subroutine meamme(modelz, &
     call ndynkk(sddyna, 'AMOR_FLUI', amor_flui)
 
 ! - Field for external state variables
-    call vrcins(model, mate, caraElem, time, chvarc, codret)
+    call vrcins(model, materField, caraElem, time, chvarc, codret)
 
 ! - Get RESU_ELEM from rigidity matrix
     resuElemRigi = ' '
@@ -188,39 +190,34 @@ subroutine meamme(modelz, &
     end if
 
 ! - Prepare RESU_ELEM objects
-    call memare(base, matrElem, model, 'AMOR_MECA', to_aster_logical(nbSubstruct > 0))
+    call memare(jvBase, matrElem, model, 'AMOR_MECA', to_aster_logical(nbSubstruct > 0))
     call jedetr(matrElem//'.RELR')
 
-! - Input fields
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom(1:19)
     lpain(2) = 'PMATERC'
-    lchin(2) = matecoz(1:19)
-    lpain(3) = 'PCAORIE'
-    lchin(3) = chcara(1) (1:19)
-    lpain(4) = 'PCADISA'
-    lchin(4) = chcara(4) (1:19)
-    lpain(5) = 'PCAGNPO'
-    lchin(5) = chcara(6) (1:19)
-    lpain(6) = 'PCACOQU'
-    lchin(6) = chcara(7) (1:19)
-    lpain(7) = 'PVARCPR'
-    lchin(7) = chvarc(1:19)
-    lpain(8) = 'PCADISK'
-    lchin(8) = chcara(2) (1:19)
-    lpain(9) = 'PCINFDI'
-    lchin(9) = chcara(15) (1:19)
-    lpain(10) = 'PMASSEL'
-    lchin(10) = resuElemMass(1:19)
-    lpain(11) = 'PCOMPOR'
-    lchin(11) = compor(1:19)
-    lpain(12) = 'PNONLIN'
-    lchin(12) = nonLinearMap(1:19)
-    lpain(13) = 'PVARIPG'
-    lchin(13) = vari(1:19)
-    lpain(14) = 'PAMORFL'
-    lchin(14) = amor_flui(1:19)
-    nbFieldIn = 14
+    lchin(2) = materCodeZ(1:19)
+    lpain(3) = 'PMASSEL'
+    lchin(3) = resuElemMass(1:19)
+    lpain(4) = 'PCOMPOR'
+    lchin(4) = compor(1:19)
+    lpain(5) = 'PNONLIN'
+    lchin(5) = nonLinearMap(1:19)
+    lpain(6) = 'PVARIPG'
+    lchin(6) = vari(1:19)
+    lpain(7) = 'PAMORFL'
+    lchin(7) = amor_flui(1:19)
+    lpain(8) = 'PVARCPR'
+    lchin(8) = chvarc(1:19)
+    nbFieldIn = 8
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
 
 ! - Get symmetric or unsymmetric rigidity matrix
     if (resuElemRigi .ne. ' ') then
@@ -259,11 +256,11 @@ subroutine meamme(modelz, &
                 option, modelLigrel, &
                 nbFieldIn, lchin, lpain, &
                 nbFieldOut, lchout, lpaout, &
-                base, 'OUI')
+                jvBase, 'OUI')
 
 ! - Save RESU_ELEM
-    call reajre(matrElem, lchout(1), base)
-    call reajre(matrElem, lchout(2), base)
+    call reajre(matrElem, lchout(1), jvBase)
+    call reajre(matrElem, lchout(2), jvBase)
 
 ! - Clean
     call redetr(matrElem)

@@ -15,18 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine pipepl(ndim, compor, typmod, tau, mate,&
-                      sigm, vim, epsp, epsd, a0,&
+    subroutine pipepl(materPara, ndim, relaComp, typmod, &
+                      tau, &
+                      sigm, vim, epsp, epsd, a0, &
                       a1, a2, a3, etas)
-        integer(kind=8) :: ndim
-        character(len=16) :: compor
-        character(len=8) :: typmod(*)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: relaComp
+        integer(kind=8), intent(in) :: ndim
         real(kind=8) :: tau
-        integer(kind=8) :: mate
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(2)
         real(kind=8) :: epsp(6)

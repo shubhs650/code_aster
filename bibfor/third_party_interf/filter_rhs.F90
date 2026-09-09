@@ -52,7 +52,7 @@ subroutine filter_rhs(rsolu, nume_equa)
                 rsolu(ieq) = 0.d0
             end if
         end do
-        call vector_update_ghost_values(rsolu, nume_equa//"", "BIDIR")
+        call vector_update_ghost_values(rsolu, nume_equa, "BIDIR")
     end if
 !
     call jedema()

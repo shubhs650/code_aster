@@ -40,7 +40,6 @@ subroutine te0487(nomopt, nomte)
 #include "asterfort/readVector.h"
 #include "asterfort/writeVector.h"
 #include "asterfort/rccoma.h"
-#include "blas/dgemv.h"
 #include "jeveux.h"
 !
 ! --------------------------------------------------------------------------------------------------
@@ -63,7 +62,7 @@ subroutine te0487(nomopt, nomte)
     character(len=8), parameter :: fami = 'RIGI'
     character(len=32) :: phenom
     type(HHO_matrix) :: gradrec
-    real(kind=8), dimension(3*MAX_QP_CELL) :: flux
+    real(kind=8), dimension(3*MSIZE_QP_CELL) :: flux
     real(kind=8) :: module_tang(3, 3), G_curr(3), sig_curr(3), dsig_curr(3)
     real(kind=8) :: coorpg(3), weight, time_curr, temp_eval_curr
     real(kind=8) :: BSCEval(MSIZE_CELL_SCAL)

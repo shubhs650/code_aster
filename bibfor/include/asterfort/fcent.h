@@ -15,14 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine fcent(nomte, xi, nb1, vecl)
-        character(len=16) :: nomte
-        real(kind=8) :: xi(3, *)
-        integer(kind=8) :: nb1
-        real(kind=8) :: vecl(51)
+    subroutine fcent(plateCara, &
+                     nomte, xi, nb1, &
+                     vecl)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: xi(3, *)
+        integer(kind=8), intent(in) :: nb1
+        real(kind=8), intent(out) :: vecl(51)
     end subroutine fcent
 end interface

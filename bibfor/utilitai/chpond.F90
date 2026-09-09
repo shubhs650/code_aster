@@ -15,22 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine chpond(tych, dejain, chin, cesout, cespoi, &
-                  ligrel, carele)
+! aslint: disable=W0413
 !
+subroutine chpond(fieldDisc, dejain, chin, cesout, cespoi, &
+                  ligrelZ, caraElem)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
-#include "asterf_types.h"
-#include "jeveux.h"
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/celces.h"
-#include "asterfort/cesvar.h"
 #include "asterfort/celfpg.h"
 #include "asterfort/cesexi.h"
 #include "asterfort/cesred.h"
+#include "asterfort/cesvar.h"
 #include "asterfort/copisd.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/dismoi.h"
@@ -39,13 +40,17 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
 #include "asterfort/jeexin.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
-    character(len=8), intent(in) :: carele
-    character(len=*), intent(in) :: ligrel
+#include "jeveux.h"
+!
+    character(len=8), intent(in) :: caraElem
+    character(len=*), intent(in) :: ligrelZ
     character(len=19), intent(in) :: chin, cesout, cespoi
-    character(len=4), intent(in) :: tych, dejain
-
+    character(len=4), intent(in) :: fieldDisc, dejain
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     operateur   post_elem
 !
@@ -53,7 +58,7 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
 !          (poids*jacobien)
 !
 !     in  chin      : champ a ponderer   (cham_elem   /elxx)
-!     in  tych      : type du champ (elno/elga/elem)
+!     in  fieldDisc      : type du champ (elno/elga/elem)
 !     in  ligrel    : nom du ligrel
 !     in  dejain    : pour les champs elem : deja_integre=oui/non
 !     out cesout    : chin + ponderation (cham_elem_s /elxx)
@@ -62,63 +67,77 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
 !     attention : cespoi n'est pas recalcule s'il existe deja.
 !                 => gain de cpu dans une boucle sur les numeros d'ordre.
 !                 mais il faut penser a le detruire quand on change de ligrel.
-!-------------------------------------------------------------------------------
 !
-    integer(kind=8) :: iret, nbchin, nbma, nbpt, nbsp, nbcmp, joutl, joutd
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
+    integer(kind=8) :: iret, nbCell, nbpt, nbsp, nbcmp, joutl, joutd
     integer(kind=8) :: nbspmx
     integer(kind=8) :: iad1, iad2, iad3, isp, ima, icmp, ipt, jchsl, jchsd, iexi
     integer(kind=8) :: jpoid, jpoil, jpoic, jch2, jch1, iret1, iret2, jpdsm
     real(kind=8) :: poids, rvid
-    parameter(nbchin=6)
-    character(len=8) :: lpain(nbchin), lpaout(1), noma
-    character(len=19) :: chins, ligr19
-    character(len=24) :: chgeom, lchin(nbchin), lchout(2), vefch1
+    character(len=8) :: mesh
+    character(len=19) :: chins, ligrel
+    character(len=24) :: chgeom, vefch1
     character(len=24) :: vefch2
     integer(kind=8), pointer :: repe(:) => null()
     real(kind=8), pointer :: chsv(:) => null()
     real(kind=8), pointer :: outv(:) => null()
     real(kind=8), pointer :: poiv(:) => null()
-!-----------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     call jemarq()
 
+! - Initializations
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
     rvid = r8vide()
-    ligr19 = ligrel
-    call dismoi('NOM_MAILLA', ligr19, 'LIGREL', repk=noma)
-    call dismoi('NB_MA_MAILLA', noma, 'MAILLAGE', repi=nbma)
-    call jeveuo(ligr19//'.REPE', 'L', vi=repe)
+    ligrel = ligrelZ
 
-!   -- CALCUL DU CHAMP CESPOI
-!      (UNIQUEMENT AU PREMIER NUMERO D'ORDRE RENCONTRE)
+! - Access to mesh
+    call dismoi('NOM_MAILLA', ligrel, 'LIGREL', repk=mesh)
+    call dismoi('NB_MA_MAILLA', mesh, 'MAILLAGE', repi=nbCell)
+    call jeveuo(ligrel//'.REPE', 'L', vi=repe)
+    chgeom = mesh//'.COORDO'
+
+! - CALCUL DU CHAMP CESPOI (UNIQUEMENT AU PREMIER NUMERO D'ORDRE RENCONTRE)
     call jeexin(cespoi//'.CESV', iret)
     if (iret .eq. 0) then
-!
-        chgeom = noma//'.COORDO'
+! ----- Add input field
         lchin(1) = chgeom(1:19)
         lpain(1) = 'PGEOMER'
-        lchin(2) = carele//'.CANBSP'
-        lpain(2) = 'PNBSP_I'
-        lchin(3) = carele//'.CAFIBR'
-        lpain(3) = 'PFIBRES'
-        lchin(4) = carele//'.CARORIEN'
-        lpain(4) = 'PCAORIE'
-        lchin(5) = carele//'.CARGEOPO'
-        lpain(5) = 'PCAGEPO'
-        lchin(6) = carele//'.CARCOQUE'
-        lpain(6) = 'PCACOQU'
+        nbFieldIn = 1
+
+! ----- Add fields for structural elements
+        call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! ----- Add fields for orientation
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElem)
+
+! ----- Set output field
         lchout(1) = '&&CHPOND.PGCOOR'
         lpaout(1) = 'PCOORPG'
 !
-!
-        if (carele .ne. ' ') then
-            call cesvar(carele, ' ', ligr19, lchout(1))
+        if (caraElem .ne. ' ') then
+            call cesvar(caraElem, ' ', ligrel, lchout(1))
         end if
 !
-        call calcul('S', 'COOR_ELGA', ligr19, 6, lchin, &
-                    lpain, 1, lchout, lpaout, 'V', 'OUI')
+        call calcul('S', 'COOR_ELGA', ligrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    'V', 'OUI')
 !
 !       -- verification sur les champs cespoi et chin :
 !          (MEME FAMILLE DE PG & MEME ELEMENT DE REFERENCE)
-        if (tych .eq. 'ELGA') then
+        if (fieldDisc .eq. 'ELGA') then
             vefch1 = '&&CHPOND.FPGCHIN'
             vefch2 = '&&CHPOND.FPGCOOR'
             call celfpg(chin, vefch1, iret1)
@@ -127,7 +146,7 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
             ASSERT(iret2 .eq. 0)
             call jeveuo(vefch1, 'L', jch1)
             call jeveuo(vefch2, 'L', jch2)
-            do ima = 1, nbma
+            do ima = 1, nbCell
 !               -- il ne faut verifier que les mailles affectees de chin:
                 if (zk16(jch1+ima-1) .eq. ' ') cycle
 
@@ -144,8 +163,7 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
         end if
 !
         call celces(lchout(1), 'V', cespoi)
-        call cesred(cespoi, 0, [0], 1, 'W', &
-                    'V', cespoi)
+        call cesred(cespoi, 0, [0], 1, 'W', 'V', cespoi)
 !
     end if
 
@@ -168,21 +186,21 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
     call jeveuo(cesout//'.CESL', 'E', joutl)
     call jeveuo(cesout//'.CESD', 'E', joutd)
 !
-    nbma = zi(jpoid-1+1)
+    nbCell = zi(jpoid-1+1)
 
 !   -- calcul du volume des mailles (si elem ou elno) :
-    if (tych .ne. 'ELGA') then
+    if (fieldDisc .ne. 'ELGA') then
         call jeexin(cespoi//'.PDSM', iexi)
         if (iexi .eq. 0) then
             nbspmx = 0
-            do ima = 1, nbma
+            do ima = 1, nbCell
                 if (zi(jpoid-1+5+4*(ima-1)+2) .gt. nbspmx) then
                     nbspmx = zi(jpoid-1+5+4*(ima-1)+2)
                 end if
             end do
-            call wkvect(cespoi//'.PDSM', 'V V R', nbma*nbspmx, jpdsm)
+            call wkvect(cespoi//'.PDSM', 'V V R', nbCell*nbspmx, jpdsm)
 
-            do ima = 1, nbma
+            do ima = 1, nbCell
                 if (repe(2*(ima-1)+1) .eq. 0) cycle
 
                 nbpt = zi(jpoid-1+5+4*(ima-1)+1)
@@ -204,26 +222,26 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
 !
 !
 !   -- ponderation du champ par les poids des points :
-    do ima = 1, nbma
+    do ima = 1, nbCell
         if (repe(2*(ima-1)+1) .eq. 0) cycle
 
         nbpt = zi(jchsd-1+5+4*(ima-1)+1)
         nbsp = zi(jchsd-1+5+4*(ima-1)+2)
         nbcmp = zi(jchsd-1+5+4*(ima-1)+3)
         do ipt = 1, nbpt
-            if (tych .eq. 'ELGA') then
+            if (fieldDisc .eq. 'ELGA') then
                 call cesexi('S', jpoid, jpoil, ima, ipt, &
                             1, 1, iad2)
                 ASSERT(iad2 .gt. 0)
                 poids = poiv(iad2)
-            else if (tych .eq. 'ELEM') then
+            else if (fieldDisc .eq. 'ELEM') then
                 ASSERT(nbpt .eq. 1)
                 if (dejain .eq. 'NON') then
                     poids = zr(jpdsm-1+ima)
                 else
                     poids = 1.d0
                 end if
-            else if (tych .eq. 'ELNO') then
+            else if (fieldDisc .eq. 'ELNO') then
                 ASSERT(nbpt .gt. 0)
                 poids = zr(jpdsm-1+ima)/nbpt
             end if
@@ -238,7 +256,7 @@ subroutine chpond(tych, dejain, chin, cesout, cespoi, &
                         goto 40
                     else
                         ASSERT(iad3 .gt. 0)
-                        if (tych .eq. 'ELNO') then
+                        if (fieldDisc .eq. 'ELNO') then
                             if (chsv(iad1) .eq. rvid) then
                                 outv(iad3) = rvid
                             else

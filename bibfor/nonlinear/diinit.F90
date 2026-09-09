@@ -69,16 +69,19 @@ subroutine diinit(meshZ, modelZ, ds_inout, materField, materCode, caraElem, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: factorKeyword = "INCREMENT"
     aster_logical :: l_expl, l_implex, lCutStep
-    character(len=19) :: listInst
+    character(len=19) :: listInst, sdarch
     character(len=8) :: model, mesh, result
     character(len=16) :: answer
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call getvid('INCREMENT', 'LIST_INST', iocc=1, scal=listInst)
     model = modelZ
     mesh = meshZ
+
+! - Get object for time list from user
+    call getvid(factorKeyword, 'LIST_INST', iocc=1, scal=listInst)
 
 ! - Get parameters
     result = ds_inout%result
@@ -95,8 +98,9 @@ subroutine diinit(meshZ, modelZ, ds_inout, materField, materCode, caraElem, &
         call ndxcfl(materField, materCode, caraElem, sddyna, sddisc)
     end if
 
-! - Create storing datastructure
-    call nmcrar(result, sddisc, listFuncActi)
+! - Create storing objects
+    sdarch = sddisc(1:14)//'.ARCH'
+    call nmcrar(result, sddisc, sdarch, listFuncActi)
 
 ! - Automatic management of time stepping
     call nmcrsu(sddisc, listInst, ds_conv, &

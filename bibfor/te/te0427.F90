@@ -27,7 +27,6 @@ subroutine te0427(nomopt, nomte)
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/lteatt.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !  HHO

@@ -15,20 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmgran(fami,   kpg,    ksp,    typmod, imate, &
-                      compor, instam, instap, tpmxm,  tpmxp, &
-                      depst,  sigm,   vim,    option, sigp, &
-                      vip,    dsidep, materi)
+    subroutine nmgran(fami, kpg, ksp, typmod, imate, &
+                      relaComp, instam, instap, tpmxm, tpmxp, &
+                      depst, sigm, vim, option, sigp, &
+                      vip, dsidep)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
-        character(len=8) :: typmod(*), materi
+        character(len=8) :: typmod(2)
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
+        character(len=16) :: relaComp
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: tpmxm

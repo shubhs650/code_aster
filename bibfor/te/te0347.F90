@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0347(option, nomte)
+    use resi_refe_module, only: RESI_REFE
 !
 !
 ! --------------------------------------------------------------------------------------------------
@@ -58,7 +59,6 @@ subroutine te0347(option, nomte)
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utpvlg.h"
 !
     character(len=16) :: option, nomte
@@ -75,10 +75,11 @@ subroutine te0347(option, nomte)
     real(kind=8) :: valres(2), e, nu, g, aa, xiy, xiz, alfay, alfaz
     real(kind=8) :: phiy, phiz, gamma
     character(len=2) :: nomres(2)
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: peffor
 !
     aster_logical :: lefgno, reactu, okelem
+    type(RESI_REFE):: refe
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: nb_cara = 7
@@ -107,8 +108,10 @@ subroutine te0347(option, nomte)
 !
     if (option .eq. 'REFE_FORC_NODA  ') then
         call jevech('PVECTUR', 'E', ivectu)
-        call terefe('EFFORT_REFE', 'MECA_POUTRE', forref)
-        call terefe('MOMENT_REFE', 'MECA_POUTRE', momref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        momref = refe%GetRef('MOMENT')
+        call refe%Check()
         do in = 1, nno
             do i = 1, 3
                 zr(ivectu+(in-1)*nc+i-1) = forref

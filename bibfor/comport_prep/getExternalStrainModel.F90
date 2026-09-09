@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine getExternalStrainModel(defo_comp, strain_model)
+subroutine getExternalStrainModel(defoComp, strainMGIS)
 !
     implicit none
 !
@@ -25,8 +25,8 @@ subroutine getExternalStrainModel(defo_comp, strain_model)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/BehaviourMGIS_type.h"
 !
-    character(len=16), intent(in) :: defo_comp
-    integer(kind=8), intent(out) :: strain_model
+    character(len=16), intent(in) :: defoComp
+    integer(kind=8), intent(out) :: strainMGIS
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -36,27 +36,22 @@ subroutine getExternalStrainModel(defo_comp, strain_model)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  defo_comp        : value of DEFORMATION keyword
-! Out strain_model     : model of (large) strains
-!                        1 - small strains
-!                        2 - Simo-Miehe
-!                        3 - GreenLagrange
+! In  defoComp         : model of strain (DEFORMATION keyword)
+! Out strainMGIS       : model of (large) strains
+!
 ! --------------------------------------------------------------------------------------------------
-    strain_model = MGIS_STRAIN_UNSET
-
-! ----- Indicator for large strains
+!
+    strainMGIS = MGIS_STRAIN_UNSET
 
 !   Obsolete - for trace
-    ASSERT(defo_comp .ne. 'GROT_GDEP')
-    ASSERT(defo_comp .ne. 'SIMO_MIEHE')
-
-!   for GDEF_LOG, prelog/poslog are called in te*
-    if (defo_comp .eq. 'PETIT' .or. &
-        defo_comp .eq. 'PETIT_REAC' .or. &
-        defo_comp .eq. 'GDEF_LOG') then
-        strain_model = MGIS_STRAIN_SMALL
-    else if (defo_comp .eq. 'GREEN_LAGRANGE') then
-        strain_model = MGIS_STRAIN_F
+    ASSERT(defoComp .ne. 'GROT_GDEP')
+    ASSERT(defoComp .ne. 'SIMO_MIEHE')
+    if (defoComp .eq. 'PETIT' .or. &
+        defoComp .eq. 'PETIT_REAC' .or. &
+        defoComp .eq. 'GDEF_LOG') then
+        strainMGIS = MGIS_STRAIN_SMALL
+    else if (defoComp .eq. 'GREEN_LAGRANGE') then
+        strainMGIS = MGIS_STRAIN_F
     else
         ASSERT(ASTER_FALSE)
     end if

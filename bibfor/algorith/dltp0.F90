@@ -37,11 +37,8 @@ subroutine dltp0(t0, nume)
 ! OUT : T0   : INSTANT INITIAL
 ! OUT : NUME : NUMERO D'ORDRE DE REPRISE
 !     ------------------------------------------------------------------
-    integer(kind=8) :: vali
-    real(kind=8) :: valr
     character(len=8) :: k8b, nomres, dyna, li, crit, ctype
     character(len=16) :: typres, nomcmd
-    character(len=24) :: valk
     complex(kind=8) :: c16b
 !     -----------------------------------------------------------------
 !-----------------------------------------------------------------------
@@ -72,14 +69,9 @@ subroutine dltp0(t0, nume)
                             nbtrou)
                 nume = tnume(1)
                 if (nbtrou .lt. 0) then
-                    valk = dyna
-                    valr = temps
-                    vali = -nbtrou
-                    call utmess('F', 'ALGORITH12_83', sk=valk, si=vali, sr=valr)
+                    call utmess('F', 'ALGORITH12_83', si=-nbtrou, sr=temps)
                 else if (nbtrou .eq. 0) then
-                    valk = dyna
-                    valr = temps
-                    call utmess('F', 'ALGORITH12_84', sk=valk, sr=valr)
+                    call utmess('F', 'ALGORITH12_84', sr=temps)
                 end if
             end if
         else

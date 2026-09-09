@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0244(option, nomte)
 !
     use FE_topo_module
@@ -24,131 +24,141 @@ subroutine te0244(option, nomte)
     use FE_stiffness_module
     use FE_rhs_module
     use FE_eval_module
-!
+    use coorSyst_module, only: hasOrieField
     implicit none
 !
-!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/jevech.h"
-#include "asterfort/rcdiff.h"
+#include "asterfort/ntcomp.h"
 #include "asterfort/ntfcma.h"
 #include "asterfort/rccoma.h"
+#include "asterfort/rcdiff.h"
+#include "asterfort/rcfode.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
-#include "asterfort/rcfode.h"
-#include "asterfort/ntcomp.h"
 #include "asterfort/utmess.h"
 #include "asterfort/writeVector.h"
-#include "asterfort/Behaviour_type.h"
 #include "FE_module.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
+    character(len=16), intent(in) :: option, nomte
 !
-!    - FONCTION REALISEE:  CALCUL DES VECTEURS ELEMENTAIRES
-!                          OPTION : 'CHAR_THER_EVOLNI'
+! --------------------------------------------------------------------------------------------------
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-!----------------------------------------------------------------------
+! Elementary computation
 !
+! Elements: THER_*
+!
+! Options: CHAR_THER_EVOLNI
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuadRigi, FEQuadMass
     type(FE_basis) :: FEBasis
 !
-    integer(kind=8) :: nbres
-    parameter(nbres=1)
-    integer(kind=8) :: icodre(nbres)
-    character(len=16) :: phenom, rela_name
-    real(kind=8) :: valQPM(MAX_QP), BGSEval(3, MAX_BS)
+    integer(kind=8), parameter :: nbProp = 1
+    integer(kind=8) :: propCode(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'CHALHYDR'/)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16) :: therKeyword, relaName
+    real(kind=8) :: valQPM(MAX_QP), BGSEval(3, MAX_BS_CG)
     real(kind=8) :: valQPMP(MAX_QP)
-    real(kind=8) :: resi_f(MAX_BS), resi_m(MAX_BS), resi(MAX_BS)
-    real(kind=8) :: resi_mp(MAX_BS), resi_p(MAX_BS), dfluxglo(3)
+    real(kind=8) :: resi_f(MAX_BS_CG), resi_m(MAX_BS_CG), resi(MAX_BS_CG)
+    real(kind=8) :: resi_mp(MAX_BS_CG), resi_p(MAX_BS_CG), dfluxglo(3)
     real(kind=8) ::  deltat, theta, chal(1), diff, Kglo(3, 3)
     real(kind=8) :: beta, dbeta, tpg, dtpg(3), flux(3), sechpg, dsechpg(3)
-    integer(kind=8) :: kp, imate, icamas, ifon(6), itemps, iret
+    integer(kind=8) :: kpg, jvMaterc, jvCamass, ifon(6), jvInstr, iret
     character(len=16), pointer :: compor(:) => null()
     aster_logical :: lhyd, aniso
-    real(kind=8), pointer :: tempi(:) => null()
+    real(kind=8), pointer :: temper(:) => null()
     real(kind=8), pointer :: hydrpg(:) => null()
+!
+! --------------------------------------------------------------------------------------------------
 !
     call FECell%init()
     call FEBasis%initCell(FECell)
     call FEQuadMass%initCell(FECell, "MASS")
     call FEQuadRigi%initCell(FECell, "RIGI")
 !
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PINSTR', 'L', itemps)
-    call jevech('PTEMPER', 'L', vr=tempi)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call jevech('PINSTR', 'L', jvInstr)
+    call jevech('PTEMPER', 'L', vr=temper)
     call jevech('PCOMPOR', 'L', vk16=compor)
-    rela_name = compor(RELA_NAME)
+    relaName = compor(RELA_NAME)
 !
-    deltat = zr(itemps+1)
-    theta = zr(itemps+2)
+    deltat = zr(jvInstr+1)
+    theta = zr(jvInstr+2)
+    jvCamass = 0
 
-    if (rela_name(1:5) .eq. 'THER_') then
-        call rccoma(zi(imate), 'THER', 1, phenom, icodre(1))
+    if (relaName(1:5) .eq. 'THER_') then
+        call rccoma(zi(jvMaterc), 'THER', 1, therKeyword, propCode(1))
         aniso = ASTER_FALSE
-        if (phenom(1:12) .eq. 'THER_NL_ORTH') then
+        if (therKeyword(1:12) .eq. 'THER_NL_ORTH') then
             aniso = ASTER_TRUE
         end if
-        call ntfcma(rela_name, zi(imate), aniso, ifon)
-!       pour stopper le calcul si PCAMASS n'est pas disponible
+        call ntfcma(relaName, zi(jvMaterc), aniso, ifon)
         if (aniso) then
-            call jevech('PCAMASS', 'L', icamas)
+            if (.not. hasOrieField(jvCamass)) then
+                call utmess('F', 'THERMIQUE1_3')
+            end if
         end if
     end if
 !
     resi_f = 0.d0
-    do kp = 1, FEQuadRigi%nbQuadPoints
-        BGSEval = FEBasis%grad(FEQuadRigi%points_param(1:3, kp), FEQuadRigi%jacob(1:3, 1:3, kp))
+    do kpg = 1, FEQuadRigi%nbQuadPoints
+        BGSEval = FEBasis%grad(FEQuadRigi%points_param(1:3, kpg), FEQuadRigi%jacob(1:3, 1:3, kpg))
 !
-        if (rela_name(1:5) .eq. 'THER_') then
-            tpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadRigi%points_param(1:3, kp))
-            dtpg = FEEvalGradVec(FEBasis, tempi, FEQuadRigi%points_param(1:3, kp), BGSEval)
-            call ntcomp(rela_name, FECell%ndim, tpg, dtpg, &
-                        FEQuadRigi%points(1:3, kp), aniso, ifon, flux, Kglo, dfluxglo)
-        else if (rela_name(1:5) .eq. 'SECH_') then
-            sechpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadRigi%points_param(1:3, kp))
-            dsechpg = FEEvalGradVec(FEBasis, tempi, FEQuadRigi%points_param(1:3, kp), BGSEval)
-            call rcvarc(' ', 'TEMP', '-', 'RIGI', kp, 1, tpg, iret)
+        if (relaName(1:5) .eq. 'THER_') then
+            tpg = FEEvalFuncRScal(FEBasis, temper, FEQuadRigi%points_param(1:3, kpg))
+            dtpg = FEEvalGradVec(FEBasis, temper, FEQuadRigi%points_param(1:3, kpg), BGSEval)
+            call ntcomp(relaName, FECell%ndim, tpg, dtpg, &
+                        FEQuadRigi%points(1:3, kpg), aniso, ifon, flux, Kglo, dfluxglo)
+        else if (relaName(1:5) .eq. 'SECH_') then
+            sechpg = FEEvalFuncRScal(FEBasis, temper, FEQuadRigi%points_param(1:3, kpg))
+            dsechpg = FEEvalGradVec(FEBasis, temper, FEQuadRigi%points_param(1:3, kpg), BGSEval)
+            call rcvarc(' ', 'TEMP', '-', 'RIGI', kpg, 1, tpg, iret)
             if (iret .ne. 0) call utmess('F', 'THERMIQUE1_2')
-            call rcdiff(zi(imate), rela_name, tpg, sechpg, diff)
+            call rcdiff(zi(jvMaterc), relaName, tpg, sechpg, diff)
             flux = diff*dsechpg
         else
             ASSERT(ASTER_FALSE)
         end if
-        call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadRigi%weights(kp), flux, resi_f)
+        call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadRigi%weights(kpg), flux, resi_f)
     end do
 !
-    if (rela_name(1:9) .eq. 'THER_HYDR') then
+    if (relaName(1:9) .eq. 'THER_HYDR') then
         lhyd = ASTER_TRUE
         call jevech('PHYDRPM', 'L', vr=hydrpg)
-!
-        call rcvalb('FPG1', 1, 1, '+', zi(imate), &
-                    ' ', 'THER_HYDR', 0, ' ', [0.d0], &
-                    1, 'CHALHYDR', chal, icodre, 1)
+        call rcvalb('FPG1', 1, 1, '+', &
+                    zi(jvMaterc), ' ', 'THER_HYDR', &
+                    0, ' ', [0.d0], &
+                    nbProp, propName, propVale, propCode, 1)
     else
         lhyd = ASTER_FALSE
     end if
 !
-    do kp = 1, FEQuadMass%nbQuadPoints
-        tpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadMass%points_param(1:3, kp))
-        if (rela_name(1:5) .eq. 'THER_') then
+    do kpg = 1, FEQuadMass%nbQuadPoints
+        tpg = FEEvalFuncRScal(FEBasis, temper, FEQuadMass%points_param(1:3, kpg))
+        if (relaName(1:5) .eq. 'THER_') then
             call rcfode(ifon(1), tpg, beta, dbeta)
             if (lhyd) then
-                valQPMP(kp) = (dbeta*tpg-chal(1)*hydrpg(kp))
-                valQPM(kp) = (beta-chal(1)*hydrpg(kp))
+                valQPMP(kpg) = (dbeta*tpg-propVale(1)*hydrpg(kpg))
+                valQPM(kpg) = (beta-propVale(1)*hydrpg(kpg))
             else
-                valQPMP(kp) = dbeta*tpg
-                valQPM(kp) = beta
+                valQPMP(kpg) = dbeta*tpg
+                valQPM(kpg) = beta
             end if
-        else if (rela_name(1:5) .eq. 'SECH_') then
-            valQPM(kp) = tpg
-            valQPMP(kp) = tpg
+        else if (relaName(1:5) .eq. 'SECH_') then
+            valQPM(kpg) = tpg
+            valQPMP(kpg) = tpg
         else
             ASSERT(ASTER_FALSE)
         end if

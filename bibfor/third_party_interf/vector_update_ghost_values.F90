@@ -386,7 +386,6 @@ subroutine vector_update_ghost_values(vector, nume_equa, mode)
         call jedetr(tag_name)
     end do
 !
-!
 ! -- debug
     if (ldebug) then
         print *, "DEBUG IN vect_asse_update_ghost_values"

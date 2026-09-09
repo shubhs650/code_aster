@@ -159,7 +159,7 @@ subroutine mmreas(mesh, ds_contact, hval_incr)
 !
 ! --------- MULTIPLICATEUR DE LAGRANGE DE CONTACT DU POINT
 !
-                call mmvalp_scal(ndimg, aliase, nne, ksipc1, &
+                call mmvalp_scal(aliase, nne, ksipc1, &
                                  ksipc2, mlagc, lambdc)
 !
 ! --------- SAUVEGARDE

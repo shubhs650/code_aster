@@ -181,7 +181,7 @@ class MEFOQU4(Element):
         OP.CHAR_MECA_EPSI_F(
             te=284,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINF, CEPSINF),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
@@ -194,7 +194,7 @@ class MEFOQU4(Element):
         OP.CHAR_MECA_EPSI_R(
             te=284,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINR, CEPSINR),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
@@ -231,7 +231,7 @@ class MEFOQU4(Element):
         OP.CHAR_MECA_TEMP_R(
             te=198,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
                 (SP.PMATERC, LC.CMATERC),
@@ -256,7 +256,7 @@ class MEFOQU4(Element):
         OP.EPOT_ELEM(
             te=286,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
@@ -289,13 +289,13 @@ class MEFOQU4(Element):
         ),
         OP.REPERE_LOCAL(
             te=133,
-            para_in=((SP.PCAMASS, LC.CCAMA2D), (SP.PGEOMER, NGEOMER)),
+            para_in=((SP.PCAMASS, LC.CCAMASS), (SP.PGEOMER, NGEOMER)),
             para_out=((SP.PREPLO1, LC.CGEOM2D), (SP.PREPLO2, LC.CGEOM2D)),
         ),
         OP.RIGI_MECA(
             te=190,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
                 (SP.PMATERC, LC.CMATERC),
@@ -315,7 +315,7 @@ class MEFOQU4(Element):
         OP.SIEF_ELGA(
             te=115,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PHARMON, LC.CHARMON),
@@ -345,15 +345,25 @@ class MEFOQU4(Element):
             para_in=((OP.SIGM_ELNO.PCONTRR, ECONTPG),),
             para_out=((SP.PSIEFNOC, ECONTNC), (OP.SIGM_ELNO.PSIEFNOR, ECONTNO)),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
                 (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -361,8 +371,9 @@ class MEFOQU4(Element):
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, ENGEOM_R),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VERI_JACOBIEN(

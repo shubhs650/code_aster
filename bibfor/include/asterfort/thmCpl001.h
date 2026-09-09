@@ -18,24 +18,23 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine thmCpl001(ds_thm,&
-                         lMatr, lSigm, lVari, angl_naut,&
-                         ndim  , nbvari, &
-                         dimdef, dimcon,&
-                         adcome, adcote, adcp11,&
-                         addeme, addete, addep1,&
-                         temp  ,&
-                         dtemp , dp1   ,&
-                         deps  , epsv  , depsv,&
-                         tbiot ,&
-                         phi   , rho11 , satur,&
-                         congem, congep,&
-                         vintm , vintp , dsde ,&
+    subroutine thmCpl001(ds_thm, &
+                         lMatr, lSigm, lVari, &
+                         ndim, nbvari, &
+                         dimdef, dimcon, &
+                         adcome, adcote, adcp11, &
+                         addeme, addete, addep1, &
+                         temp, &
+                         dtemp, dp1, &
+                         deps, epsv, depsv, &
+                         tbiot, &
+                         phi, rho11, satur, &
+                         congem, congep, &
+                         vintm, vintp, dsde, &
                          retcom)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         aster_logical, intent(in) :: lMatr, lSigm, lVari
-        real(kind=8), intent(in) :: angl_naut(3)
         integer(kind=8), intent(in) :: ndim, nbvari
         integer(kind=8), intent(in) :: dimdef, dimcon
         integer(kind=8), intent(in) :: adcome, adcote, adcp11

@@ -18,29 +18,30 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine pminit(jvMaterCode, nbVari, &
-                      tablName, tablNbParaMaxi, tablNbPara, tablType, &
+    subroutine pminit(tablName, tablNbPara, tablType, &
                       tablParaName, tablParaType, tablVale, &
-                      anglNaut, pgl, lRota, &
-                      epsiPrev, sigmPrev, vim, vip, &
+                      pgl, lRota, &
+                      epsiPrev, sigmPrev, &
+                      nbVari, vim, vip, &
                       loadEpsiType, loadType, loadFunc, coefImpo, &
-                      coefMatrAdim, typeMatrPred, lMatrElas, matrElas, lPrintMatr, option, &
+                      coefAdim, typeMatrPred, lMatrElas, matrElas, lPrintMatr, option, &
                       variName, nbVariTabl, &
-                      sddisc, ds_conv, ds_algopara, sderro)
+                      sddisc, ds_conv, ds_algopara, sderro, materPara)
         use NonLin_Datastructure_type
-        integer(kind=8), intent(in) :: jvMaterCode, nbVari
+        use MaterialPara_type
         character(len=8), intent(out) :: tablName
-        integer(kind=8), intent(in) :: tablNbParaMaxi
         integer(kind=8), intent(out) :: tablNbPara, tablType
-        character(len=16), intent(out) :: tablParaName(tablNbParaMaxi), tablParaType(tablNbParaMaxi)
-        real(kind=8), intent(out) :: tablVale(tablNbParaMaxi)
-        real(kind=8), intent(out) :: anglNaut(3), pgl(3, 3)
+        character(len=16), allocatable, intent(out) :: tablParaName(:)
+        character(len=8), allocatable, intent(out) :: tablParaType(:)
+        real(kind=8), allocatable, intent(out) :: tablVale(:)
+        real(kind=8), intent(out) :: pgl(3, 3)
         aster_logical, intent(out) :: lRota
         real(kind=8), intent(out) :: epsiPrev(9), sigmPrev(6)
+        integer(kind=8), intent(in) :: nbVari
         real(kind=8), intent(out) :: vim(nbVari), vip(nbVari)
         integer(kind=8), intent(out) :: loadEpsiType, loadType(9)
         character(len=8), intent(out) :: loadFunc(9)
-        real(kind=8), intent(out) :: coefImpo(6, 12), coefMatrAdim
+        real(kind=8), intent(out) :: coefImpo(6, 12), coefAdim
         integer(kind=8), intent(out) :: typeMatrPred
         aster_logical, intent(out) :: lMatrElas
         real(kind=8), intent(out) :: matrElas(6, 6)
@@ -49,8 +50,9 @@ interface
         character(len=8), intent(out) :: variName(nbVari)
         integer(kind=8), intent(out) :: nbVariTabl
         character(len=19), intent(out) :: sddisc
-        type(NL_DS_Conv), intent(out) :: ds_conv
-        type(NL_DS_AlgoPara), intent(out) :: ds_algopara
+        type(NL_DS_Conv), intent(inout) :: ds_conv
+        type(NL_DS_AlgoPara), intent(inout) :: ds_algopara
         character(len=24), intent(out) :: sderro
+        type(Material_Para), intent(inout) :: materPara
     end subroutine pminit
 end interface

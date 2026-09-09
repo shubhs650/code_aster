@@ -15,13 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcmaza(fami, kpg, ksp, ndim, typmod,&
-                      imate, compor, epsm, deps, vim,&
-                      option, sig,&
+    subroutine lcmaza(fami, kpg, ksp, ndim, typmod, &
+                      imate, epsm, deps, vim, &
+                      option, sig, &
                       vip, dsidep)
         character(len=*) :: fami
         integer(kind=8) :: kpg
@@ -29,7 +27,6 @@ interface
         integer(kind=8) :: ndim
         character(len=8) :: typmod(2)
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
         real(kind=8) :: epsm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: vim(4)

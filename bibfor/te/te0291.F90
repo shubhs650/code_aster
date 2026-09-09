@@ -15,7 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine te0291(option, nomte)
     implicit none
 #include "asterf_types.h"
@@ -51,7 +52,7 @@ subroutine te0291(option, nomte)
     real(kind=8) :: e, nu, eest, nor, norsig, nu0, he, r
 !
     integer(kind=8) :: icodre(2)
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=16) :: nomres(2)
 !
     aster_logical :: laxi

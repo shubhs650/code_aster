@@ -16,28 +16,25 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine getBehaviourAlgo(plane_stress, rela_comp, &
-                            rela_code_py, meca_code_py, &
-                            keywf, i_comp, &
+subroutine getBehaviourAlgo(lPlaneStress, relaComp, &
+                            relaCompPY, relaMecaPY, &
+                            factorKeyword, iFactorKeyword, &
                             algo_inte, algo_inte_r)
 !
     use NonLin_Datastructure_type
-!
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/lcalgo.h"
 #include "asterc/lctest.h"
+#include "asterf_types.h"
 #include "asterfort/getvtx.h"
 #include "asterfort/utlcal.h"
 #include "asterfort/utmess.h"
 !
-    aster_logical, intent(in) :: plane_stress
-    character(len=16), intent(in) :: rela_comp
-    character(len=16), intent(in) :: rela_code_py
-    character(len=16), intent(in) :: meca_code_py
-    character(len=16), intent(in) :: keywf
-    integer(kind=8), intent(in) :: i_comp
+    aster_logical, intent(in) :: lPlaneStress
+    character(len=16), intent(in) :: relaComp, relaCompPY, relaMecaPY
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
     character(len=16), intent(out) :: algo_inte
     real(kind=8), intent(out) :: algo_inte_r
 !
@@ -49,53 +46,44 @@ subroutine getBehaviourAlgo(plane_stress, rela_comp, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  mesh             : name of mesh
-! In  model            : name of model
-! In  rela_comp        : RELATION comportment
-! In  rela_code_py     : coded comportment for RELATION (coding in Python)
-! In  meca_code_py     : coded comportment for mechanical part (coding in Python)
-! In  keywf            : factor keyword to read (COMPORTEMENT)
-! In  i_comp           : factor keyword index
+! In  lPlaneStress     : flag for plane stress model
+! In  relaComp         : behaviour (RELATION keyword)
+! In  relaCompPY       : behaviour (RELATION keyword) - For Python
+! In  relaMecaPY       : mechanical part of behaviour - For Python
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
 ! Out algo_inte        : algorithm for integration of behaviour
 ! Out algo_inte_r      : identifier for algorithm for integration of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: iret
-    character(len=16) :: texte(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     algo_inte = ' '
     algo_inte_r = 0.d0
-    texte = (/' ', ' ', ' '/)
-!
+
 ! - Get ALGO_INTE
-!
-    call getvtx(keywf, 'ALGO_INTE', iocc=i_comp, scal=algo_inte, nbret=iret)
+    call getvtx(factorKeyword, 'ALGO_INTE', iocc=iFactorKeyword, scal=algo_inte, nbret=iret)
     if (iret .eq. 0) then
-        call lcalgo(rela_code_py, algo_inte)
+        call lcalgo(relaCompPY, algo_inte)
     else
-        call lctest(meca_code_py, 'ALGO_INTE', algo_inte, iret)
+        call lctest(relaMecaPY, 'ALGO_INTE', algo_inte, iret)
         if (iret .eq. 0) then
-            texte(1) = algo_inte
-            texte(2) = 'ALGO_INTE'
-            texte(3) = rela_comp
-            call utmess('F', 'COMPOR1_45', nk=3, valk=texte)
+            call utmess('F', 'COMPOR1_45', nk=3, valk=[algo_inte, 'ALGO_INTE', relaComp])
         end if
     end if
-!
+
 ! - Get ALGO_INTE - Plane stress
-!
-    if (plane_stress) then
-        if (rela_comp .eq. 'VMIS_ECMI_LINE' .or. rela_comp .eq. 'VMIS_ECMI_TRAC' .or. &
-            rela_comp .eq. 'VMIS_ISOT_LINE' .or. rela_comp .eq. 'VMIS_ISOT_TRAC') then
+    if (lPlaneStress) then
+        if (relaComp .eq. 'VMIS_ECMI_LINE' .or. relaComp .eq. 'VMIS_ECMI_TRAC' .or. &
+            relaComp .eq. 'VMIS_ISOT_LINE' .or. relaComp .eq. 'VMIS_ISOT_TRAC') then
             algo_inte = 'SECANTE'
         end if
     end if
-!
+
 ! - Convert name of algorithm to identifier
-!
     call utlcal('NOM_VALE', algo_inte, algo_inte_r)
 !
 end subroutine

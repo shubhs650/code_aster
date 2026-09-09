@@ -18,19 +18,17 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine fonoei(ds_thm, ndim, dt, fnoevo, dimdef, dimcon,&
-                      addeme,&
-                      addep1, addep2, addlh1, adcome,&
-                      adcp11, &
-                      adcop1, adcop2, congem,&
+    subroutine fonoei(ds_thm, &
+                      ndim, dimdef, dimcon, &
+                      addeme, &
+                      addep1, addep2, addlh1, adcome, &
+                      adcop1, adcop2, congem, &
                       r)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         integer(kind=8) :: dimcon
         integer(kind=8) :: dimdef
         integer(kind=8) :: ndim
-        real(kind=8) :: dt
-        aster_logical :: fnoevo
         integer(kind=8) :: addeme
         integer(kind=8) :: addep1
         integer(kind=8) :: addep2

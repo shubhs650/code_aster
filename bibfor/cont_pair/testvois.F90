@@ -27,11 +27,12 @@ subroutine testvois(jv_geom, elem_slav_type, &
 #include "asterfort/apcoor.h"
 #include "asterfort/aptype.h"
 #include "asterfort/prjint.h"
+#include "MeshTypes_type.h"
 #include "asterfort/dctest.h"
 !
     integer(kind=8), intent(in) :: jv_geom
     character(len=8), intent(in) :: elem_slav_type
-    real(kind=8), intent(in) :: elem_mast_coor(27)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code
     integer(kind=8), intent(in) :: elem_slav_nume
     real(kind=8), intent(in) :: pair_tole
@@ -60,12 +61,12 @@ subroutine testvois(jv_geom, elem_slav_type, &
 !
     integer(kind=8) :: i_elin_mast, i_node, i_elin_slav, i_dime
     integer(kind=8) :: elem_slav_nbnode, elem_dime
-    real(kind=8) :: elem_slav_coor(27)
+    real(kind=8) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8) :: elem_slav_code
     integer(kind=8) :: elin_slav_sub(1, 4), elin_mast_sub(1, 4)
     integer(kind=8) :: elin_slav_nbnode(1), elin_mast_nbnode(1)
     integer(kind=8) :: elin_slav_nbsub, elin_mast_nbsub
-    real(kind=8) :: elin_slav_coor(27), elin_mast_coor(27)
+    real(kind=8) :: elin_slav_coor(3, MT_NNOMAX2D), elin_mast_coor(3, MT_NNOMAX2D)
     character(len=8) :: elin_slav_code, elin_mast_code
     integer(kind=8) :: nb_poin_inte
     real(kind=8) :: ints_weight
@@ -101,28 +102,28 @@ subroutine testvois(jv_geom, elem_slav_type, &
 ! ----- Loop on linearized slave sub-elements
 !
         do i_elin_slav = 1, elin_slav_nbsub
-            elin_slav_coor(:) = 0.d0
+            elin_slav_coor = 0.d0
 !
 ! --------- Get coordinates for current linearized slave sub-element
 !
             do i_node = 1, elin_slav_nbnode(i_elin_slav)
                 do i_dime = 1, elem_dime
-                    elin_slav_coor(3*(i_node-1)+i_dime) = &
-                        elem_slav_coor(3*(elin_slav_sub(i_elin_slav, i_node)-1)+i_dime)
+                    elin_slav_coor(i_dime, i_node) = &
+                        elem_slav_coor(i_dime, elin_slav_sub(i_elin_slav, i_node))
                 end do
             end do
 !
 ! --------- Loop on linearized master sub-elements
 !
             do i_elin_mast = 1, elin_mast_nbsub
-                elin_mast_coor(:) = 0.d0
+                elin_mast_coor = 0.d0
 !
 ! ------------- Get coordinates for current linearized master sub-element
 !
                 do i_node = 1, elin_mast_nbnode(i_elin_mast)
                     do i_dime = 1, elem_dime
-                        elin_mast_coor(3*(i_node-1)+i_dime) = &
-                            elem_mast_coor(3*(elin_mast_sub(i_elin_mast, i_node)-1)+i_dime)
+                        elin_mast_coor(i_dime, i_node) = &
+                            elem_mast_coor(i_dime, elin_mast_sub(i_elin_mast, i_node))
                     end do
                 end do
 !

@@ -80,7 +80,7 @@ void Result::_setFieldBase(
     auto indexSymbName = _symbolicNamesOfFields->getIndexFromString( strip( symbName ) );
 
     if ( indexSymbName == 0 ) {
-        UTMESS( "F", "RESULT2_4" );
+        UTMESS( "F", "RESULT2_4", { strip( symbName ) } );
     }
 
     // Get internal index

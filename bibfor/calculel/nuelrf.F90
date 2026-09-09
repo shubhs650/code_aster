@@ -49,7 +49,7 @@ subroutine nuelrf(elrefe, nujni)
         elrefe .eq. 'TR1' .or. &
         elrefe .eq. 'SE2' .or. elrefe .eq. 'SE3' .or. elrefe .eq. 'SE4' .or. &
         elrefe .eq. 'PO1' .or. elrefe .eq. 'P18' .or. elrefe .eq. 'HE9' .or. &
-        elrefe .eq. 'PE7') then
+        elrefe .eq. 'H10' .or. elrefe .eq. 'PE7') then
         nujni = 2
     else if (elrefe .eq. 'CABPOU') then
         nujni = 92

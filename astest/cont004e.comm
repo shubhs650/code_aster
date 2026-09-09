@@ -1,0 +1,174 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# Copie of forma04a
+
+import os
+import os.path as osp
+
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI")
+
+# -- Parametres du calcul
+
+E = 20000.0
+nu = 0.3
+h = 2.0
+h_m = -1.0 * h
+R = 50.0
+
+# -- Lecture du maillage et affectation du modele, des chargements
+
+MA = LIRE_MAILLAGE(FORMAT="MED")
+
+MA = MODI_MAILLAGE(reuse=MA, MAILLAGE=MA, ORIE_PEAU=_F(GROUP_MA_PEAU=("CONT1", "CONT2")))
+
+MAT = DEFI_MATERIAU(ELAS=_F(E=E, NU=nu))
+
+CHMAT = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(GROUP_MA=("SPH_HAU", "SPH_BAS"), MATER=MAT))
+
+MO = AFFE_MODELE(
+    MAILLAGE=MA,
+    AFFE=_F(GROUP_MA=("SPH_HAU", "SPH_BAS"), PHENOMENE="MECANIQUE", MODELISATION="AXIS"),
+)
+
+CL = AFFE_CHAR_MECA(
+    MODELE=MO,
+    DDL_IMPO=(_F(GROUP_MA="A1A2", DX=0), _F(GROUP_MA="A2B2", DY=h_m), _F(GROUP_MA="A1B1", DY=h)),
+)
+
+RAMPE = DEFI_FONCTION(NOM_PARA="INST", VALE=(0, 0, 1, 1))
+
+# -- Definition du contact
+
+CONT = DEFI_CONT(
+    MODELE=MO,
+    ZONE=_F(
+        APPARIEMENT="MORTAR",
+        GROUP_MA_MAIT="CONT2",
+        GROUP_MA_ESCL="CONT1",
+        COEF_CONT=2000.0,
+        ALGO_CONT="LAGRANGIEN",
+        TYPE_APPA="FORCEBRUTE",
+    ),
+)
+
+TPS = DEFI_LIST_REEL(DEBUT=0, INTERVALLE=_F(JUSQU_A=1, NOMBRE=10))
+
+STNL = MECA_NON_LINE(
+    MODELE=MO,
+    CHAM_MATER=CHMAT,
+    EXCIT=_F(CHARGE=CL, FONC_MULT=RAMPE),
+    # CONTACT=_F(DEFINITION=CONT),
+    CONTACT=_F(
+        DEFINITION=CONT, ALGO_RESO_GEOM="POINT_FIXE", REAC_GEOM="AUTOMATIQUE", RESI_GEOM=1e-6
+    ),
+    COMPORTEMENT=_F(RELATION="ELAS"),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-8, ITER_GLOB_MAXI=40),
+    INCREMENT=_F(LIST_INST=TPS),
+    # SOLVEUR=_F(NPREC=12),
+)
+
+# -- Post-traitement
+
+STNL = CALC_CHAMP(
+    reuse=STNL, RESULTAT=STNL, CRITERES=("SIEQ_ELGA", "SIEQ_ELNO"), CONTRAINTE=("SIEF_ELNO")
+)
+
+
+STNL = CALC_CHAMP(reuse=STNL, RESULTAT=STNL, CONTRAINTE="SIEF_NOEU", CRITERES="SIEQ_NOEU")
+
+# -- Groupe de noeuds oriente depuis le centre de la zone de contact esclave
+
+MA = DEFI_GROUP(
+    reuse=MA,
+    MAILLAGE=MA,
+    CREA_GROUP_NO=_F(OPTION="NOEUD_ORDO", NOM="CONT_ord", GROUP_MA="CONT1", GROUP_NO_ORIG="C1"),
+)
+
+# -- Pression de contact extraite sur le bord oriente
+
+SIYY_abs = POST_RELEVE_T(
+    ACTION=_F(
+        OPERATION="EXTRACTION",
+        INTITULE="SIYY en fonction de ABSC_CURV",
+        RESULTAT=STNL,
+        NOM_CHAM="SIEF_NOEU",
+        INST=1.0,
+        GROUP_NO="CONT_ord",
+        NOM_CMP="SIYY",
+    )
+)
+
+IMPR_TABLE(TABLE=SIYY_abs)
+
+# -- Trace de la pression et de la solution analytique
+
+SIYY_f = RECU_FONCTION(TABLE=SIYY_abs, PARA_X="ABSC_CURV", PARA_Y="SIYY")
+
+V_ABSC = DEFI_LIST_REEL(DEBUT=0, INTERVALLE=_F(JUSQU_A=10, NOMBRE=100))
+
+
+# -- Pression de hertz et demi-largeur de contact
+
+p0 = -E / (pi * (1.0 - nu * nu)) * sqrt(2.0 * 2.0 * h / R)
+a = sqrt(R * h)
+
+PRES = FORMULE(VALE="p0*sqrt(1.0-(x/a)*(x/a))", p0=p0, a=a, NOM_PARA="x")
+
+PRES_sol = CALC_FONC_INTERP(FONCTION=PRES, LIST_PARA=V_ABSC, NOM_PARA="x")
+
+# -- Impressions des resultats
+
+IMPR_FONCTION(
+    FORMAT="XMGRACE",
+    PILOTE="",
+    UNITE=29,
+    COURBE=(_F(FONCTION=SIYY_f), _F(FONCTION=PRES_sol)),
+    TITRE="Pression de Hertz",
+    BORNE_X=(0, 20),
+    BORNE_Y=(-3000, 0),
+    GRILLE_X=1,
+    GRILLE_Y=500,
+    LEGENDE_X="Abscisse curviligne (mm)",
+    LEGENDE_Y="Pression (Mpa)",
+)
+
+# IMPR_RESU(FORMAT="MED", RESU=_F(RESULTAT=STNL))
+IMPR_RESU(FORMAT="MED", RESU=_F(RESULTAT=STNL, NOM_CHAM="DEPL"))
+
+# -- Validation des resultats
+
+TEST_RESU(
+    RESU=_F(
+        GROUP_NO="C1",
+        INST=1.0,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STNL,
+        NOM_CHAM="SIEF_NOEU",
+        NOM_CMP="SIYY",
+        VALE_CALC=-2781.5051267102886,
+        VALE_REFE=-2798.3286697476105,
+        CRITERE="RELATIF",
+        PRECISION=6.0e-2,
+    )
+)
+
+FIN()

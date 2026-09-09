@@ -23,7 +23,6 @@ subroutine calcop(option, listOptJvZ, resultIn, resultOut, listStoreJv, &
     use postComp_module
     implicit none
 !
-#include "asterc/getexm.h"
 #include "asterf_types.h"
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
@@ -42,7 +41,6 @@ subroutine calcop(option, listOptJvZ, resultIn, resultOut, listStoreJv, &
 #include "asterfort/exixfe.h"
 #include "asterfort/getelem.h"
 #include "asterfort/getvid.h"
-#include "asterfort/getvtx.h"
 #include "asterfort/indk16.h"
 #include "asterfort/infniv.h"
 #include "asterfort/isParallelMesh.h"
@@ -56,15 +54,11 @@ subroutine calcop(option, listOptJvZ, resultIn, resultOut, listStoreJv, &
 #include "asterfort/jexnom.h"
 #include "asterfort/medom1.h"
 #include "asterfort/pcptcc.h"
-#include "asterfort/reliem.h"
 #include "asterfort/rs_get_liststore.h"
 #include "asterfort/rs_get_model.h"
-#include "asterfort/rsadpa.h"
 #include "asterfort/rsexc1.h"
-#include "asterfort/rslesd.h"
 #include "asterfort/rsnoch.h"
 #include "asterfort/utmess.h"
-#include "asterfort/wkvect.h"
 #include "asterfort/xthpos.h"
 #include "jeveux.h"
 !

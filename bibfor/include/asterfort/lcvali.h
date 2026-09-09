@@ -15,24 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcvali(fami,   kpg,  ksp,  imate, materi, &
-                      compor, ndim, epsm, deps,  instam, &
-                      instap, codret)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: imate
-        character(len=8)  :: materi
-        character(len=16) :: compor(*)
-        integer(kind=8) :: ndim
-        real(kind=8) :: epsm(6)
-        real(kind=8) :: deps(6)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
-        integer(kind=8) :: codret
+    subroutine lcvali(materPara, &
+                      defoComp, epsm, deps, &
+                      instam, instap, codret)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: defoComp
+        real(kind=8), intent(in) :: deps(:), epsm(:)
+        real(kind=8), intent(in) :: instam, instap
+        integer(kind=8), intent(inout) :: codret
     end subroutine lcvali
 end interface

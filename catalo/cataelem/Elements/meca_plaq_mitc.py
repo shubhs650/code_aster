@@ -36,15 +36,7 @@ DDL_MECA = LocatedComponents(
     phys=PHY.DEPL_R,
     type="ELNO",
     diff=True,
-    components=(
-        ("EN1", ("DZ", "DRX", "DRY")),
-        ("EN2", ("DRX", "DRY", "PHI", "LAG_GV")),
-        ("EN3", ("DRX", "DRY")),
-    ),
-)
-
-CCACOQU = LocatedComponents(
-    phys=PHY.CACOQU_R, type="ELEM", components=("EP", "ALPHA", "BETA", "CTOR", "EXCENT", "INERTIE")
+    components=(("EN1", ("DZ", "DRX", "DRY")), ("EN2", ("DRX", "DRY"))),
 )
 
 CCAORIE = LocatedComponents(
@@ -139,10 +131,6 @@ EFORCNO = LocatedComponents(
 
 ENBSP_I = LocatedComponents(phys=PHY.NBSP_I, type="ELEM", components=("COQ_NCOU",))
 
-ENEU1_R = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X1",))
-
-ELNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELEM", components=("X[30]",))
-
 EGNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELGA", location="RIGI", components=("X[30]",))
 
 EGNEUT_R = LocatedComponents(phys=PHY.NEUT_R, type="ELGA", location="RIGI", components=("X[30]",))
@@ -192,15 +180,83 @@ MMATUUR = ArrayOfComponents(phys=PHY.MDEP_R, locatedComponents=DDL_MECA)
 MMATUNS = ArrayOfComponents(phys=PHY.MDNS_R, locatedComponents=DDL_MECA)
 
 
-class PLAQ_MITC(Element):
+class TemplateElement(Element):
     """Mechanics - Plate (Reissner -Mindlin Mixed Interpolation of Tensorial Components)"""
 
-    meshType = MT.QUAD9
-    nodes = (
-        SetOfNodes("EN1", (1, 2, 3, 4)),
-        SetOfNodes("EN2", (5, 6, 7, 8)),
-        SetOfNodes("EN3", (9,)),
+    calculs = (
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PERREUR, LC.CERROR),
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PCAMA_R, LC.CCAMASS),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELGA(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELGA.PDEPL_R, LC.EGDEP2D),
+                (OP.TOU_INI_ELGA.PDOMMAG, LC.EDOMGGA),
+                (OP.TOU_INI_ELGA.PEPSI_R, LC.EGPS2DR),
+                (OP.TOU_INI_ELGA.PGEOM_R, LC.EGGEO2D),
+                (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PSIEF_R, LC.EGIG2DR),
+                (OP.TOU_INI_ELGA.PSOUR_R, LC.ESOURCR),
+                (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELNO.PDOMMAG, LC.EDOMGNO),
+                (OP.TOU_INI_ELNO.PEPSI_R, LC.EEPS2DR),
+                (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
+                (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
+                (OP.TOU_INI_ELNO.PSIEF_R, LC.ESIG2DR),
+                (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
+        OP.SIEF_ELGA(
+            te=33,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLMITC),
+                (SP.PDEPLAR, DDL_MECA),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PMATERC, LC.CMATERC),
+                (OP.SIEF_ELGA.PNBSP_I, ENBSP_I),
+                (SP.PINSTR, LC.MTEMPSR),
+                (OP.SIEF_ELGA.PVARCPR, LC.ZVARCPG),
+                (SP.PVARCRR, LC.ZVARCPG),
+            ),
+            para_out=((SP.PCONTRC, LC.EGIG3DC), (OP.SIEF_ELGA.PCONTRR, LC.EGIG3DR)),
+        ),
+        OP.VERI_PLAN(
+            te=51,
+            para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PCHCKPR, LC.CCHCKPR)),
+            para_out=((OP.VERI_PLAN.PCODRET, LC.ECODRET), (OP.VERI_PLAN.PINDICR, LC.CINDICR)),
+        ),
+        OP.NSPG_NBVA(
+            te=496,
+            para_in=((OP.NSPG_NBVA.PCOMPOR, LC.CCOMPO2), (OP.NSPG_NBVA.PNBSP_I, ENBSP_I)),
+            para_out=((SP.PDCEL_I, LC.EDCEL_I),),
+        ),
     )
+
+
+class PLAQ_MITC_QUAD9(TemplateElement):
+
+    meshType = MT.QUAD9
+    nodes = (SetOfNodes("EN1", (1, 2, 3, 4)), SetOfNodes("EN2", (5, 6, 7, 8, 9)))
     elrefe = (
         ElrefeLoc(
             MT.QU9,
@@ -217,66 +273,10 @@ class PLAQ_MITC(Element):
         ElrefeLoc(MT.SE3, gauss=("RIGI=FPG4",)),
     )
     calculs = (
-        OP.TOU_INI_ELEM(
-            te=99,
-            para_out=(
-                (OP.TOU_INI_ELEM.PERREUR, LC.CERROR),
-                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
-                (OP.TOU_INI_ELEM.PNEUT_F, LC.CNTINIF),
-                (SP.PNEU1_R, LC.CNTINIR),
-            ),
-        ),
-        OP.TOU_INI_ELGA(
-            te=99,
-            para_out=(
-                (OP.TOU_INI_ELGA.PDEPL_R, LC.EGDEP2D),
-                (OP.TOU_INI_ELGA.PDOMMAG, LC.EDOMGGA),
-                (OP.TOU_INI_ELGA.PEPSI_R, LC.EGPS2DR),
-                (OP.TOU_INI_ELGA.PGEOM_R, LC.EGGEO2D),
-                (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
-                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
-                (OP.TOU_INI_ELGA.PSIEF_R, LC.EGIG2DR),
-                (OP.TOU_INI_ELGA.PSOUR_R, LC.ESOURCR),
-                (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
-            ),
-        ),
-        OP.TOU_INI_ELNO(
-            te=99,
-            para_out=(
-                (OP.TOU_INI_ELNO.PDOMMAG, LC.EDOMGNO),
-                (OP.TOU_INI_ELNO.PEPSI_R, LC.EEPS2DR),
-                (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
-                (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
-                (OP.TOU_INI_ELNO.PSIEF_R, LC.ESIG2DR),
-                (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
-            ),
-        ),
-        OP.SIEF_ELGA(
-            te=33,
-            para_in=(
-                (SP.PCACOQU, CCACOQU),
-                (SP.PDEPLAR, DDL_MECA),
-                (SP.PGEOMER, LC.EGEOM3D),
-                (SP.PMATERC, LC.CMATERC),
-                (OP.SIEF_ELGA.PNBSP_I, ENBSP_I),
-                (SP.PINSTR, LC.MTEMPSR),
-                (OP.SIEF_ELGA.PVARCPR, LC.ZVARCPG),
-                (SP.PVARCRR, LC.ZVARCPG),
-            ),
-            para_out=((SP.PCONTRC, LC.EGIG3DC), (OP.SIEF_ELGA.PCONTRR, LC.EGIG3DR)),
-        ),
-        OP.VERI_PLAN(
-            te=51,
-            para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PCHCKPR, LC.CCHCKPR)),
-            para_out=((OP.VERI_PLAN.PCODRET, LC.ECODRET), (OP.VERI_PLAN.PINDICR, LC.CINDICR)),
-        ),
         OP.RIGI_MECA(
             te=28,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLMITC),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PNBSP_I, ENBSP_I),
@@ -288,7 +288,7 @@ class PLAQ_MITC(Element):
         OP.CHAR_MECA_PRES_R(
             te=29,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLMITC),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PPRESSR, EPRESNO),
@@ -298,7 +298,7 @@ class PLAQ_MITC(Element):
         OP.CHAR_MECA_PRES_F(
             te=29,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLMITC),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PPRESSF, CPRESSF),
@@ -306,14 +306,54 @@ class PLAQ_MITC(Element):
             ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
-        OP.VERI_CARA_ELEM(
-            te=119,
-            para_in=((SP.PCACOQU, CCACOQU),),
-            para_out=((SP.PCODRET, LC.ECODRET), (SP.PINDICR, LC.CINDICR)),
+    )
+
+
+class PLAQ_MITC_TRIA6(TemplateElement):
+
+    meshType = MT.TRIA6
+    nodes = (SetOfNodes("EN1", (1, 2, 3)), SetOfNodes("EN2", (4, 5, 6)))
+    elrefe = (
+        ElrefeLoc(
+            MT.TR6, gauss=("RIGI=FPG3", "MASS=FPG7", "FPG1=FPG1"), mater=("RIGI", "MASS", "FPG1")
         ),
-        OP.NSPG_NBVA(
-            te=496,
-            para_in=((OP.NSPG_NBVA.PCOMPOR, LC.CCOMPO2), (OP.NSPG_NBVA.PNBSP_I, ENBSP_I)),
-            para_out=((SP.PDCEL_I, LC.EDCEL_I),),
+        ElrefeLoc(MT.SE3, gauss=("RIGI=FPG4",)),
+    )
+    calculs = (
+        OP.RIGI_MECA(
+            te=555,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLMITC),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PMATERC, LC.CMATERC),
+                (OP.RIGI_MECA.PNBSP_I, ENBSP_I),
+                (SP.PINSTR, LC.MTEMPSR),
+                (OP.RIGI_MECA.PVARCPR, LC.ZVARCPG),
+            ),
+            para_out=((SP.PMATUUR, MMATUUR),),
+        ),
+        OP.CHAR_MECA_PRES_R(
+            te=556,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLMITC),
+                (SP.PMATERC, LC.CMATERC),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSR, EPRESNO),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
+        ),
+        OP.CHAR_MECA_PRES_F(
+            te=556,
+            para_in=(
+                (SP.PCACOQU, LC.CSHLMITC),
+                (SP.PMATERC, LC.CMATERC),
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PPRESSF, CPRESSF),
+                (SP.PINSTR, LC.MTEMPSR),
+            ),
+            para_out=((SP.PVECTUR, MVECTUR),),
         ),
     )
+
+
+del TemplateElement

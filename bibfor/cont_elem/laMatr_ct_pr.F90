@@ -72,6 +72,7 @@ subroutine laMatr_ct_pr(parameters, geom, matr_cont, matr_fric)
     real(kind=8), pointer :: dfunc_dzeta(:, :, :) => null()
     blas_int :: b_dime, b_nb_dofs
     blas_int :: b_1, b_3, b_MAX_LAGA_DOFS
+    real(kind=8) :: weight_fp
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -79,6 +80,12 @@ subroutine laMatr_ct_pr(parameters, geom, matr_cont, matr_fric)
     b_1 = 1
     b_3 = 3
     l_print = ASTER_FALSE
+! - Weight for fixed point iteration
+    if (parameters%reso_geom == RESO_GEOM_NEWT) then
+        weight_fp = 1.0
+    else
+        weight_fp = 0.0
+    end if
 !
 ! - Large arrays allocated on the heap rather than on the stack
     allocate (dfunc_dzeta(3, MAX_LAGA_DOFS, MAX_LAGA_DOFS))
@@ -173,7 +180,7 @@ subroutine laMatr_ct_pr(parameters, geom, matr_cont, matr_fric)
 !
 !        term: -(lagr_c Dn^s[du], -v^m + v^s)
 !
-            coeff = -weight_sl_qp*lagr_c
+            coeff = -weight_fp*weight_sl_qp*lagr_c
             b_nb_dofs = to_blas_int(geom%nb_dofs)
             b_dime = to_blas_int(geom%elem_dime)
             call dgemm('N', 'T', b_nb_dofs, b_nb_dofs, b_dime, coeff, &

@@ -261,7 +261,7 @@ def meca_statique_ops(self, **args):
 
         # solve linear system
         diriBCs = disc_comp.getDirichletBC(phys_state.time_curr)
-        phys_state.primal_curr = linear_solver.solve(rhs, diriBCs)
+        phys_state.U = linear_solver.solve(rhs, diriBCs)
 
         _post_hooks(lin_operator, hooks)
         phys_state.commit()

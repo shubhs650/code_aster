@@ -1,0 +1,125 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+
+mesh = LIRE_MAILLAGE(UNITE=20)
+
+
+mesh = MODI_MAILLAGE(
+    reuse=mesh,
+    MAILLAGE=mesh,
+    ORIE_PEAU=_F(GROUP_MA_PEAU=("SURF_INT", "SURF_EXT", "LEFT", "BOTTOM")),
+)
+
+model0 = AFFE_MODELE(AFFE=_F(MODELISATION="AXIS", PHENOMENE="MECANIQUE", TOUT="OUI"), MAILLAGE=mesh)
+
+mater = DEFI_MATERIAU(ELAS=_F(E=100000.0, NU=0.4999))
+
+fieldmat = AFFE_MATERIAU(AFFE=_F(MATER=(mater,), TOUT="OUI"), MODELE=model0)
+
+cine = AFFE_CHAR_CINE(
+    MECA_IMPO=(_F(DX=0.0, GROUP_MA=("LEFT",)), _F(DY=0.0, GROUP_MA=("BOTTOM",))), MODELE=model0
+)
+
+load = AFFE_CHAR_MECA(
+    MODELE=model0,
+    PRES_REP=(_F(GROUP_MA=("SURF_INT",), PRES=300.0), _F(GROUP_MA=("SURF_EXT",), PRES=150.0)),
+)
+
+reslin = MECA_STATIQUE(
+    CHAM_MATER=fieldmat,
+    EXCIT=(_F(CHARGE=cine), _F(CHARGE=load)),
+    INST=1.0,
+    MODELE=model0,
+    OPTION="SIEF_ELGA",
+)
+
+reslin = CALC_CHAMP(
+    reuse=reslin,
+    CRITERES=("SIEQ_NOEU", "SIEQ_ELGA"),
+    CONTRAINTE=("SIGM_ELGA", "SIGM_NOEU"),
+    DEFORMATION=("EPSI_ELGA"),
+    RESULTAT=reslin,
+)
+
+
+# COORDONNEES DES POINTS DE GAUSS
+
+COOR = CALC_CHAM_ELEM(MODELE=model0, OPTION="COOR_ELGA")
+
+X, _ = COOR.getValuesWithDescription("X", ["SURFACE"])
+Y, _ = COOR.getValuesWithDescription("Y", ["SURFACE"])
+
+SIGMA = reslin.getField("SIGM_ELGA", para="INST", value=1.0)
+
+SIXX, _ = SIGMA.getValuesWithDescription("SIXX", ["SURFACE"])
+SIYY, _ = SIGMA.getValuesWithDescription("SIYY", ["SURFACE"])
+SIZZ, _ = SIGMA.getValuesWithDescription("SIZZ", ["SURFACE"])
+SIXY, _ = SIGMA.getValuesWithDescription("SIXY", ["SURFACE"])
+
+assert len(SIXX) == len(X), f"{len(SIXX)} vs {len(X)}"
+
+tab = CREA_TABLE(
+    LISTE=(
+        _F(PARA="R", LISTE_R=X),
+        _F(PARA="Z", LISTE_R=Y),
+        _F(PARA="S_RR", LISTE_R=SIXX),
+        _F(PARA="S_ZZ", LISTE_R=SIYY),
+        _F(PARA="S_TT", LISTE_R=SIZZ),
+        _F(PARA="S_RZ", LISTE_R=SIXY),
+    )
+)
+
+# ============================================================
+# EXPORT DANS UN FICHIER TEXTE (colonnes demandées)
+# ============================================================
+
+IMPR_TABLE(TABLE=tab, UNITE=81, FORMAT="TABLEAU")
+
+TEST_RESU(
+    RESU=(
+        _F(
+            RESULTAT=reslin,
+            INST=1.0,
+            NOM_CHAM="SIEQ_ELGA",
+            NOM_CMP="TRSIG",
+            TYPE_TEST="MAX",
+            REFERENCE="ANALYTIQUE",
+            VALE_CALC=5747.5488167289805,
+            VALE_REFE=-449.54954955,
+            PRECISION=14.0,
+        ),
+        _F(
+            RESULTAT=reslin,
+            INST=1.0,
+            NOM_CHAM="SIEQ_ELGA",
+            NOM_CMP="TRSIG",
+            TYPE_TEST="MIN",
+            REFERENCE="ANALYTIQUE",
+            VALE_CALC=-4727.469094330167,
+            VALE_REFE=-449.54954955,
+            PRECISION=10.0,
+        ),
+    )
+)
+
+
+FIN()

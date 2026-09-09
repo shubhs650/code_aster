@@ -1,0 +1,203 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+#
+
+POURSUITE(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), IMPR_MACRO="NON")
+
+IMPR_RESU(
+    FORMAT="MED",
+    UNITE=81,
+    RESU=(
+        _F(
+            RESULTAT=RESU_C1,
+            IMPR_NOM_VARI="NON",
+            GROUP_MA=("CRAYON", "T_GUIDE"),
+            NOM_CHAM="VARI_ELGA",
+            INST=33.008,
+            CARA_ELEM=RESU_C1.getElementaryCharacteristics(),
+        ),
+        _F(
+            RESULTAT=RESU_C1,
+            IMPR_NOM_VARI="NON",
+            GROUP_MA=(
+                "EBOSUP",
+                "EBOINF",
+                "ELA",
+                "RIG",
+                "DIL",
+                "GRIL_I",
+                "GRIL_E",
+                "MAINTIEN",
+                "RES_TOT",
+                "CREI",
+            ),
+            NOM_CHAM="VARI_ELGA",
+            INST=33.008,
+        ),
+    ),
+)
+
+TAB4 = POST_MAC3COEUR(
+    RESULTAT=RESU_C1,
+    TYPE_COEUR="TEST",
+    INST=t9,
+    TABLE=DATAMAC,
+    TYPE_CALCUL="DEFORMATION",
+    OPERATION="ANALYSE",
+)
+
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxGravCoeur",
+    VALE_CALC=0.93011794441988,
+    VALE_REFE=0.93011794441988,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxRhoCoeur",
+    VALE_CALC=3.18288082639214,
+    VALE_REFE=3.18288082639214,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="moyGravCoeur",
+    VALE_CALC=0.29571420130380804,
+    VALE_REFE=0.29571420130380804,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="moyRhoCoeur",
+    VALE_CALC=0.96477932300438,
+    VALE_REFE=0.96477932300438,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="sigGravCoeur",
+    VALE_CALC=0.38174053905196453,
+    VALE_REFE=0.38174053905196453,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maRAFA3GL_N4",
+    VALE_CALC=3.18288082639214,
+    VALE_REFE=3.18288082639214,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="moRAFA3GL_N4",
+    VALE_CALC=0.96477932300438,
+    VALE_REFE=0.96477932300438,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maGAFA3GL_N4",
+    VALE_CALC=0.93011794441988,
+    VALE_REFE=0.93011794441988,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="moGAFA3GL_N4",
+    VALE_CALC=0.29571420130380804,
+    VALE_REFE=0.29571420130380804,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille2",
+    VALE_CALC=1.37793937954018,
+    VALE_REFE=1.37793937954018,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille3",
+    VALE_CALC=2.93512357615963,
+    VALE_REFE=2.93512357615963,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille4",
+    VALE_CALC=3.16271231586764,
+    VALE_REFE=3.16271231586764,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille5",
+    VALE_CALC=3.18288082639214,
+    VALE_REFE=3.18288082639214,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille6",
+    VALE_CALC=3.16997310134113,
+    VALE_REFE=3.16997310134113,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille7",
+    VALE_CALC=3.13236415552215,
+    VALE_REFE=3.13236415552215,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille8",
+    VALE_CALC=3.09777900657879,
+    VALE_REFE=3.09777900657879,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+TEST_TABLE(
+    TABLE=TAB4,
+    NOM_PARA="maxDeplGrille9",
+    VALE_CALC=1.40695871538663,
+    VALE_REFE=1.40695871538663,
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+
+FIN()

@@ -20,7 +20,7 @@
 !
 subroutine nmfi3d(BEHInteg, typmod, &
                   nno, nddl, npg, lgpg, wref, &
-                  vff, dfde, mate, option, geom, &
+                  vff, dfde, option, geom, &
                   deplm, ddepl, sigm, sigp, fint, &
                   ktan, vim, vip, carcri, compor, &
                   matsym, coopg, tm, tp, lMatr, &
@@ -28,10 +28,8 @@ subroutine nmfi3d(BEHInteg, typmod, &
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
-#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
@@ -41,8 +39,8 @@ subroutine nmfi3d(BEHInteg, typmod, &
 #include "asterfort/r8inir.h"
 #include "blas/ddot.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
-    integer(kind=8) :: nno, nddl, npg, lgpg, mate, codret
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8) :: nno, nddl, npg, lgpg, codret
     real(kind=8) :: wref(npg), vff(nno, npg), dfde(2, nno, npg)
     real(kind=8) :: geom(nddl), deplm(nddl), ddepl(nddl), tm, tp
     real(kind=8) :: fint(nddl), ktan(*), coopg(4, npg)
@@ -66,7 +64,6 @@ subroutine nmfi3d(BEHInteg, typmod, &
 ! IN  WREF   POIDS DE REFERENCE DES POINTS DE GAUSS
 ! IN  VFF    VALEUR DES FONCTIONS DE FORME (DE LA FACE)
 ! IN  DFDE   DERIVEE DES FONCTIONS DE FORME (DE LA FACE)
-! IN  MATE   MATERIAU CODE
 ! IN  OPTION OPTION DE CALCUL
 ! IN  GEOM   COORDONNEES DES NOEUDS
 ! IN  DEPLM  DEPLACEMENTS NODAUX AU DEBUT DU PAS DE TEMPS
@@ -85,13 +82,11 @@ subroutine nmfi3d(BEHInteg, typmod, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: ksp = 1
-    integer(kind=8), parameter :: ndim = 3
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=16), parameter :: multComp = " "
+    integer(kind=8), parameter :: ksp = 1, ndim = 3
     integer(kind=8) :: cod(9), ni, mj, kk, p, q, kpg, n
     real(kind=8) :: b(3, 60), sigmo(6), sigma(6)
     real(kind=8) :: sum(3), dsu(3), dsidep(6, 6), poids
-    real(kind=8) :: angmas(3)
     blas_int :: b_incx, b_incy, b_n
 !
 ! --------------------------------------------------------------------------------------------------
@@ -99,10 +94,6 @@ subroutine nmfi3d(BEHInteg, typmod, &
     sum = 0.d0
     dsu = 0.d0
     cod = 0
-
-! - Don't use orientation (MASSIF in AFFE_CARA_ELEM)
-    angmas = r8vide()
-!
     if (lVect) then
         fint = 0.d0
     end if
@@ -154,8 +145,8 @@ subroutine nmfi3d(BEHInteg, typmod, &
         end if
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
-        BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:3) = coopg(1:3, kpg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
+        BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:3) = coopg(1:3, kpg)
 
 ! ----- Integrator
         sigmo = 0.d0
@@ -163,14 +154,17 @@ subroutine nmfi3d(BEHInteg, typmod, &
             sigmo(n) = sigm(n, kpg)
         end do
         sigma = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, tm, tp, &
-                    3, sum, dsu, 3, sigmo, &
-                    vim(1, kpg), option, angmas, &
-                    sigma, vip(1, kpg), 36, dsidep, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    tm, tp, &
+                    compor, carcri, multComp, &
+                    3, sum, dsu, &
+                    3, sigmo, &
+                    vim(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    36, dsidep, cod(kpg))
         if (cod(kpg) .eq. 1) goto 900
-!
+
 ! ----- Stresses
         if (lSigm) then
             do n = 1, 3
@@ -180,6 +174,7 @@ subroutine nmfi3d(BEHInteg, typmod, &
 
 ! ----- Internal forces
         if (lVect) then
+!       Il faudrait séparer les deux => petit travail de réflexion
             ASSERT(lSigm)
             do ni = 1, nddl
                 b_n = to_blas_int(3)

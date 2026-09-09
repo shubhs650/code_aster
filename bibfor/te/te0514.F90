@@ -18,6 +18,8 @@
 !
 subroutine te0514(option, nomte)
     implicit none
+#include "MeshTypes_type.h"
+#include "FE_module.h"
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterc/r8prem.h"
@@ -78,7 +80,7 @@ subroutine te0514(option, nomte)
     real(kind=8) :: nmil(3, 7), txlsn(28), ainter(ptmaxi*zintmx), rainter(4)
     real(kind=8) :: newpt(3), p(3), lonref, pinter(3*ptmaxi), lsn(3)
     real(kind=8) :: pmilie(3*pmmaxi), heav(nsemax*nfimax), u(3), v(3), normal(3)
-    real(kind=8) :: xg(3), cridist, xref(81), ff(27), ptref(3), norme
+    real(kind=8) :: xg(3), cridist, xref(3*MT_NNOMAX3D), ff(MAX_BS_CG), ptref(3), norme
     integer(kind=8) :: fisco(2*nfimax), fisc(2*nfimax), coupe(nfimax), zxain, ai, nnos
     parameter(ninmax=44, nmmax=264)
 !

@@ -132,7 +132,13 @@ for k in range(1, NB_PAS + 1):
     if k == 1:
         # 2.1.1 Projection du champ de temperature definit sur le maillage thermique
         #      sur le maillage mecanique
-        a = PROJ_CHAMP(METHODE="AUTO", RESULTAT=THER0, MAILLAGE_1=MAIL_THE, MAILLAGE_2=MAIL_MEC)
+        a = PROJ_CHAMP(
+            METHODE="AUTO",
+            RESULTAT=THER0,
+            MAILLAGE_1=MAIL_THE,
+            MAILLAGE_2=MAIL_MEC,
+            NOM_CHAM="TEMP",
+        )
 
         # 2.1.2 Utilisation AFFE_VARC pour la dependance des parametres materiaux
         #      vis a vis de la temperature

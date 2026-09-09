@@ -23,8 +23,9 @@ interface
                       kappa , vech1 , vech2 , h     ,&
                       mprt11, mprt12, mprt21, mprt22,&
                       matrme)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: ndim, nnm, nne
-        real(kind=8), intent(in) :: wpg, ffe(9), ddffm(3,9)
+        real(kind=8), intent(in) :: wpg, ffe(9), ddffm(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: jacobi, coefac, coefff, jeu, dlagrc
         real(kind=8), intent(in) :: mprt11(3,3), mprt22(3,3), mprt21(3,3), mprt12(3,3)
         real(kind=8), intent(in) :: kappa(2,2), vech1(3), vech2(3), h(2,2)

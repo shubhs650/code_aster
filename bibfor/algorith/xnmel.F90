@@ -17,37 +17,36 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine xnmel(nnop, nfh, nfe, ddlc, &
-                 ddlm, igeom, typmod, option, imate, &
-                 compor, lgpg, carcri, jpintt, cnset, &
-                 heavt, lonch, basloc, instam, instap, idepl, lsn, &
-                 lst, sig, vi, matuu, ivectu, &
-                 codret, jpmilt, nfiss, jheavn, jstno, &
-                 l_line, l_nonlin, lMatr, lVect, lSigm)
+subroutine xnmel(materPara, typmod, &
+                 nnop, nfh, nfe, &
+                 ddlc, ddlm, jvGeom, &
+                 lgpg, jpintt, cnset, &
+                 heavt, lonch, basloc, &
+                 lsn, lst, &
+                 matuu, &
+                 jpmilt, nfiss, jheavn, jstno)
 !
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/iselli.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/tecach.h"
 #include "asterfort/xxnmel.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: nnop, imate, lgpg, codret, igeom, nfiss, jheavn
+    type(Material_Para), intent(inout) :: materPara
+    character(len=8), intent(in) :: typmod(2)
+    integer(kind=8) :: nnop, lgpg, jvGeom, nfiss, jheavn
     integer(kind=8) :: cnset(4*32), heavt(*), lonch(10), ndim
     integer(kind=8) :: nfh, nfe, ddlc, ddlm
-    integer(kind=8) :: ivectu, idepl, jpintt, jpmilt
-    integer(kind=8) :: jstno
-    character(len=8) :: typmod(*)
-    character(len=16) :: option, compor(*)
-    real(kind=8) :: instam, instap
-    real(kind=8) :: carcri(*), vi(*), crit2(1), vi2(1), sig2(1)
+    integer(kind=8) :: jpintt, jpmilt, jstno
     real(kind=8) :: lsn(nnop)
-    real(kind=8) :: lst(nnop), matuu(*), sig(*), basloc(*)
-    aster_logical, intent(in) :: l_line, l_nonlin, lMatr, lVect, lSigm
+    real(kind=8) :: lst(nnop), matuu(*), basloc(*)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -63,14 +62,8 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
 ! IN  DDLC    : NOMBRE DE DDL DE CONTACT (PAR NOEUD)
 ! IN  DDLM    : NOMBRE DE DDL PAR NOEUD MILIEU
 ! IN  IGEOM   : COORDONEES DES NOEUDS
-! IN  TYPMOD  : TYPE DE MODELISATION
-! IN  OPTION  : OPTION DE CALCUL
-! IN  NOMTE   : NOM DU TE
-! IN  IMATE   : MATERIAU CODE
-! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG  : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !              CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
-! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
 ! IN  PINTT   : COORDONNÉES DES POINTS D'INTERSECTION
 ! IN  CNSET   : CONNECTIVITE DES SOUS-ELEMENTS
 ! IN  HEAVT   : VALEURS DE L'HEAVISIDE SUR LES SS-ELTS
@@ -92,8 +85,7 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
 !
     character(len=8) :: elrefp, fami_se
     real(kind=8) :: coorse(81), he(nfiss)
-    integer(kind=8) :: nse, npg
-    integer(kind=8) :: nnops, ibid, ibid2
+    integer(kind=8) :: nse, npg, nnops
     integer(kind=8) :: j, ise, in, ino, idebs, idebv
     integer(kind=8) :: nbsig, idecpg, jtab(7), ncomp, iret
     integer(kind=8) :: ncompn, heavn(nnop, 5)
@@ -109,8 +101,7 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
     call elref1(elrefp)
 !
 !     NOMBRE DE COMPOSANTES DE PHEAVTO (DANS LE CATALOGUE)
-    call tecach('OOO', 'PHEAVTO', 'L', iret, nval=2, &
-                itab=jtab)
+    call tecach('OOO', 'PHEAVTO', 'L', iret, nval=2, itab=jtab)
     ncomp = jtab(2)
 !
 !     ELEMENT DE REFERENCE PARENT : RECUP DE NDIM
@@ -132,9 +123,8 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
             fami_se = 'XGEO'
         end if
     end if
-!
+
 ! - Get element parameters
-!
     call elrefe_info(elrefe=elrese(ndim+irese), fami=fami_se, nno=nno, npg=npg)
 !
 !     NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
@@ -161,16 +151,13 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
             ino = cnset(nno*(ise-1)+in)
             do j = 1, ndim
                 if (ino .lt. 1000) then
-                    coorse(ndim*(in-1)+j) = zr(igeom-1+ndim*(ino-1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jvGeom-1+ndim*(ino-1)+j)
                 else if (ino .gt. 1000 .and. ino .lt. 2000) then
-                    coorse(ndim*(in-1)+j) = zr(jpintt-1+ndim*(ino-1000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpintt-1+ndim*(ino-1000-1)+j)
                 else if (ino .gt. 2000 .and. ino .lt. 3000) then
-                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-2000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-2000-1)+j)
                 else if (ino .gt. 3000) then
-                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-3000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-3000-1)+j)
                 end if
             end do
         end do
@@ -191,27 +178,13 @@ subroutine xnmel(nnop, nfh, nfe, ddlc, &
             ASSERT(nbsig .eq. 4)
         end if
 !
-        if (l_line) then
-            call xxnmel(elrefp, elrese(ndim+irese), ndim, coorse, &
-                        igeom, he, nfh, ddlc, ddlm, &
-                        nnops, nfe, basloc, nnop, npg, &
-                        typmod, option, imate, compor, lgpg, &
-                        crit2, instam, instap, ibid, lsn, lst, idecpg, &
-                        sig2, vi2, matuu, ibid2, codret, &
-                        nfiss, heavn, jstno, &
-                        l_line, l_nonlin, lMatr, lVect, lSigm)
-        elseif (l_nonlin) then
-            call xxnmel(elrefp, elrese(ndim+irese), ndim, coorse, &
-                        igeom, he, nfh, ddlc, ddlm, &
-                        nnops, nfe, basloc, nnop, npg, &
-                        typmod, option, imate, compor, lgpg, &
-                        carcri, instam, instap, idepl, lsn, lst, idecpg, &
-                        sig(idebs+1), vi(idebv+1), matuu, ivectu, codret, &
-                        nfiss, heavn, jstno, &
-                        l_line, l_nonlin, lMatr, lVect, lSigm)
-        else
-            ASSERT(ASTER_FALSE)
-        end if
+        call xxnmel(typmod, materPara, &
+                    elrefp, elrese(ndim+irese), ndim, coorse, &
+                    jvGeom, he, nfh, ddlc, ddlm, &
+                    nnops, nfe, basloc, nnop, npg, &
+                    lsn, lst, idecpg, &
+                    matuu, &
+                    nfiss, heavn, jstno)
     end do
 !
 end subroutine

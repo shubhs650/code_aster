@@ -15,16 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_meca_incr(rela_comp, defo_comp, type_comp, l_etat_init)
-        character(len=16), intent(in) :: rela_comp
-        character(len=16), intent(in) :: defo_comp
-        character(len=16), intent(out) :: type_comp
-        aster_logical, optional, intent(in) :: l_etat_init
+    subroutine comp_meca_incr(lInitialState, relaComp, defoComp, typeComp)
+        aster_logical, intent(in) :: lInitialState
+        character(len=16), intent(in) :: relaComp, defoComp
+        character(len=16), intent(out) :: typeComp
     end subroutine comp_meca_incr
 end interface

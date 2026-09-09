@@ -15,22 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine getnode(mesh   , keywordfact, iocc, stop_void, list_node, &
-                       nb_node, model      , suffix, elem_excl)
+    subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
+                       nb_node, modelZ_, suffixZ_, elem_excl)
         character(len=8), intent(in) :: mesh
         character(len=16), intent(in) :: keywordfact
         integer(kind=8), intent(in) :: iocc
         character(len=1), intent(in) :: stop_void
         integer(kind=8), intent(out) :: nb_node
         character(len=24), intent(in) :: list_node
-        character(len=8), intent(in), optional :: model
-        character(len=*), intent(in), optional :: suffix
+        character(len=*), intent(in), optional :: modelZ_, suffixZ_
         aster_logical, intent(in), optional :: elem_excl
     end subroutine getnode
 end interface

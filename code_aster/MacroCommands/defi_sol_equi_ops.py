@@ -750,7 +750,7 @@ def defi_sol_equi_ops(self, INFO=None, **args):
         MATERIAU = args["MATERIAU"]
         l_mate = []
         for Mi in MATERIAU:
-            dM = Mi.cree_dict_valeurs(Mi.mc_liste)
+            dM = Mi
             l_mate.append(dM)
         nbmat = len(l_mate)
 
@@ -758,7 +758,7 @@ def defi_sol_equi_ops(self, INFO=None, **args):
         COUCHE = args["COUCHE"]
         l_couche = []
         for Ci in COUCHE:
-            dC = Ci.cree_dict_valeurs(Ci.mc_liste)
+            dC = Ci
             l_couche.append(dC)
         NCOU = len(l_couche) - 1
 

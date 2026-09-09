@@ -18,16 +18,15 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmiclb(fami, kpg, ksp, option, rela_comp,&
-                      imate, xlong0, aire, tmoins, tplus,&
-                      dlong0, effnom, vim, effnop, vip,&
-                      klv, fono, epsm, carcri, codret)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: option
-        character(len=16) :: rela_comp
-        integer(kind=8) :: imate
+    subroutine nmiclb(materPara, &
+                      option, relaComp, carcri, &
+                      xlong0, aire, tmoins, tplus, &
+                      dlong0, effnom, vim, effnop, vip, &
+                      klv, fono, epsm, codret)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: option, relaComp
+        real(kind=8) :: carcri(CARCRI_SIZE)
         real(kind=8) :: xlong0
         real(kind=8) :: aire
         real(kind=8) :: tmoins
@@ -40,7 +39,6 @@ interface
         real(kind=8) :: klv(21)
         real(kind=8) :: fono(6)
         real(kind=8) :: epsm
-        real(kind=8) :: carcri(CARCRI_SIZE)
         integer(kind=8) :: codret
     end subroutine nmiclb
 end interface

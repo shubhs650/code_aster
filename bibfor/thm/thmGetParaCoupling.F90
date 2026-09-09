@@ -15,18 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine thmGetParaCoupling(ds_thm, j_mater, temp)
 !
+subroutine thmGetParaCoupling(ds_thm, temp)
+!
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvala.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
     real(kind=8), intent(in) :: temp
 !
 ! --------------------------------------------------------------------------------------------------
@@ -38,146 +38,156 @@ subroutine thmGetParaCoupling(ds_thm, j_mater, temp)
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
-! In  j_mater          : coded material address
 ! In  temp             : current temperature
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_para_l1 = 4
-    real(kind=8) :: para_vale_l1(nb_para_l1)
-    integer(kind=8) :: icodre_l1(nb_para_l1)
-    character(len=16), parameter :: para_name_l1(nb_para_l1) = (/'RHO        ', 'UN_SUR_K   ', &
-                                                                 'VISC       ', 'D_VISC_TEMP'/)
-    integer(kind=8), parameter :: nb_para_l2 = 6
-    real(kind=8) :: para_vale_l2(nb_para_l2)
-    integer(kind=8) :: icodre_l2(nb_para_l2)
-    character(len=16), parameter :: para_name_l2(nb_para_l2) = (/'RHO        ', 'UN_SUR_K   ', &
-                                                                 'ALPHA      ', 'CP         ', &
-                                                                 'VISC       ', 'D_VISC_TEMP'/)
-    integer(kind=8), parameter :: nb_para_g1 = 3
-    real(kind=8) :: para_vale_g1(nb_para_g1)
-    integer(kind=8) :: icodre_g1(nb_para_g1)
-    character(len=16), parameter :: para_name_g1(nb_para_g1) = (/'MASS_MOL   ', &
-                                                                 'VISC       ', 'D_VISC_TEMP'/)
-    integer(kind=8), parameter :: nb_para_g2 = 4
-    real(kind=8) :: para_vale_g2(nb_para_g2)
-    integer(kind=8) :: icodre_g2(nb_para_g2)
-    character(len=16), parameter :: para_name_g2(nb_para_g2) = (/'MASS_MOL   ', 'CP         ', &
-                                                                 'VISC       ', 'D_VISC_TEMP'/)
-    integer(kind=8), parameter :: nb_para_s = 4
-    real(kind=8) :: para_vale_s(nb_para_s)
-    integer(kind=8) :: icodre_s(nb_para_s)
-    character(len=16), parameter :: para_name_s(nb_para_s) = (/'MASS_MOL   ', 'CP         ', &
-                                                               'VISC       ', 'D_VISC_TEMP'/)
-    integer(kind=8), parameter :: nb_para_ad = 2
-    real(kind=8) :: para_vale_ad(nb_para_ad)
-    integer(kind=8) :: icodre_ad(nb_para_ad)
-    character(len=16), parameter :: para_name_ad(nb_para_ad) = (/'COEF_HENRY ', 'CP         '/)
-    integer(kind=8), parameter :: nb_para_s1 = 1
-    real(kind=8) :: para_vale_s1(nb_para_s1)
-    integer(kind=8) :: icodre_s1(nb_para_s1)
-    character(len=16), parameter :: para_name_s1(nb_para_s1) = (/'RHO        '/)
-    integer(kind=8), parameter :: nb_para_s2 = 2
-    real(kind=8) :: para_vale_s2(nb_para_s2)
-    integer(kind=8) :: icodre_s2(nb_para_s2)
-    character(len=16), parameter :: para_name_s2(nb_para_s2) = (/'RHO        ', 'R_GAZ      '/)
-    integer(kind=8), parameter :: nb_para_s3 = 1
-    real(kind=8) :: para_vale_s3(nb_para_s3)
-    integer(kind=8) :: icodre_s3(nb_para_s3)
-    character(len=16), parameter :: para_name_s3(nb_para_s3) = (/'CP         '/)
+    integer(kind=8), parameter :: nbPropL1 = 4
+    real(kind=8) :: propValeL1(nbPropL1)
+    integer(kind=8) :: propCodeL1(nbPropL1)
+    character(len=16), parameter :: propNameL1(nbPropL1) = (/'RHO        ', 'UN_SUR_K   ', &
+                                                             'VISC       ', 'D_VISC_TEMP'/)
+    integer(kind=8), parameter :: nbPropL2 = 6
+    real(kind=8) :: propValeL2(nbPropL2)
+    integer(kind=8) :: propCodeL2(nbPropL2)
+    character(len=16), parameter :: propNameL2(nbPropL2) = (/'RHO        ', 'UN_SUR_K   ', &
+                                                             'ALPHA      ', 'CP         ', &
+                                                             'VISC       ', 'D_VISC_TEMP'/)
+    integer(kind=8), parameter :: nbPropG1 = 3
+    real(kind=8) :: propValeG1(nbPropG1)
+    integer(kind=8) :: propCodeG1(nbPropG1)
+    character(len=16), parameter :: propNameG1(nbPropG1) = (/'MASS_MOL   ', &
+                                                             'VISC       ', 'D_VISC_TEMP'/)
+    integer(kind=8), parameter :: nbPropG2 = 4
+    real(kind=8) :: propValeG2(nbPropG2)
+    integer(kind=8) :: propCodeG2(nbPropG2)
+    character(len=16), parameter :: propNameG2(nbPropG2) = (/'MASS_MOL   ', 'CP         ', &
+                                                             'VISC       ', 'D_VISC_TEMP'/)
+    integer(kind=8), parameter :: nbPropS = 4
+    real(kind=8) :: propValeS(nbPropS)
+    integer(kind=8) :: propCodeS(nbPropS)
+    character(len=16), parameter :: propNameS(nbPropS) = (/'MASS_MOL   ', 'CP         ', &
+                                                           'VISC       ', 'D_VISC_TEMP'/)
+    integer(kind=8), parameter :: nbPropAd = 2
+    real(kind=8) :: propValeAd(nbPropAd)
+    integer(kind=8) :: propCodeAd(nbPropAd)
+    character(len=16), parameter :: propNameAd(nbPropAd) = (/'COEF_HENRY ', 'CP         '/)
+    integer(kind=8), parameter :: nbPropS1 = 1
+    real(kind=8) :: propValeS1(nbPropS1)
+    integer(kind=8) :: propCodeS1(nbPropS1)
+    character(len=16), parameter :: propNameS1(nbPropS1) = (/'RHO        '/)
+    integer(kind=8), parameter :: nbPropS2 = 2
+    real(kind=8) :: propValeS2(nbPropS2)
+    integer(kind=8) :: propCodeS2(nbPropS2)
+    character(len=16), parameter :: propNameS2(nbPropS2) = (/'RHO        ', 'R_GAZ      '/)
+    integer(kind=8), parameter :: nbPropS3 = 1
+    real(kind=8) :: propValeS3(nbPropS3)
+    integer(kind=8) :: propCodeS3(nbPropS3)
+    character(len=16), parameter :: propNameS3(nbPropS3) = (/'CP         '/)
+    integer(kind=8) :: jvMaterCode
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    para_vale_l1(:) = 0.d0
-    para_vale_l2(:) = 0.d0
-    para_vale_g1(:) = 0.d0
-    para_vale_g2(:) = 0.d0
-    para_vale_s(:) = 0.d0
-    para_vale_ad(:) = 0.d0
-    para_vale_s1(:) = 0.d0
-    para_vale_s2(:) = 0.d0
+    jvMaterCode = ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode
+    propValeL1 = 0.d0
+    propValeL2 = 0.d0
+    propValeG1 = 0.d0
+    propValeG2 = 0.d0
+    propValeS = 0.d0
+    propValeAd = 0.d0
+    propValeS1 = 0.d0
+    propValeS2 = 0.d0
 !
     if (ds_thm%ds_material%l_liquid) then
         if (ds_thm%ds_behaviour%l_temp) then
-            call rcvala(j_mater, ' ', 'THM_LIQU', &
+            call rcvala(jvMaterCode, &
+                        ' ', 'THM_LIQU', &
                         1, 'TEMP', [temp], &
-                        nb_para_l2, para_name_l2, para_vale_l2, &
-                        icodre_l2, 1, nan='NON')
-            ds_thm%ds_material%liquid%rho = para_vale_l2(1)
-            ds_thm%ds_material%liquid%unsurk = para_vale_l2(2)
-            ds_thm%ds_material%liquid%alpha = para_vale_l2(3)
-            ds_thm%ds_material%liquid%cp = para_vale_l2(4)
-            ds_thm%ds_material%liquid%visc = para_vale_l2(5)
-            ds_thm%ds_material%liquid%dvisc_dtemp = para_vale_l2(6)
+                        nbPropL2, propNameL2, propValeL2, &
+                        propCodeL2, 1, nan='NON')
+            ds_thm%ds_material%liquid%rho = propValeL2(1)
+            ds_thm%ds_material%liquid%unsurk = propValeL2(2)
+            ds_thm%ds_material%liquid%alpha = propValeL2(3)
+            ds_thm%ds_material%liquid%cp = propValeL2(4)
+            ds_thm%ds_material%liquid%visc = propValeL2(5)
+            ds_thm%ds_material%liquid%dvisc_dtemp = propValeL2(6)
         else
-            call rcvala(j_mater, ' ', 'THM_LIQU', &
+            call rcvala(jvMaterCode, &
+                        ' ', 'THM_LIQU', &
                         0, ' ', [0.d0], &
-                        nb_para_l1, para_name_l1, para_vale_l1, &
-                        icodre_l1, 1, nan='NON')
-            ds_thm%ds_material%liquid%rho = para_vale_l1(1)
-            ds_thm%ds_material%liquid%unsurk = para_vale_l1(2)
-            ds_thm%ds_material%liquid%visc = para_vale_l1(3)
-            ds_thm%ds_material%liquid%dvisc_dtemp = para_vale_l1(4)
+                        nbPropL1, propNameL1, propValeL1, &
+                        propCodeL1, 1, nan='NON')
+            ds_thm%ds_material%liquid%rho = propValeL1(1)
+            ds_thm%ds_material%liquid%unsurk = propValeL1(2)
+            ds_thm%ds_material%liquid%visc = propValeL1(3)
+            ds_thm%ds_material%liquid%dvisc_dtemp = propValeL1(4)
         end if
     end if
     if (ds_thm%ds_material%l_gaz) then
         if (ds_thm%ds_behaviour%l_temp) then
-            call rcvala(j_mater, ' ', 'THM_GAZ', &
+            call rcvala(jvMaterCode, &
+                        ' ', 'THM_GAZ', &
                         1, 'TEMP', [temp], &
-                        nb_para_g2, para_name_g2, para_vale_g2, &
-                        icodre_g2, 1, nan='NON')
-            ds_thm%ds_material%gaz%mass_mol = para_vale_g2(1)
-            ds_thm%ds_material%gaz%cp = para_vale_g2(2)
-            ds_thm%ds_material%gaz%visc = para_vale_g2(3)
-            ds_thm%ds_material%gaz%dvisc_dtemp = para_vale_g2(4)
+                        nbPropG2, propNameG2, propValeG2, &
+                        propCodeG2, 1, nan='NON')
+            ds_thm%ds_material%gaz%mass_mol = propValeG2(1)
+            ds_thm%ds_material%gaz%cp = propValeG2(2)
+            ds_thm%ds_material%gaz%visc = propValeG2(3)
+            ds_thm%ds_material%gaz%dvisc_dtemp = propValeG2(4)
         else
-            call rcvala(j_mater, ' ', 'THM_GAZ', &
+            call rcvala(jvMaterCode, &
+                        ' ', 'THM_GAZ', &
                         0, ' ', [0.d0], &
-                        nb_para_g1, para_name_g1, para_vale_g1, &
-                        icodre_g1, 1, nan='NON')
-            ds_thm%ds_material%gaz%mass_mol = para_vale_g1(1)
-            ds_thm%ds_material%gaz%visc = para_vale_g1(2)
-            ds_thm%ds_material%gaz%dvisc_dtemp = para_vale_g1(3)
+                        nbPropG1, propNameG1, propValeG1, &
+                        propCodeG1, 1, nan='NON')
+            ds_thm%ds_material%gaz%mass_mol = propValeG1(1)
+            ds_thm%ds_material%gaz%visc = propValeG1(2)
+            ds_thm%ds_material%gaz%dvisc_dtemp = propValeG1(3)
         end if
     end if
     if (ds_thm%ds_material%l_steam) then
-        call rcvala(j_mater, ' ', 'THM_VAPE_GAZ', &
+        call rcvala(jvMaterCode, &
+                    ' ', 'THM_VAPE_GAZ', &
                     0, ' ', [0.d0], &
-                    nb_para_s, para_name_s, para_vale_s, &
-                    icodre_s, 1, nan='NON')
-        ds_thm%ds_material%steam%mass_mol = para_vale_s(1)
-        ds_thm%ds_material%steam%cp = para_vale_s(2)
-        ds_thm%ds_material%steam%visc = para_vale_s(3)
-        ds_thm%ds_material%steam%dvisc_dtemp = para_vale_s(4)
+                    nbPropS, propNameS, propValeS, &
+                    propCodeS, 1, nan='NON')
+        ds_thm%ds_material%steam%mass_mol = propValeS(1)
+        ds_thm%ds_material%steam%cp = propValeS(2)
+        ds_thm%ds_material%steam%visc = propValeS(3)
+        ds_thm%ds_material%steam%dvisc_dtemp = propValeS(4)
     end if
     if (ds_thm%ds_material%l_ad) then
-        call rcvala(j_mater, ' ', 'THM_AIR_DISS', &
+        call rcvala(jvMaterCode, &
+                    ' ', 'THM_AIR_DISS', &
                     1, 'TEMP', [temp], &
-                    nb_para_ad, para_name_ad, para_vale_ad, &
-                    icodre_ad, 1, nan='NON')
-        ds_thm%ds_material%ad%coef_henry = para_vale_ad(1)
-        ds_thm%ds_material%ad%cp = para_vale_ad(2)
+                    nbPropAd, propNameAd, propValeAd, &
+                    propCodeAd, 1, nan='NON')
+        ds_thm%ds_material%ad%coef_henry = propValeAd(1)
+        ds_thm%ds_material%ad%cp = propValeAd(2)
     end if
     if (ds_thm%ds_material%l_r_gaz) then
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     1, 'TEMP', [temp], &
-                    nb_para_s2, para_name_s2, para_vale_s2, &
-                    icodre_s2, 1, nan='NON')
-        ds_thm%ds_material%solid%rho = para_vale_s2(1)
-        ds_thm%ds_material%solid%r_gaz = para_vale_s2(2)
+                    nbPropS2, propNameS2, propValeS2, &
+                    propCodeS2, 1, nan='NON')
+        ds_thm%ds_material%solid%rho = propValeS2(1)
+        ds_thm%ds_material%solid%r_gaz = propValeS2(2)
     else
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     1, 'TEMP', [temp], &
-                    nb_para_s1, para_name_s1, para_vale_s1, &
-                    icodre_s1, 1, nan='NON')
-        ds_thm%ds_material%solid%rho = para_vale_s1(1)
+                    nbPropS1, propNameS1, propValeS1, &
+                    propCodeS1, 1, nan='NON')
+        ds_thm%ds_material%solid%rho = propValeS1(1)
     end if
     if (ds_thm%ds_behaviour%l_temp) then
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     1, 'TEMP', [temp], &
-                    nb_para_s3, para_name_s3, para_vale_s3, &
-                    icodre_s3, 1, nan='NON')
-        ds_thm%ds_material%solid%cp = para_vale_s3(1)
+                    nbPropS3, propNameS3, propValeS3, &
+                    propCodeS3, 1, nan='NON')
+        ds_thm%ds_material%solid%cp = propValeS3(1)
     end if
 !
 end subroutine

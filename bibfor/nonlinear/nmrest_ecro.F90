@@ -62,7 +62,7 @@ subroutine nmrest_ecro(model_, mate_, ds_constitutive, hval_incr)
     character(len=19) :: ligrmo
     character(len=1)  :: base
     character(len=19) :: vari_curr, varc_prev, varc_curr, vari_curr_modi
-    character(len=19) :: vrcplu, vrcmoi, time_prev, time_curr
+    character(len=19) :: varcAllCurr, varcAllPrev, time_prev, time_curr
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -77,8 +77,8 @@ subroutine nmrest_ecro(model_, mate_, ds_constitutive, hval_incr)
     call nmchex(hval_incr, 'VALINC', 'VARPLU', vari_curr)
     call nmchex(hval_incr, 'VALINC', 'COMMOI', varc_prev)
     call nmchex(hval_incr, 'VALINC', 'COMPLU', varc_curr)
-    call nmvcex('TOUT', varc_prev, vrcmoi)
-    call nmvcex('TOUT', varc_curr, vrcplu)
+    call nmvcex('TOUT', varc_prev, varcAllPrev)
+    call nmvcex('TOUT', varc_curr, varcAllCurr)
     call nmvcex('INST', varc_prev, time_prev)
     call nmvcex('INST', varc_curr, time_curr)
 !
@@ -94,9 +94,9 @@ subroutine nmrest_ecro(model_, mate_, ds_constitutive, hval_incr)
     lpain(3) = 'PVARIMR'
     lchin(3) = vari_curr
     lpain(4) = 'PVARCMR'
-    lchin(4) = vrcmoi
+    lchin(4) = varcAllPrev
     lpain(5) = 'PVARCPR'
-    lchin(5) = vrcplu
+    lchin(5) = varcAllCurr
     lpain(6) = 'PINSTPR'
     lchin(6) = time_curr
     lpain(7) = 'PCARCRI'

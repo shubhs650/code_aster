@@ -15,23 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine dxdmul(lcalct, icou, iniv, t1ve, t2ui,&
-                      h, d1i, d2i, x3i, epi)
-        aster_logical :: lcalct
-        integer(kind=8) :: icou
-        integer(kind=8) :: iniv
-        real(kind=8) :: t1ve(3, 3)
-        real(kind=8) :: t2ui(2, 2)
-        real(kind=8) :: h(3, 3)
-        real(kind=8) :: d1i(2, 2)
-        real(kind=8) :: d2i(2, 4)
-        real(kind=8) :: x3i
-        real(kind=8) :: epi
+    subroutine dxdmul(plateCara, plateOrie, &
+                      lcalct, iLayer, iniv, &
+                      h, d1i, d2i, x3i, hLayer)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        aster_logical, intent(in) :: lcalct
+        integer(kind=8), intent(in) :: iLayer, iniv
+        real(kind=8), intent(out) :: h(3, 3), d1i(2, 2), d2i(2, 4)
+        real(kind=8), intent(out) :: x3i, hLayer
     end subroutine dxdmul
 end interface

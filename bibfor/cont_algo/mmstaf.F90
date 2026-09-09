@@ -121,18 +121,18 @@ subroutine mmstaf(mesh, ndim, chdepd, coef_frot, &
 !
 ! - Lagrange multiplier for friction at current contact point
 !
-    call mmvalp_scal(ndim, aliase, nne, ksipc1, &
+    call mmvalp_scal(aliase, nne, ksipc1, &
                      ksipc2, mult_lagr_f1, dlagrf(1))
     if (ndim .eq. 3) then
-        call mmvalp_scal(ndim, aliase, nne, ksipc1, &
+        call mmvalp_scal(aliase, nne, ksipc1, &
                          ksipc2, mult_lagr_f2, dlagrf(2))
     end if
 !
 ! - Displacement increment
 !
-    call mcopco(mesh, chdepd, ndim, nummae, ksipc1, &
+    call mcopco(mesh, chdepd, nummae, ksipc1, &
                 ksipc2, ddeple)
-    call mcopco(mesh, chdepd, ndim, nummam, ksipr1, &
+    call mcopco(mesh, chdepd, nummam, ksipr1, &
                 ksipr2, ddeplm)
 !
 ! - Gap increment

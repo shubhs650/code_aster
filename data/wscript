@@ -30,6 +30,7 @@ Build some data files (dest: share/aster)
 - 'profile.sh': environment script.
 - 'run_aster': script that executes code_aster.
 - 'run_aster_for_ctest': script that executes code_aster used by 'run_ctest'.
+- 'run_aster_extract': script that filter output of 'run_aster' for statistics.
 - 'run_ctest': script that executes a list of testcases using 'ctest'.
 - 'run_sbatch': script that executes code_aster through sbatch.
 """
@@ -297,7 +298,7 @@ def build(self):
 
     # without substitution
     scripts = ["run_aster" + shext, "run_ctest" + shext]
-    shared = ["run_aster_for_ctest" + shext, "ddt_wrapper.tmpl"]
+    shared = ["run_aster_for_ctest" + shext, "ddt_wrapper.tmpl", "run_aster_extract" + shext]
     if self.env.ASTER_PLATFORM_POSIX:
         shared.append("post_install")
     if self.env.PROG_sbatch:
@@ -360,9 +361,9 @@ def env2dict(self, src):
     )
     sep = os.pathsep + "\\\n"
     dico = {}
-    dico["DEFINES"] = " ".join(
-        [d.split("=")[0] for d in env["DEFINES"] if not d.startswith("HAVE_")]
-    )
+    dico["DEFINES"] = " ".join([
+        d.split("=")[0] for d in env["DEFINES"] if not d.startswith("HAVE_")
+    ])
     # as_run compatibility
     if env.ASRUN_MPI_VERSION:
         dico["DEFINES"] += " _USE_MPI"
@@ -382,12 +383,10 @@ def env2dict(self, src):
             dico["BUILD_ENV"] = fobj.read()
     dico["CONFIG_ENV"] = config_env(env)
     dico["addmem"] = env["addmem"]
-    dico["srctest"] = os.linesep.join(
-        [
-            SRCTEST_TMPL % "%(SRC)s/astest" % dico,
-            SRCTEST_TMPL % "%(SRC)s/../validation/astest" % dico,
-        ]
-    )
+    dico["srctest"] = os.linesep.join([
+        SRCTEST_TMPL % "%(SRC)s/astest" % dico,
+        SRCTEST_TMPL % "%(SRC)s/../validation/astest" % dico,
+    ])
     dico["ASTERDATADIR"] = env["ASTERDATADIR"]
     dico["ASTER_TAG"] = ".".join([str(i) for i in env["ASTER_VERSION"][0]])
     dico["BIN_NODBG"] = "{PREFIX}/bin/aster".format(**env)
@@ -400,11 +399,10 @@ def env2dict(self, src):
         dico["BIND_PREFIX"] = ""
     self.end_msg("yes")
 
-    self.start_msg("Detecting virtual environment")
-    venv = os.environ.get("VIRTUAL_ENV") or "no"
-    if venv != "no":
-        dico["CONFIG_ENV"] += f"\nsource {venv}/bin/activate"
-    self.end_msg(venv)
+    if self.env["VIRTUAL_ENV"]:
+        self.start_msg("Adding source of virtual environment")
+        dico["CONFIG_ENV"] += self.env["VIRTUAL_ENV"]
+        self.end_msg("done")
 
     self.start_msg("Build list of testcases")
     valid = osp.join(src, "..", "validation")
@@ -419,9 +417,6 @@ def to_cfg(cfgext, dict_values):
     """Format a dict of values to YAML or JSON."""
     if cfgext == "json":
         return json.dumps(dict_values, sort_keys=True, indent=4, separators=(",", ": "))
-
-    import yaml
-
     return yaml.dump(dict_values, default_flow_style=False)
 
 
@@ -512,9 +507,8 @@ def check_config(self):
     self.start_msg(f"Set parameters for 'config.{cfgext}'")
     self.end_msg("...")
     tmpdir = None if self.env.ASTER_PLATFORM_MINGW else "/tmp"
-    if os.environ.get("ASTER_TMPDIR"):
-        tmpdir = os.environ["ASTER_TMPDIR"]
     cfg["tmpdir"] = tmpdir
+    cfg["shared_tmpdir"] = tmpdir
 
     addmem = 1024
     if os.environ.get("ADDMEM"):
@@ -546,9 +540,15 @@ def check_config(self):
         "valgrind": "valgrind --tool=memcheck --leak-check=full --error-limit=no --track-origins=yes",
         "gdb": osp.join(self.env.ASTERDATADIR, "exectool", "gdb_wrapper"),
     }
+    # rsync available?
+    _check_prog(self, "RSYNC", ["rsync"], mandatory=False, var_prefix="")
+    cfg["copymode"] = "rsync" if self.env.RSYNC else "shutil"
+    # slurm plugin
+    cfg["use_s3sp"] = 0
     from_env = self.env["CONFIG_PARAMETERS"]
     for param in (
         "tmpdir",
+        "shared_tmpdir",
         "addmem",
         "python",
         "python_interactive",
@@ -559,6 +559,7 @@ def check_config(self):
         "require_mpiexec",
         "use_srun",
         "exectool",
+        "use_s3sp",
     ):
         verbose = param != "require_mpiexec" and cfg.get(param) is not None
         if verbose:
@@ -666,6 +667,14 @@ def check_mpiexec(self):
         ):
             narg = ["-np", "1"]
             mpicmd.extend(["-np", "{mpi_nbcpu}"])
+        if (
+            self._call_cmd(
+                "Check for mpiexec flag '-np N'",
+                self.env["base_mpiexec"] + narg + ["--bind-to", "none", "echo"],
+            )
+            == 0
+        ):
+            mpicmd.extend(["--bind-to", "none"])
 
         for opt in ("--tag-output", "-print-rank-map", "-prepend-rank", "-ordered-output"):
             if (
@@ -716,7 +725,6 @@ def _call_cmd(self, msg, cmd):
 
 @Configure.conf
 def check_external_programs(self):
-    exe = ".exe" if self.env.ASTER_PLATFORM_MINGW else ""
     bat = ".bat" if self.env.ASTER_PLATFORM_MINGW else ""
     _check_prog(
         self, "gmsh", ["gmsh"], mandatory=self.options.with_prog_gmsh, add_paths=["${GMSH_BIN_DIR}"]

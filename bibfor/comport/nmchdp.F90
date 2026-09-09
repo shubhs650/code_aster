@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmchdp(crit, seuil, dp, iret, iter)
+subroutine nmchdp(carcri, seuil, dp, iret, iter)
 !.======================================================================
     implicit none
 !
@@ -71,16 +71,19 @@ subroutine nmchdp(crit, seuil, dp, iret, iter)
 !                                        LOI
 !    ITER           OUT    I   NOMBRE D'ITERATIONS POUR CONVERGER
 !
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/infniv.h"
 #include "asterfort/nmchcr.h"
 #include "asterfort/utlcal.h"
 #include "asterfort/utmess.h"
 #include "asterfort/zerofr.h"
+
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8) :: ndimsi, nbvar, visc, memo, niter, i, iter, ifm, niv, nbp, iret
     integer(kind=8) :: idelta
     real(kind=8) :: mat(18), pm, sigedv(6), alfam(6), deuxmu, dp, dt, qp
     real(kind=8) :: ksip(6)
-    real(kind=8) :: crit(*), seuil, alfa2m(6), z, zz, ksim(6), qm, dpe, n1, n2
+    real(kind=8) :: seuil, alfa2m(6), z, zz, ksim(6), qm, dpe, n1, n2
     real(kind=8) :: beta1
     real(kind=8) :: zero, dix, epspm(6), dpmax1, prec, dpmax, ddp, rpvm, rpvp
     real(kind=8) :: beta2
@@ -129,8 +132,8 @@ subroutine nmchdp(crit, seuil, dp, iret, iter)
 ! --- NOMBRE D'ITERATIONS DONT ON DISPOSE POUR CONVERGER ET TOLERANCE
 ! --- SUR LA VALEUR CONVERGEE :
 !     -----------------------
-    niter = int(crit(1))
-    prec = crit(3)
+    niter = int(carcri(1))
+    prec = carcri(3)
 !
 !     RECHERCHE DES BORNES 0-DPMAX
 !
@@ -195,7 +198,7 @@ subroutine nmchdp(crit, seuil, dp, iret, iter)
 !
 !     RECUPERATION DE L'ALGORITHME DE RESOLUTION 1D
 !
-    call utlcal('VALE_NOM', meth, crit(6))
+    call utlcal('VALE_NOM', meth, carcri(6))
 !
 !     PREC RELATIVE CAR EQUATION NORMEE
 !     RESOLUTION 1D

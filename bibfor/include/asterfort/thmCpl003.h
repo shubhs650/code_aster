@@ -16,28 +16,26 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmCpl003(ds_thm,&
-                         lMatr, lSigm, lVari, lMatrPred, angl_naut,&
-                         j_mater  ,&
-                         ndim  , nbvari   ,&
-                         dimdef, dimcon   ,&
-                         adcote, adcp11   , adcp12, & 
-                         addete, addep1   , &
-                         temp  , p1       ,&
-                         dtemp , dp1      ,&
-                         deps  , epsv     , depsv ,&
-                         tbiot ,&
-                         phi   , rho11    , satur ,&
-                         pvp   , h11      , h12   ,&
-                         congem, congep   ,&       
-                         vintm , vintp    , dsde,& 
+interface
+    subroutine thmCpl003(ds_thm, &
+                         lMatr, lSigm, lVari, lMatrPred, &
+                         ndim, nbvari, &
+                         dimdef, dimcon, &
+                         adcote, adcp11, adcp12, &
+                         addete, addep1, &
+                         temp, p1, &
+                         dtemp, dp1, &
+                         deps, epsv, depsv, &
+                         tbiot, &
+                         phi, rho11, satur, &
+                         pvp, h11, h12, &
+                         congem, congep, &
+                         vintm, vintp, dsde, &
                          retcom)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
-        real(kind=8), intent(in) :: angl_naut(3)
-        integer(kind=8), intent(in) :: j_mater, ndim, nbvari
+        integer(kind=8), intent(in) :: ndim, nbvari
         integer(kind=8), intent(in) :: dimdef, dimcon
         integer(kind=8), intent(in) :: adcote, adcp11, adcp12
         integer(kind=8), intent(in) :: addep1, addete
@@ -53,4 +51,4 @@ interface
         real(kind=8), intent(inout) :: dsde(dimcon, dimdef)
         integer(kind=8), intent(out)  :: retcom
     end subroutine thmCpl003
-end interface 
+end interface

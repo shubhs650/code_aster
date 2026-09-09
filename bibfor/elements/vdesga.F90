@@ -16,31 +16,38 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vdesga(kwgt, nb1, nb2, &
-                  vectt, disp, btild, &
-                  hasTemp_, alpha_, tempKpg_, siefKpg_, &
-                  epsiKpg_)
+subroutine vdesga(plateCara, plateOrie, &
+                  kwgt, nb1, &
+                  disp, btild, vectBaseKpg, &
+                  hasTemp_, alpha_, tempKpg_, &
+                  siefKpg_, epsiKpg_)
 !
+    use plate_type
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/matrc.h"
+#include "asterfort/moytem.h"
 #include "jeveux.h"
 !
-    integer(kind=8), intent(in) :: kwgt, nb1, nb2
-    real(kind=8), intent(in) :: vectt(3, 3), disp(42), btild(5, 42)
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: kwgt, nb1
+    real(kind=8), intent(in) :: disp(42), btild(5, 42), vectBaseKpg(3, 3)
     aster_logical, optional, intent(in) :: hasTemp_
     real(kind=8), optional, intent(in) :: alpha_, tempKpg_
     real(kind=8), optional, intent(out) :: siefKpg_(6, *), epsiKpg_(6, *)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: matrElas(5, 5)
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8) :: matrElas(5, 5), tempMoye
     real(kind=8) :: epsi(5), sigm(5)
     real(kind=8) :: kappa
-    integer(kind=8) :: i, jvCacoqu, k
+    integer(kind=8) :: i, k, nbLayer, npg, iret
     aster_logical :: hasTemp
 !
 ! --------------------------------------------------------------------------------------------------
@@ -49,6 +56,11 @@ subroutine vdesga(kwgt, nb1, nb2, &
     if (present(hasTemp_)) then
         hasTemp = hasTemp_
     end if
+    call elrefe_info(fami=fami, npg=npg)
+
+! - Get plate parameters
+    nbLayer = plateCara%nbLayer
+    kappa = plateCara%shearCoef
 
 ! - Compute tensor of strains
     epsi = 0.d0
@@ -69,12 +81,11 @@ subroutine vdesga(kwgt, nb1, nb2, &
     end if
 
     if (present(siefKpg_)) then
-! ----- Get kappa
-        call jevech('PCACOQU', 'L', jvCacoqu)
-        kappa = zr(jvCacoqu+3)
+! ----- Compute mean temperature (on all point and "sous-point" gauss)
+        call moytem(fami, npg, 3*nbLayer, '+', tempMoye, iret)
 
 ! ----- Compute elastic matrix
-        call matrc(nb2, kappa, matrElas, vectt)
+        call matrc(plateOrie, vectBaseKpg, tempMoye, kappa, matrElas)
 
 ! ----- Compute stress
         sigm = 0.d0
@@ -83,7 +94,6 @@ subroutine vdesga(kwgt, nb1, nb2, &
                 sigm(i) = sigm(i)+matrElas(i, k)*epsi(k)
             end do
         end do
-
         siefKpg_(1, kwgt) = sigm(1)
         siefKpg_(2, kwgt) = sigm(2)
         siefKpg_(3, kwgt) = 0.d0

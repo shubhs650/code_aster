@@ -18,10 +18,7 @@
 !
 #include "asterfort/Behaviour_type.h"
 interface
-    subroutine comp_meca_pvar(ligrel_, comporMap_, comporList_, comporInfo)
-        character(len=19), optional, intent(in) :: ligrel_
-        character(len=19), optional, intent(in) :: comporMap_
-        character(len=16), optional, intent(in) :: comporList_(COMPOR_SIZE)
-        character(len=19), intent(in) :: comporInfo
+    subroutine comp_meca_pvar(modelFED, comporMap, comporInfo)
+        character(len=19), intent(in) :: modelFED, comporMap, comporInfo
     end subroutine comp_meca_pvar
 end interface

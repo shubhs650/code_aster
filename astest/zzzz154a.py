@@ -20,7 +20,10 @@
 from code_aster.Commands import *
 from code_aster import CA
 
-CA.init("--test", ERREUR=_F(ALARME="EXCEPTION"))
+CA.init("--test", IGNORE_ALARM=("CALCULEL4_76"))
+# on ignore l'alarme CALCULEL4_76 qui prévient l'utilisateur que les champs ELGA ne
+# sont pas projetés, afin que le test qui vérifie l'absence du champ FLUX_ELGA dans
+# le résultat projeté puisse se faire
 
 from zzzz154a_cmd import MACRO_TEST
 

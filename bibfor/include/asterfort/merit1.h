@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine merit1(modelZ, caraElemZ, matecoZ, &
+    subroutine merit1(modelZ, caraElemZ, materCodeZ, &
                       loadNameZ, &
                       timeMap, matrElem, resuElemPref, &
                       indxMatrElem, jvBase)
-        character(len=*), intent(in) :: modelZ, caraElemZ, matecoZ
+        character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
         character(len=*), intent(in) :: loadNameZ
         character(len=24), intent(in) :: timeMap
         character(len=19), intent(in) :: matrElem, resuElemPref

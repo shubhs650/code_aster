@@ -22,7 +22,6 @@
 **************************************************
 """
 
-import aster
 from libaster import ConstantFieldOnCellsReal, ConstantFieldOnCellsChar16
 
 from ..Utilities import injector
@@ -32,19 +31,7 @@ from ..Utilities import injector
 class ExtendedConstantFieldOnCellsReal:
     cata_sdj = "SD.sd_carte.sd_carte"
 
-    def __getinitargs__(self):
-        """Returns the argument required to reinitialize a ConstantFieldOnCellsReal
-        object during unpickling.
-        """
-        return (self.getName(), self.getMesh())
-
 
 @injector(ConstantFieldOnCellsChar16)
 class ExtendedConstantFieldOnCellsChar16:
     cata_sdj = "SD.sd_carte.sd_carte"
-
-    def __getinitargs__(self):
-        """Returns the argument required to reinitialize a ConstantFieldOnCellsChar16
-        object during unpickling.
-        """
-        return (self.getName(), self.getMesh())

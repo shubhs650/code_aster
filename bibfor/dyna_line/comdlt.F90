@@ -80,37 +80,37 @@ subroutine comdlt()
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: numeHarm = 0
     integer(kind=8) :: nbVectAsse, nbLoad
-    integer(kind=8) :: jvMatr(3), nume, niv, ifm, jvLoadWave, ladpa, numrep
+    integer(kind=8) :: jvMatr(3), nume, niv, ifm, jvLoadWave, jvPara, numrep
     integer(kind=8) :: jvVectFunc, jvVectAsse, nbWave, ifexte, ifamor, ifliai
-    integer(kind=8) :: neq, idepl0, ivite0, iacce0, iwk, iordr
+    integer(kind=8) :: neq, idepl0, ivite0, iacce0, iwk, iStore
     integer(kind=8) :: iinteg, iret, nbpas, nbpas_min, nbpas_max
-    integer(kind=8) :: nbord, jchar, jinst, pasar, nbar
+    integer(kind=8) :: nbStore, jchar, jinst, pasar, nbar
     integer(kind=8) :: lresu, lcrre, iresu, nbexre, l, ncomu
     integer(kind=8) :: nbchre, iocc, nfon, nbexcl, i, counter, lsize
-    real(kind=8) :: t0, time, rundf, alpha, tinit
+    real(kind=8) :: t0, time, rundf, coefMultR, tinit
     real(kind=8) :: tfin, dt, dtmin, dtmax, cdivi
     real(kind=8) :: nbpas_max_r, epsi
-    character(len=1) :: base, typcoe
+    character(len=1) :: jvBase
     character(len=2) :: codret
-    character(len=8) :: k8b, masse, rigid, amort, result
-    character(len=8) :: kstr, nomfon, charep
+    character(len=8) :: existPoux, masse, rigid, amort, result
+    character(len=8) :: existStr2, nomfon, loadPres
     character(len=9) :: nomsym(6)
     character(len=19) :: solveu, listLoad, ligrel, linst
     character(len=12) :: allschemes(4), schema, schtyp
-    character(len=24) :: model, caraElem, loadNameJv, loadFuncJv, mateco, materField
-    character(len=24) :: numedd, chamgd
+    character(len=24) :: model, caraElem, loadNameJv, loadFuncJv, materCode, materField
+    character(len=24) :: numedd, disp
     character(len=24) :: loadInfoJv, criter
-    character(len=24) :: chgeom, chcara(18), chharm, chtime
-    character(len=24) :: chvarc, chvref, chstru, compor, kineLoad
-    complex(kind=8) :: calpha
+    character(len=24) :: chgeom, chharm, chtime
+    character(len=24) :: chvarc, chvref, strx, compor, kineLoad
     character(len=19) :: force0, force1
     character(len=19) :: sd_obsv
     type(NL_DS_InOut) :: ds_inout
     character(len=46) :: champs
     type(NL_DS_Energy) :: ds_energy
-    aster_logical :: lamort, lcrea, lprem, exipou
-    integer(kind=8), pointer :: ordr(:) => null()
+    aster_logical :: lamort, lcrea, lprem, lPoux
+    integer(kind=8), pointer :: listStore(:) => null()
     character(len=8), pointer :: chexc(:) => null()
     data model/'                        '/
     data allschemes/'NEWMARK', 'WILSON', 'DIFF_CENTRE', 'ADAPT_ORDRE2'/
@@ -136,14 +136,12 @@ subroutine comdlt()
     lamort = .true.
     amort = ' '
     criter = '&&RESGRA_GCPC'
-    alpha = 0.d0
-    calpha = (0.d0, 0.d0)
+    coefMultR = 0.d0
     nfon = 0
     ncomu = 0
-    typcoe = ' '
-    charep = ' '
+    loadPres = ' '
     chtime = ' '
-    base = 'G'
+    jvBase = 'G'
     nbpas = 0
     nbpas_min = 0
     nbpas_max = 0
@@ -154,7 +152,7 @@ subroutine comdlt()
     chvref = '&&COMDLT.VREF'
 !
 ! - Get parameters
-    call dltlec(result, model, numedd, materField, mateco, &
+    call dltlec(result, model, numedd, materField, materCode, &
                 caraElem, jvMatr, masse, rigid, amort, &
                 lamort, nbLoad, nbVectAsse, listLoad, loadNameJv, &
                 loadInfoJv, loadFuncJv, jvVectAsse, jvVectFunc, nbWave, &
@@ -247,10 +245,10 @@ subroutine comdlt()
         ASSERT(nbpas .gt. 1)
         dt = (tfin-tinit)/real(nbpas-1)
 
-        call getvis('INCREMENT', 'NUME_FIN', iocc=1, scal=iordr, nbret=iret)
+        call getvis('INCREMENT', 'NUME_FIN', iocc=1, scal=iStore, nbret=iret)
         if (iret .ne. 0) then
-            if (iordr .ge. nbpas) goto 99
-            tfin = zr(jinst+iordr)
+            if (iStore .ge. nbpas) goto 99
+            tfin = zr(jinst+iStore)
         else
             call getvr8('INCREMENT', 'INST_FIN', iocc=1, scal=tfin, nbret=iret)
         end if
@@ -299,7 +297,7 @@ subroutine comdlt()
     force1 = '&&COMDLT.FORCE1'
     call dltali(neq, result, jvMatr, masse, rigid, &
                 zi(jvVectAsse), zk24(jvVectFunc), nbLoad, nbVectAsse, lcrea, &
-                lprem, lamort, t0, materField, mateco, &
+                lprem, lamort, t0, materField, materCode, &
                 caraElem, loadNameJv, loadInfoJv, loadFuncJv, model, &
                 numedd, nume, solveu, criter, zr(idepl0), &
                 zr(ivite0), zr(iacce0), zr(ifexte+neq), zr(ifamor+neq), zr(ifliai+neq), &
@@ -389,7 +387,7 @@ subroutine comdlt()
                     iinteg, neq, jvMatr, masse, rigid, &
                     amort, zr(idepl0), zr(ivite0), zr(iacce0), zr(ifexte), &
                     zr(ifamor), zr(ifliai), t0, nbLoad, nbVectAsse, &
-                    zi(jvVectAsse), zk24(jvVectFunc), model, materField, mateco, &
+                    zi(jvVectAsse), zk24(jvVectFunc), model, materField, materCode, &
                     caraElem, loadNameJv, loadInfoJv, loadFuncJv, numedd, &
                     nume, solveu, criter, zk8(jvLoadWave), nbWave, &
                     numrep, ds_energy, sd_obsv, mesh, kineLoad)
@@ -400,7 +398,7 @@ subroutine comdlt()
                     iinteg, neq, jvMatr, masse, rigid, &
                     amort, zr(idepl0), zr(ivite0), zr(iacce0), zr(ifexte), &
                     zr(ifamor), zr(ifliai), t0, nbLoad, nbVectAsse, &
-                    zi(jvVectAsse), zk24(jvVectFunc), model, materField, mateco, &
+                    zi(jvVectAsse), zk24(jvVectFunc), model, materField, materCode, &
                     caraElem, loadNameJv, loadInfoJv, loadFuncJv, numedd, &
                     nume, solveu, criter, zk8(jvLoadWave), nbWave, &
                     numrep, ds_energy, sd_obsv, mesh, kineLoad)
@@ -411,7 +409,7 @@ subroutine comdlt()
                     jvMatr, masse, rigid, amort, zr(idepl0), &
                     zr(ivite0), zr(iacce0), zr(ifexte), zr(ifamor), zr(ifliai), &
                     t0, nbLoad, nbVectAsse, zi(jvVectAsse), zk24(jvVectFunc), &
-                    model, materField, mateco, caraElem, loadNameJv, &
+                    model, materField, materCode, caraElem, loadNameJv, &
                     loadInfoJv, loadFuncJv, numedd, nume, numrep, &
                     ds_energy, sd_obsv, mesh)
 !
@@ -421,7 +419,7 @@ subroutine comdlt()
                     jvMatr, masse, rigid, amort, zr(idepl0), &
                     zr(ivite0), zr(iacce0), zr(ifexte), zr(ifamor), zr(ifliai), &
                     nbLoad, nbVectAsse, zi(jvVectAsse), zk24(jvVectFunc), model, &
-                    materField, mateco, caraElem, loadNameJv, loadInfoJv, &
+                    materField, materCode, caraElem, loadNameJv, loadInfoJv, &
                     loadFuncJv, numedd, nume, numrep, ds_energy, &
                     sd_obsv, mesh)
 !
@@ -432,36 +430,30 @@ subroutine comdlt()
 !====
 !
 !
-    call jeveuo(result//'           .ORDR', 'L', vi=ordr)
-    call jelira(result//'           .ORDR', 'LONUTI', nbord)
-    do iordr = 1, nbord
-        call rsadpa(result, 'E', 1, 'MODELE', ordr(iordr), &
-                    0, sjv=ladpa)
-        zk8(ladpa) = model(1:8)
+    call jeveuo(result//'           .ORDR', 'L', vi=listStore)
+    call jelira(result//'           .ORDR', 'LONUTI', nbStore)
+    do iStore = 1, nbStore
+        call rsadpa(result, 'E', 1, 'MODELE', listStore(iStore), 0, sjv=jvPara)
+        zk8(jvPara) = model(1:8)
         if (materField .ne. ' ') then
-            call rsadpa(result, 'E', 1, 'CHAMPMAT', ordr(iordr), &
-                        0, sjv=ladpa)
-            zk8(ladpa) = materField(1:8)
+            call rsadpa(result, 'E', 1, 'CHAMPMAT', listStore(iStore), 0, sjv=jvPara)
+            zk8(jvPara) = materField(1:8)
         else
             call utmess('I', 'DYNALINE1_3')
         end if
-!
-        call rsadpa(result, 'E', 1, 'CARAELEM', ordr(iordr), &
-                    0, sjv=ladpa)
-        zk8(ladpa) = caraElem(1:8)
+        call rsadpa(result, 'E', 1, 'CARAELEM', listStore(iStore), 0, sjv=jvPara)
+        zk8(jvPara) = caraElem(1:8)
     end do
-!
-! --- ON CALCULE LE CHAMP DE STRUCTURE STRX_ELGA SI BESOIN
-!
-    call dismoi('EXI_STR2', model, 'MODELE', repk=kstr)
-    if (kstr(1:3) .eq. 'OUI') then
+
+! - Compute STRX_ELGA field
+    call dismoi('EXI_STR2', model, 'MODELE', repk=existStr2)
+    if (existStr2(1:3) .eq. 'OUI') then
         compor = materField(1:8)//'.COMPOR'
         call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrel)
-        exipou = .false.
-!
-        call dismoi('EXI_POUX', model, 'MODELE', repk=k8b)
-        if (k8b(1:3) .eq. 'OUI') then
-            exipou = .true.
+        lPoux = .false.
+        call dismoi('EXI_POUX', model, 'MODELE', repk=existPoux)
+        if (existPoux(1:3) .eq. 'OUI') then
+            lPoux = .true.
             if (nbLoad .ne. 0) then
                 call jeveuo(loadNameJv, 'L', jchar)
                 call cochre(zk24(jchar), nbLoad, nbchre, iocc)
@@ -469,42 +461,51 @@ subroutine comdlt()
                     call utmess('F', 'DYNAMIQUE_19')
                 end if
                 if (iocc .gt. 0) then
-                    call getvid('EXCIT', 'CHARGE', iocc=iocc, scal=charep, nbret=iret)
+                    call getvid('EXCIT', 'CHARGE', iocc=iocc, scal=loadPres, nbret=iret)
                     call getvid('EXCIT', 'FONC_MULT', iocc=iocc, scal=nomfon, nbret=nfon)
                     if (nfon .ne. 0) then
-                        call getvr8('EXCIT', 'COEF_MULT', iocc=iocc, scal=alpha, nbret=ncomu)
+                        call getvr8('EXCIT', 'COEF_MULT', iocc=iocc, scal=coefMultR, nbret=ncomu)
                     end if
                 end if
             end if
-            typcoe = 'R'
-            if (ncomu .eq. 0) alpha = 1.d0
+            if (ncomu .eq. 0) coefMultR = 1.d0
         end if
-        do iordr = 0, nbord
-            call rsexch(' ', result, 'DEPL', iordr, chamgd, &
-                        iret)
+        do iStore = 0, nbStore
+! --------- Get displacements
+            call rsexch(' ', result, 'DEPL', iStore, disp, iret)
             if (iret .gt. 0) cycle
-            call mecham('STRX_ELGA', model, caraElem(1:8), 0, chgeom, &
-                        chcara, chharm, iret)
+
+! --------- Prepare input fields
+            call mecham('STRX_ELGA', model, numeHarm, &
+                        chgeom, chharm, iret)
             if (iret .ne. 0) cycle
-            call rsadpa(result, 'L', 1, 'INST', iordr, &
-                        0, sjv=ladpa)
-            time = zr(ladpa)
+
+! --------- Prepare field for time
+            call rsadpa(result, 'L', 1, 'INST', iStore, 0, sjv=jvPara)
+            time = zr(jvPara)
             call mechti(chgeom(1:8), time, rundf, rundf, chtime)
-            call vrcins(model, materField, caraElem(1:8), time, chvarc(1:19), &
-                        codret)
+
+! --------- Get external state varaibles
+            call vrcins(model, materField, caraElem(1:8), time, chvarc(1:19), codret)
             call vrcref(model(1:8), materField(1:8), caraElem(1:8), chvref(1:19))
-            if (exipou .and. nfon .ne. 0) then
+            if (lPoux .and. nfon .ne. 0) then
                 call fointe('F ', nomfon, 1, ['INST'], [time], &
-                            alpha, iret)
+                            coefMultR, iret)
             end if
-            call rsexch(' ', result, 'STRX_ELGA', iordr, chstru, &
-                        iret)
+
+! --------- Get field to create STRX_ELGA
+            call rsexch(' ', result, 'STRX_ELGA', iStore, strx, iret)
             if (iret .ne. 0) cycle
-            call compStrx(model, ligrel, compor, chamgd, chgeom, &
-                          mateco, chcara, chvarc, chvref, base, &
-                          chstru, iret, exipou, charep, typcoe, &
-                          alpha, calpha)
-            call rsnoch(result, 'STRX_ELGA', iordr)
+
+! --------- Compute STRX_ELGA
+            call compStrx(model, materCode, caraElem, compor, &
+                          disp, chgeom, &
+                          chvarc, chvref, &
+                          lPoux, loadPres, coefMultR, &
+                          ligrel, jvBase, strx, iret)
+
+! --------- Save STRX_ELGA
+            call rsnoch(result, 'STRX_ELGA', iStore)
         end do
     end if
 !

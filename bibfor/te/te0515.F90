@@ -18,20 +18,22 @@
 !
 subroutine te0515(option, nomte)
 !
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     use THM_type
-    use Behaviour_module, only: behaviourOption
-!
     implicit none
 !
-#include "asterf_types.h"
-#include "jeveux.h"
 #include "asterc/ismaem.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/assesu.h"
 #include "asterfort/Behaviour_type.h"
-#include "asterfort/thmGetElemPara_vf.h"
 #include "asterfort/fnoesu.h"
 #include "asterfort/jevech.h"
+#include "asterfort/thmGetElemPara_vf.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -49,57 +51,84 @@ subroutine te0515(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nno, imatuu, ndim, imate, iinstm, jcret
+    character(len=8), parameter :: fami = "RIGI"
+    integer(kind=8) :: nno, imatuu, ndim, jvMaterc, jvInstmr, jcret
     integer(kind=8) :: retloi
-    integer(kind=8) :: igeom
-    integer(kind=8) :: iinstp, ideplm, ideplp, icarcr
+    integer(kind=8) :: jvGeom
+    integer(kind=8) :: jvInstpr, ideplm, ideplp, jvCarcri
     integer(kind=8) :: icontm, ivarip, ivarim, ivectu, icontp
     integer(kind=8) :: mecani(5), press1(7), press2(7), tempe(5), dimuel
     integer(kind=8) :: dimdef, dimcon, nbvari
     integer(kind=8) :: nnos, nface
     real(kind=8) :: defgep(21), defgem(21)
     character(len=16), pointer :: compor(:) => null()
-    character(len=8) :: type_elem(2)
+    character(len=8) :: typmod(2)
     integer(kind=8) :: li
     aster_logical :: l_axi, l_vf
     aster_logical :: lVect, lMatr, lVari, lSigm, lMatrPred
     type(THM_DS) :: ds_thm
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!
+
 ! - Get all parameters for current element - Finite volume version
-!
     call thmGetElemPara_vf(ds_thm, l_axi, l_vf, &
-                           type_elem, ndim, &
+                           typmod, ndim, &
                            mecani, press1, press2, tempe, &
                            dimdef, dimcon, dimuel, &
                            nno, nnos, nface)
     ASSERT(l_vf)
-!
+
 ! - Non-linear options
-!
     if ((option(1:14) .eq. 'RIGI_MECA_TANG') .or. (option(1:9) .eq. 'RAPH_MECA') .or. &
         (option(1:9) .eq. 'FULL_MECA')) then
 ! ----- Get input fields
-        call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PINSTMR', 'L', iinstm)
-        call jevech('PINSTPR', 'L', iinstp)
+        call jevech('PGEOMER', 'L', jvGeom)
         call jevech('PDEPLMR', 'L', ideplm)
         call jevech('PDEPLPR', 'L', ideplp)
-        call jevech('PCOMPOR', 'L', vk16=compor)
-        call jevech('PCARCRI', 'L', icarcr)
         call jevech('PVARIMR', 'L', ivarim)
         call jevech('PCONTMR', 'L', icontm)
+
+! ----- Get material parameters
+        call jevech('PMATERC', 'L', jvMaterc)
+
+! ----- Initializations of material parameters on current cell
+        call initParaCell(fami, zi(jvMaterc), materPara)
+
+! ----- Angle du mot clef MASSIF de AFFE_CARA_ELEM, initialisé à 0
+        call initLCSZero(materPara)
+
+! ----- Get fields for non-linear behaviour
+        call jevech('PCOMPOR', 'L', vk16=compor)
+        call jevech('PCARCRI', 'L', jvCarcri)
+
+! ----- Properties of behaviour
+        read (compor(NVAR), '(I16)') nbvari
+
 ! ----- Select objects to construct from option name
         lMatrPred = option(1:9) .eq. 'RIGI_MECA'
         call behaviourOption(option, compor, &
                              lMatr, lVect, &
                              lVari, lSigm, &
                              retloi)
-! ----- Properties of behaviour
-        read (compor(NVAR), '(I16)') nbvari
+
+! ----- Get time
+        call jevech('PINSTMR', 'L', jvInstmr)
+        call jevech('PINSTPR', 'L', jvInstpr)
+
+! ----- Initialisation of behaviour datastructure
+        call behaviourInit(BEHInteg)
+
+! ----- Set main parameters for behaviour (on cell)
+        call behaviourSetParaCell(typmod, option, &
+                                  compor, zr(jvCarcri), &
+                                  zr(jvInstmr), zr(jvInstpr), &
+                                  materPara, BEHInteg)
+
+        ds_thm%ds_behaviour%BEHInteg = BEHInteg
+
 ! ----- Get output fields
         ivectu = ismaem()
         icontp = ismaem()
@@ -122,19 +151,18 @@ subroutine te0515(option, nomte)
             call assesu(ds_thm, &
                         lMatr, lVect, lSigm, &
                         lVari, lMatrPred, &
-                        option, zi(imate), &
-                        type_elem, &
+                        option, typmod, &
                         ndim, nbvari, &
                         nno, nnos, nface, &
                         dimdef, dimcon, dimuel, &
                         mecani, press1, press2, tempe, &
-                        compor, zr(icarcr), &
-                        zr(igeom), &
+                        compor, zr(jvCarcri), &
+                        zr(jvGeom), &
                         zr(ideplm), zr(ideplm), &
                         defgem, defgep, &
                         zr(icontm), zr(icontm), &
                         zr(ivarim), zr(ivarim), &
-                        zr(iinstm), zr(iinstp), &
+                        zr(jvInstmr), zr(jvInstpr), &
                         zr(imatuu), zr(ivectu))
         else
             do li = 1, dimuel
@@ -143,19 +171,18 @@ subroutine te0515(option, nomte)
             call assesu(ds_thm, &
                         lMatr, lVect, lSigm, &
                         lVari, lMatrPred, &
-                        option, zi(imate), &
-                        type_elem, &
+                        option, typmod, &
                         ndim, nbvari, &
                         nno, nnos, nface, &
                         dimdef, dimcon, dimuel, &
                         mecani, press1, press2, tempe, &
-                        compor, zr(icarcr), &
-                        zr(igeom), &
+                        compor, zr(jvCarcri), &
+                        zr(jvGeom), &
                         zr(ideplm), zr(ideplp), &
                         defgem, defgep, &
                         zr(icontm), zr(icontp), &
                         zr(ivarim), zr(ivarip), &
-                        zr(iinstm), zr(iinstp), &
+                        zr(jvInstmr), zr(jvInstpr), &
                         zr(imatuu), zr(ivectu))
 
         end if

@@ -16,10 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
-                  jvMaterCode, poum, dEpsiIn, sigmPrev, option, &
-                  anglNaut, sigmCurr, dsidep)
+subroutine nmorth(materPara, ndim, poum, &
+                  dEpsiIn, sigmPrev, option, &
+                  sigmCurr, dsidep)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -29,6 +31,7 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
 #include "asterfort/d1mamc.h"
 #include "asterfort/dmat3d.h"
 #include "asterfort/dmatmc.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/matrot.h"
 #include "asterfort/utbtab.h"
@@ -38,15 +41,12 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
 #include "asterfort/verifs.h"
 #include "asterfort/verift.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: kpg, ksp, ndim
-    character(len=16), intent(in) :: elasKeyword
-    integer(kind=8), intent(in) :: jvMaterCode
+    type(Material_Para), intent(in) :: materPara
+    integer(kind=8), intent(in) :: ndim
     character(len=*), intent(in) :: poum
     real(kind=8), intent(in) :: dEpsiIn(2*ndim)
     real(kind=8), intent(in) :: sigmPrev(2*ndim)
     character(len=16), intent(in):: option
-    real(kind=8), intent(in) :: anglNaut(3)
     real(kind=8), intent(out) :: sigmCurr(2*ndim)
     real(kind=8), intent(out) :: dsidep(2*ndim, 2*ndim)
 !
@@ -74,7 +74,7 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
 !
     real(kind=8), parameter :: rac2 = sqrt(2.d0)
     real(kind=8) :: p(3, 3)
-    real(kind=8) :: timeNaN, hookf(36), mkooh(36)
+    real(kind=8) :: timeNaN, hooke(36), ekooh(36)
     real(kind=8) :: dEpsi(6)
     real(kind=8) :: epsiTherAnis(3), dEpsiTherLoca(6), dEpsiTherGlob(6)
     real(kind=8) :: dEpsiHydr, dEpsiSech, dEpsiAnel(6)
@@ -88,7 +88,7 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
 !
     timeNaN = r8vide()
 !
-    if (elasKeyword .eq. 'ELAS_ISTR' .and. ndim .eq. 2) then
+    if (materPara%elasID .eq. ELAS_ISTR .and. ndim .eq. 2) then
         call utmess('F', 'ELEMENTS3_2')
     end if
 
@@ -106,13 +106,11 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
         end do
     end if
 !
-    if (anglNaut(1) .eq. r8vide()) then
-        call utmess('F', 'ALGORITH8_20')
-    end if
+    call chckLCSValid(materPara)
 
 ! - Check legit model
     lLegitModel = ASTER_FALSE
-    if (fami .eq. 'PMAT') then
+    if (materPara%schemePara%fami .eq. 'PMAT') then
         lLegitModel = ASTER_TRUE
     else
         if (lteatt('DIM_TOPO_MAILLE', '3')) then
@@ -128,55 +126,49 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
     if (.not. lLegitModel) then
         call utmess('F', 'ALGORITH8_22')
     end if
-!
+
 ! - MATRICES TANGENTES
-!
-    if (fami .eq. 'PMAT') then
-!        ON VIENT DE OP0033
+    if (materPara%schemePara%fami .eq. 'PMAT') then
         if (option .eq. 'RIGI_MECA_TANG') then
-            call dmat3d(fami, jvMaterCode, timeNaN, '-', kpg, &
-                        ksp, anglNaut, hookf)
+            call dmat3d(materPara, '-', timeNaN, hooke)
         else
-            call d1ma3d(fami, jvMaterCode, timeNaN, '-', kpg, &
-                        ksp, anglNaut, mkooh)
-            call dmat3d(fami, jvMaterCode, timeNaN, '+', kpg, &
-                        ksp, anglNaut, hookf)
+            call d1ma3d(materPara, '-', timeNaN, ekooh)
+            call dmat3d(materPara, '+', timeNaN, hooke)
         end if
-!
     else
         if (option .eq. 'RIGI_MECA_TANG') then
-            call dmatmc(fami, jvMaterCode, timeNaN, '-', kpg, &
-                        ksp, anglNaut, ndimsi, hookf)
+            call dmatmc(materPara, "-", timeNaN, ndimsi, hooke)
         else
-            call d1mamc(fami, jvMaterCode, timeNaN, '-', kpg, &
-                        ksp, anglNaut, ndimsi, mkooh)
-            call dmatmc(fami, jvMaterCode, timeNaN, '+', kpg, &
-                        ksp, anglNaut, ndimsi, hookf)
+            call d1mamc(materPara, '-', timeNaN, ndimsi, ekooh)
+            call dmatmc(materPara, '+', timeNaN, ndimsi, hooke)
         end if
     end if
 !
     if (option(1:10) .eq. 'RIGI_MECA_' .or. option(1:9) .eq. 'FULL_MECA') then
         do i = 1, ndimsi
             do j = 1, ndimsi
-                dsidep(i, j) = hookf(ndimsi*(j-1)+i)
+                dsidep(i, j) = hooke(ndimsi*(j-1)+i)
             end do
         end do
     end if
-!
+
 ! - INTEGRATION
-!
     if (option .eq. 'FULL_MECA' .or. option .eq. 'RAPH_MECA') then
 ! ----- Thermal strains (local)
         dEpsiTherLoca = 0.d0
-        if (elasKeyword .eq. 'ELAS_ORTH') then
-            call verift(fami, kpg, ksp, poum, jvMaterCode, &
+        if (materPara%elasID .eq. ELAS_ORTH) then
+            call verift(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        poum, materPara%jvMaterCode, &
                         epsth_anis_=epsiTherAnis)
             dEpsiTherLoca(1) = epsiTherAnis(1)
             dEpsiTherLoca(2) = epsiTherAnis(2)
             dEpsiTherLoca(3) = epsiTherAnis(3)
 
-        else if (elasKeyword .eq. 'ELAS_ISTR') then
-            call verift(fami, kpg, ksp, poum, jvMaterCode, &
+        else if (materPara%elasID .eq. ELAS_ISTR) then
+            call verift(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        poum, materPara%jvMaterCode, &
                         epsth_anis_=epsiTherAnis)
             dEpsiTherLoca(1) = epsiTherAnis(1)
             dEpsiTherLoca(2) = epsiTherAnis(1)
@@ -187,7 +179,11 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
         end if
 
 !       RECUPERATION DE LA MATRICE DE PASSAGE
-        call matrot(anglNaut, p)
+        if (chckLCSDefine(materPara%lcsPara)) then
+            call matrot(materPara%lcsPara%lcsAngle, p)
+        else
+            call utmess("F", "ALGORITH8_20")
+        end if
 
 ! ----- Thermal strains (global)
         do i = 1, 3
@@ -199,8 +195,7 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
         deplth_mat(2, 1) = deplth_mat(1, 2)
         deplth_mat(3, 1) = deplth_mat(1, 3)
         deplth_mat(3, 2) = deplth_mat(2, 3)
-        call utbtab('ZERO', 3, 3, deplth_mat, p, &
-                    work, depgth_mat)
+        call utbtab('ZERO', 3, 3, deplth_mat, p, work, depgth_mat)
         dEpsiTherGlob(1) = depgth_mat(1, 1)
         dEpsiTherGlob(2) = depgth_mat(2, 2)
         dEpsiTherGlob(3) = depgth_mat(3, 3)
@@ -209,13 +204,15 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
         dEpsiTherGlob(6) = depgth_mat(2, 3)
 
 ! ----- Get increment of external state variables
-        call verifh(fami, kpg, ksp, poum, jvMaterCode, dEpsiHydr)
-        call verifs(fami, kpg, ksp, poum, jvMaterCode, dEpsiSech)
-        call verifepsa(fami, kpg, ksp, poum, dEpsiAnel)
+        call verifh(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                    poum, materPara%jvMaterCode, dEpsiHydr)
+        call verifs(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                    poum, materPara%jvMaterCode, dEpsiSech)
+        call verifepsa(materPara%schemePara%fami, &
+                       materPara%schemePara%kpg, materPara%schemePara%ksp, poum, dEpsiAnel)
 
-!
-! CALCUL DES DEFORMATIONS MECANIQUES
-!
         do i = 1, ndimsi
             if (i .le. 3) then
                 dEpsiMeca(i) = dEpsi(i)-dEpsiTherGlob(i)-dEpsiHydr-dEpsiSech-dEpsiAnel(i)
@@ -223,8 +220,7 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
                 dEpsiMeca(i) = dEpsi(i)-2.0*dEpsiTherGlob(i)-2.0*dEpsiAnel(i)
             end if
         end do
-!
-! CONTRAINTE A L ETAT +
+
         sigm2 = sigmPrev
         do i = 4, ndimsi
             sigm2(i) = sigm2(i)/rac2
@@ -236,19 +232,17 @@ subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
         do i = 1, ndimsi
             epsm2(i) = 0.d0
             do j = 1, ndimsi
-                epsm2(i) = epsm2(i)+mkooh(ndimsi*(j-1)+i)*sigm2(j)
+                epsm2(i) = epsm2(i)+ekooh(ndimsi*(j-1)+i)*sigm2(j)
             end do
         end do
 !
         do i = 1, ndimsi
             sigmCurr(i) = 0.d0
             do j = 1, ndimsi
-                sigmCurr(i) = sigmCurr(i)+hookf(ndimsi*(j-1)+i)*(dEpsiMeca(j)+ &
-                                                                 epsm2(j))
+                sigmCurr(i) = sigmCurr(i)+ &
+                              hooke(ndimsi*(j-1)+i)*(dEpsiMeca(j)+epsm2(j))
             end do
         end do
-!
-! REMISE AU FORMAT ASTER DES VALEURS EXTRA DIAGONALES
         do i = 4, ndimsi
             sigmCurr(i) = sigmCurr(i)*rac2
         end do

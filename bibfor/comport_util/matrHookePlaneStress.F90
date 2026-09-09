@@ -15,20 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine matrHookePlaneStress(elas_type, angl_naut, &
+!
+subroutine matrHookePlaneStress(materPara, &
                                 h, g, g1, &
                                 matr_elas)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/dpao2d.h"
+#include "asterfort/ElasticityMaterial_type.h"
+#include "asterfort/MaterialPara_type.h"
 #include "asterfort/utbtab.h"
+#include "asterfort/utmess.h"
 !
-!
-    integer(kind=8), intent(in) :: elas_type
-    real(kind=8), intent(in) :: angl_naut(3)
+    type(Material_Para), intent(in) :: materPara
     real(kind=8), intent(in) :: h(3), g
     real(kind=8), intent(in) :: g1
     real(kind=8), intent(out) :: matr_elas(4, 4)
@@ -41,59 +44,48 @@ subroutine matrHookePlaneStress(elas_type, angl_naut, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  elas_id          : Type of elasticity
-!                 1 - Isotropic
-!                 2 - Orthotropic
-!                 3 - Transverse isotropic
-!                           or viscoelasticity
-!                 4 - Isotropic
-!                 5 - Orthotropic
-!                 6 - Transverse isotropic
-! In  angl_naur        : nautical angles
-! In h                 : Hook matrix element
-! In g                 : shear ratio (Isotropic)
+! In  materPara        : parameters of material
+! In  h                : Hooke coefficients (all)
+! In  g                : shear ratio (Isotropic)
 ! In  g1               : shear ratio (Orthotropic)
 ! Out matr_elas        : Hooke matrix
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: irep, i, j
-    real(kind=8) :: matr_tran(4, 4), dorth(4, 4), work(4, 4)
+    integer(kind=8) :: irep, i, j, elasID
+    real(kind=8) :: matr_tran(4, 4), dorth(4, 4), work(4, 4), anglNaut(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    matr_elas(:, :) = 0.d0
-    dorth(:, :) = 0.d0
-    work(:, :) = 0.d0
-!
+    elasID = materPara%elasID
+    anglNaut = materPara%lcsPara%lcsAngle
+
+    matr_elas = 0.d0
+    dorth = 0.d0
+    work = 0.d0
+
 ! - Compute Hooke matrix
-!
-    if (elas_type .eq. 1 .or. elas_type .eq. 4) then
-!
-! ----- Isotropic matrix
-!
+    if (elasID .eq. ELAS_ISOT .or. elasID .eq. ELAS_VISC_ISOT) then
         matr_elas(1, 1) = h(1)
         matr_elas(1, 2) = h(2)
         matr_elas(2, 1) = h(2)
         matr_elas(2, 2) = h(1)
         matr_elas(4, 4) = g
-!
-    else if (elas_type .eq. 2 .or. elas_type .eq. 5) then
-!
-! ----- Orthotropic matrix
-!
+
+    else if (elasID .eq. ELAS_ORTH .or. elasID .eq. ELAS_VISC_ORTH) then
+        if (.not. chckLCSDefine(materPara%lcsPara)) then
+            call utmess("F", "ALGORITH8_20")
+        end if
         dorth(1, 1) = h(1)
         dorth(1, 2) = h(2)
         dorth(2, 2) = h(3)
         dorth(2, 1) = dorth(1, 2)
         dorth(4, 4) = g1
-!
+
 ! ----- Matrix from orthotropic basis to global 3D basis
-!
-        call dpao2d(angl_naut, irep, matr_tran)
-!
+        call dpao2d(anglNaut, irep, matr_tran)
+
 ! ----- Hooke matrix in global 3D basis
-!
         ASSERT((irep .eq. 1) .or. (irep .eq. 0))
         if (irep .eq. 1) then
             call utbtab('ZERO', 4, 4, dorth, matr_tran, work, matr_elas)
@@ -104,17 +96,16 @@ subroutine matrHookePlaneStress(elas_type, angl_naut, &
                 end do
             end do
         end if
-    else if (elas_type .eq. 3) then
-!
-! ----- Transverse isotropic matrix
-!
+
+    else if (elasID .eq. ELAS_ISTR) then
         matr_elas(1, 1) = h(1)
         matr_elas(1, 2) = h(2)
         matr_elas(2, 1) = matr_elas(1, 2)
         matr_elas(2, 2) = matr_elas(1, 1)
         matr_elas(4, 4) = h(3)
+
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end subroutine

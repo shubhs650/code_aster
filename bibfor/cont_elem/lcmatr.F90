@@ -33,6 +33,7 @@ subroutine lcmatr(elem_dime, &
 #include "asterfort/lcptga.h"
 #include "asterfort/lccoes.h"
 #include "asterfort/lccoma.h"
+#include "MeshTypes_type.h"
 #include "asterfort/lcgeom_prep.h"
 !
     integer(kind=8), intent(in) :: elem_dime
@@ -41,11 +42,11 @@ subroutine lcmatr(elem_dime, &
     character(len=8), intent(in) :: elem_slav_code, elem_mast_code
     integer(kind=8), intent(in) :: nb_node_slav, nb_node_mast
     integer(kind=8), intent(in) :: nb_poin_inte
-    real(kind=8), intent(in) :: poin_inte_sl(16), poin_inte_ma(16)
-    real(kind=8), intent(in) :: elem_mast_init(nb_node_mast, elem_dime)
-    real(kind=8), intent(in) :: elem_slav_init(nb_node_slav, elem_dime)
-    real(kind=8), intent(in) :: elem_mast_coor(nb_node_mast, elem_dime)
-    real(kind=8), intent(in) :: elem_slav_coor(nb_node_slav, elem_dime)
+    real(kind=8), intent(in) :: poin_inte_sl(2, 8), poin_inte_ma(2, 8)
+    real(kind=8), intent(in) :: elem_mast_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_slav_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elga_fami
     real(kind=8), intent(inout) :: matr(55, 55)
 !
@@ -74,16 +75,15 @@ subroutine lcmatr(elem_dime, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i_node, i_dime, i_tria, i_gauss
+    integer(kind=8) :: i_dime, i_tria, i_gauss
     integer(kind=8) :: nb_tria
     integer(kind=8) :: tria_node(6, 3)
-    real(kind=8) :: tria_coot_sl(2, 3), tria_coor_sl(16)
-    real(kind=8) :: tria_coot_ma(2, 3), tria_coor_ma(16)
+    real(kind=8) :: tria_coor_sl(2, 3), tria_coor_ma(2, 3)
     integer(kind=8) :: nb_gauss
     real(kind=8) :: poidpg_sl, poidpg_ma, jacobian_ma, jacobian_sl
     real(kind=8) :: gauss_weight_sl(12), gauss_coor_sl(2, 12), gauss_coot_sl(2)
     real(kind=8) :: gauss_weight_ma(12), gauss_coor_ma(2, 12), gauss_coot_ma(2)
-    real(kind=8) :: shape_func_sl(9), shape_func_ma(9)
+    real(kind=8) :: shape_func_sl(MT_NNOMAX2D), shape_func_ma(MT_NNOMAX2D)
     real(kind=8) :: dist_vect_sl(3), dist_vect_ma(3)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -99,54 +99,26 @@ subroutine lcmatr(elem_dime, &
 ! - Loop on triangles
     do i_tria = 1, nb_tria
 ! ----- Coordinates of current triangle (slave)
-        tria_coor_sl(:) = 0.d0
+        tria_coor_sl = 0.d0
         if (elem_dime .eq. 3) then
             call lctrco(i_tria, tria_node, poin_inte_sl, tria_coor_sl)
         elseif (elem_dime .eq. 2) then
-            tria_coor_sl(1:16) = poin_inte_sl(1:16)
-        end if
-! ----- Change shape of vector (slave)
-        tria_coot_sl(1:2, 1:3) = 0.d0
-        if (elem_dime .eq. 3) then
-            do i_node = 1, 3
-                do i_dime = 1, (elem_dime-1)
-                    tria_coot_sl(i_dime, i_node) = &
-                        tria_coor_sl((i_node-1)*(elem_dime-1)+i_dime)
-                end do
-            end do
-        else
-            tria_coot_sl(1, 1) = tria_coor_sl(1)
-            tria_coot_sl(2, 1) = 0.d0
-            tria_coot_sl(1, 2) = tria_coor_sl(2)
-            tria_coot_sl(2, 2) = 0.d0
+            tria_coor_sl(1, 1) = poin_inte_sl(1, 1)
+            tria_coor_sl(1, 2) = poin_inte_sl(1, 2)
         end if
 ! ----- Coordinates of current triangle (master)
-        tria_coor_ma(:) = 0.d0
+        tria_coor_ma = 0.d0
         if (elem_dime .eq. 3) then
             call lctrco(i_tria, tria_node, poin_inte_ma, tria_coor_ma)
         elseif (elem_dime .eq. 2) then
-            tria_coor_ma(1:16) = poin_inte_ma(1:16)
-        end if
-! ----- Change shape of vector (master)
-        tria_coot_ma(1:2, 1:3) = 0.d0
-        if (elem_dime .eq. 3) then
-            do i_node = 1, 3
-                do i_dime = 1, (elem_dime-1)
-                    tria_coot_ma(i_dime, i_node) = &
-                        tria_coor_ma((i_node-1)*(elem_dime-1)+i_dime)
-                end do
-            end do
-        else
-            tria_coot_ma(1, 1) = tria_coor_ma(1)
-            tria_coot_ma(2, 1) = 0.d0
-            tria_coot_ma(1, 2) = tria_coor_ma(2)
-            tria_coot_ma(2, 2) = 0.d0
+            tria_coor_ma(1, 1) = poin_inte_ma(1, 1)
+            tria_coor_ma(1, 2) = poin_inte_ma(1, 2)
         end if
 ! ----- Get integration points for slave element
-        call lcptga(elem_dime, tria_coot_sl, elga_fami, &
+        call lcptga(elem_dime, tria_coor_sl, elga_fami, &
                     nb_gauss, gauss_coor_sl, gauss_weight_sl)
 ! ----- Get integration points for master element
-        call lcptga(elem_dime, tria_coot_ma, elga_fami, &
+        call lcptga(elem_dime, tria_coor_ma, elga_fami, &
                     nb_gauss, gauss_coor_ma, gauss_weight_ma)
 ! ----- Loop on integration points
         do i_gauss = 1, nb_gauss

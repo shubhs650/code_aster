@@ -16,11 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dktrig(nomte, xyzl, option, pgl, rig, &
-                  ener, multic)
+subroutine dktrig(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  matrRigi_, ener_)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/bsthpl.h"
 #include "asterfort/dktbf.h"
 #include "asterfort/dxmate.h"
@@ -36,60 +39,65 @@ subroutine dktrig(nomte, xyzl, option, pgl, rig, &
 #include "asterfort/utpvgl.h"
 #include "blas/dcopy.h"
 #include "blas/dscal.h"
-    real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
-    character(len=16) :: option, nomte
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(in) :: xyzl(3, *), pgl(*)
+    character(len=16), intent(in) :: option
+    real(kind=8), optional, intent(out) :: matrRigi_(300), ener_(3)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     MATRICE DE RIGIDITE DE L'ELEMENT DE PLAQUE DKT
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES TROIS NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT RIG    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_POT (EPOT_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: multic, i, jcoqu, jdepg
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: npg, ndim, ipoids, icoopg
+    integer(kind=8) :: multic, i, jvDisp
     real(kind=8) :: wgt, aire
     real(kind=8) :: dm(9), df(9), dmf(9), df2(9), dmf2(9), dc(4), dci(4)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
     real(kind=8) :: bf(3, 9), bm(3, 6)
     real(kind=8) :: xab1(3, 9), depl(18)
     real(kind=8) :: flex(81), memb(36), mefl(54)
-    real(kind=8) :: bsigth(24), enerth, ctor
-    aster_logical :: coupmf, indith
-    real(kind=8) :: qsi, eta, carat3(21), t2iu(4), t2ui(4), t1ve(9)
+    real(kind=8) :: ctor
+    aster_logical :: coupmf
+    real(kind=8) :: qsi, eta, carat3(21)
     blas_int :: b_incx, b_incy, b_n
-!     ------------------------------------------------------------------
-    enerth = 0.0d0
+    real(kind=8) :: matrRigi(300), ener(3)
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
+    ener = 0.d0
+    matrRigi = 0.d0
 !
-!     ------ MISE A ZERO DES MATRICES : FLEX ET MEFL -------------------
-    call r8inir(81, 0.d0, flex, 1)
-    call r8inir(36, 0.d0, memb, 1)
-    call r8inir(54, 0.d0, mefl, 1)
-!
-!     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE TRIANGLE ----------
+    call elrefe_info(fami='RIGI', npg=npg, ndim=ndim, &
+                     jpoids=ipoids, jcoopg=icoopg)
+
+! - Get parameters
+    ctor = plateCara%coefRigiDRZ
+
+! - Geometric properties
     call gtria3(xyzl, carat3)
-!
-!     CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION
-!     MEMBRANE ET CISAILLEMENT INVERSEE
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+
+! - Get elementary matrix of rigidity
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
+
 !     ------------------------------------------------------------------
 !     CALCUL DE LA MATRICE DE RIGIDITE DE L'ELEMENT EN MEMBRANE
 !     ------------------------------------------------------------------
+    memb = 0.d0
+    flex = 0.d0
+    mefl = 0.d0
 !
 !     ------ CALCUL DE LA MATRICE BM -----------------------------------
     call dxtbm(carat3(9), bm)
     aire = carat3(8)
-!
+
 !     ------ CALCUL DU PRODUIT BMT.DM.BM -------------------------------
     b_n = to_blas_int(9)
     b_incx = to_blas_int(1)
@@ -98,9 +106,8 @@ subroutine dktrig(nomte, xyzl, option, pgl, rig, &
     b_n = to_blas_int(9)
     b_incx = to_blas_int(1)
     call dscal(b_n, aire, dmf2, b_incx)
-    call utbtab('ZERO', 3, 6, dmf2, bm, &
-                xab1, memb)
-!
+    call utbtab('ZERO', 3, 6, dmf2, bm, xab1, memb)
+
 !     ------------------------------------------------------------------
 !     CALCUL DES MATRICES DE RIGIDITE DE L'ELEMENT EN FLEXION ET
 !     COUPLAGE MEMBRANE/FLEXION
@@ -133,24 +140,33 @@ subroutine dktrig(nomte, xyzl, option, pgl, rig, &
             call utctab('CUMU', 3, 9, 6, dmf2, &
                         bf, bm, xab1, mefl)
         end if
-!
+
     end do
 !
     if (option .eq. 'RIGI_MECA') then
-        call dxtloc(flex, memb, mefl, ctor, rig)
-!
+        call dxtloc(flex, memb, mefl, ctor, matrRigi)
     else if (option .eq. 'EPOT_ELEM') then
-        call jevech('PDEPLAR', 'L', jdepg)
-        call utpvgl(3, 6, pgl, zr(jdepg), depl)
+        call jevech('PDEPLAR', 'L', jvDisp)
+        call utpvgl(3, 6, pgl, zr(jvDisp), depl)
         call dxtloe(flex, memb, mefl, ctor, coupmf, &
                     depl, ener)
-        call bsthpl(nomte, bsigth, indith)
-        if (indith) then
-            do i = 1, 18
-                enerth = enerth+depl(i)*bsigth(i)
-            end do
-            ener(1) = ener(1)-enerth
-        end if
+        ! call bsthpl(plateCara, plateOrie, &
+        !             jvGeom, nomte, xyzl, &
+        !             bsigth)
+        ! if (indith) then
+        !     enerTher = 0.d0
+        !     do i = 1, 18
+        !         enerTher = enerTher+depl(i)*bsigth(i)
+        !     end do
+        !     ener(1) = ener(1)-enerTher
+        ! end if
+    end if
+!
+    if (present(matrRigi_)) then
+        matrRigi_ = matrRigi
+    end if
+    if (present(ener_)) then
+        ener_ = ener
     end if
 !
 end subroutine

@@ -57,7 +57,7 @@ cata_msg = {
     ),
     11: _(
         """
-  La fermeture du joint sort des bornes [0,fermeture maximale] sur la maille %(k1)s.
+  La fermeture du joint sort des bornes [0,fermeture maximale].
   fermeture du joint = %(r1)f
   fermeture maximale = %(r2)f
   Vérifier la cohérence chargement mécanique, fermeture asymptotique et ouverture

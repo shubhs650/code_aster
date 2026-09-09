@@ -17,10 +17,10 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W1306
 !
-subroutine assthm(ds_thm, option, j_mater, &
+subroutine assthm(ds_thm, &
                   lMatr, lSigm, lVect, &
                   lVari, lMatrPred, l_axi, &
-                  typmod, inte_type, angl_naut, &
+                  option, typmod, inte_type, &
                   ndim, nbvari, nno, nnos, &
                   npg, npi, &
                   nddls, nddlm, nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
@@ -34,11 +34,12 @@ subroutine assthm(ds_thm, option, j_mater, &
                   dispm, dispp, &
                   congem, congep, &
                   vintm, vintp, &
-                  time_prev, time_curr, &
+                  timePrev, timeCurr, &
                   matuu, vectu, codret)
 !
+    use Behaviour_module
+    use Behaviour_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -57,18 +58,16 @@ subroutine assthm(ds_thm, option, j_mater, &
     integer(kind=8), parameter :: dimmat = 120
     character(len=16), intent(in) :: option
     aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred, lVect
-    integer(kind=8), intent(in) :: j_mater
     aster_logical, intent(in)  :: l_axi
     character(len=8), intent(in) :: typmod(2)
     character(len=3), intent(in) :: inte_type
-    real(kind=8), intent(in)  :: angl_naut(3)
     integer(kind=8), intent(in) :: nbvari, ndim
     integer(kind=8), intent(in) :: nno, nnos
     integer(kind=8), intent(in) :: npg, npi
     integer(kind=8), intent(in) :: nddls, nddlm, nddl_meca, nddl_p1, nddl_p2, nddl_2nd
     integer(kind=8), intent(in) :: dimuel, dimdef, dimcon
     integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
-    character(len=16), intent(in)  :: compor(COMPOR_SIZE)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8), intent(in) :: jv_poids, jv_poids2
     integer(kind=8), intent(in) :: jv_func, jv_func2
@@ -79,7 +78,7 @@ subroutine assthm(ds_thm, option, j_mater, &
     real(kind=8), intent(inout) :: congep(dimcon*npi)
     real(kind=8), intent(in) :: vintm(nbvari*npi)
     real(kind=8), intent(inout) :: vintp(nbvari*npi)
-    real(kind=8), intent(in) :: time_prev, time_curr
+    real(kind=8), intent(in) :: timePrev, timeCurr
     real(kind=8), intent(inout) :: matuu(dimuel*dimuel)
     real(kind=8), intent(inout) :: vectu(dimuel)
     integer(kind=8), intent(out) :: codret
@@ -94,12 +93,10 @@ subroutine assthm(ds_thm, option, j_mater, &
 !
 ! IO  ds_thm           : datastructure for THM
 ! In  option           : name of option to compute
-! In  j_mater          : coded material address
 ! In  l_axi            : flag is axisymmetric model
 ! In  l_steady         : flag for no-transient problem
 ! In  typmod           : type of modelization (TYPMOD2)
 ! In  inte_type        : type of integration - classical, lumped (D), reduced (R)
-! In  angl_naut        : nautical angles
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  nno              : total number of nodes
@@ -135,15 +132,16 @@ subroutine assthm(ds_thm, option, j_mater, &
 ! IO  congep           : generalized stresses - At end of current step
 ! In  vintm            : internal state variables - At begin of current step
 ! IO  vintp            : internal state variables - At end of current step
-! In  time_prev        : time at beginning of step
-! In  time_curr        : time at end of step
+! In  timePrev        : time at beginning of step
+! In  timeCurr        : time at end of step
 ! IO  matuu            : tangent matrix
 ! IO  vectu            : non-linear forces
 ! Out codret           : return code for error
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: time_incr, parm_theta
+    integer(kind=8), parameter :: ksp = 1
+    real(kind=8) :: timeIncr, paraTheta
     integer(kind=8) :: kpi, ipi
     integer(kind=8) :: i, j, n, k, kji
     integer(kind=8) :: nb_vari_meca
@@ -194,11 +192,11 @@ subroutine assthm(ds_thm, option, j_mater, &
     nb_vari_meca = ds_thm%ds_behaviour%nb_vari_meca
 
 ! - Get initial parameters (THM_INIT)
-    call thmGetParaInit(j_mater, ds_thm, l_check_=ASTER_TRUE)
+    call thmGetParaInit(ds_thm, l_check_=ASTER_TRUE)
 
 ! - Time parameters
-    time_incr = time_curr-time_prev
-    parm_theta = carcri(PARM_THETA_THM)
+    timeIncr = timeCurr-timePrev
+    paraTheta = carcri(PARM_THETA_THM)
 
 ! - Create matrix for selection of dof for reduced integration
     call thmSelectMatrix(ds_thm, &
@@ -245,11 +243,14 @@ subroutine assthm(ds_thm, option, j_mater, &
             end do
         end do
 
+! ----- Set main parameters for behaviour (on point)
+        call behaviourSetParaPoin(kpi, ksp, ds_thm%ds_behaviour%BEHInteg)
+
 ! ----- Compute generalized stresses and derivatives at current Gauss point
-        call equthm(ds_thm, option, j_mater, &
+        call equthm(ds_thm, option, &
                     lMatr, lSigm, &
                     lVari, lMatrPred, &
-                    typmod, angl_naut, parm_theta, &
+                    typmod, paraTheta, &
                     ndim, nbvari, &
                     kpi, npg, &
                     dimdef, dimcon, &
@@ -258,7 +259,7 @@ subroutine assthm(ds_thm, option, j_mater, &
                     defgem, defgep, &
                     congem((kpi-1)*dimcon+1), congep((kpi-1)*dimcon+1), &
                     vintm((kpi-1)*nbvari+1), vintp((kpi-1)*nbvari+1), &
-                    time_prev, time_curr, time_incr, &
+                    timePrev, timeCurr, timeIncr, &
                     r, drds, dsde, codret)
 
 ! ----- For selective integrations => move Gauss points to nodes
@@ -358,8 +359,8 @@ subroutine assthm(ds_thm, option, j_mater, &
             end do
         end do
     end if
-! ======================================================================
+!
 99  continue
     deallocate (matri)
-! ======================================================================
+!
 end subroutine

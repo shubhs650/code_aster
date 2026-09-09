@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
+subroutine nttcmv(model, materCode, caraElem, listLoad, nume_dof, &
                   solver, timeMap, tpsthe, tpsnp1, reasvt, &
                   reasmt, creas, vtemp, vtempm, vec2nd, &
                   matass, maprec, cndirp, cnchci, cnchtp)
@@ -44,7 +44,7 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 #include "asterfort/vedith.h"
 !
     character(len=8), intent(in) :: model, caraElem
-    character(len=24), intent(in) :: mateco, listLoad
+    character(len=24), intent(in) :: materCode, listLoad
     character(len=24), intent(in) :: nume_dof
     character(len=19), intent(in) :: solver
     character(len=24), intent(in) :: timeMap
@@ -52,7 +52,7 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
     real(kind=8) :: tpsthe(6), tpsnp1
     character(len=1) :: creas
     character(len=19) :: maprec
-    character(len=24) :: time_move
+    character(len=24) :: timeMapMove
     character(len=24) :: vtemp, vtempm, vec2nd
     character(len=24) :: matass, cndirp, cnchci, cnchtp
 !
@@ -67,17 +67,18 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ibid, k, iret, ierr, nbmat, jmet
+    integer(kind=8) :: ibid, k, iret, ierr, nbmat
     integer(kind=8) :: j2nd, lonch
     character(len=1) :: typres
     character(len=8) :: nomcmp(6)
     character(len=19) :: merigi
     character(len=24) :: ligrmo, mediri
     character(len=19) ::  tlimat(3)
-    character(len=24) :: vediri, vechtp, vadirp, vachtp, metrnl, time_matr
-    character(len=19) :: resu_elem
+    character(len=24) :: vediri, vechtp, vadirp, vachtp, timeMapMatr
+    character(len=24), parameter :: metrnl = "&&METRNL"
+    character(len=19) :: resuElem
     real(kind=8) :: time_curr
-    character(len=24), pointer :: v_resu_elem(:) => null()
+    character(len=24), pointer :: resuElemRelr(:) => null()
     real(kind=8), pointer :: chtp(:) => null()
     real(kind=8), pointer :: dirp(:) => null()
     character(len=24) :: loadNameJv, loadInfoJv, loadFuncJv
@@ -86,7 +87,6 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
     data nomcmp/'INST    ', 'DELTAT  ', 'THETA   ', 'KHI     ', &
         'R       ', 'RHO     '/
     data mediri/'&&MEDIRI           .RELR'/
-    data metrnl/'&&METNTH           .RELR'/
     data vediri/'&&VETDIR           .RELR'/
     data vechtp/'&&VETCHA           .RELR'/
 !
@@ -95,8 +95,8 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
     call jemarq()
     vadirp = '&&VATDIR'
     vachtp = '&&VATCHA'
-    time_move = '&&NTTCMV.TIMEMO'
-    time_matr = '&&NTTCMV.TIMEMA'
+    timeMapMove = '&&NTTCMV.TIMEMO'
+    timeMapMatr = '&&NTTCMV.TIMEMA'
     merigi = '&&METRIG'
     creas = ' '
     time_curr = tpsthe(1)
@@ -113,7 +113,6 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
     if (reasvt) then
 !
 ! ----- Field for timeMap
-!
         call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
         call mecact('V', timeMap, 'MODELE', ligrmo, 'INST_R', &
                     ncmp=6, lnomcmp=nomcmp, vr=tpsthe)
@@ -121,10 +120,10 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 ! ----- Field for shifted timeMap with 1-THETA
 !
         tpsthe(3) = 1.d0
-        call mecact('V', time_move, 'MODELE', ligrmo, 'INST_R', &
+        call mecact('V', timeMapMove, 'MODELE', ligrmo, 'INST_R', &
                     ncmp=6, lnomcmp=nomcmp, vr=tpsthe)
         tpsthe(3) = -1.d0
-        call mecact('V', time_matr, 'MODELE', ligrmo, 'INST_R', &
+        call mecact('V', timeMapMatr, 'MODELE', ligrmo, 'INST_R', &
                     ncmp=6, lnomcmp=nomcmp, vr=tpsthe)
         tpsthe(3) = 0.d0
 !
@@ -147,11 +146,11 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 !                 VTEMPD ET THETA SONT INUTILISES.
 !
         call vechth('MOVE', &
-                    model, mateco, &
+                    model, materCode, &
                     loadNameJv, loadInfoJv, &
                     time_curr, &
                     vechtp, &
-                    timeMapZ_=timeMap, tempPrevZ_=vtemp, timeMoveZ_=time_move)
+                    timeMapZ_=timeMap, tempPrevZ_=vtemp, timeMoveZ_=timeMapMove)
         call asasve(vechtp, nume_dof, typres, 'D', vachtp)
         call ascova('D', vachtp, loadFuncJv, 'INST', time_curr, &
                     typres, cnchtp)
@@ -172,34 +171,34 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 ! ======================================================================
 !
     if (reasmt) then
-!
+
 ! --- (RE)CALCUL DE LA MATRICE DES DIRICHLET POUR L'ASSEMBLER
-!
         call medith('V', 'ZERO', model, listLoad, mediri)
-!
+
 ! ----- Elementary matrix for transport (volumic and surfacic terms)
-!
         creas = 'M'
-        call mertth(model, loadNameJv, loadInfoJv, caraElem, mateco, &
-                    time_matr, time_move, vtemp, vtempm, merigi)
-!
+        call mertth(model, loadNameJv, loadInfoJv, &
+                    caraElem, materCode, &
+                    timeMapMatr, timeMapMove, vtemp, vtempm, merigi)
+
 ! ----- Elementary matrix for boundary conditions
-!
-        call metnth(model, loadNameJv, caraElem, mateco, timeMap, &
-                    vtempm, metrnl)
+        call metnth(model, loadNameJv, loadInfoJv, &
+                    caraElem, materCode, &
+                    timeMap, vtempm, metrnl)
 !
         nbmat = 0
-        call jeveuo(merigi(1:19)//'.RELR', 'L', vk24=v_resu_elem)
-        resu_elem = v_resu_elem(1) (1:19)
-        if (resu_elem .ne. ' ') then
+        call jeveuo(merigi(1:19)//'.RELR', 'L', vk24=resuElemRelr)
+        resuElem = resuElemRelr(1) (1:19)
+        if (resuElem .ne. ' ') then
             nbmat = nbmat+1
             tlimat(nbmat) = merigi(1:19)
         end if
 !
-        call jeexin(metrnl, iret)
+        call jeexin(metrnl(1:19)//'.RELR', iret)
         if (iret .gt. 0) then
-            call jeveuo(metrnl, 'L', jmet)
-            if (zk24(jmet) (1:8) .ne. '        ') then
+            call jeveuo(metrnl(1:19)//'.RELR', 'L', vk24=resuElemRelr)
+            resuElem = resuElemRelr(1) (1:19)
+            if (resuElem .ne. ' ') then
                 nbmat = nbmat+1
                 tlimat(nbmat) = metrnl(1:19)
             end if
@@ -207,8 +206,9 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
 !
         call jeexin(mediri(1:8)//'           .RELR', iret)
         if (iret .gt. 0) then
-            call jeveuo(mediri(1:8)//'           .RELR', 'L', vk24=v_resu_elem)
-            if (v_resu_elem(1) .ne. ' ') then
+            call jeveuo(mediri(1:8)//'           .RELR', 'L', vk24=resuElemRelr)
+            resuElem = resuElemRelr(1) (1:19)
+            if (resuElem .ne. ' ') then
                 nbmat = nbmat+1
                 tlimat(nbmat) = mediri(1:19)
             end if
@@ -225,6 +225,6 @@ subroutine nttcmv(model, mateco, caraElem, listLoad, nume_dof, &
                     ibid, -9999)
 !
     end if
-!-----------------------------------------------------------------------
+!
     call jedema()
 end subroutine

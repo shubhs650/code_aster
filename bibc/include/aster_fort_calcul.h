@@ -285,6 +285,11 @@ void DEFSSSS( CHCKAVRI, chckvari, const char *, STRING_SIZE, const char *, STRIN
 void DEFSSPSP( COMPAREFIELDSHAPE, comparefieldshape, const char *, STRING_SIZE, const char *,
                STRING_SIZE, ASTERLOGICAL *, const char *, STRING_SIZE, ASTERINTEGER * );
 
+#define CALLO_VARINONU_WRAP( a, b, c, d, e )                                                       \
+    CALLOOOOO( VARINONU_WRAP, varinonu_wrap, a, b, c, d, e )
+void DEFSSSSS( VARINONU_WRAP, varinonu_wrap, const char *, STRING_SIZE, const char *, STRING_SIZE,
+               const char *, STRING_SIZE, const char *, STRING_SIZE, const char *, STRING_SIZE );
+
 #ifdef __cplusplus
 }
 #endif

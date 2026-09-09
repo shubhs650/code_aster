@@ -53,7 +53,7 @@ subroutine elraga(elrefz, fapz, ndim, nbpg, coopg, poipg)
     real(kind=8) :: xpg(MT_NBPGMX), ypg(MT_NBPGMX), zpg(MT_NBPGMX), hpg(MT_NBPGMX)
     real(kind=8) :: h(8), a(8)
     real(kind=8) :: aty(40), ht(40), atz(40)
-    real(kind=8) :: lobWeight(7), lobCoor(7)
+    real(kind=8) :: lobWeight(7), lobCoor(7), quadWeight(3), quadCoor(3)
     real(kind=8) :: a1, a2, b1, b2, c1, c2, d1, e1
     real(kind=8) :: h1, h2, h3, h5
     real(kind=8) :: p1, p2, p3, p4, p5
@@ -339,6 +339,58 @@ subroutine elraga(elrefz, fapz, ndim, nbpg, coopg, poipg)
                         hpg(npi) = h(ix)*h(iy)*h(iz)
                     end do
                 end do
+            end do
+
+        else
+            ASSERT(ASTER_FALSE)
+        end if
+!
+    else if (elrefa .eq. 'H10') then
+        if (fapg .eq. 'FIS2') then
+! --------- FORMULE DE QUADRATURE DE GAUSS A 2 POINTS DANS
+!           LA DIRECTION DU PREMIER AXE ET AU CENTRE DE L'ELEMENT
+            ! order 3
+            xpg(1) = -rac_1div3
+            xpg(2) = -xpg(1)
+            hpg(1) = un
+            hpg(2) = hpg(1)
+            do iz = 1, 2
+                ypg(iz) = zero
+                zpg(iz) = zero
+            end do
+
+        else if (fapg .eq. 'FIS3') then
+! --------- FORMULE DE QUADRATURE DE GAUSS A 3 POINTS DANS
+!           LA DIRECTION DU PREMIER AXE ET AU CENTRE DE L'ELEMENT
+            ! order 5
+            quadCoor(1) = -rac_3div5
+            quadCoor(2) = zero
+            quadCoor(3) = -quadCoor(1)
+            quadWeight(1) = 5.d0/9.d0
+            quadWeight(2) = 8.d0/9.d0
+            quadWeight(3) = quadWeight(1)
+            do iz = 1, 3
+                xpg(iz) = quadCoor(iz)
+                ypg(iz) = zero
+                zpg(iz) = zero
+                hpg(iz) = quadWeight(iz)
+            end do
+
+        else if (fapg .eq. 'FIS4') then
+! --------- FORMULE DE QUADRATURE DE GAUSS A 4 POINTS DANS
+!           LA DIRECTION DU PREMIER AXE ET AU CENTRE DE L'ELEMENT
+            ! order 7
+            xpg(1) = gauss4p12
+            xpg(2) = -xpg(1)
+            xpg(3) = gauss4p34
+            xpg(4) = -xpg(3)
+            hpg(1) = (18.d0+rac30)/36.d0
+            hpg(2) = hpg(1)
+            hpg(3) = (18.d0-rac30)/36.d0
+            hpg(4) = hpg(3)
+            do iz = 1, 4
+                ypg(iz) = zero
+                zpg(iz) = zero
             end do
 
         else

@@ -20,16 +20,17 @@
 !
 interface
     subroutine nmfi2d(BEHInteg, &
-                      npg, lgpg, mate, option, geom, &
+                      npg, lgpg, option, geom, &
                       deplm, ddepl, sigmo, sigma, fint, &
-                      ktan, vim, vip, tm, tp, &
-                      carcri, compor, typmod, lMatr, lVect, lSigm, &
+                      kTang, vim, vip, &
+                      tm, tp, &
+                      carcri, compor, typmod, &
+                      lMatr, lVect, lSigm, &
                       codret)
         use Behaviour_type
         type(Behaviour_Integ), intent(inout) :: BEHinteg
         integer(kind=8) :: lgpg
         integer(kind=8) :: npg
-        integer(kind=8) :: mate
         character(len=8), intent(in) :: typmod(2)
         character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
@@ -39,7 +40,7 @@ interface
         real(kind=8) :: sigmo(6, npg)
         real(kind=8) :: sigma(6, npg)
         real(kind=8) :: fint(8)
-        real(kind=8) :: ktan(8, 8)
+        real(kind=8) :: kTang(8, 8)
         real(kind=8) :: vim(lgpg, npg)
         real(kind=8) :: vip(lgpg, npg)
         real(kind=8) :: tm

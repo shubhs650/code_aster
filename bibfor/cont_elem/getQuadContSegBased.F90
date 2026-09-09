@@ -33,6 +33,7 @@ subroutine getQuadContSegBased(elem_dime, &
 #include "asterfort/mmdonf.h"
 #include "asterfort/mmmjac.h"
 #include "asterfort/mmnonf.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     integer(kind=8), intent(in) :: elem_dime
@@ -42,7 +43,7 @@ subroutine getQuadContSegBased(elem_dime, &
     real(kind=8), intent(out) :: coor_qp(2, MAX_NB_QUAD)
     integer(kind=8), intent(out) :: nb_qp
     integer(kind=8), optional, intent(in) :: nb_node_slav_
-    real(kind=8), optional, intent(in) :: elem_slav_coor_(3, 9)
+    real(kind=8), optional, intent(in) :: elem_slav_coor_(3, MT_NNOMAX2D)
     aster_logical, optional, intent(in) :: l_axis_
     real(kind=8), optional, intent(out) :: weight_qp_(MAX_NB_QUAD)
 !
@@ -70,7 +71,7 @@ subroutine getQuadContSegBased(elem_dime, &
     integer(kind=8) :: nbTria, nbGauss
     real(kind=8) :: triaCoorSlav(2, 3)
     real(kind=8) :: gausWeightSlav(12), gausCoorSlav(2, 12)
-    real(kind=8) :: shape_func(9), shape_dfunc(2, 9), jacobian_sl
+    real(kind=8) :: shape_func(MT_NNOMAX2D), shape_dfunc(2, MT_NNOMAX2D), jacobian_sl
     character(len=8) :: elga_fami
 !
 ! --------------------------------------------------------------------------------------------------
@@ -134,10 +135,10 @@ subroutine getQuadContSegBased(elem_dime, &
 
             if (present(weight_qp_)) then
 ! ------------- Get shape functions and first derivative only (for perf)
-                call mmnonf(elem_dime, nb_node_slav_, elem_slav_code, &
+                call mmnonf(elem_slav_code, &
                             gausCoorSlav(1, iGauss), gausCoorSlav(2, iGauss), &
                             shape_func)
-                call mmdonf(elem_dime, nb_node_slav_, elem_slav_code, &
+                call mmdonf(elem_slav_code, &
                             gausCoorSlav(1, iGauss), gausCoorSlav(2, iGauss), &
                             shape_dfunc)
 

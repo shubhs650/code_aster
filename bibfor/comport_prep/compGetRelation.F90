@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine compGetRelation(factorKeyword, iFactorKeyword, rela_comp)
+subroutine compGetRelation(factorKeyword, iFactorKeyword, relaComp)
 !
     implicit none
 !
@@ -26,7 +26,7 @@ subroutine compGetRelation(factorKeyword, iFactorKeyword, rela_comp)
 !
     character(len=16), intent(in) :: factorKeyword
     integer(kind=8), intent(in) :: iFactorKeyword
-    character(len=16), intent(out) :: rela_comp
+    character(len=16), intent(out) :: relaComp
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -37,15 +37,15 @@ subroutine compGetRelation(factorKeyword, iFactorKeyword, rela_comp)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  iFactorKeyword   : factor keyword index
-! Out rela_comp        : name of behaviour relation
+! Out relaComp         : behaviour (RELATION keyword)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    rela_comp = ' '
-    call getvtx(factorKeyword, 'RELATION', iocc=iFactorKeyword, scal=rela_comp)
-    call deprecated_behavior(rela_comp)
-    if ((rela_comp(1:4) .eq. 'META') .and. (rela_comp .ne. 'META_LEMA_ANI')) then
-        rela_comp = 'KIT_META'
+    relaComp = 'VIDE'
+    call getvtx(factorKeyword, 'RELATION', iocc=iFactorKeyword, scal=relaComp)
+    call deprecated_behavior(relaComp)
+    if ((relaComp(1:4) .eq. 'META') .and. (relaComp .ne. 'META_LEMA_ANI')) then
+        relaComp = 'KIT_META'
     end if
 !
 end subroutine

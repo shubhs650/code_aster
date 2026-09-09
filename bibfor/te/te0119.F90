@@ -19,13 +19,14 @@
 subroutine te0119(option, nomte)
 !
     use pipeElem_module
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
 !
 #include "asterc/r8prem.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/teattr.h"
-#include "asterfort/utmess.h"
 #include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
@@ -40,11 +41,13 @@ subroutine te0119(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: jvCacoqu, ibid, jvCodret
+    integer(kind=8) :: ibid, jvCodret
     real(kind=8) :: excent
     character(len=3) :: cmod
     character(len=8) :: alias8
     aster_logical :: lPipe
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -54,9 +57,10 @@ subroutine te0119(option, nomte)
 
 ! - Vérification que l'excentrement est nul pour COQUE_3D
     if (cmod .eq. 'CQ3') then
-        call jevech('PCACOQU', 'L', jvCacoqu)
+        call getCara(plateCara, plateOrie)
+        call compCoorSystNone(plateOrie)
         call jevech('PCODRET', "E", jvCodret)
-        excent = zr(jvCacoqu-1+6)
+        excent = plateCara%offset
         if (abs(excent) .ge. r8prem()) then
             zi(jvCodret-1+1) = 1
         end if

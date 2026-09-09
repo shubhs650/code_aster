@@ -15,6 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine mmopti(mesh, ds_contact, list_func_acti)
 !
@@ -48,6 +49,7 @@ subroutine mmopti(mesh, ds_contact, list_func_acti)
 #include "blas/ddot.h"
 #include "asterfort/isfonc.h"
 #include "asterfort/mmvalp.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: mesh
     type(NL_DS_Contact), intent(inout) :: ds_contact
@@ -88,8 +90,9 @@ subroutine mmopti(mesh, ds_contact, list_func_acti)
     integer(kind=8) :: elem_mast_nume, elem_mast_nbno
     character(len=8) :: elem_mast_type
     character(len=19) :: oldgeo, newgeo
-    real(kind=8) :: elem_mast_coor(27), lenght_master_elem, lenght_master_elem_init, milieu(3)
-    real(kind=8) :: coef_cont, cont_eval, elem_slav_coor(27)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D), elem_slav_coor(3, MT_NNOMAX2D)
+    real(kind=8) :: lenght_master_elem, lenght_master_elem_init, milieu(3)
+    real(kind=8) :: coef_cont, cont_eval
     aster_logical :: l_reuse
     blas_int :: b_incx, b_incy, b_n
 !
@@ -226,23 +229,23 @@ subroutine mmopti(mesh, ds_contact, list_func_acti)
                     lenght_master_elem = sqrt( &
                                          abs( &
                                          ( &
-                                         elem_mast_coor(4)-elem_mast_coor(1)))**2.d0+abs((elem_m&
-                                         &ast_coor(5)-elem_mast_coor(2)))**2.d0+abs((elem_mast_c&
-                                         &oor(6)-elem_mast_coor(3) &
+                                      elem_mast_coor(1, 2)-elem_mast_coor(1, 1)))**2.d0+abs((elem_m&
+                                      &ast_coor(2, 2)-elem_mast_coor(2, 1)))**2.d0+abs((elem_mast_c&
+                                         &oor(3, 2)-elem_mast_coor(3, 1) &
                                          ) &
                                          )**2.d0 &
                                          )
                 else if ((elem_mast_type(1:2) .eq. 'TR')) then
                     lenght_master_elem = 0.0
 ! On calcule la mediane
-                    milieu(1) = (elem_mast_coor(1)+elem_mast_coor(4))*0.5
-                    milieu(2) = (elem_mast_coor(2)+elem_mast_coor(5))*0.5
-                    milieu(3) = (elem_mast_coor(3)+elem_mast_coor(6))*0.5
+                    milieu(1) = (elem_mast_coor(1, 1)+elem_mast_coor(1, 2))*0.5
+                    milieu(2) = (elem_mast_coor(2, 1)+elem_mast_coor(2, 2))*0.5
+                    milieu(3) = (elem_mast_coor(3, 1)+elem_mast_coor(3, 2))*0.5
                     lenght_master_elem = sqrt( &
                                          abs( &
                                          ( &
-                                         elem_mast_coor(7)-milieu(1)))**2.d0+abs((elem_mast_coor&
-                                         &(8)-milieu(2)))**2.d0+abs((elem_mast_coor(9)-milieu(3) &
+                                         elem_mast_coor(1, 3)-milieu(1)))**2.d0+abs((elem_mast_coor&
+                                     &(2, 3)-milieu(2)))**2.d0+abs((elem_mast_coor(3, 3)-milieu(3) &
                                          ) &
                                          )**2.d0 &
                                          )
@@ -253,12 +256,12 @@ subroutine mmopti(mesh, ds_contact, list_func_acti)
                     lenght_master_elem = sqrt( &
                                          abs( &
                                          ( &
-                                         elem_mast_coor(7)-elem_mast_coor(1)))**2.d0+abs((elem_m&
-                                         &ast_coor(8)-elem_mast_coor(2)))**2.d0+abs((elem_mast_c&
-                                         &oor(9)-elem_mast_coor(3)))**2.d0)+sqrt(abs((elem_mas&
-                                         &t_coor(10)-elem_mast_coor(4)))**2.d0+abs((elem_mast_co&
-                                         &or(11)-elem_mast_coor(5)))**2.d0+abs((elem_mast_coor(1&
-                                         &2)-elem_mast_coor(6) &
+                                      elem_mast_coor(1, 3)-elem_mast_coor(1, 1)))**2.d0+abs((elem_m&
+                                      &ast_coor(2, 3)-elem_mast_coor(2, 1)))**2.d0+abs((elem_mast_c&
+                                        &oor(3, 3)-elem_mast_coor(3, 1)))**2.d0)+sqrt(abs((elem_mas&
+                                       &t_coor(1, 4)-elem_mast_coor(1, 2)))**2.d0+abs((elem_mast_co&
+                                        &or(2, 4)-elem_mast_coor(2, 2)))**2.d0+abs((elem_mast_coor(&
+                                         &3, 4)-elem_mast_coor(3, 2) &
                                          ) &
                                          )**2.d0 &
                                          )
@@ -330,7 +333,7 @@ subroutine mmopti(mesh, ds_contact, list_func_acti)
 !
                 if ((l_auto_seuil) .or. ((l_reuse) .and. (contInit .eq. 2))) then
                     call mmextm(ds_contact%sdcont_defi, cnscon, elem_slav_indx, mlagc)
-                    call mmvalp_scal(model_ndim, elem_slav_type, elem_slav_nbno, ksipr1, ksipr2, &
+                    call mmvalp_scal(elem_slav_type, elem_slav_nbno, ksipr1, ksipr2, &
                                      mlagc, pres_cont)
                     v_sdcont_tabfin(ztabf*(i_cont_poin-1)+17) = pres_cont
                 else

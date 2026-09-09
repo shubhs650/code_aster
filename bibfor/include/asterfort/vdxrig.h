@@ -15,17 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vdxrig(nomte, xi, rig, nb1, indm,&
-                      indf)
-        character(len=16) :: nomte
-        real(kind=8) :: xi(3, 9)
-        real(kind=8) :: rig(51, 51)
-        integer(kind=8) :: nb1
-        integer(kind=8) :: indm
-        integer(kind=8) :: indf
+    subroutine vdxrig(plateCara, plateOrie, &
+                      nomte, nodeCoor, matrRigi, nb1, &
+                      indm, indf)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: nodeCoor(3, 9)
+        real(kind=8), intent(out) :: matrRigi(51, 51)
+        integer(kind=8), intent(out) :: nb1
+        integer(kind=8), intent(in) :: indm, indf
     end subroutine vdxrig
 end interface

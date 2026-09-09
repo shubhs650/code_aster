@@ -19,20 +19,14 @@
 !
 interface
     subroutine nmco1d(BEHInteg, &
-                      fami, kpg, ksp, imate, rela_comp, rela_cpla, &
-                      option, epsm, deps, angmas, sigm, &
+                      relaComp, &
+                      option, deps, sigm, &
                       vim, sigp, vip, dsidep, codret)
         use Behaviour_type
-        type(Behaviour_Integ), intent(in) :: BEHinteg
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: imate
-        character(len=16) :: rela_comp, rela_cpla
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        character(len=16) :: relaComp
         character(len=16) :: option
-        real(kind=8) :: epsm
         real(kind=8) :: deps
-        real(kind=8) :: angmas(3)
         real(kind=8) :: sigm
         real(kind=8) :: vim(*)
         real(kind=8) :: sigp

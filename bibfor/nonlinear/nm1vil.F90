@@ -15,45 +15,53 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nm1vil(fami, kpg, ksp, icdmat, materi, &
-                  crit, instam, instap, tm, tp, &
-                  tref, deps, sigm, vim, option, &
-                  defam, defap, angmas, sigp, vip, &
-                  dsidep, iret, compo, nbvalc)
+! aslint: disable=W0413
 !
-! aslint: disable=W1504
+subroutine nm1vil(materPara, &
+                  relaComp, carcri, &
+                  materPoin, &
+                  instam, instap, tm, tp, &
+                  deps, sigm, vim, &
+                  defam, defap, sigp, vip, &
+                  dsidep, iret, nbvalc)
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8t0.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/granac.h"
+#include "asterfort/MaterialPara_type.h"
 #include "asterfort/nmasse.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: icdmat, kpg, ksp, iret, nbvalc
-    real(kind=8) :: crit(*)
+    type(Material_Para), intent(inout) :: materPara
+    character(len=16), intent(in) :: relaComp
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=*), intent(in) :: materPoin
+    integer(kind=8) :: iret, nbvalc
     real(kind=8) :: instam, instap
-    real(kind=8) :: tm, tp, tref
+    real(kind=8) :: tm, tp
     real(kind=8) :: irram, irrap
     real(kind=8) :: deps
     real(kind=8) :: sigm, vim(nbvalc)
-    character(len=16) :: option, compo
-    character(len=*) :: fami
     real(kind=8) :: defam, defap
-    real(kind=8) :: angmas(3)
     real(kind=8) :: sigp, vip(nbvalc), dsidep, alpha
-    character(len=8) :: materi
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 !      VISCO_PLASTICITE FLUAGE SOUS IRRADIATION AVEC GRANDISSEMENT
 !      VISC_IRRA_LOG OU GRAN_IRRA_LOG
 !      LOI 1D PURE. MODIF JMP POUR ECRIRE SIMPLEMENT :
 ! DEPSVP=SIGMA+.EXP(-Q/T)*(A.OMEGA/(1+OMEGA*FLUENCE)+B*FLUENCE)*DFLUENCE
 !
-! IN  ICDMAT  : MATERIAU CODE
-! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  INSTAM  : INSTANT DU CALCUL PRECEDENT
 ! IN  INSTAP  : INSTANT DU CALCUL
 ! IN  TM      : TEMPERATURE A L'INSTANT PRECEDENT
@@ -73,7 +81,7 @@ subroutine nm1vil(fami, kpg, ksp, icdmat, materi, &
 !                   IRET=0 => PAS DE PROBLEME
 !                   IRET=1 => ECHEC
 !
-!
+! --------------------------------------------------------------------------------------------------
 !
 !     COMMON POUR LES PARAMETRES DES LOIS VISCOPLASTIQUES
     common/nmpavp/dpc, sieleq, deuxmu, deltat, tschem, prec, theta, niter
@@ -87,21 +95,25 @@ subroutine nm1vil(fami, kpg, ksp, icdmat, materi, &
     real(kind=8) :: ep, nup, troikp, deumup
     real(kind=8) :: em, num, troikm, deumum
 ! AUTRES
-    integer(kind=8) :: nbcgil, iret2
-    parameter(nbcgil=5)
-    real(kind=8) :: coegil(nbcgil)
-    character(len=8) :: nomgil(nbcgil)
-    integer(kind=8) :: codgil(nbcgil)
+    integer(kind=8) :: iret2
+    integer(kind=8), parameter  :: nbProp = 5
+    real(kind=8) :: propVale(nbProp)
+    character(len=8), parameter :: propName(nbProp) = &
+                                   (/'A       ', 'B       ', &
+                                     'CSTE_TPS', 'ENER_ACT', &
+                                     'C       '/)
+    integer(kind=8) :: propCode(nbProp)
     real(kind=8) :: t1, t2
     real(kind=8) :: degran, depsan, depsim, depsgr
     real(kind=8) :: coef1, coefb, expqt
     real(kind=8) :: fluphi
-    data nomgil/'A', 'B', 'CSTE_TPS', 'ENER_ACT', 'C'/
+!
+! --------------------------------------------------------------------------------------------------
 !
     iret = 0
 !     PARAMETRE THETA D'INTEGRATION
 !
-    theta = crit(4)
+    theta = carcri(4)
     t1 = abs(theta-0.5d0)
     t2 = abs(theta-1.d0)
     prec = 0.000001d0
@@ -116,41 +128,62 @@ subroutine nm1vil(fami, kpg, ksp, icdmat, materi, &
 ! INCREMENT DE TEMPS (DANS COMMON / NMPAVP /)
     deltat = instap-instam
 ! CARACTERISTIQUES ELASTIQUES VARIABLES
-    call nmasse(fami, kpg, ksp, '-', icdmat, &
-                materi, instam, em, num, deumum, &
+
+    call nmasse(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '-', &
+                materPara%jvMaterCode, &
+                materPoin, instam, em, num, deumum, &
                 troikm)
 !
-    call nmasse(fami, kpg, ksp, '+', icdmat, &
-                materi, instap, ep, nup, deumup, &
+    call nmasse(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, instap, ep, nup, deumup, &
                 troikp)
 !
 !     IRRADIATION AU POINT CONSIDERE
 !     FLUX NEUTRONIQUE
-    call rcvarc('F', 'IRRA', '-', fami, kpg, &
-                ksp, irram, iret2)
+    call rcvarc('F', 'IRRA', '-', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                irram, iret2)
+
     if (iret2 .gt. 0) irram = 0.d0
-    call rcvarc('F', 'IRRA', '+', fami, kpg, &
-                ksp, irrap, iret2)
+    call rcvarc('F', 'IRRA', '+', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                irrap, iret2)
     if (iret2 .gt. 0) irrap = 0.d0
     irrap = irrap-irram+vim(2)
     irram = vim(2)
 !
     fluphi = (irrap-irram)/deltat
-!     RECUPERATION DES CARACTERISTIQUES DES LOIS DE FLUAGE
-    call rcvalb(fami, kpg, ksp, '+', icdmat, &
-                materi, compo, 0, ' ', [0.d0], &
-                nbcgil, nomgil(1), coegil(1), codgil(1), 0)
+
+! - RECUPERATION DES CARACTERISTIQUES DES LOIS DE FLUAGE
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, relaComp, &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 0)
+
 !     TRAITEMENT DES PARAMETRES DE LA LOI DE FLUAGE
-    if (codgil(1) .eq. 0) then
-!         LOI DE TYPE VISC_IRRA_LOG
-!         PARAMETRES DE LA LOI DE FLUAGE
-!
-        a = coegil(1)
-        b = coegil(2)
-        ctps = coegil(3)
-        ener = coegil(4)
-        if (compo(1:10) .eq. 'GRAN_IRRA_') then
-            c = coegil(5)
+    if (propCode(1) .eq. 0) then
+        a = propVale(1)
+        b = propVale(2)
+        ctps = propVale(3)
+        ener = propVale(4)
+        if (relaComp(1:10) .eq. 'GRAN_IRRA_') then
+            c = propVale(5)
         else
             c = 0.0d0
         end if
@@ -163,19 +196,20 @@ subroutine nm1vil(fami, kpg, ksp, icdmat, materi, &
 !
 !     CALCUL DE LA DEFORMATION DE GRANDISSEMENT
     degran = 0.0d0
-    call granac(fami, kpg, ksp, icdmat, materi, &
-                compo, irrap, irram, tm, tp, &
+    call granac(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                materPara%jvMaterCode, &
+                materPoin, &
+                relaComp, irrap, irram, tm, tp, &
                 depsgr)
 !
-    if (compo(1:10) .eq. 'GRAN_IRRA_') then
+    if (relaComp(1:10) .eq. 'GRAN_IRRA_') then
         vip(3) = vim(3)+depsgr
-        if (depsgr .ne. 0.0d0) then
-! --- RECUPERATION DU REPERE POUR LE GRANDISSEMENT
-            alpha = angmas(1)
-            if (angmas(2) .ne. 0.d0) then
-                call utmess('F', 'ALGORITH6_59')
-            end if
-!
+        if (depsgr .ne. 0.d0) then
+            ASSERT(materPara%lcsPara%lcsType .eq. MATER_LCS_ZERO)
+            alpha = 0.d0
+
 !        INCREMENT DEFORMATION DE GRANDISSEMENT DANS LE REPERE
             degran = depsgr*cos(alpha)*cos(alpha)
         end if

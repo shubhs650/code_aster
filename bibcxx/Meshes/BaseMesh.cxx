@@ -164,7 +164,7 @@ const JeveuxVectorLong BaseMesh::getMedCellsTypes() const {
 }
 
 bool BaseMesh::printMedFile( const std::filesystem::path &fileName, bool local,
-                             std::array< int, 3 > version ) const {
+                             std::array< int, 3 > version, const std::string &mode ) const {
     AS_ASSERT( false );
     return false;
 };
@@ -514,4 +514,48 @@ BaseMesh::getMinMaxEdgeSizes( const std::string cellGroupName ) {
     std::pair< ASTERDOUBLE, ASTERDOUBLE > returnValue = std::make_pair( edgeMin, edgeMax );
 
     return returnValue;
+}
+
+VectorLong BaseMesh::getNodes( const VectorString &names, const bool localNumbering,
+                               const ASTERINTEGER same_rank ) const {
+
+    if ( names.empty() ) {
+        return irange( (ASTERINTEGER)0, (ASTERINTEGER)( getNumberOfNodes() - 1 ) );
+    }
+
+    std::vector< VectorLong > nodes;
+    nodes.reserve( names.size() );
+
+    for ( auto &name : names ) {
+        if ( hasGroupOfNodes( name ) ) {
+            nodes.push_back( ( *_groupsOfNodes )[name]->toVector() );
+        }
+    }
+
+    if ( nodes.empty() ) {
+        return VectorLong();
+    }
+
+    VectorLong all_nodes;
+
+    if ( nodes.size() == 1 ) {
+        all_nodes = nodes[0];
+    } else {
+        all_nodes = unique( concatenate( nodes ) );
+    }
+
+    for ( auto &node : all_nodes ) {
+        node -= 1;
+    }
+
+    return all_nodes;
+}
+
+VectorLong BaseMesh::getNodes( const std::string name, const bool localNumbering,
+                               const ASTERINTEGER same_rank ) const {
+    if ( name.empty() ) {
+        return getNodes( VectorString() );
+    }
+
+    return getNodes( VectorString( { name } ) );
 }

@@ -18,23 +18,24 @@
 !
 subroutine thmCompForcNoda(ds_thm)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/fnothm.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
 #include "asterfort/thmGetElemDime.h"
-#include "asterfort/fnothm.h"
-#include "asterfort/thmGetGeneDime.h"
 #include "asterfort/thmGetElemInfo.h"
-#include "asterfort/thmGetElemRefe.h"
-#include "asterfort/thmGetElemModel.h"
-#include "asterfort/thmGetGene.h"
 #include "asterfort/thmGetElemIntegration.h"
+#include "asterfort/thmGetElemModel.h"
+#include "asterfort/thmGetElemRefe.h"
+#include "asterfort/thmGetGene.h"
+#include "asterfort/thmGetGeneDime.h"
+#include "jeveux.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
 !
@@ -51,7 +52,7 @@ subroutine thmCompForcNoda(ds_thm)
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=8) :: elrefe, elref2
-    integer(kind=8) :: jv_geom, jv_mater, jvSief, jv_vect, jv_instm, jv_instp, jv_contm
+    integer(kind=8) :: jv_geom, jvMaterc, jvSief, jv_vect, jv_instm, jv_instp, jv_contm
     integer(kind=8) :: iret_instm, iret_instp, iret_contm
     aster_logical :: fnoevo
     integer(kind=8) :: nno, nnos, nnom
@@ -89,16 +90,13 @@ subroutine thmCompForcNoda(ds_thm)
 !
     call thmGetGene(ds_thm, l_vf, ndim, &
                     mecani, press1, press2, tempe, second)
-!
+
 ! - Input/ouput fields
-!
     call jevech('PGEOMER', 'L', jv_geom)
-    call jevech('PMATERC', 'L', jv_mater)
     call jevech('PSIEFR', 'L', jvSief)
     call jevech('PVECTUR', 'E', jv_vect)
-!
+
 ! - Is transient computation (STAT_NON_LINE or CALC_CHAMP?)
-!
     call tecach('NNN', 'PINSTMR', 'L', iret_instm, iad=jv_instm)
     call tecach('NNN', 'PINSTPR', 'L', iret_instp, iad=jv_instp)
     call tecach('NNN', 'PCONTGM', 'L', iret_contm, iad=jv_contm)
@@ -123,24 +121,26 @@ subroutine thmCompForcNoda(ds_thm)
                         inte_type, npi, npi2, npg)
     ASSERT(npi .le. 27)
     ASSERT(nno .le. 20)
-!
+
 ! - Get dimensions of generalized vectors
-!
     call thmGetGeneDime(ndim, &
                         mecani, press1, press2, tempe, second, &
                         dimdep, dimdef, dimcon)
-!
+
 ! - Get dimensions about element
-!
     call thmGetElemDime(ndim, nnos, nnom, &
                         mecani, press1, press2, tempe, second, &
                         nddls, nddlm, &
                         nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
                         dimdep, dimdef, dimcon, dimuel)
-!
+
+! - Set reference to material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+    ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode = zi(jvMaterc)
+
 ! - Compute
-!
-    call fnothm(ds_thm, zi(jv_mater), ndim, l_axi, fnoevo, &
+    call fnothm(ds_thm, &
+                ndim, l_axi, fnoevo, &
                 mecani, press1, press2, tempe, second, &
                 nno, nnos, npi, npg, &
                 zr(jv_geom), dt, dimdef, dimcon, dimuel, &

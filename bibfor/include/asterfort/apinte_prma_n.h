@@ -21,14 +21,15 @@ interface
                            elem_mast_nbnode, elem_mast_coor, elem_mast_code, &
                            elem_slav_nbnode, elem_slav_coor, elem_slav_code,&
                            proj_coor       , nb_node_proj, iret)
+#include "MeshTypes_type.h"
         real(kind=8), intent(in) :: proj_tole
         integer(kind=8), intent(in) :: elem_dime
         integer(kind=8), intent(in) :: elem_mast_nbnode
-        real(kind=8), intent(in) :: elem_mast_coor(3,9)
+        real(kind=8), intent(in) :: elem_mast_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_slav_nbnode
-        real(kind=8), intent(in) :: elem_slav_coor(3,9)
+        real(kind=8), intent(in) :: elem_slav_coor(3,MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_mast_code, elem_slav_code
-        real(kind=8), intent(out) :: proj_coor(elem_dime-1,9)
+        real(kind=8), intent(out) :: proj_coor(2,9)
         integer(kind=8), intent(out) :: iret, nb_node_proj
     end subroutine apinte_prma_n
 

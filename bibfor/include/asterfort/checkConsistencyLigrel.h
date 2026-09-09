@@ -15,13 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterf_types.h"
 !
 interface
     subroutine checkConsistencyLigrel(model, ligrel, answer)
         character(len=8), intent(in) :: model
         character(len=19), intent(in) :: ligrel
-    aster_logical, intent(out) :: answer
+        aster_logical, intent(out) :: answer
     end subroutine checkConsistencyLigrel
 end interface

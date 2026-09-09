@@ -25,6 +25,7 @@
 module Behaviour_type
 ! ==================================================================================================
     use BehaviourStrain_type
+    use MaterialPara_type
 ! ==================================================================================================
     implicit none
 ! ==================================================================================================
@@ -40,18 +41,6 @@ module Behaviour_type
 ! Type: parameters of behaviour
 ! ==================================================================================================
     type Behaviour_Para
-! ----- Dimension of physic for behaviour
-        integer(kind=8) :: ldcDime = 0
-! ----- Name of quadrature scheme
-        character(len=4) :: fami = " "
-! ----- Adress for material parameters
-        integer(kind=8) :: jvMaterCode = 0
-! ----- Type for elasticity
-        integer(kind=8) :: elasID = ELAS_UNDEF
-        character(len=16) :: elasKeyword = " "
-! ----- Flag for metallurgical case
-        aster_logical :: lElasIsMeta = ASTER_FALSE
-        aster_logical :: lMetaLemaAni = ASTER_FALSE
 ! ----- Times
         real(kind=8) :: timePrev = 0.d0
         real(kind=8) :: timeCurr = 0.d0
@@ -80,30 +69,36 @@ module Behaviour_type
         aster_logical :: lImplex = ASTER_FALSE
 ! ----- Offset for index of behaviour
         integer(kind=8) :: lawIndexOffset = 0
+! ----- Automatic mechanism for the size of stress and strain tensors (ndimsi)
+        aster_logical :: lNdimsiEnabled = ASTER_FALSE
+        aster_logical :: lEpsComEnabled = ASTER_FALSE
+        aster_logical :: lDeborstEnabled = ASTER_FALSE
+        aster_logical :: lCtrlEpsEnabled = ASTER_FALSE
+        aster_logical :: lReguViscEnabled = ASTER_FALSE
 ! ----- Flags for standard FE
-        aster_logical :: lStandardFE = ASTER_FALSE
         aster_logical :: lAxis = ASTER_FALSE
         aster_logical :: lThreeDim = ASTER_FALSE
         aster_logical :: lPlaneStress = ASTER_FALSE
         aster_logical :: lPlaneStrain = ASTER_FALSE
+        aster_logical :: lTwoDim = ASTER_FALSE
+        aster_logical :: lOneDim = ASTER_FALSE
 ! ----- Flags for other modeliazations
         aster_logical :: lGradVari = ASTER_FALSE
-        aster_logical :: lCZM = ASTER_FALSE
         aster_logical :: lTHM = ASTER_FALSE
 ! ----- Flags for external solves
         aster_logical :: lExteSolver = ASTER_FALSE
         aster_logical :: lMGIS = ASTER_FALSE
         aster_logical :: lUMAT = ASTER_FALSE
-! ----- Index of quadrature point
-        integer(kind=8) :: kpg = 0
-! ----- Index of "sub"-point (plates, pipes, beams, etc.)
-        integer(kind=8) :: ksp = 0
 ! ----- Index of law
         integer(kind=8) :: numlc = 0
 ! ----- Number of internal state variable
         integer(kind=8) :: nvi = 0
+! ----- Default size of strain and stress tensors
+        integer(kind=8) :: ndimsi = 0
 ! ----- Flag to check bounds
         aster_logical :: lChckBounds = ASTER_FALSE
+! ----- Cut level
+        integer(kind=8) :: cutLevel = 0
     end type Behaviour_Para
 ! ==================================================================================================
 ! Type: External state variables - geometric properties
@@ -182,7 +177,10 @@ module Behaviour_type
 ! Type: Parameters for integration (main object)
 ! ==================================================================================================
     type Behaviour_Integ
-! ----- Parameters
+! ----- Material parameters
+        type(Material_Para) :: materPara
+
+! ----- Behaviour parameters
         type(Behaviour_Para) :: behavPara
 
 ! ----- Parameters for external state variables

@@ -63,22 +63,20 @@ contains
 ! In  option           : name of option to compute
 ! In  elemProp         : general properties of element
 ! In  cellGeom         : general geometric properties of cell
-! In  matePara         : parameters of material
 ! IO  behaPara         : parameters of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compNonLinearHexa(option, elemProp, cellGeom, matePara, behaPara)
+    subroutine compNonLinearHexa(option, elemProp, cellGeom, behaPara)
 !   ------------------------------------------------------------------------------------------------
-! - Parameters
+! ----- Parameters
         character(len=16), intent(in) :: option
         type(SSH_ELEM_PROP), intent(in) :: elemProp
         type(SSH_CELL_GEOM), intent(in) :: cellGeom
-        type(SSH_MATE_PARA), intent(in) :: matePara
         type(SSH_BEHA_PARA), intent(inout) :: behaPara
-! - Local
+! ----- Locals
         integer(kind=8) :: nbIntePoint, nbVari
         integer(kind=8) :: jtab(7), iret
-        integer(kind=8) :: jvGeom, jvMater
+        integer(kind=8) :: jvGeom
         integer(kind=8) :: jvMatr, jvVect, jvSigmP, jvVariP, jvVariX, jvCodret
         integer(kind=8) :: jvTimeM, jvTimeP, jvSigmM, jvVariM, jvDispM, jvDispIncr
         blas_int :: b_incx, b_incy, b_n
@@ -90,7 +88,6 @@ contains
 !
 ! - Get input fields
         jvGeom = cellGeom%jvGeom
-        jvMater = matePara%jvMater
         call jevech('PINSTMR', 'L', jvTimeM)
         call jevech('PINSTPR', 'L', jvTimeP)
         call jevech('PCONTMR', 'L', jvSigmM)
@@ -131,13 +128,13 @@ contains
 !
 ! - Compute
         if (behaPara%defoComp .eq. 'PETIT') then
-            call compSmallStrainHexa(option, elemProp, cellGeom, matePara, behaPara, &
+            call compSmallStrainHexa(option, elemProp, cellGeom, behaPara, &
                                      nbIntePoint, nbVari, zr(jvTimeM), zr(jvTimeP), zr(jvDispM), &
                                      zr(jvDispIncr), zr(jvSigmM), zr(jvVariM), zr(jvSigmP), &
                                      zr(jvVariP), zr(jvMatr), zr(jvVect), zi(jvCodret))
 !
         else if (behaPara%defoComp .eq. 'GDEF_LOG') then
-            call compGdefLogHexa(option, elemProp, cellGeom, matePara, behaPara, &
+            call compGdefLogHexa(option, elemProp, cellGeom, behaPara, &
                                  nbIntePoint, nbVari, zr(jvTimeM), zr(jvTimeP), zr(jvDispM), &
                                  zr(jvDispIncr), zr(jvSigmM), zr(jvVariM), zr(jvSigmP), &
                                  zr(jvVariP), zr(jvMatr), zr(jvVect), zi(jvCodret))
@@ -157,7 +154,6 @@ contains
 ! In  option           : name of option to compute
 ! In  elemProp         : general properties of element
 ! In  cellGeom         : general geometric properties of cell
-! In  matePara         : parameters of material
 ! IO  behaPara         : parameters of behaviour
 ! In  nbIntePoint      : number of integration points on cell
 ! In  nbVari           : number of internal state variables
@@ -174,16 +170,15 @@ contains
 ! Out codret           : error code from integration of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compSmallStrainHexa(option, elemProp, cellGeom, matePara, behaPara, &
+    subroutine compSmallStrainHexa(option, elemProp, cellGeom, behaPara, &
                                    nbIntePoint, nbVari, timePrev, timeCurr, dispPrev, &
                                    dispIncr, sigm, vim, sigp, vip, &
                                    matr, vect, codret)
 !   ------------------------------------------------------------------------------------------------
-! - Parameters
+! ----- Parameters
         character(len=16), intent(in) :: option
         type(SSH_ELEM_PROP), intent(in) :: elemProp
         type(SSH_CELL_GEOM), intent(in) :: cellGeom
-        type(SSH_MATE_PARA), intent(in) :: matePara
         type(SSH_BEHA_PARA), intent(inout) :: behaPara
         integer(kind=8), intent(in) :: nbIntePoint, nbVari
         real(kind=8), intent(in) :: timePrev, timeCurr
@@ -192,7 +187,8 @@ contains
         real(kind=8), intent(out) :: sigp(SSH_SIZE_TENS, nbIntePoint), vip(nbVari, nbIntePoint)
         real(kind=8), intent(out) :: matr(*), vect(SSH_NBDOF_HEXA)
         integer(kind=8), intent(out) :: codret
-! - Local
+! ----- Local
+        character(len=16), parameter :: multComp = " "
         type(SSH_GEOM_HEXA) :: geomHexa
         integer(kind=8), parameter :: ksp = 1
         real(kind=8), parameter :: rac2 = sqrt(2.d0)
@@ -276,16 +272,18 @@ contains
             end do
 
 ! --------- Set main parameters for behaviour (on point)
-            call behaviourSetParaPoin(kpg, ksp, behaPara%BEHinteg)
+            call behaviourSetParaPoin(kpg, ksp, behaPara%BEHInteg)
 
 ! --------- Integrator
             sigmPost = 0.d0
             dsidep = 0.d0
             cod(kpg) = 0
-            call nmcomp(behaPara%BEHInteg, elemProp%elemInte%inteFami, kpg, ksp, SSH_NDIM, &
-                        typmod, matePara%jvMater, behaPara%compor, behaPara%carcri, &
-                        timePrev, timeCurr, SSH_SIZE_TENS, epsiPrev, epsiIncr, &
-                        SSH_SIZE_TENS, sigmPrep, vim(1, kpg), option, matePara%mateBase, &
+            call nmcomp(behaPara%BEHInteg, &
+                        SSH_NDIM, option, typmod, &
+                        timePrev, timeCurr, &
+                        behaPara%compor, behaPara%carcri, multComp, &
+                        SSH_SIZE_TENS, epsiPrev, epsiIncr, &
+                        SSH_SIZE_TENS, sigmPrep, vim(1, kpg), &
                         sigmPost, vip(1, kpg), SSH_SIZE_TENS*SSH_SIZE_TENS, dsidep, cod(kpg))
             if (cod(kpg) .eq. 1) then
                 goto 99
@@ -390,7 +388,6 @@ contains
 ! In  option           : name of option to compute
 ! In  elemProp         : general properties of element
 ! In  cellGeom         : general geometric properties of cell
-! In  matePara         : parameters of material
 ! IO  behaPara         : parameters of behaviour
 ! In  nbIntePoint      : number of integration points on cell
 ! In  nbVari           : number of internal state variables
@@ -407,7 +404,7 @@ contains
 ! Out codret           : error code from integration of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compGdefLogHexa(option, elemProp, cellGeom, matePara, behaPara, &
+    subroutine compGdefLogHexa(option, elemProp, cellGeom, behaPara, &
                                nbIntePoint, nbVari, timePrev, timeCurr, dispPrev, &
                                dispIncr, sigm, vim, sigp, vip, &
                                matr, vect, codret)
@@ -416,7 +413,6 @@ contains
         character(len=16), intent(in)   :: option
         type(SSH_ELEM_PROP), intent(in) :: elemProp
         type(SSH_CELL_GEOM), intent(in) :: cellGeom
-        type(SSH_MATE_PARA), intent(in) :: matePara
         type(SSH_BEHA_PARA), intent(inout) :: behaPara
         integer(kind=8), intent(in) :: nbIntePoint, nbVari
         real(kind=8), intent(in) :: timePrev, timeCurr
@@ -426,6 +422,7 @@ contains
         real(kind=8), intent(out) :: matr(*), vect(SSH_NBDOF_HEXA)
         integer(kind=8), intent(out) :: codret
 ! ----- Local
+        character(len=16), parameter :: multComp = " "
         type(SSH_GEOM_HEXA) :: geomHexa
         integer(kind=8), parameter :: ksp = 1
         integer(kind=8) :: cod(nbIntePoint), kpg, iTens, nbDof, nbDofGeom
@@ -537,16 +534,18 @@ contains
             end do
 
 ! --------- Set main parameters for behaviour (on point)
-            call behaviourSetParaPoin(kpg, ksp, behaPara%BEHinteg)
+            call behaviourSetParaPoin(kpg, ksp, behaPara%BEHInteg)
 
 ! --------- Integrator
             tCurr = 0.d0
             dtde = 0.d0
             cod(kpg) = 0
-            call nmcomp(behaPara%BEHInteg, elemProp%elemInte%inteFami, kpg, ksp, SSH_NDIM, &
-                        typmod, matePara%jvMater, behaPara%compor, behaPara%carcri, &
-                        timePrev, timeCurr, SSH_SIZE_TENS, kineHexa%epslPrev%vale, epslIncr, &
-                        SSH_SIZE_TENS, tPrev, vim(1, kpg), option, matePara%mateBase, &
+            call nmcomp(behaPara%BEHInteg, &
+                        SSH_NDIM, option, typmod, &
+                        timePrev, timeCurr, &
+                        behaPara%compor, behaPara%carcri, multComp, &
+                        SSH_SIZE_TENS, kineHexa%epslPrev%vale, epslIncr, &
+                        SSH_SIZE_TENS, tPrev, vim(1, kpg), &
                         tCurr, vip(1, kpg), SSH_SIZE_TENS*SSH_SIZE_TENS, dtde, cod(kpg))
             if (cod(kpg) .eq. 1) then
                 goto 99
@@ -678,13 +677,13 @@ contains
     subroutine postLog(lMatrPred, lMatr, lSigm, kineHexa, tPrev, &
                        tCurr, dtde, dsidep, pk2)
 !   ------------------------------------------------------------------------------------------------
-! - Parameters
+! ----- Parameters
         aster_logical, intent(in) :: lMatrPred, lMatr, lSigm
         type(SSH_KINE_HEXA), intent(in) :: kineHexa
         real(kind=8), intent(in) :: tPrev(SSH_SIZE_TENS), tCurr(SSH_SIZE_TENS)
         real(kind=8), intent(in) :: dtde(SSH_SIZE_TENS, SSH_SIZE_TENS)
         real(kind=8), intent(out) :: dsidep(SSH_SIZE_TENS, SSH_SIZE_TENS), pk2(SSH_SIZE_TENS)
-! - Local
+! ----- Locals
         real(kind=8), parameter :: rac2 = sqrt(2.d0)
         integer(kind=8) :: i, j
         type(SSH_EPSL_HEXA) :: epsl

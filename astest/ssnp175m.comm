@@ -97,8 +97,8 @@ TEST_RESU(
             LEGENDE="SIEF_NOEU",
             NOM_CMP="SIYY",
             VALE_REFE=-25.0,
-            VALE_CALC=-25.830610159974214,
-            PRECISION=0.05,
+            VALE_CALC=-25.000000000005045,
+            PRECISION=1.0e-12,
         ),
         _F(
             INST=1.0,
@@ -109,8 +109,8 @@ TEST_RESU(
             LEGENDE="SIEF_NOEU",
             NOM_CMP="SIYY",
             VALE_REFE=-25.0,
-            VALE_CALC=-24.227133615082842,
-            PRECISION=0.05,
+            VALE_CALC=-24.999999999996486,
+            PRECISION=1.0e-12,
         ),
         _F(
             INST=1.0,
@@ -121,8 +121,8 @@ TEST_RESU(
             LEGENDE="SIYY",
             NOM_CMP="SIYY",
             VALE_REFE=-25.0,
-            VALE_CALC=-25.830610159974214,
-            PRECISION=0.05,
+            VALE_CALC=-25.000000000005045,
+            PRECISION=1.0e-12,
         ),
         _F(
             INST=1.0,
@@ -133,8 +133,8 @@ TEST_RESU(
             LEGENDE="SIYY",
             NOM_CMP="SIYY",
             VALE_REFE=-25.0,
-            VALE_CALC=-24.227133615082842,
-            PRECISION=0.05,
+            VALE_CALC=-24.999999999996486,
+            PRECISION=1.0e-12,
         ),
         _F(
             INST=1.0,
@@ -145,9 +145,9 @@ TEST_RESU(
             LEGENDE="SIXY",
             NOM_CMP="SIXY",
             CRITERE="ABSOLU",
-            PRECISION=0.5,
+            PRECISION=1.0e-10,
             VALE_REFE=0.0,
-            VALE_CALC=-0.2864431423512956,
+            VALE_CALC=-9.806615490223976e-13,
         ),
         _F(
             INST=1.0,
@@ -158,9 +158,9 @@ TEST_RESU(
             LEGENDE="SIXY",
             NOM_CMP="SIXY",
             CRITERE="ABSOLU",
-            PRECISION=0.5,
+            PRECISION=1.0e-10,
             VALE_REFE=0.0,
-            VALE_CALC=0.2950667695726071,
+            VALE_CALC=1.6470656001345857e-12,
         ),
     )
 )

@@ -16,10 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmGetParaHydr(j_mater, ds_thm)
+subroutine thmGetParaHydr(ds_thm)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -27,7 +28,6 @@ subroutine thmGetParaHydr(j_mater, ds_thm)
 #include "asterfort/rcvala.h"
 #include "asterfort/THM_type.h"
 !
-    integer(kind=8), intent(in) :: j_mater
     type(THM_DS), intent(inout) :: ds_thm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -38,59 +38,59 @@ subroutine thmGetParaHydr(j_mater, ds_thm)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  j_mater          : coded material address
 ! IO  ds_thm           : datastructure for THM
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_para_vgm = 6
-    real(kind=8) :: para_vale_vgm(nb_para_vgm)
-    integer(kind=8) :: icodre_vgm(nb_para_vgm)
-    character(len=16), parameter :: para_name_vgm(nb_para_vgm) = (/'VG_N    ', &
-                                                                   'VG_PR   ', &
-                                                                   'VG_SR   ', &
-                                                                   'VG_SMAX ', &
-                                                                   'VG_SATUR', &
-                                                                   'VG_PENTR'/)
-    integer(kind=8), parameter :: nb_para = 1
-    real(kind=8) :: para_vale(nb_para)
-    integer(kind=8) :: icodre(nb_para)
-    character(len=16), parameter :: para_name(nb_para) = (/'EMMAG'/)
+    integer(kind=8), parameter :: nbPropVGM = 6
+    real(kind=8) :: propValeVGM(nbPropVGM)
+    integer(kind=8) :: propCodeVGM(nbPropVGM)
+    character(len=16), parameter :: propNameVGM(nbPropVGM) = (/'VG_N    ', &
+                                                               'VG_PR   ', &
+                                                               'VG_SR   ', &
+                                                               'VG_SMAX ', &
+                                                               'VG_SATUR', &
+                                                               'VG_PENTR'/)
+    integer(kind=8), parameter :: nbPropEmmag = 1
+    real(kind=8) :: paraValeEmmag(nbPropEmmag)
+    integer(kind=8) :: paraCodeEmmag(nbPropEmmag)
+    character(len=16), parameter :: paraNameEmmag(nbPropEmmag) = (/'EMMAG'/)
     character(len=16) :: hydr
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    para_vale(:) = 0.d0
-    para_vale_vgm(:) = 0.d0
+    propValeVGM = 0.d0
     hydr = ds_thm%ds_behaviour%rela_hydr
     if ((hydr .eq. 'HYDR_VGM') .or. (hydr .eq. 'HYDR_VGC')) then
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     0, ' ', [0.d0], &
-                    nb_para_vgm, para_name_vgm, para_vale_vgm, icodre_vgm, &
-                    1)
-        ds_thm%ds_material%hydr%n = para_vale_vgm(1)
-        ds_thm%ds_material%hydr%pr = para_vale_vgm(2)
-        ds_thm%ds_material%hydr%sr = para_vale_vgm(3)
-        ds_thm%ds_material%hydr%smax = para_vale_vgm(4)
-        ds_thm%ds_material%hydr%satuma = para_vale_vgm(5)
-        ds_thm%ds_material%hydr%pentree = para_vale_vgm(6)
-        if (icodre_vgm(1) .eq. 1) then
+                    nbPropVGM, propNameVGM, propValeVGM, &
+                    propCodeVGM, 1)
+        ds_thm%ds_material%hydr%n = propValeVGM(1)
+        ds_thm%ds_material%hydr%pr = propValeVGM(2)
+        ds_thm%ds_material%hydr%sr = propValeVGM(3)
+        ds_thm%ds_material%hydr%smax = propValeVGM(4)
+        ds_thm%ds_material%hydr%satuma = propValeVGM(5)
+        ds_thm%ds_material%hydr%pentree = propValeVGM(6)
+        if (propCodeVGM(1) .eq. 1) then
             call utmess('F', 'THM1_94')
         end if
     end if
-!
+
 ! - For storing coefficient
-!
-    call rcvala(j_mater, ' ', 'THM_DIFFU', &
+    paraValeEmmag = 0.d0
+    call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
                 0, ' ', [0.d0], &
-                nb_para, para_name, para_vale, icodre, &
-                0, nan='NON')
-    if (icodre(1) .eq. 0) then
+                nbPropEmmag, paraNameEmmag, paraValeEmmag, &
+                paraCodeEmmag, 0, nan='NON')
+    if (paraCodeEmmag(1) .eq. 0) then
         ds_thm%ds_material%hydr%l_emmag = ASTER_TRUE
         if (ds_thm%ds_elem%l_dof_meca) then
             call utmess('F', 'THM1_5')
         end if
     end if
-    ds_thm%ds_material%hydr%emmag = para_vale(1)
+    ds_thm%ds_material%hydr%emmag = paraValeEmmag(1)
 !
 end subroutine

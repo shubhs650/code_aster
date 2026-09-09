@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0078(option, nomte)
 !
     use FE_topo_module
@@ -24,86 +24,96 @@ subroutine te0078(option, nomte)
     use FE_stiffness_module
     use FE_rhs_module
     use FE_eval_module
-!
+    use coorSyst_module, only: hasOrieField
     implicit none
 !
-!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/jevech.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/nlcomp.h"
+#include "asterfort/utmess.h"
 #include "asterfort/writeVector.h"
 #include "FE_module.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
+    character(len=16), intent(in) :: option, nomte
 !
-!    - FONCTION REALISEE:  CALCUL DES VECTEURS ELEMENTAIRES
-!                          OPTION : 'CHAR_THER_EVOL'
+! --------------------------------------------------------------------------------------------------
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-!----------------------------------------------------------------------
+! Elementary computation
 !
+! Elements: THER_*
+!
+! Options: CHAR_THER_EVOL
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuadRigi, FEQuadMass
     type(FE_basis) :: FEBasis
 !
-    integer(kind=8) :: nbres
-    parameter(nbres=1)
-    integer(kind=8) :: icodre(nbres)
-    character(len=16) :: phenom
-    real(kind=8) :: valQPM(MAX_QP), tpg, dtpg(3), flux(3), BGSEval(3, MAX_BS)
-    real(kind=8) :: resi_f(MAX_BS), resi_m(MAX_BS), resi(MAX_BS)
-    real(kind=8) :: cp, valres(1), Kglo(3, 3), time, deltat, theta
-    integer(kind=8) :: kp, imate, icamas, itemps
+    integer(kind=8), parameter :: nbProp = 1
+    integer(kind=8) :: propCode(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'RHO_CP'/)
+    character(len=16) :: therKeyword
+    real(kind=8) :: valQPM(MAX_QP), tpg, dtpg(3), flux(3), BGSEval(3, MAX_BS_CG)
+    real(kind=8) :: resi_f(MAX_BS_CG), resi_m(MAX_BS_CG), resi(MAX_BS_CG)
+    real(kind=8) :: cp, propVale(1), Kglo(3, 3), time, deltat, theta
+    integer(kind=8) :: kpg, jvMaterc, jvInstr
     real(kind=8), pointer :: temp(:) => null()
     character(len=8), parameter :: famiR = "RIGI"
     character(len=8), parameter :: famiM = "MASS"
+!
+! --------------------------------------------------------------------------------------------------
 !
     call FECell%init()
     call FEBasis%initCell(FECell)
     call FEQuadMass%initCell(FECell, famiM)
     call FEQuadRigi%initCell(FECell, famiR)
 !
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PINSTR', 'L', itemps)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call jevech('PINSTR', 'L', jvInstr)
     call jevech('PTEMPER', 'L', vr=temp)
 !
-    time = zr(itemps)
-    deltat = zr(itemps+1)
-    theta = zr(itemps+2)
+    time = zr(jvInstr)
+    deltat = zr(jvInstr+1)
+    theta = zr(jvInstr+2)
 !
-    call rccoma(zi(imate), 'THER', 1, phenom, icodre(1))
-!
-!   pour stopper le calcul si PCAMASS n'est pas disponible
-    if (phenom == "THER_ORTH") then
-        call jevech('PCAMASS', 'L', icamas)
+    call rccoma(zi(jvMaterc), 'THER', 1, therKeyword, propCode(1))
+    if (therKeyword == "THER_ORTH") then
+        if (.not. hasOrieField()) then
+            call utmess('F', 'THERMIQUE1_3')
+        end if
     end if
 !
     resi_f = 0.d0
-    do kp = 1, FEQuadRigi%nbQuadPoints
-        BGSEval = FEBasis%grad(FEQuadRigi%points_param(1:3, kp), FEQuadRigi%jacob(1:3, 1:3, kp))
+    do kpg = 1, FEQuadRigi%nbQuadPoints
+        BGSEval = FEBasis%grad(FEQuadRigi%points_param(1:3, kpg), FEQuadRigi%jacob(1:3, 1:3, kpg))
 !
-        dtpg = FEEvalGradVec(FEBasis, temp, FEQuadRigi%points_param(1:3, kp), BGSEval)
+        dtpg = FEEvalGradVec(FEBasis, temp, FEQuadRigi%points_param(1:3, kpg), BGSEval)
 !
-        call nlcomp(phenom, famiR, kp, imate, FECell%ndim, FEQuadRigi%points(1:3, kp), &
+        call nlcomp(therKeyword, famiR, kpg, jvMaterc, FECell%ndim, FEQuadRigi%points(1:3, kpg), &
                     time, 0.d0, Kglo, dtp_=dtpg, fluglo_=flux)
 !
-        call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadRigi%weights(kp), flux, resi_f)
+        call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadRigi%weights(kpg), flux, resi_f)
     end do
 !
-    do kp = 1, FEQuadMass%nbQuadPoints
+    do kpg = 1, FEQuadMass%nbQuadPoints
+        call rcvalb(famiM, kpg, 1, '+', &
+                    zi(jvMaterc), ' ', therKeyword, &
+                    1, 'INST', [time], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        cp = propVale(1)
 !
-        call rcvalb(famiM, kp, 1, '+', zi(imate), ' ', phenom, 1, 'INST', [time], &
-                    1, 'RHO_CP', valres, icodre, 1)
-        cp = valres(1)
-!
-        tpg = FEEvalFuncRScal(FEBasis, temp, FEQuadMass%points_param(1:3, kp))
-        ValQPM(kp) = cp*tpg
+        tpg = FEEvalFuncRScal(FEBasis, temp, FEQuadMass%points_param(1:3, kpg))
+        ValQPM(kpg) = cp*tpg
     end do
 !
     call FeMakeRhsScal(FEQuadMass, FEBasis, ValQPM, resi_m)

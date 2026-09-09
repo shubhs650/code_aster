@@ -75,7 +75,7 @@ subroutine te0295(option, nomte)
     real(kind=8) :: k3a, ttrgv, tgvdm(3)
     real(kind=8) :: valpar(4), lsng, lstg, puls, coef, ffp(27)
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(4)
     character(len=16) :: nomres(4)
     character(len=32) :: phenom
@@ -91,6 +91,9 @@ subroutine te0295(option, nomte)
     fami = 'RIGI'
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
+
+!   Verify that the number of nodes is lower than 60-HEXA20 (catalogue)
+    ASSERT(nno .le. 60)
 !
 ! --- RECUPERATION DES CHAMPS IN
 !

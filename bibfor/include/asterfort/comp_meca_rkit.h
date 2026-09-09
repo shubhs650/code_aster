@@ -15,17 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_meca_rkit(keywordfact, iocc, rela_comp, kit_comp, l_etat_init_)
-        character(len=16), intent(in) :: keywordfact
-        integer(kind=8), intent(in) :: iocc
-        character(len=16), intent(in) :: rela_comp
-        character(len=16), intent(out) :: kit_comp(4)
-        aster_logical, optional, intent(in) :: l_etat_init_
+    subroutine comp_meca_rkit(factorKeyword, iFactorKeyword, relaComp, kitComp)
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
+        character(len=16), intent(in) :: relaComp
+        character(len=16), intent(out) :: kitComp(4)
     end subroutine comp_meca_rkit
 end interface

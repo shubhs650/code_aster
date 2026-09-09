@@ -91,7 +91,7 @@ subroutine aflrch(lisrez, chargz, type_liai, elim, detr_lisrez, l_preallocz)
     character(len=19) :: betaf
     character(len=8) :: mod, nomgd, nomnoe, kelim
     character(len=8) :: noma, cmp, nomcmp(nmocl), ctype1, ctype2
-    character(len=9) :: nomte
+    character(len=8) :: nomte
     character(len=19) :: ca1, ca2
     character(len=19) :: ligrmo, ligrch
     integer(kind=8) :: ntypel(nmocl)
@@ -148,23 +148,23 @@ subroutine aflrch(lisrez, chargz, type_liai, elim, detr_lisrez, l_preallocz)
         ligrch = charge//'.CHME.LIGRE'
         nomgd = 'DEPL_R'
         if (.not. l_lag1) then
-            nomte = 'D_DEPL_R_'
+            nomte = 'DDEPL_R_'
         else
-            nomte = 'D_DEPL_RS'
+            nomte = 'DDEPL_RS'
         end if
     else if (typcha(1:4) .eq. 'THER') then
         ligrch = charge//'.CHTH.LIGRE'
         nomgd = 'TEMP_R'
         if (.not. l_lag1) then
-            nomte = 'D_TEMP_R_'
+            nomte = 'DTEMP_R_'
         else
-            nomte = 'D_TEMP_RS'
+            nomte = 'DTEMP_RS'
         end if
     else if (typcha(1:4) .eq. 'ACOU') then
         ligrch = charge//'.CHAC.LIGRE'
         nomgd = 'PRES_C'
         if (.not. l_lag1) then
-            nomte = 'D_PRES_C_'
+            nomte = 'DPRES_C_'
         else
             ASSERT(.false.)
         end if
@@ -255,7 +255,7 @@ subroutine aflrch(lisrez, chargz, type_liai, elim, detr_lisrez, l_preallocz)
     ASSERT(nbcmp .le. nmocl)
     do i = 1, nbcmp
         nomcmp(i) = zk8(inom-1+i)
-        call jenonu(jexnom('&CATA.TE.NOMTE', nomte//nomcmp(i) (1:7)), ntypel(i))
+        call jenonu(jexnom('&CATA.TE.NOMTE', nomte//nomcmp(i) (1:8)), ntypel(i))
     end do
     call dismoi('NB_EC', nomgd, 'GRANDEUR', repi=nec)
 !

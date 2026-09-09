@@ -17,9 +17,9 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine merith(modelZ, loadNameZ, matecoZ, caraElemZ, &
+    subroutine merith(modelZ, loadNameZ, materCodeZ, caraElemZ, &
                       timeMapZ, matrElemZ, jvBaseZ)
-        character(len=*), intent(in) :: modelZ, loadNameZ, matecoZ, caraElemZ, jvBaseZ, timeMapZ
+        character(len=*), intent(in) :: modelZ, loadNameZ, materCodeZ, caraElemZ, jvBaseZ, timeMapZ
         character(len=*), intent(inout) :: matrElemZ
     end subroutine merith
 end interface

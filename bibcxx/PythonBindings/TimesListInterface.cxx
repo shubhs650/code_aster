@@ -33,6 +33,17 @@ void exportTimesListToPython( py::module_ &mod ) {
         .def( py::init( &initFactoryPtr< TimesList > ) )
         .def( py::init( &initFactoryPtr< TimesList, std::string > ) )
         .def_readwrite( "stepper", &TimesList::pyStepper )
-        .def( "getValues", &TimesList::getValues )
-        .def( "setValues", &TimesList::setValues );
+        .def( "getValues", &TimesList::getValues, R"(
+            Return the current times values.
+
+            Returns:
+                list[float]: Current values.
+            )" )
+        .def( "_setValues", &TimesList::setValues, R"(
+            Set values of the times list
+
+            Args:
+                values (list[float]): new values to be assigned
+            )",
+              py::arg( "values" ) );
 };

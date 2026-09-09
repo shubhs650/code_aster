@@ -43,6 +43,7 @@ PCHHOBS = InputParameter(phys=PHY.N3600R, comment=""" HHO - coefficient base loc
 PILO_PRED_DEFO = Option(
     para_in=(
         SP.PCDTAU,
+        SP.PCAMASS,
         PCOMPOR,
         SP.PCARCRI,
         PCONTMR,

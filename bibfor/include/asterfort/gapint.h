@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine gapint(elem_dime     , l_axis          ,&
@@ -27,14 +28,14 @@ interface
         aster_logical, intent(in) :: l_axis
         character(len=8), intent(in) :: elem_slav_code
         integer(kind=8), intent(in) :: elem_slav_nbnode
-        real(kind=8), intent(in) :: elem_slav_coorO(3,elem_slav_nbnode)
-        real(kind=8), intent(in) :: elem_slav_coorN(3,elem_slav_nbnode)
+        real(kind=8), intent(in) :: elem_slav_coorO(3,MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_slav_coorN(3,MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_mast_code
         integer(kind=8), intent(in) :: elem_mast_nbnode
-        real(kind=8), intent(in) :: elem_mast_coorN(3,elem_mast_nbnode)
+        real(kind=8), intent(in) :: elem_mast_coorN(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: nb_poin_inte
-        real(kind=8), intent(in) :: poin_inte(elem_dime-1,nb_poin_inte)
-        real(kind=8), intent(in) :: poin_gaus_ma(elem_dime-1,36)
+        real(kind=8), intent(in) :: poin_inte(2,nb_poin_inte)
+        real(kind=8), intent(in) :: poin_gaus_ma(2,36)
         real(kind=8), intent(out) :: gap_moy
         real(kind=8), intent(out) :: inte_weight
     end subroutine gapint

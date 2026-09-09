@@ -42,6 +42,7 @@ module coupling_quadrature_module
 #include "asterfort/mmnewd.h"
 #include "asterfort/mmnonf.h"
 #include "asterfort/projInsideCell.h"
+#include "MeshTypes_type.h"
 #include "asterfort/reerel.h"
 !
 ! --------------------------------------------------------------------------------------------------
@@ -110,7 +111,7 @@ contains
         integer(kind=8) :: iTria, iGauss, nbTria, nbGauss
         real(kind=8) :: triaCoorSlav(2, 3), jaco, coorac(3)
         real(kind=8) :: gausWeightSlav(12), gausCoorSlav(2, 12)
-        real(kind=8) :: shape_func(9), shape_dfunc(2, 9)
+        real(kind=8) :: shape_func(MT_NNOMAX2D), shape_dfunc(2, MT_NNOMAX2D)
         character(len=8) :: elga_fami
         real(kind=8) :: poinInteSlav(2, MAX_NB_INTE)
 !
@@ -195,10 +196,10 @@ contains
                 FEQuadSl%weights_param(nb_qp) = gausWeightSlav(iGauss)
 !
 ! ------------- Get shape functions and first derivative only (for perf)
-                call mmnonf(ndim, FEFaceSl%nbnodes, FEFaceSl%typemas, &
+                call mmnonf(FEFaceSl%typemas, &
                             gausCoorSlav(1, iGauss), gausCoorSlav(2, iGauss), &
                             shape_func)
-                call mmdonf(ndim, FEFaceSl%nbnodes, FEFaceSl%typemas, &
+                call mmdonf(FEFaceSl%typemas, &
                             gausCoorSlav(1, iGauss), gausCoorSlav(2, iGauss), &
                             shape_dfunc)
 !
@@ -240,11 +241,13 @@ contains
         integer(kind=8) :: ndim, ipg, iret
         real(kind=8) :: norm_slav(3), tau_slav(3, 2), coor_qp_sl(2)
         real(kind=8) :: coor_qp_sl_re(3), ksi_line(2)
-        real(kind=8) :: tau1_mast(3), tau2_mast(3)
+        real(kind=8) :: tau1_mast(3), tau2_mast(3), coor_nodes(3, MT_NNOMAX2D)
         character(len=8) :: type_mast
 !
         hhoQuadMa%nbQuadPoints = FEQuadSl%nbQuadPoints
         ndim = FEFaceSl%ndim+1
+!
+        coor_nodes(1:3, 1:9) = hhoFaceMa%coorno
 !
         call CellNameL2S(hhoFaceMa%typema, type_mast)
 !
@@ -262,7 +265,7 @@ contains
             coor_qp_sl_re = FEQuadSl%points(1:3, ipg)
 !
 ! ----- Projection on master element
-            call mmnewd(type_mast, hhoFaceMa%nbnodes, ndim, hhoFaceMa%coorno, &
+            call mmnewd(type_mast, hhoFaceMa%nbnodes, ndim, coor_nodes, &
                         coor_qp_sl_re, 100, PROJ_TOLE, norm_slav, ksi_line(1), &
                         ksi_line(2), tau1_mast, tau2_mast, iret)
             ASSERT(iret == 0)

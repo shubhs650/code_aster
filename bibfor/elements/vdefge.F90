@@ -22,11 +22,12 @@ subroutine vdefge(nomte, nb1, npgsr, xr, epais, &
     implicit none
 !
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 !
     character(len=16), intent(in) :: nomte
     integer(kind=8), intent(in) :: nb1, npgsr
     real(kind=8), intent(in) :: xr(*), epais
-    real(kind=8), intent(in) :: sigmElno(6, 27)
+    real(kind=8), intent(in) :: sigmElno(6, MT_NNOMAX3D)
     real(kind=8), intent(out) :: efgeElno(8, 9)
 !
 ! --------------------------------------------------------------------------------------------------

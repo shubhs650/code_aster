@@ -48,7 +48,7 @@ class sd_nume_equa(AsBase):
 
         # nom de la grandeur :
         assert refn[1] != ""
-        sdu_verif_nom_gd(refn[1])
+        assert sdu_verif_nom_gd(refn[1]), refn[1] + " n'est pas un nom de grandeur."
 
         # Cas ELIM_LAGR :
         assert refn[3] in ("", "ELIM_LAGR", "SIMPLE_LAGRANGE")

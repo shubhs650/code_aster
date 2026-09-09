@@ -15,29 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nm1dco(fami, kpg, ksp, option, imate,&
-                      materi, e, sigm, epsm, deps,&
-                      vim, sigp, vip, dsde, crildc,&
+    subroutine nm1dco(materPara, option, carcri, &
+                      materPoin, e, sigm, epsm, deps, &
+                      vim, sigp, vip, dsde, &
                       codret)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: option
-        integer(kind=8) :: imate
-        character(len=*) :: materi
-        real(kind=8) :: e
-        real(kind=8) :: sigm
-        real(kind=8) :: epsm
-        real(kind=8) :: deps
-        real(kind=8) :: vim(*)
-        real(kind=8) :: sigp
-        real(kind=8) :: vip(*)
-        real(kind=8) :: dsde
-        real(kind=8) :: crildc(*)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: option
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=*), intent(in) :: materPoin
+        real(kind=8) :: e, sigm, epsm, deps, vim(*), vip(*)
+        real(kind=8) :: sigp, dsde
         integer(kind=8) :: codret
     end subroutine nm1dco
 end interface

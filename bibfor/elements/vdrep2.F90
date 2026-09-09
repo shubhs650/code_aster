@@ -16,10 +16,22 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vdrep2(alpha, beta, zilzi, zrlzr, matevn, &
-                  matevg)
-!.======================================================================
+subroutine vdrep2(alphaIn, betaIn, nb2, npgsr, desr, &
+                  matevn, matevg_)
+!
     implicit none
+!
+#include "asterf_types.h"
+#include "asterc/r8dgrd.h"
+#include "asterfort/coqrep.h"
+!
+    real(kind=8), intent(in) :: alphaIn, betaIn
+    integer(kind=8), intent(in) :: nb2, npgsr
+    real(kind=8), intent(in) :: desr(*)
+    real(kind=8), intent(out) :: matevn(2, 2, 1)
+    real(kind=8), optional, intent(out) :: matevg_(2, 2, 1)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !      VDREP2   -- DETERMINATION DES MATRICES DE PASSAGE
 !                  DES REPERES INTRINSEQUES AUX NOEUDS  DE L'ELEMENT
@@ -36,114 +48,68 @@ subroutine vdrep2(alpha, beta, zilzi, zrlzr, matevn, &
 !    MATEVG(2,2,10) OUT    R        MATRICES DE PASSAGE DES REPERES
 !                                   INTRINSEQUES AUX POINTS
 !                                   D'INTEGRATION DE L'ELEMENT AU
-!                                   REPERE UTILISATEUR
 !
-!.========================= DEBUT DES DECLARATIONS ====================
-! -----  ARGUMENTS
-#include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
-    real(kind=8) :: matevn(2, 2, 1), matevg(2, 2, 1)
-! -----  VARIABLES LOCALES
-    real(kind=8) :: pgl(3, 3), zrlzr(*)
-    integer(kind=8) :: zilzi(*)
-!.========================= DEBUT DU CODE EXECUTABLE ==================
+! --------------------------------------------------------------------------------------------------
 !
-! --- NOMBRE DE NOEUDS DE L'ELEMENT  :
-!     -----------------------------
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, idec, igau, ino, j, k, nb2
-    integer(kind=8) :: npgsr
-    real(kind=8) :: alpha, beta, c
-    real(kind=8) :: s
-    real(kind=8) :: r8bid4(4)
-!-----------------------------------------------------------------------
-    nb2 = zilzi(2)
+    integer(kind=8) :: i, idec, ino, j, k, kpgsr
+    real(kind=8) :: c, s
+    real(kind=8) :: pgl(3, 3), alpha, beta
 !
-! --- NOMBRE DE POINTS D'INTEGRATION DE L'ELEMENT (SOUS-INTEGRE) :
-!     ----------------------------------------------------------
-    npgsr = zilzi(3)
+! --------------------------------------------------------------------------------------------------
 !
-! --- RECUPERATION DES ANGLES DETERMINANT LE REPERE UTILISATEUR
-! --- PAR RAPPORT AU REPERE GLOBAL :
-!     ============================
-    alpha = alpha*r8dgrd()
-    beta = beta*r8dgrd()
-!
-! --- DETERMINATION DES MATRICES DE PASSAGE DES REPERES INTRINSEQUES
-! --- AUX NOEUDS DE L'ELEMENT AU REPERE UTILISATEUR :
-!     =============================================
-!
-! --- ADRESSE DES MATRICES DE PASSAGE DU REPERE GLOBAL AUX REPERES
-! --- INTRINSEQUES AUX NOEUDS DE L'ELEMENT DANS LE TABLEAU .DESR :
-!     ----------------------------------------------------------
+    alpha = alphaIn*r8dgrd()
+    beta = betaIn*r8dgrd()
+    matevn = 0.d0
+
+! - DETERMINATION DES MATRICES DE PASSAGE DES REPERES INTRINSEQUES
+! - AUX NOEUDS DE L'ELEMENT AU REPERE UTILISATEUR
     idec = 1090
-!
-! --- BOUCLE SUR LES NOEUDS DE L'ELEMENT :
-!     ----------------------------------
+
     do ino = 1, nb2
-!
-! ---   RECUPERATION DE LA MATRICE DE PASSAGE AU NOEUD COURANT :
-!       ------------------------------------------------------
+! ---   RECUPERATION DE LA MATRICE DE PASSAGE AU NOEUD COURANT
         k = 0
         do j = 1, 3
             do i = 1, 3
                 k = k+1
-                pgl(i, j) = zrlzr(idec+(ino-1)*9+k)
+                pgl(i, j) = desr(idec+(ino-1)*9+k)
             end do
         end do
-!
-! ---   DETERMINATION DE LA PROJECTION DU VECTEUR X DU REPERE
-! ---   UTILISATEUR SUR LE FEUILLET TANGENT A LA COQUE AU NOEUD
-! ---   COURANT :
-!       -------
-        call coqrep(pgl, alpha, beta, r8bid4, r8bid4, &
-                    c, s)
-!
+
+! ----- Compute operators for coordinate transformation
+        call coqrep(pgl, alpha, beta, &
+                    c_=c, s_=s)
         matevn(1, 1, ino) = c
         matevn(2, 1, ino) = s
         matevn(1, 2, ino) = -s
         matevn(2, 2, ino) = c
 !
     end do
-!
-! --- DETERMINATION DES MATRICES DE PASSAGE DES REPERES INTRINSEQUES
-! --- AUX POINTS D'INTEGRATION DE L'ELEMENT AU REPERE UTILISATEUR :
-!     ===========================================================
-!
-! --- ADRESSE DES MATRICES DE PASSAGE DU REPERE GLOBAL AUX REPERES
-! --- INTRINSEQUES AUX POINTS D'INTEGRATION DE L'ELEMENT
-! --- DANS LE TABLEAU .DESR :
-!     ---------------------
-    idec = 2000
-!
-! --- BOUCLE SUR LES POINTS D'INTEGRATION DE L'ELEMENT (SOUS-INTEGRE) :
-!     --------------------------------------------------------------
-    do igau = 1, npgsr
-!
-! ---   RECUPERATION DE LA MATRICE DE PASSAGE AU POINT D'INTEGRATION
-! ---   COURANT :
-!       -------
-        k = 0
-        do j = 1, 3
-            do i = 1, 3
-                k = k+1
-                pgl(i, j) = zrlzr(idec+(igau-1)*9+k)
+
+! - Matrix for point quantities (reduced integration) - Compute local => global
+    if (present(matevg_)) then
+        idec = 2000
+        matevg_ = 0.d0
+        do kpgsr = 1, npgsr
+! ----- RECUPERATION DE LA MATRICE DE PASSAGE AU POINT D'INTEGRATION COURANT
+            k = 0
+            do j = 1, 3
+                do i = 1, 3
+                    k = k+1
+                    pgl(i, j) = desr(idec+(kpgsr-1)*9+k)
+                end do
             end do
+
+! ----- Compute operators for coordinate transformation
+            call coqrep(pgl, &
+                        alpha, beta, &
+                        c_=c, s_=s)
+!
+            matevg_(1, 1, kpgsr) = c
+            matevg_(2, 1, kpgsr) = s
+            matevg_(1, 2, kpgsr) = -s
+            matevg_(2, 2, kpgsr) = c
+!
         end do
+    end if
 !
-! ---   DETERMINATION DE LA PROJECTION DU VECTEUR X DU REPERE
-! ---   UTILISATEUR SUR LE FEUILLET TANGENT A LA COQUE AU POINT
-! ---   D'INTEGRATION COURANT :
-!       ---------------------
-        call coqrep(pgl, alpha, beta, r8bid4, r8bid4, &
-                    c, s)
-!
-        matevg(1, 1, igau) = c
-        matevg(2, 1, igau) = s
-        matevg(1, 2, igau) = -s
-        matevg(2, 2, igau) = c
-!
-    end do
-!
-!.============================ FIN DE LA ROUTINE ======================
 end subroutine

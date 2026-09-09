@@ -140,6 +140,9 @@ class AsterMPI {
     template < typename T >
     static void bcast( T &value, int root, aster_comm_t *_commCurrent = aster_get_current_comm() );
 
+    static void bcast( std::string &value, int root,
+                       aster_comm_t *_commCurrent = aster_get_current_comm() );
+
     /// Broadcast a vector from root
     template < typename T >
     static void bcast( std::vector< T > &value, int root,

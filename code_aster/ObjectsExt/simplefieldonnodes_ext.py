@@ -27,28 +27,13 @@ import numpy.ma as ma
 
 from ..MedUtils.MedConverter import fromMedFileField1TSNodes, toMedCouplingField, toMedFileField1TS
 from ..Objects import PythonBool, SimpleFieldOnNodesComplex, SimpleFieldOnNodesReal
-from ..Objects.Serialization import InternalStateBuilder
 from ..Utilities import force_list, injector
 from .component import ComponentOnNodes
 
 
-class SFoNStateBuilder(InternalStateBuilder):
-    """Class that returns the internal state of a *SimpleFieldOnNodes*."""
-
-    def restore(self, field):
-        """Restore the *DataStructure* content from the previously saved internal
-        state.
-
-        Arguments:
-            field (*DataStructure*): The *DataStructure* object to be restored.
-        """
-        super().restore(field)
-        field.build()
-
-
 @injector(SimpleFieldOnNodesReal)
 class ExtendedSimpleFieldOnNodesReal:
-    internalStateBuilder = SFoNStateBuilder
+    cata_sdj = "SD.sd_cham_no_s.sd_cham_no_s"
 
     @property
     def _cache(self):
@@ -234,6 +219,8 @@ class ExtendedSimpleFieldOnNodesReal:
 
 @injector(SimpleFieldOnNodesComplex)
 class ExtendedSimpleFieldOnNodesComplex:
+    cata_sdj = "SD.sd_cham_no_s.sd_cham_no_s"
+
     def getValues(self, copy=False):
         """
         Returns two numpy arrays with shape ( number_of_cells_with_components, number_of_components )

@@ -15,17 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lceobl(ndim, typmod, imate, crit, epsm,&
-                      deps, vim, option, sigm, vip,&
+    subroutine lceobl(ndim, imate, carcri, epsm, &
+                      deps, vim, option, sigm, vip, &
                       dsidep, iret)
         integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
         integer(kind=8) :: imate
-        real(kind=8) :: crit(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: epsm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: vim(7)

@@ -114,8 +114,6 @@ subroutine char_crea_cart(phenom, loadType, load, mesh, valeType, &
         nbMap = 1
     else if (loadType .eq. 'PESANTEUR') then
         nbMap = 1
-    else if (loadType .eq. 'FORCE_ELEC') then
-        nbMap = 1
     else if (loadType .eq. 'VITE_FACE') then
         nbMap = 1
     else
@@ -144,8 +142,6 @@ subroutine char_crea_cart(phenom, loadType, load, mesh, valeType, &
         map(1) = obje_pref(1:13)//'.PRESS'
     else if (loadType .eq. 'PESANTEUR') then
         map(1) = obje_pref(1:13)//'.PESAN'
-    else if (loadType .eq. 'FORCE_ELEC') then
-        map(1) = obje_pref(1:13)//'.FELEC'
     else if (loadType .eq. 'VITE_FACE') then
         map(1) = obje_pref(1:13)//'.VFACE'
     else
@@ -217,12 +213,6 @@ subroutine char_crea_cart(phenom, loadType, load, mesh, valeType, &
     else if (loadType .eq. 'PESANTEUR') then
         if (valeType .eq. 'REEL') then
             physQuantity(1) = 'PESA_R'
-        else
-            ASSERT(ASTER_FALSE)
-        end if
-    else if (loadType .eq. 'FORCE_ELEC') then
-        if (valeType .eq. 'REEL') then
-            physQuantity(1) = 'FLAP_R'
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -308,12 +298,6 @@ subroutine char_crea_cart(phenom, loadType, load, mesh, valeType, &
         else
             ASSERT(ASTER_FALSE)
         end if
-    else if (loadType .eq. 'FORCE_ELEC') then
-        if (valeType .eq. 'REEL') then
-            mapType(1) = 'R'
-        else
-            ASSERT(ASTER_FALSE)
-        end if
     else if (loadType .eq. 'VITE_FACE') then
         if (valeType .eq. 'COMP') then
             mapType(1) = 'C'
@@ -388,15 +372,6 @@ subroutine char_crea_cart(phenom, loadType, load, mesh, valeType, &
         cmpName(1, 2) = 'AG'
         cmpName(1, 3) = 'BG'
         cmpName(1, 4) = 'CG'
-    else if (loadType .eq. 'FORCE_ELEC') then
-        nbCmp(1) = 7
-        cmpName(1, 1) = 'X1'
-        cmpName(1, 2) = 'Y1'
-        cmpName(1, 3) = 'Z1'
-        cmpName(1, 4) = 'X2'
-        cmpName(1, 5) = 'Y2'
-        cmpName(1, 6) = 'Z2'
-        cmpName(1, 7) = 'CODE'
     else if (loadType .eq. 'VITE_FACE') then
         nbCmp(1) = 5
         cmpName(1, 1) = 'VITE'

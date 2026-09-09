@@ -15,20 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1504
 !
-subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
+subroutine dhrc_lc(plateOrie, &
+                   epsm, deps, vim, option, &
                    sig, vip, a0, c0, aa_t, &
                    ga_t, ab, gb, ac, gc, &
                    aa_c, ga_c, cstseu, crit, codret, &
                    dsidep, debug)
-! aslint: disable=W1504
 !
-!
+    use plate_type
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
+#include "asterf_types.h"
 #include "asterfort/dhrc_calc_a.h"
 #include "asterfort/dhrc_calc_b.h"
 #include "asterfort/dhrc_calc_c.h"
@@ -44,8 +44,10 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 #include "asterfort/utbtab.h"
 #include "asterfort/utmess.h"
 #include "blas/dgeev.h"
+#include "jeveux.h"
 !
-    real(kind=8), intent(in) :: pgl(3, 3), epsm(6), deps(6), vim(*), crit(*), cstseu(6)
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(in) :: epsm(6), deps(6), vim(*), crit(*), cstseu(6)
     real(kind=8), intent(in) :: a0(6, 6), c0(2, 2, 2)
     real(kind=8), intent(in) :: aa_t(6, 6, 2), ab(6, 2, 2), ac(2, 2, 2)
     real(kind=8), intent(in) :: ga_t(6, 6, 2), gb(6, 2, 2), gc(2, 2, 2)
@@ -53,15 +55,16 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
     real(kind=8), intent(in) :: ga_c(6, 6, 2)
     character(len=16), intent(in) :: option
     aster_logical, intent(in) :: debug
-!
     integer(kind=8), intent(out) :: codret
     real(kind=8), intent(out) :: sig(8), vip(*)
     real(kind=8), intent(out) :: dsidep(6, 6)
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
 !      LOI GLOBALE POUR LES PLAQUES/COQUES DKTG - DHRC
 !
-! IN:
+! --------------------------------------------------------------------------------------------------
+!
 !       A0     : RAIDEUR ELASTIQUE (D=0)
 !       AA     : PARAMETRE ALPHA DE LA FONCTION D'ENDOMMAGEMENT
 !       GA     : PARAMETRE GAMMA DE LA FONCTION D'ENDOMMAGEMENT
@@ -81,7 +84,8 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 !                     1 = EN INCREMENTAL >NON-SYMETRIQUE
 !              (3) = VALEUR TOLERANCE DE CONVERGENCE
 !                    (RESI_INTE == RESCREL)
-!              (5) = NOMBRE D'INCREMENTS POUR LE
+!  !
+! IN:            (5) = NOMBRE D'INCREMENTS POUR LE
 !                    REDECOUPAGE LOCAL DU PAS DE TEMPS
 !                    (ITER_INTE_PAS  == ITEDEC)
 !                    -1,0,1 = PAS DE REDECOUPAGE
@@ -95,16 +99,14 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 !       CODRET  : CODE RETOUR DE L'INTEGRATION DE LA LDC
 !                 0 => PAS DE PROBLEME
 !                 1 => ABSENCE DE CONVERGENCE
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     aster_logical :: rigi, resi
     aster_logical :: lelas
-!
     integer(kind=8) :: k, itmax, indi(6), nbact, l, i, iret, iter, iter2
-    integer(kind=8) :: jcara
     blas_int :: info
     real(kind=8) :: wr(6), wi(6), work(18), vl(1), vr(1)
-!
     real(kind=8) :: eps(8)
     real(kind=8) :: vint(6)
     real(kind=8) :: a(6, 6), b(6, 2, 2), c(2, 2, 2), ates(6, 6)
@@ -115,21 +117,19 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
     real(kind=8) :: g1, g2
     real(kind=8) :: neta1(2), neta2(2)
     real(kind=8) :: jacob(6, 6), bocaj(6, 6), det
-!
-    real(kind=8) :: alpha, beta, cosi, sinu
-    real(kind=8) :: t2ev2(2, 2), t2ve2(2, 2), epsg(8), sigg(8)
-    real(kind=8) :: t1ve(3, 3), dsideg(6, 6)
+    real(kind=8) :: epsg(8), sigg(8), dsideg(6, 6)
     real(kind=8) :: dsidem(3, 3), dsidec(3, 3), dsidef(3, 3)
     real(kind=8) :: dsidmg(3, 3), dsidcg(3, 3), dsidfg(3, 3)
     real(kind=8) :: xab1(3, 3)
     blas_int :: b_lda, b_ldvl, b_ldvr, b_lwork, b_n
 !
-! --  OPTION ET MODELISATION
+! --------------------------------------------------------------------------------------------------
+!
     rigi = (option(1:4) .eq. 'RIGI' .or. option(1:4) .eq. 'FULL')
     resi = (option(1:4) .eq. 'RAPH' .or. option(1:4) .eq. 'FULL')
     lelas = option .eq. 'RIGI_MECA       '
-!
-! -- INITIALISATION
+
+! - INITIALISATION
     if (lelas) then
         call r8inir(6, 0.0d0, epsm, 1)
         call r8inir(6, 0.0d0, deps, 1)
@@ -148,32 +148,15 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 !
     eps(7) = 0.0d0
     eps(8) = 0.0d0
-!
-! -- EPS EST FOURNI DANS LE REPERE LOCAL DE L'ELEMENT
-!    ON PASSE EPS DANS LE REPERE GLOBAL => EPSG
-! -- POUR CE FAIRE ON A BESOIN DE ALPHA ET BETA DONNES PAR ANGLE_REP
-!    DANS AFFE_CARA_ELEM
-! ---------------------------------------------------------------------
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2ev2, t2ve2, &
-                cosi, sinu)
-!
-! ---   PASSAGE DES DEFORMATIONS EPS DU REPERE INTRINSEQUE
-! ---   A L'ELEMENT AU REPERE GLOBAL DE LA COQUE
     eps(3) = eps(3)*0.5d0
     eps(6) = eps(6)*0.5d0
-!
     call r8inir(8, 0.0d0, epsg, 1)
-!
-    call dxefro(1, t2ev2, eps, epsg)
+    call dxefro(1, plateOrie%t2iu, eps, epsg)
 !
     epsg(3) = epsg(3)*2.d0
     epsg(6) = epsg(6)*2.d0
 !
     if (debug) then
-        write (6, *) 'pgl  :', pgl
         write (6, *) 'eps  :', eps
         write (6, *) 'epsg :', epsg
     end if
@@ -580,22 +563,8 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 ! ---  AU REPERE INTRINSEQUE A L'ELEMENT => SIG
     if (resi) then
         call r8inir(8, 0.0d0, sig, 1)
-        call dxefro(1, t2ve2, sigg, sig)
+        call dxefro(1, plateOrie%t2ui, sigg, sig)
     end if
-!
-! ---  PASSAGE DE LA MATRICE TANGENTE DSIDEG DU REPERE GLOBAL DE LA
-! ---  COQUE AU REPERE INTRINSEQUE A L'ELEMENT => DSIDEP
-!      CALCUL DE LA MATRICE T1VE DE PASSAGE D'UNE MATRICE
-!      (3,3) DU REPERE DE LA VARIETE AU REPERE ELEMENT
-    t1ve(1, 1) = cosi*cosi
-    t1ve(1, 2) = sinu*sinu
-    t1ve(1, 3) = cosi*sinu
-    t1ve(2, 1) = t1ve(1, 2)
-    t1ve(2, 2) = t1ve(1, 1)
-    t1ve(2, 3) = -t1ve(1, 3)
-    t1ve(3, 1) = -t1ve(1, 3)*2.d0
-    t1ve(3, 2) = t1ve(1, 3)*2.d0
-    t1ve(3, 3) = t1ve(1, 1)-t1ve(1, 2)
 !
     dsidmg(:, :) = 0.0d0
     dsidcg(:, :) = 0.0d0
@@ -612,11 +581,11 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
         end do
     end do
 !
-    call utbtab('ZERO', 3, 3, dsidmg, t1ve, &
+    call utbtab('ZERO', 3, 3, dsidmg, plateOrie%t1ve, &
                 xab1, dsidem)
-    call utbtab('ZERO', 3, 3, dsidcg, t1ve, &
+    call utbtab('ZERO', 3, 3, dsidcg, plateOrie%t1ve, &
                 xab1, dsidec)
-    call utbtab('ZERO', 3, 3, dsidfg, t1ve, &
+    call utbtab('ZERO', 3, 3, dsidfg, plateOrie%t1ve, &
                 xab1, dsidef)
 !
     dsidep(:, :) = 0.0d0
@@ -641,13 +610,12 @@ subroutine dhrc_lc(epsm, deps, vim, pgl, option, &
 !            write(6,*) 'rigi  =', rigi
 !            write(6,*) 'resi  =', resi
 !            write(6,*) 'lelas =', lelas
-!            write(6,*) 'pgl   =', pgl
-!            write(6,*) 'alpha =', alpha
-!            write(6,*) 'beta  =', beta
-!            write(6,*) 't2ev2 =', t2ev2
-!            write(6,*) 't2ve2 =', t2ve2
-!            write(6,*) 'cosi  =', cosi
-!            write(6,*) 'sinu  =', sinu
+!            write(6,*) 'alpha =', plateOrie%alpha
+!            write(6,*) 'beta  =', plateOrie%beta
+!            write(6,*) 't2ev2 =', plateOrie%t2ui
+!            write(6,*) 't2ve2 =', plateOrie%t2iy
+!            write(6,*) 'cosi  =', plateOrie%c
+!            write(6,*) 'sinu  =', plateOrie%s
 !            write(6,*) 'Donnees d entree'
 !            write(6,*) 'epsm    = [',epsm   ,']'
 !            write(6,*) 'deps    = [',deps   ,']'

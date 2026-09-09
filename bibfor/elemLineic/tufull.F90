@@ -17,17 +17,17 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306
 !
-subroutine tufull(option, nbFourier, nbDof)
+subroutine tufull(materPara, option, nbFourier, nbDof)
 !
-    use Behaviour_type
+    use beamElem_type
     use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     use pipeElem_module
     use pipeElem_type
-    use beamElem_type
-!
     implicit none
 !
-#include "asterc/r8nnem.h"
 #include "asterc/r8pi.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
@@ -41,6 +41,7 @@ subroutine tufull(option, nbFourier, nbDof)
 #include "asterfort/tecach.h"
 #include "jeveux.h"
 !
+    type(Material_Para), intent(inout) :: materPara
     character(len=16), intent(in) :: option
     integer(kind=8), intent(in) :: nbDof, nbFourier
 !
@@ -54,62 +55,53 @@ subroutine tufull(option, nbFourier, nbDof)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ndimLdc = 2
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     real(kind=8), parameter :: rac2 = sqrt(2.d0)
     real(kind=8) :: dispPrev(nbDof), dispIncr(nbDof)
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     real(kind=8) :: radiusLayer
     real(kind=8) :: poids, weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
-    integer(kind=8) :: jvMaterCode
     real(kind=8) :: cisail, gxz
     real(kind=8) :: jacobi, xpg(PIPE_MAX_NPG)
     real(kind=8) :: phi, zeta
     integer(kind=8) :: nbLayer, nbSect
     integer(kind=8) :: nspgLayer, nspgSect, npg, nspg
-    integer(kind=8) :: kspgLayer, kspgSect, kpg, kspg, kspgTot
+    integer(kind=8) :: kspgLayer, kspgSect, kpg, ksp, kspTot
     integer(kind=8) :: nbNode
-    integer(kind=8) :: iDof, iSief, iTens, nc, iret
+    integer(kind=8) :: iDof, iSief, iTens, nc, iret, k2
     real(kind=8) :: b(PIPE_TENS_SIZE, nbDof)
     real(kind=8) :: ktild(nbDof, nbDof), effint(nbDof)
     real(kind=8) :: effinb, epsi(4), depsi(4), eps2d(6), deps2d(6)
     real(kind=8) :: sigmPrepInte(6), sigmPostInte(6), sgmtd(4)
     real(kind=8) :: dsidep(6, 6), dtild(PIPE_TENS_SIZE, PIPE_TENS_SIZE)
     real(kind=8) :: instm, instp
-    real(kind=8) :: angmas(3)
-    integer(kind=8) :: icompo, ivarix
+    integer(kind=8) :: ivarix
     integer(kind=8) :: nbvari, lgpg, jtab(7)
-    integer(kind=8) :: imatuu, igeom
+    integer(kind=8) :: imatuu
     integer(kind=8) :: ivarip, ivarim, icontm, icontp, ivectu, jcret
-    integer(kind=8) :: iinstm, iinstp, jvDispPrev, jvDispIncr, icarcr, k2
+    integer(kind=8) :: iinstm, iinstp, jvDispPrev, jvDispIncr, jvCarcri
     integer(kind=8) :: codret, cod
-    character(len=16) :: defo_comp, rela_comp, type_comp
+    character(len=16), pointer :: compor(:) => null()
+    character(len=16) :: defoComp
     aster_logical :: lVect, lMatr, lVari, lSigm
-    type(Behaviour_Integ) :: BEHinteg
     integer(kind=8) :: variLen
     real(kind=8), allocatable :: varip(:)
     character(len=8), parameter :: typmod(2) = (/'C_PLAN  ', '        '/)
     type(pipeElem_Prop) :: pipeElem
     type(sectPipe_Prop) :: sectPipe
     type(beamElem_Prop) :: beamElem
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call elrefe_info(fami=fami, nno=nbNode, npg=npg, &
+    call elrefe_info(fami=fami, &
+                     nno=nbNode, npg=npg, &
                      jpoids=jpoids, jcoopg=jcoopg, jvf=jvf, jdfde=jdfde, jdfd2=jdfd2)
     ASSERT(npg .le. PIPE_MAX_NPG)
     nc = nbDof*(nbDof+1)/2
     codret = 0
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-!   Angle du mot clef MASSIF de AFFE_CARA_ELEM, initialisé à r8nnem (on ne s'en sert pas)
-    angmas = r8nnem()
-
-!   Angle du mot clef MASSIF de AFFE_CARA_ELEM, initialisé à 0, nécessaire pour les LdC
-! - LEMAITRE_IRRA et VISC_IRRA_LOG (voir ssnl121c)
-    angmas = 0.d0
 
 ! - Get input fields
     call jevech('PVARIMR', 'L', ivarim)
@@ -117,37 +109,37 @@ subroutine tufull(option, nbFourier, nbDof)
     call jevech('PINSTPR', 'L', iinstp)
     call jevech('PDEPLMR', 'L', jvDispPrev)
     call jevech('PDEPLPR', 'L', jvDispIncr)
-    call jevech('PCARCRI', 'L', icarcr)
     call jevech('PCONTMR', 'L', icontm)
-    call jevech('PMATERC', 'L', jvMaterCode)
-    call jevech('PCOMPOR', 'L', icompo)
     call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg = max(jtab(6), 1)*jtab(7)
-    call jevech('PGEOMER', 'L', igeom)
 
 ! - Get time
     instm = zr(iinstm)
     instp = zr(iinstp)
 
+! - Initialisation of behaviour datastructure
+    call behaviourInit(BEHInteg)
+
+! - Get fields for non-linear behaviour
+    call jevech('PCARCRI', 'L', jvCarcri)
+    call jevech('PCOMPOR', 'L', vk16=compor)
+
+! - Properties of behaviour
+    read (compor(NVAR), '(I16)') nbvari
+    defoComp = compor(DEFO)
+    ASSERT(defoComp .eq. 'PETIT')
+
 ! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndimLdc, typmod, option, &
-                              zk16(icompo), zr(icarcr), &
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jvCarcri), &
                               instm, instp, &
-                              fami, zi(jvMaterCode), &
-                              BEHinteg)
+                              materPara, BEHInteg)
 
 ! - Select objects to construct from option name
-    call behaviourOption(option, zk16(icompo), &
+    call behaviourOption(option, compor, &
                          lMatr, lVect, &
                          lVari, lSigm, &
                          codret)
-
-! - Properties of behaviour
-    read (zk16(icompo-1+NVAR), '(I16)') nbvari
-    rela_comp = zk16(icompo-1+RELA_NAME)
-    defo_comp = zk16(icompo-1+DEFO)
-    type_comp = zk16(icompo-1+INCRELAS)
-    ASSERT(defo_comp .eq. 'PETIT')
 
 ! - Get output fields
     if (lMatr) then
@@ -195,7 +187,7 @@ subroutine tufull(option, nbFourier, nbDof)
     call pipeGetDisp(pipeElem, nbDof, zr(jvDispIncr), dispIncr)
 
 ! - Loop on Gauss points (on segment)
-    kspgTot = 0
+    kspTot = 0
     ktild = 0.d0
     effint = 0.d0
     do kpg = 1, npg
@@ -211,9 +203,12 @@ subroutine tufull(option, nbFourier, nbDof)
 
 ! --------- Loop on sub-points in section
             do kspgSect = 1, nspgSect
-                kspg = (kspgLayer-1)*(2*nbSect+1)+kspgSect
-                kspgTot = kspgTot+1
+                ksp = (kspgLayer-1)*(2*nbSect+1)+kspgSect
+                kspTot = kspTot+1
                 k2 = lgpg*(kpg-1)+((2*nbSect+1)*(kspgLayer-1)+(kspgSect-1))*nbvari
+
+! ------------- Set main parameters for behaviour (on point)
+                call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ------------- Coordinate of sub-point in section
                 phi = (kspgSect-1)*2.d0*r8pi()/(2.d0*nbSect)
@@ -263,27 +258,24 @@ subroutine tufull(option, nbFourier, nbDof)
 ! ------------- Prepare stress
                 sigmPrepInte = 0.d0
                 do iSief = 1, 3
-                    sigmPrepInte(iSief) = zr(icontm-1+6*(kspgTot-1)+iSief)
+                    sigmPrepInte(iSief) = zr(icontm-1+6*(kspTot-1)+iSief)
                 end do
-                sigmPrepInte(4) = zr(icontm-1+6*(kspgTot-1)+4)*rac2
-
-! ------------- Set main parameters for behaviour (on point)
-                call behaviourSetParaPoin(kpg, kspg, BEHinteg)
+                sigmPrepInte(4) = zr(icontm-1+6*(kspTot-1)+4)*rac2
 
 ! ------------- Integrate
                 sigmPostInte = 0.d0
-                call nmcomp(BEHinteg, &
-                            fami, kpg, kspg, ndimLdc, typmod, &
-                            zi(jvMaterCode), zk16(icompo), zr(icarcr), instm, instp, &
+                call nmcomp(BEHInteg, &
+                            ndimLdc, option, typmod, &
+                            instm, instp, &
+                            compor, zr(jvCarcri), multComp, &
                             6, eps2d, deps2d, &
                             6, sigmPrepInte, zr(ivarim+k2), &
-                            option, angmas, &
                             sigmPostInte, varip(1+k2), &
                             36, dsidep, cod)
 
 ! ------------- Get shear parameter from elasticity
-                call pipeGetElasProp(jvMaterCode, &
-                                     kpg_=kpg, kspg_=kspg, &
+                call pipeGetElasProp(BEHINteg%materPara%jvMaterCode, &
+                                     kpg_=kpg, kspg_=ksp, &
                                      cisail_=cisail)
 
                 if (cod .ne. 0) then
@@ -319,17 +311,17 @@ subroutine tufull(option, nbFourier, nbDof)
 !
                 if (lSigm) then
                     do iSief = 1, 3
-                        zr(icontp-1+6*(kspgTot-1)+iSief) = sigmPostInte(iSief)
+                        zr(icontp-1+6*(kspTot-1)+iSief) = sigmPostInte(iSief)
                     end do
-                    zr(icontp-1+6*(kspgTot-1)+4) = sigmPostInte(4)/rac2
-                    zr(icontp-1+6*(kspgTot-1)+5) = cisail*gxz/2.d0
-                    zr(icontp-1+6*(kspgTot-1)+6) = 0.d0
+                    zr(icontp-1+6*(kspTot-1)+4) = sigmPostInte(4)/rac2
+                    zr(icontp-1+6*(kspTot-1)+5) = cisail*gxz/2.d0
+                    zr(icontp-1+6*(kspTot-1)+6) = 0.d0
                 end if
                 if (lVect) then
                     ASSERT(lSigm)
-                    sgmtd(1) = zr(icontp-1+6*(kspgTot-1)+1)
-                    sgmtd(2) = zr(icontp-1+6*(kspgTot-1)+2)
-                    sgmtd(3) = zr(icontp-1+6*(kspgTot-1)+4)
+                    sgmtd(1) = zr(icontp-1+6*(kspTot-1)+1)
+                    sgmtd(2) = zr(icontp-1+6*(kspTot-1)+2)
+                    sgmtd(3) = zr(icontp-1+6*(kspTot-1)+4)
                     sgmtd(4) = cisail*gxz/2.d0
                     do iDof = 1, nbDof
                         effinb = 0.d0

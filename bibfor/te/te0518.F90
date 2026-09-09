@@ -17,22 +17,27 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0518(option, nomte)
-!
+
+    use Behaviour_type
+    use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-!
+
 #include "asterf_types.h"
 #include "jeveux.h"
-#include "asterfort/elrefv.h"
+#include "asterc/r8vide.h"
+#include "asterfort/elrefe_info.h"
+#include "asterfort/elref2.h"
 #include "asterfort/jevech.h"
+#include "asterfort/lteatt.h"
 #include "asterfort/ngpipe.h"
 #include "asterfort/nmgvmb.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
 !
     character(len=16), intent(in) :: option, nomte
-!
 ! --------------------------------------------------------------------------------------------------
-!
 ! Elementary computation
 !
 ! Elements: 3D_GRAD_INCO, 3D_GRAD_VARI
@@ -41,95 +46,85 @@ subroutine te0518(option, nomte)
 ! Options: PILO_PRED_ELAS, PILO_PRED_DEFO
 !
 ! --------------------------------------------------------------------------------------------------
-!
 ! In  option           : name of option to compute
 ! In  nomte            : type of finite element
-!
 ! --------------------------------------------------------------------------------------------------
-!
-    character(len=8) :: typmod(2)
-    character(len=16) :: typilo
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter:: ntrou_max = 10
+! --------------------------------------------------------------------------------------------------
     aster_logical :: axi
-    integer(kind=8) :: nnoQ, nnoL, npg, ndim, nddl, neps, lgpg, jtab(7)
-    integer(kind=8) :: iret, nnos, jv_ganoQ, jv_poids, jv_vfQ, jv_dfdeQ, jv_vfL, jv_dfdeL, jv_ganoL
-    integer(kind=8) :: igeom, imate, itype, icontm, ivarim, icopil, iborne, ictau
-    integer(kind=8) :: iddlm, iddld, iddl0, iddl1
+    character(len=8) :: typmod(2), lielrf(ntrou_max)
     character(len=16), pointer :: compor(:) => null()
+    integer(kind=8) :: ntrou, ndim, nnoL, nnoQ, npg, lgpg, jtab(7), nddl, neps
+    integer(kind=8) :: jv_poids, jv_vffL, jv_vffQ, jv_dfdeL, jv_dfdeQ
+    integer(kind=8) :: jv_geom, jv_materc, jv_carcri
+    integer(kind=8) :: jv_contm, jv_varim, jv_copil, jv_borne, jv_dtau, jv_typilo
+    integer(kind=8) :: jv_deplm, jv_ddepl, jv_depl0, jv_depl1, iret
+    real(kind=8) :: instam, instap
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
     real(kind=8), allocatable:: b(:, :, :), w(:, :), ni2ldc(:, :)
-    real(kind=8) :: etamin, etamax
-!
 ! --------------------------------------------------------------------------------------------------
-!
 !
 ! - Type of modelling
-!
     call teattr('S', 'TYPMOD', typmod(1))
-    call teattr('S', 'TYPMOD2', typmod(2))
-    axi = typmod(1) .eq. 'AXIS'
-!
+    call teattr('C', 'TYPMOD2', typmod(2), vattr_missing=' ')
+    axi = lteatt('AXIS', 'OUI')
+
 ! - Get parameters of element
-!
-    call elrefv('RIGI', ndim, &
-                nnoL, nnoQ, nnos, &
-                npg, jv_poids, &
-                jv_vfL, jv_vfQ, &
-                jv_dfdeL, jv_dfdeQ, &
-                jv_ganoL, jv_ganoQ)
-!
-! - CALCUL DES ELEMENTS CINEMATIQUES
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PDEPLMR', 'L', iddlm)
-    call nmgvmb(ndim, nnoQ, nnoL, npg, axi, &
-                zr(igeom), zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
-                jv_poids, nddl, neps, b, w, ni2ldc)
-!
-! - TYPE DE PILOTAGE (IDENTIQUE A UNE SELECTION VIA LE NOM DE L'OPTION
-!
-    call jevech('PTYPEPI', 'L', itype)
-    typilo = zk16(itype)
-!
-! - PARAMETRES COMMUNS AUX MODELES DE PILOTAGE
-!
-    call jevech('PDEPLMR', 'L', iddlm)
-    call jevech('PDDEPLR', 'L', iddld)
-    call jevech('PDEPL0R', 'L', iddl0)
-    call jevech('PDEPL1R', 'L', iddl1)
-    call jevech('PCDTAU', 'L', ictau)
-    call jevech('PCOPILO', 'E', icopil)
+    call elref2(nomte, ntrou_max, lielrf, ntrou)
+    call elrefe_info(elrefe=lielrf(2), fami=fami, ndim=ndim, nno=nnoL, npg=npg, &
+                     jpoids=jv_poids, jvf=jv_vffL, jdfde=jv_dfdeL)
+    call elrefe_info(elrefe=lielrf(1), fami=fami, ndim=ndim, nno=nnoQ, npg=npg, &
+                     jpoids=jv_poids, jvf=jv_vffQ, jdfde=jv_dfdeQ)
+
+! - Option parameters
+    call jevech('PGEOMER', 'L', jv_geom)
+    call jevech('PDEPLMR', 'L', jv_deplm)
+    call jevech('PCONTMR', 'L', jv_contm)
+    call jevech('PVARIMR', 'L', jv_varim)
+    call jevech('PDDEPLR', 'L', jv_ddepl)
+    call jevech('PDEPL0R', 'L', jv_depl0)
+    call jevech('PDEPL1R', 'L', jv_depl1)
+    call jevech('PMATERC', 'L', jv_materc)
     call jevech('PCOMPOR', 'L', vk16=compor)
-!
-! - PARAMETRES SPECIFIQUES AU PILOTAGE PAR LA LOI DE COMPORTEMENT
-!
-    if (typilo .eq. 'PRED_ELAS') then
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PCONTMR', 'L', icontm)
-        call jevech('PVARIMR', 'L', ivarim)
-        call jevech('PBORNPI', 'L', iborne)
-!
-!      BORNES POUR LE PILOTAGE (SELON LOIS DE COMPORTEMENT)
-        etamin = zr(iborne+1)
-        etamax = zr(iborne)
-!
-!      NOMBRE DE VARIABLES INTERNES
-        call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                    itab=jtab)
-        lgpg = max(jtab(6), 1)*jtab(7)
-    else
-        imate = 1
-        icontm = 1
-        ivarim = 1
-        iborne = 1
-        lgpg = 0
-        etamin = 0.d0
-        etamax = 0.d0
-    end if
-!
-    call ngpipe(typilo, npg, neps, nddl, b, &
-                ni2ldc, typmod, zi(imate), compor, lgpg, &
-                zr(iddlm), zr(icontm), zr(ivarim), zr(iddld), zr(iddl0), &
-                zr(iddl1), zr(ictau), etamin, etamax, zr(icopil))
-!
+    call jevech('PCARCRI', 'L', jv_carcri)
+    call jevech('PCDTAU', 'L', jv_dtau)
+    call jevech('PBORNPI', 'L', jv_borne)
+    call jevech('PCOPILO', 'E', jv_copil)
+
+! Number of internal variables
+    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
+    lgpg = max(jtab(6), 1)*jtab(7)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jv_materc), materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
+
+! - Set main parameters for behaviour (on cell)
+    instam = r8vide()
+    instap = r8vide()
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jv_carcri), &
+                              instam, instap, &
+                              materPara, BEHInteg)
+
+    call behaviourPrepESVAGeom(nnoQ, npg, ndim, &
+                               jv_poids, jv_vffQ, jv_dfdeQ, &
+                               zr(jv_geom), BEHInteg)
+
+    ! Kinematics
+    call nmgvmb(ndim, nnoQ, nnoL, npg, axi, &
+                zr(jv_geom), zr(jv_vffQ), zr(jv_vffL), jv_dfdeQ, jv_dfdeL, &
+                jv_poids, nddl, neps, b, w, ni2ldc)
+
+    ! Computation of path-following coefficients
+    call ngpipe(BEHInteg, typmod, compor, ndim, npg, neps, nddl, b, ni2ldc, &
+                zr(jv_deplm), zr(jv_ddepl), zr(jv_depl0), zr(jv_depl1), &
+                lgpg, zr(jv_contm), zr(jv_varim), &
+                zr(jv_dtau), zr(jv_borne+1), zr(jv_borne), zr(jv_copil))
 
     deallocate (b, w, ni2ldc)
 end subroutine

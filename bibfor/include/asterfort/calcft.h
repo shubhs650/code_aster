@@ -17,26 +17,25 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 !
-interface 
-    subroutine calcft(ds_thm, lMatr    , lSigm , angl_naut,&
-                      ndim  , dimdef   , dimcon,&
+interface
+    subroutine calcft(ds_thm, lMatr, lSigm, &
+                      ndim, dimdef, dimcon, &
                       adcote, &
-                      addeme, addete   , addep1, addep2,&
-                      temp  , grad_temp,&
-                      tbiot ,&
-                      phi   , rho11    , satur_, dsatur_,&
-                      pvp   , h11      , h12   ,&
-                      lambs , dlambs   , lambp , dlambp,&
-                      tlambt, tlamct   , tdlamt,&
+                      addeme, addete, addep1, addep2, &
+                      temp, gradTemp, &
+                      tbiot, &
+                      phi, rho11, satur_, dsatur_, &
+                      pvp, h11, h12, &
+                      lambs, dlambs, lambp, dlambp, &
+                      tlambt, tlamct, tdlamt, &
                       congep, dsde)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         aster_logical, intent(in) :: lMatr, lSigm
-        real(kind=8), intent(in) :: angl_naut(3)
         integer(kind=8), intent(in) :: ndim, dimdef, dimcon
         integer(kind=8), intent(in) :: adcote
         integer(kind=8), intent(in) :: addeme, addete, addep1, addep2
-        real(kind=8), intent(in) :: temp, grad_temp(3)
+        real(kind=8), intent(in) :: temp, gradTemp(3)
         real(kind=8), intent(in) :: tbiot(6)
         real(kind=8), intent(in) :: phi, rho11, satur_, dsatur_
         real(kind=8), intent(in) :: pvp, h11, h12
@@ -47,4 +46,4 @@ interface
         real(kind=8), intent(in) :: tdlamt(ndim, ndim)
         real(kind=8), intent(inout) :: congep(1:dimcon), dsde(1:dimcon, 1:dimdef)
     end subroutine calcft
-end interface 
+end interface

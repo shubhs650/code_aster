@@ -15,24 +15,42 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1306
 !
-subroutine massup(option, ndim, dlns, nno, nnos, &
-                  mate, phenom, npg, ipoids, idfde, &
+subroutine massup(jvMaterCode, &
+                  option, ndim, dlns, nno, nnos, &
+                  npg, ipoids, idfde, &
                   geom, vff1, imatuu, icodre, igeom, &
                   ivf)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DE LA MATRICE DE MASSE
+!
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/dfdm2j.h"
+#include "asterfort/dfdm3j.h"
+#include "asterfort/lteatt.h"
+#include "asterfort/r8inir.h"
+#include "asterfort/rcvalb.h"
+#include "jeveux.h"
+!
+    character(len=16) :: option
+    integer(kind=8) :: jvMaterCode, ndim, nno, nnos, npg
+!
+! --------------------------------------------------------------------------------------------------
+!
+!   CALCUL DE LA MATRICE DE MASSE
 !                          POUR ELEMENTS DONT LES NOEUDS SOMMETS
 !                          ONT + DE DDL QUE LES DEPLACEMENTS
-!    - ARGUMENTS:
+!
+! --------------------------------------------------------------------------------------------------
+!
 !        DONNEES:   NDIM   -->  DIMENSION DU PROBLEME
 !                   DLNS   -->  DEGRES DE LIBERTE AU NOEUD SOMMET
 !                   NNO    -->  NOMBRE DE NOEUD
 !                   NNOS   -->  NOMBRE DE NOEUD SOMMET
-!                   MATE   -->  MATERIAU
-!                   PHENOM -->  PHENOMENE
 !                   NPG    -->  NOMBRE DE POIDS DE GAUSS
 !                   IPOIDS -->  POSITION DES POIDS DE GAUSS DANS ZR
 !                   IDFDE  -->
@@ -40,44 +58,45 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
 !                   VFF1   -->  VALEUR DES FONCTIONS DE FORME AUX PG
 !                   IMATUU -->  POSITION DE LA MATRICE DE MASSE DANS ZR
 !        RESULTATS: ICODRE -->  CODE RETOUR
-! ......................................................................
 !
-#include "jeveux.h"
-#include "asterfort/assert.h"
-#include "asterfort/dfdm2j.h"
-#include "asterfort/dfdm3j.h"
-#include "asterfort/lteatt.h"
-#include "asterfort/r8inir.h"
-#include "asterfort/rccoma.h"
-#include "asterfort/rcvalb.h"
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i, j, k, l, kpg, ik, ijkl, dlns
-    integer(kind=8) :: ndim, nno, nnos, npg, mate, ipoids, idfde, imatuu
+    character(len=8), parameter :: fami = "FPG1"
+    character(len=1), parameter :: poum = "+"
+    integer(kind=8), parameter :: kpgCst = 1, ksp = 1
+    integer(kind=8) :: i, j, k, l, ik, ijkl, dlns, kpg
+    integer(kind=8) :: ipoids, idfde, imatuu
     integer(kind=8) :: n1, n2, j2, k2, idiag
-    integer(kind=8) :: igeom, ivf, i2, idec, spt
-!
+    integer(kind=8) :: igeom, ivf, i2, idec
     real(kind=8) :: vff1(nno, npg), geom(ndim, nno), rho(1), r
     real(kind=8) :: a(ndim, ndim, nno, nno), matv(ndim*nno*(ndim*nno+1)/2)
     real(kind=8) :: poids, wgt, trace, alpha
-    character(len=8) :: fami, poum
-    character(len=16) :: phenom
-    character(len=16) :: option
     integer(kind=8) :: icodre(1)
+    type(Material_Para) :: materPara
 !
+! --------------------------------------------------------------------------------------------------
 !
     idec = dlns-ndim
-!
-    call rccoma(mate, 'ELAS', 1, phenom, icodre(1))
-!
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, jvMaterCode, materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
+
+! - Initialization for current point
+    call initParaPoin(kpgCst, ksp, materPara)
+
     call r8inir(ndim*ndim*nno*nno, 0.d0, a, 1)
     call r8inir(ndim*nno*(ndim*nno+1)/2, 0.d0, matv, 1)
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-!
-    call rcvalb(fami, kpg, spt, poum, mate, &
-                ' ', phenom, 0, ' ', [0.d0], &
+
+! - Get parameters
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                poum, materPara%jvMaterCode, &
+                ' ', materPara%elasKeyword, &
+                0, ' ', [0.d0], &
                 1, 'RHO', rho, icodre, 1)
 !
     if (ndim .eq. 2) then
@@ -85,7 +104,6 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
             k = (kpg-1)*nno
             call dfdm2j(nno, kpg, idfde, geom, poids)
             poids = abs(poids)*zr(ipoids+kpg-1)
-!
             if (lteatt('AXIS', 'OUI')) then
                 r = 0.0d0
                 do i = 1, nno
@@ -93,7 +111,6 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
                 end do
                 poids = poids*r
             end if
-!
             do i = 1, nno
                 do j = 1, i
                     a(1, 1, i, j) = a(1, 1, i, j)+rho(1)*poids*vff1(i, kpg)*vff1(j, kpg)
@@ -101,11 +118,11 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
                 end do
             end do
         end do
+
     else if (ndim .eq. 3) then
         do kpg = 1, npg
             call dfdm3j(nno, kpg, idfde, geom, poids)
             poids = abs(poids)*zr(ipoids+kpg-1)
-!
             do i = 1, nno
                 do j = 1, i
                     a(1, 1, i, j) = a(1, 1, i, j)+rho(1)*poids*vff1(i, kpg)*vff1(j, kpg)
@@ -115,10 +132,9 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
             end do
         end do
     else
-! - OPTION DE CALCUL INVALIDE
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - PASSAGE DU STOCKAGE RECTANGULAIRE (A) AU STOCKAGE TRIANGULAIRE (ZR)
     do k = 1, ndim
         do l = 1, ndim
@@ -156,9 +172,8 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
 405             continue
             end do
         end do
-    elseif (option .eq. 'MASS_MECA_DIAG' .or.&
- &        option .eq. 'MASS_MECA_EXPLI') then
-!
+    elseif (option .eq. 'MASS_MECA_DIAG' .or. &
+            option .eq. 'MASS_MECA_EXPLI') then
 ! - CALCUL DE LA MASSE DE L'ELEMENT
         wgt = a(1, 1, 1, 1)
         do i = 2, nno
@@ -196,8 +211,7 @@ subroutine massup(option, ndim, dlns, nno, nnos, &
             end do
         end do
     else
-! - OPTION DE CALCUL INVALIDE
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end subroutine

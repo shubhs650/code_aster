@@ -15,74 +15,83 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0428(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate, &
+                                isPlateTria, isPlateQuad
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
 #include "asterfort/dkqrge.h"
 #include "asterfort/dktrge.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
+#include "asterfort/plate_type.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
-
 !
-! ajout elements
+! --------------------------------------------------------------------------------------------------
 !
-!    calcul de la matrice de rigidite geometrique des elements de plaque
-!       => option rigi_meca_geom
+! Elementary computation
 !
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: jgeom, jmatr
+! Elements: DKT, DKTG
+!
+! Options: RIGI_GEOM
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: nno
+    integer(kind=8) :: jvGeom, jvMatr
     real(kind=8) :: pgl(3, 3), xyzl(3, 4)
+    real(kind=8) :: matrGeom(300)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-!     ---> pour dkt/dktg  matelem = 3 * 6 ddl = 171 termes stockage syme
-!     ---> pour dkq/dkqg  matelem = 4 * 6 ddl = 300 termes stockage syme
+! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: matloc(300)
-!
-! deb ------------------------------------------------------------------
-!
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
-!
-    call jevech('PGEOMER', 'L', jgeom)
-!
-! --- calcul de la matrice de passage du repere global --> intrinseque
-!
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
+    ASSERT(option .eq. 'RIGI_GEOM')
+    call elrefe_info(fami='RIGI', nno=nno)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    ASSERT(plateCara%type .eq. PLATE_DKT .or. plateCara%type .eq. PLATE_DKTG)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of displacements
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
 !
     if (option .eq. 'RIGI_GEOM') then
-!     --------------------------------------
-!
-        if ((nomte .eq. 'MEDKTR3') .or. (nomte .eq. 'MEDKTG3')) then
-            call dktrge(nomte, xyzl, pgl, matloc)
-        else if ((nomte .eq. 'MEDKQU4') .or. (nomte .eq. 'MEDKQG4')) then
-            call dkqrge(nomte, xyzl, pgl, matloc)
+        if (isPlateTria(plateCara)) then
+            call dktrge(plateCara, plateOrie, &
+                        xyzl, matrGeom)
+        elseif (isPlateQuad(plateCara)) then
+            call dkqrge(plateCara, plateOrie, &
+                        xyzl, matrGeom)
         else
-! type d element invalide
-            ASSERT(.false.)
+            ASSERT(ASTER_FALSE)
         end if
-!
-! - stockage
-!
-        call jevech('PMATUUR', 'E', jmatr)
-        call utpslg(nno, 6, pgl, matloc, zr(jmatr))
+        call jevech('PMATUUR', 'E', jvMatr)
+        call utpslg(nno, 6, pgl, matrGeom, zr(jvMatr))
     else
-!
-! option de calcul invalide
-!
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end

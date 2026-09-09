@@ -19,9 +19,10 @@
 !
 !
 interface
-    subroutine tophys(dplmod, xgene, xphys)
+    subroutine tophys(dplmod, xgene, xphys, nbddl_)
         real(kind=8), pointer  :: dplmod(:)
         real(kind=8), pointer  :: xgene(:)
-        real(kind=8),          intent(out) :: xphys(:)
+        real(kind=8), intent(out) :: xphys(:)
+        integer(kind=8), intent(in), optional :: nbddl_
     end subroutine tophys
 end interface

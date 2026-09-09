@@ -15,21 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine dinuar(result    , sddisc     , nume_inst, force,&
-                      nume_store, nume_reuse_, lStoringInitState_)
+    subroutine dinuar(result, sddisc, numeInst, lForceStore, &
+                      numeStoring, numeReuseCalc_, lStoreInitState_)
         use NonLin_Datastructure_type
         character(len=8), intent(in) :: result
         character(len=19), intent(in) :: sddisc
-        integer(kind=8), intent(in) :: nume_inst
-        aster_logical, intent(in) :: force
-        integer(kind=8), intent(out) :: nume_store
-        integer(kind=8), optional, intent(out) :: nume_reuse_
-        aster_logical, intent(in), optional :: lStoringInitState_
+        integer(kind=8), intent(in) :: numeInst
+        aster_logical, intent(in) :: lForceStore
+        integer(kind=8), intent(out) :: numeStoring
+        integer(kind=8), optional, intent(out) :: numeReuseCalc_
+        aster_logical, intent(in), optional :: lStoreInitState_
     end subroutine dinuar
 end interface

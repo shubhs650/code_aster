@@ -80,6 +80,7 @@ def coupled_fluid(cpl, UNITE_MA):
             self.epsilon = 1e-7
             self.depl_prev = None
             self.result = []
+            self._use_CFEMDEC = cpl._use_CFEMDEC
 
         def extent(self, depl):
             fns = depl.toSimpleFieldOnNodes()
@@ -102,7 +103,6 @@ def coupled_fluid(cpl, UNITE_MA):
 
             Returns:
                 bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingField*]: Output fields, on nodes.
             """
 
             assert len(data) == 2, "expecting one field"
@@ -111,7 +111,7 @@ def coupled_fluid(cpl, UNITE_MA):
             depl = None
             if mc_depl:
                 # MEDC field => .med => code_aster field
-                depl = self._medcpl.import_displacement(mc_depl)
+                depl = self._medcpl.import_displacement("mesh_displacement")
 
             CHINST = CA.FieldOnNodesReal(MAFLUIDE, "INST_R", {"INST": current_time})
 
@@ -135,9 +135,9 @@ def coupled_fluid(cpl, UNITE_MA):
                 OPERATION="EVAL", TYPE_CHAM="NOEU_NEUT_R", CHAM_F=PRES_F, CHAM_PARA=(CHXN, CHINST)
             )
 
-            force = CHNEUT.asPhysicalQuantity("FORC_R", {"X1": "FX", "X2": "FY", "X3": "FZ"})
+            force_noeu = CHNEUT.asPhysicalQuantity("FORC_R", {"X1": "FX", "X2": "FY", "X3": "FZ"})
 
-            force_elem = force.toFieldOnCells(MOFLUIDE.getFiniteElementDescriptor(), "ELEM")
+            force_elem = force_noeu.toFieldOnCells(MOFLUIDE.getFiniteElementDescriptor(), "ELEM")
 
             if i_iter == 0:
                 self.result.append(force_elem)
@@ -145,8 +145,10 @@ def coupled_fluid(cpl, UNITE_MA):
                 self.result[-1] = force_elem
 
             # export
-
-            mc_pres = self._medcpl.export_field(force_elem)
+            if self._use_CFEMDEC:
+                self._medcpl.set_field("boundary_stress", force_noeu)
+            else:
+                self._medcpl.set_field("boundary_stress", force_elem)
 
             # test convergence:
             has_cvg = False
@@ -159,7 +161,7 @@ def coupled_fluid(cpl, UNITE_MA):
 
             self.depl_prev = depl
 
-            return has_cvg, {"fluid_forces": mc_pres}
+            return has_cvg
 
     ################################################################################
     # loop on time steps

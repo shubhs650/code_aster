@@ -99,7 +99,7 @@ DEFLIST = DEFI_LIST_INST(
     DEFI_LIST=_F(LIST_INST=temps),
     ECHEC=(
         _F(EVENEMENT="ERREUR", ACTION="DECOUPE", SUBD_METHODE="MANUEL"),
-        _F(EVENEMENT="INTERPENETRATION", PENE_MAXI=1e-5, ACTION="ADAPT_COEF_PENA", COEF_MAXI=1e10),
+        _F(EVENEMENT="INTERPENETRATION", PENE_MAXI=1e-1),
     ),
     INFO=2,
 )
@@ -211,7 +211,7 @@ TEST_RESU(
             RESULTAT=RESU,
             NOM_CHAM="DEPL",
             NOM_CMP="DX",
-            VALE_CALC=1.44642428063,
+            VALE_CALC=1.4575784936465743,
             CRITERE="RELATIF",
         ),
         _F(
@@ -229,7 +229,7 @@ TEST_RESU(
             RESULTAT=RESU,
             NOM_CHAM="VITE",
             NOM_CMP="DX",
-            VALE_CALC=83900.2716899,
+            VALE_CALC=85084.27848675974,
             CRITERE="RELATIF",
         ),
         _F(

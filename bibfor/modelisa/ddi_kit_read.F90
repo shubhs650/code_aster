@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
+subroutine ddi_kit_read(factorKeyword, iFactorKeyword, &
                         rela_flua, rela_plas, rela_cpla, rela_coup)
 !
     implicit none
@@ -26,13 +26,9 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
 #include "asterfort/assert.h"
 #include "asterfort/utmess.h"
 !
-    character(len=16), intent(in) :: keywordfact
-    integer(kind=8), intent(in) :: iocc
-    aster_logical, intent(in) :: l_etat_init
-    character(len=16), intent(out) :: rela_flua
-    character(len=16), intent(out) :: rela_plas
-    character(len=16), intent(out) :: rela_cpla
-    character(len=16), intent(out) :: rela_coup
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
+    character(len=16), intent(out) :: rela_flua, rela_plas, rela_cpla, rela_coup
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -42,9 +38,8 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  keywordfact      : factor keyword to read (COMPORTEMENT)
-! In  iocc             : factor keyword index in COMPORTEMENT
-! In  l_etat_init      : .true. if initial state is defined
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
 ! Out rela_flua        : comportment relation for fluage
 ! Out rela_plas        : comportment relation for plasticity
 ! Out rela_cpla        : comportment relation for plane stress (GLRC)
@@ -52,19 +47,17 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: dmflua, dmplas
-    parameter(dmflua=5, dmplas=9)
-    character(len=16) :: poflua(dmflua), poplas(dmplas)
-    integer(kind=8) :: ikit, ii, nocc
+    integer(kind=8), parameter ::  dmflua = 5, dmplas = 9
+    integer(kind=8) :: ikit, ii, nbFactorKeyword
     character(len=16) :: rela_kit(2)
-!
-! --------------------------------------------------------------------------------------------------
-!
-    data poflua/'BETON_GRANGER', 'BETON_GRANGER_V', &
-        'BETON_UMLV', 'GLRC_DM', 'GLRC_DAMAGE'/
-    data poplas/'ELAS', 'VMIS_ISOT_TRAC', 'VMIS_ISOT_PUIS', &
-        'VMIS_ISOT_LINE', 'VMIS_CINE_LINE', 'ROUSS_PR', &
-        'BETON_DOUBLE_DP', 'ENDO_ISOT_BETON', 'MAZARS'/
+    character(len=16), parameter :: poflua(dmflua) = (/'BETON_GRANGER  ', 'BETON_GRANGER_V', &
+                                                       'BETON_UMLV     ', 'GLRC_DM        ', &
+                                                       'GLRC_DAMAGE    '/)
+    character(len=16), parameter :: poplas(dmplas) = (/'ELAS           ', 'VMIS_ISOT_TRAC ', &
+                                                       'VMIS_ISOT_PUIS ', 'VMIS_ISOT_LINE ', &
+                                                       'VMIS_CINE_LINE ', 'ROUSS_PR       ', &
+                                                       'BETON_DOUBLE_DP', 'ENDO_ISOT_BETON', &
+                                                       'MAZARS         '/)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -72,29 +65,27 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
     rela_plas = 'VIDE'
     rela_cpla = 'VIDE'
     rela_coup = 'VIDE'
-!
+
 ! - Read command file
-!
-    call getvtx(keywordfact, 'RELATION_KIT', iocc=iocc, nbval=0, nbret=nocc)
-    nocc = -nocc
-    ASSERT(nocc .le. 2)
-    call getvtx(keywordfact, 'RELATION_KIT', iocc=iocc, nbval=nocc, vect=rela_kit)
-!
+    call getvtx(factorKeyword, 'RELATION_KIT', iocc=iFactorKeyword, nbval=0, &
+                nbret=nbFactorKeyword)
+    nbFactorKeyword = -nbFactorKeyword
+    ASSERT(nbFactorKeyword .le. 2)
+    call getvtx(factorKeyword, 'RELATION_KIT', iocc=iFactorKeyword, nbval=nbFactorKeyword, &
+                vect=rela_kit)
+
 ! - Get relations for kit
-!
-    do ikit = 1, nocc
-!
+    do ikit = 1, nbFactorKeyword
+
 ! ----- Fluage
-!
         do ii = 1, dmflua
             if (rela_kit(ikit) .eq. poflua(ii)) then
                 rela_flua = rela_kit(ikit)
                 cycle
             end if
         end do
-!
+
 ! ----- Elasto-plastic
-!
         do ii = 1, dmplas
             if (rela_kit(ikit) .eq. poplas(ii)) then
                 rela_plas = rela_kit(ikit)
@@ -102,9 +93,8 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
             end if
         end do
     end do
-!
+
 ! - Compatibility
-!
     if (rela_flua(1:13) .eq. 'BETON_GRANGER') then
         if (rela_plas .ne. 'ELAS' .and. rela_plas .ne. 'VMIS_ISOT_TRAC' .and. rela_plas &
             .ne. 'VMIS_ISOT_PUIS' .and. rela_plas .ne. 'VMIS_ISOT_LINE' .and. rela_plas &
@@ -123,22 +113,11 @@ subroutine ddi_kit_read(keywordfact, iocc, l_etat_init, &
     else
         call utmess('F', 'COMPOR3_6', sk=rela_flua)
     end if
-!
+
 ! - For GLRC: internal Deborst Algorithm and special internal variables
-!
     if (rela_flua(1:4) .eq. 'GLRC') then
         rela_coup = 'DDI_PLAS_ENDO'
         rela_cpla = 'DEBORST'
-    end if
-!
-! - Alarm
-!
-    if (l_etat_init) then
-        if (rela_flua .eq. 'BETON_UMLV') then
-            if (rela_plas .eq. 'ENDO_ISOT_BETON' .or. rela_plas .eq. 'MAZARS') then
-                call utmess('A', 'COMPOR3_83')
-            end if
-        end if
     end if
 !
 end subroutine

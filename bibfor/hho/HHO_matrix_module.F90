@@ -95,7 +95,6 @@ contains
         this%max_nrows = n_rows
         this%max_ncols = n_cols
 !
-        ASSERT(.not. this%is_allocated)
         ASSERT(n_rows > 0 .and. n_cols > 0)
 !
         allocate (this%m(n_rows, n_cols))

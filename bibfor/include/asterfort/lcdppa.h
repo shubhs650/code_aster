@@ -15,18 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcdppa(mod, nvi, option, materf, compor,&
-                      sigm, deps, vim, vip, sig,&
+    subroutine lcdppa(mod, nvi, option, materf, &
+                      sigm, deps, vim, vip, sig, &
                       dsidep, iret)
         integer(kind=8) :: nvi
         character(len=8) :: mod
         character(len=16) :: option
         real(kind=8) :: materf(5, 2)
-        character(len=16) :: compor(*)
         real(kind=8) :: sigm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: vim(nvi)

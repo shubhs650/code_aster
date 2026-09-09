@@ -484,6 +484,7 @@ subroutine detrsd(typesd, nomsd)
         call jedetr(k19//'.PDDL')
         call jedetr(k19//'.CRCO')
         call jedetr(k19//'.REFP')
+        call jedetr(k19//'.LILT')
 
     else if (typ2sd .eq. 'NUML_EQUA') then
 !  --------------------------------------

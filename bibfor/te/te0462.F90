@@ -17,121 +17,119 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0462(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystNone, &
+                                isPlateQuad, isPlateTria
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/fmater.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
+#include "asterfort/plate_type.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utpvlg.h"
-    character(len=16) :: option, nomte
-! ----------------------------------------------------------------------
-!     CALCUL DES COORDONNEES DES SOUS POINTS DE GAUSS SUR LES FAMILLE
-!     DE LA LISTE MATER
-!     POUR LES ELEMENTS : DKT
-! ----------------------------------------------------------------------
-!     NOMBRE MAX DE FAMILLE DANS MATER
-    integer(kind=8) :: nfpgmx
-!     NOMBRE DE NIVEAUX PAR COUCHE
-    integer(kind=8) :: nbniv
-!     DIMENSION
-    integer(kind=8) :: ndim
-    parameter(nfpgmx=10, nbniv=3, ndim=3)
+#include "jeveux.h"
 !
-    integer(kind=8) :: ndim1, nno, nnos, npg, jgano, idfde, ipoids, ivf
-    integer(kind=8) :: igeom, jtab(7), icopg, inbf, icoq, iret, decpo, iad
-    integer(kind=8) :: nbsp, nbcou, nfpg, decfpg
-    integer(kind=8) :: ifpg, ig, icou, iniv, ino
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: DKT, GRILLE_EXCENTRE
+!
+! Option: COOR_ELGA_MATER
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nfpgmx = 10, nbniv = 3, ndim = 3
+    real(kind=8), parameter :: gm1(3) = (/0.d0, 0.d0, 1.d0/)
+    integer(kind=8) :: nno, npg, ivf
+    integer(kind=8) :: jvGeom, jtab(7), icopg, iret, decpo, iad
+    integer(kind=8) :: nbsp, nbLayer, nfpg, decfpg
+    integer(kind=8) :: ifpg, kpg, iLayer, iniv, ino
     real(kind=8) :: pgl(3, 3), xx, yy, zz
-    real(kind=8) :: epais, excen, gm1(3), gm2(3), epc, bas, hh
+    real(kind=8) :: epais, excen, gm2(3), epc, bas, hh
     aster_logical :: grille
     character(len=8) :: fami(nfpgmx)
-    data gm1/0.d0, 0.d0, 1.d0/
-! ----------------------------------------------------------------------
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    if (.not. (lteatt('MODELI', 'DKT') .or. lteatt('MODELI', 'GRC'))) then
-        ASSERT(.false.)
-    end if
+! --------------------------------------------------------------------------------------------------
+!
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    ASSERT(plateCara%type .eq. PLATE_DKT .or. plateCara%type .eq. PLATE_GRID)
     grille = lteatt('MODELI', 'GRC')
-!
-!     NOMBRE DE NOEUDS
-    if (lteatt('TYPMA', 'QU4')) then
+    if (isPlateQuad(plateCara)) then
         nno = 4
-    else if (lteatt('TYPMA', 'TR3')) then
+    else if (isPlateTria(plateCara)) then
         nno = 3
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
-!
-!
-    call jevech('PGEOMER', 'L', igeom)
-!
-!     ZR(ICOPG) : COORDONNEES DE SOUS-POINTS DE GAUSS
-    call tecach('OOO', 'PCOOPGM', 'E', iret, nval=7, &
-                itab=jtab)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+!    ZR(ICOPG) : COORDONNEES DE SOUS-POINTS DE GAUSS
+    call tecach('OOO', 'PCOOPGM', 'E', iret, nval=7, itab=jtab)
     icopg = jtab(1)
     nbsp = jtab(7)
     ASSERT(nbsp .gt. 0)
-!
-    call jevech('PCACOQU', 'L', icoq)
-!
+
+! - Get shell parameters
+    nbLayer = plateCara%nbLayer
+    epais = plateCara%thick
+    excen = plateCara%offset
     if (grille) then
-        excen = zr(icoq+3)
+        ASSERT(nbLayer .eq. 1)
     else
-!       ELEMENTS A SOUS POINTS : DKT
-        call jevech('PNBSP_I', 'L', inbf)
-        nbcou = zi(inbf)
-        epais = zr(icoq)
-        excen = zr(icoq+4)
         bas = -epais/2.d0+excen
-        epc = epais/nbcou
+        epc = epais/nbLayer
     end if
-!
-! ON UTILISE LE VECTEUR NORMAL DE LA PLAQUE
-    if (nno .eq. 3) then
-        call dxtpgl(zr(igeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(igeom), pgl)
-    end if
-!
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - No coordinate system from user
+    call compCoorSystNone(plateOrie)
+
     call utpvlg(1, 3, pgl, gm1, gm2)
+
 !
     call fmater(nfpgmx, nfpg, fami)
     decfpg = 0
     do ifpg = 1, nfpg
-!
-        call elrefe_info(fami=fami(ifpg), ndim=ndim1, nno=nno, nnos=nnos, npg=npg, &
-                         jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-!
-        do ig = 1, npg
-!
-!         CALCUL DES COORDONNEES DES POINTS DE GAUSS
+        call elrefe_info(fami=fami(ifpg), npg=npg, jvf=ivf)
+        do kpg = 1, npg
+! --------- Coordinates of Gauss point
             xx = 0.d0
             yy = 0.d0
             zz = 0.d0
             do ino = 1, nno
-                xx = xx+zr(igeom+3*(ino-1)+0)*zr(ivf+(ig-1)*nno+ino-1)
-                yy = yy+zr(igeom+3*(ino-1)+1)*zr(ivf+(ig-1)*nno+ino-1)
-                zz = zz+zr(igeom+3*(ino-1)+2)*zr(ivf+(ig-1)*nno+ino-1)
+                xx = xx+zr(jvGeom+3*(ino-1)+0)*zr(ivf+(kpg-1)*nno+ino-1)
+                yy = yy+zr(jvGeom+3*(ino-1)+1)*zr(ivf+(kpg-1)*nno+ino-1)
+                zz = zz+zr(jvGeom+3*(ino-1)+2)*zr(ivf+(kpg-1)*nno+ino-1)
             end do
-!
+
             if (grille) then
-                decpo = ndim*(decfpg+ig-1)
+                decpo = ndim*(decfpg+kpg-1)
                 iad = icopg+decpo
                 zr(iad+0) = xx+excen*gm2(1)
                 zr(iad+1) = yy+excen*gm2(2)
                 zr(iad+2) = zz+excen*gm2(3)
             else
-                decpo = nbcou*nbniv*ndim*(decfpg+ig-1)
-                do icou = 1, nbcou
+                decpo = nbLayer*nbniv*ndim*(decfpg+kpg-1)
+                do iLayer = 1, nbLayer
                     do iniv = 1, nbniv
-                        hh = bas+dble(icou-1)*epc+dble(iniv-1)*epc/2.d0
-                        iad = icopg+decpo+(icou-1)*nbniv*ndim+(iniv-1)*ndim
+                        hh = bas+dble(iLayer-1)*epc+dble(iniv-1)*epc/2.d0
+                        iad = icopg+decpo+(iLayer-1)*nbniv*ndim+(iniv-1)*ndim
                         zr(iad+0) = xx+hh*gm2(1)
                         zr(iad+1) = yy+hh*gm2(2)
                         zr(iad+2) = zz+hh*gm2(3)
@@ -141,7 +139,5 @@ subroutine te0462(option, nomte)
         end do
         decfpg = decfpg+npg
     end do
-!
-!
 !
 end subroutine

@@ -25,6 +25,7 @@ subroutine te0517(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    use resi_refe_module, only: RESI_REFE
     implicit none
     character(len=16) :: option, nomte
 !
@@ -45,7 +46,6 @@ subroutine te0517(option, nomte)
 #include "asterfort/poutre_modloc.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvlg.h"
 #include "asterfort/Behaviour_type.h"
@@ -62,6 +62,7 @@ subroutine te0517(option, nomte)
     real(kind=8) :: phiz, forref, momref, carsec(6)
     aster_logical :: reactu, rigige
     character(len=24) :: mator
+    type(RESI_REFE):: refe
 !
 ! --------------------------------------------------------------------------------------------------
     integer(kind=8) :: nbfibr, nbgrfi, tygrfi, nbcarm, nug(10)
@@ -88,8 +89,11 @@ subroutine te0517(option, nomte)
 !
     if (option .eq. 'REFE_FORC_NODA  ') then
         call jevech('PVECTUR', 'E', ivectu)
-        call terefe('EFFORT_REFE', 'MECA_POUTRE', forref)
-        call terefe('MOMENT_REFE', 'MECA_POUTRE', momref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        momref = refe%GetRef('MOMENT')
+        call refe%Check()
+
         do ino = 1, nno
             do i = 1, 3
                 zr(ivectu+(ino-1)*nc+i-1) = forref

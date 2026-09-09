@@ -18,8 +18,7 @@
 ! aslint: disable=W1504
 !
 subroutine thmCpl003(ds_thm, &
-                     lMatr, lSigm, lVari, lMatrPred, angl_naut, &
-                     j_mater, &
+                     lMatr, lSigm, lVari, lMatrPred, &
                      ndim, nbvari, &
                      dimdef, dimcon, &
                      adcote, adcp11, adcp12, &
@@ -35,7 +34,6 @@ subroutine thmCpl003(ds_thm, &
                      retcom)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -67,8 +65,7 @@ subroutine thmCpl003(ds_thm, &
 !
     type(THM_DS), intent(in) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
-    real(kind=8), intent(in) :: angl_naut(3)
-    integer(kind=8), intent(in) :: j_mater, ndim, nbvari
+    integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: adcote, adcp11, adcp12
     integer(kind=8), intent(in) :: addep1, addete
@@ -93,11 +90,6 @@ subroutine thmCpl003(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  dimdef           : dimension of generalized strains vector
@@ -213,10 +205,10 @@ subroutine thmCpl003(ds_thm, &
 !
     l_emmag = ds_thm%ds_material%hydr%l_emmag
     em = ds_thm%ds_material%hydr%emmag
-!
+
 ! - Evaluation of initial saturation
-!
-    call thmEvalSatuInit(ds_thm, j_mater, p1m, p1, temp-dtemp, temp, &
+    call thmEvalSatuInit(ds_thm, &
+                         p1m, p1, temp-dtemp, temp, &
                          saturm, satur, dsatur, retcom)
 !
 ! - Evaluation of initial porosity
@@ -236,7 +228,7 @@ subroutine thmCpl003(ds_thm, &
 ! - Prepare initial parameters for coupling law
 !
     call inithm(ds_thm, &
-                angl_naut, tbiot, phi0, &
+                tbiot, phi0, &
                 epsv, depsv, &
                 epsvm, cs, mdal, dalal, &
                 alpha0, alphfi, cbiot, unsks)
@@ -294,10 +286,10 @@ subroutine thmCpl003(ds_thm, &
 ! - Increment of steam pressure
 !
     dpvp = pvp-pvpm
-!
+
 ! - Evaluation of "middle" saturation (only LIQU_VAPE)
-!
-    call thmEvalSatuMiddle(ds_thm, j_mater, pvp-p1, temp, &
+    call thmEvalSatuMiddle(ds_thm, &
+                           pvp-p1, temp, &
                            satur, dsatur, retcom)
     if (lVari) then
 !

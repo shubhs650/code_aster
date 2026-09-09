@@ -17,45 +17,40 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W0104
 !
-subroutine lc8331(BEHinteg, &
-                  fami, kpg, ksp, ndim, imate, &
-                  compor, mult_comp, carcri, instam, instap, neps, &
-                  epsm, deps, nsig, sigm, vim, &
-                  option, angmas, sigp, nvi, vip, &
+subroutine lc8331(BEHInteg, &
+                  fami, kpg, ksp, ndim, jvMaterCode, &
+                  compor, carcri, instam, instap, neps, &
+                  epsm, deps, nsig, sigm, nvi, vim, &
+                  option, sigp, vip, &
                   typmod, ndsde, dsidep, codret)
 !
     use Behaviour_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/Behaviour_type.h"
-#include "asterfort/nmcomp.h"
 #include "asterfort/kitPrepBehaviour.h"
+#include "asterfort/nmcomp.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    character(len=16), intent(in) :: mult_comp
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
-    integer(kind=8), intent(in) :: neps
+    integer(kind=8), intent(in) :: jvMaterCode
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8), intent(in) :: instam, instap
+    integer(kind=8), intent(in) :: neps, nvi
     real(kind=8), intent(in) :: epsm(*)
     real(kind=8), intent(in) :: deps(*)
     integer(kind=8), intent(in) :: nsig
     real(kind=8), intent(in) :: sigm(*)
-    real(kind=8), intent(in) :: vim(*)
+    real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(out) :: sigp(*)
-    integer(kind=8), intent(in) :: nvi
-    real(kind=8), intent(out) :: vip(*)
-    character(len=8), intent(in) :: typmod(*)
+    real(kind=8), intent(out) :: vip(nvi)
+    character(len=8), intent(in) :: typmod(2)
     integer(kind=8), intent(in) :: ndsde
     real(kind=8), intent(out) :: dsidep(*)
     integer(kind=8), intent(out) :: codret
@@ -68,32 +63,47 @@ subroutine lc8331(BEHinteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=16) :: compor_creep(COMPOR_SIZE), compor_plas(COMPOR_SIZE)
+    character(len=16), parameter :: multComp = " "
+    character(len=16) :: comporFlua(COMPOR_SIZE), comporPlas(COMPOR_SIZE)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call kitPrepBehaviour(compor, nvi, compor_creep, compor_plas)
+    call kitPrepBehaviour(compor, nvi, comporFlua, comporPlas)
 !
     if ((option(1:9) .eq. 'RAPH_MECA') .or. (option(1:9) .eq. 'FULL_MECA')) then
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    imate, compor_creep, carcri, instam, instap, &
-                    neps, epsm, deps, nsig, sigm, &
-                    vim, option, angmas, &
-                    sigp, vip, ndsde, dsidep, codret)
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    imate, compor_plas, carcri, instam, instap, &
-                    neps, epsm, deps, nsig, sigm, &
-                    vim, option, angmas, &
-                    sigp, vip, ndsde, dsidep, codret)
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    comporFlua, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, &
+                    codret)
+
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    comporPlas, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, &
+                    codret)
+
     else if (option(1:9) .eq. 'RIGI_MECA') then
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    imate, compor_creep, carcri, instam, instap, &
-                    neps, epsm, deps, nsig, sigm, &
-                    vim, option, angmas, &
-                    sigp, vip, ndsde, dsidep, codret)
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    comporFlua, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, &
+                    codret)
     end if
 !
 end subroutine

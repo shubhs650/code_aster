@@ -88,16 +88,15 @@ contains
 ! dbgObjMatePara
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine dbgObjMatePara(matePara)
+    subroutine dbgObjMatePara(sshMatePara)
 !   ------------------------------------------------------------------------------------------------
 ! - Parameters
-        type(SSH_MATE_PARA), intent(in) :: matePara
+        type(SSH_MATE_PARA), intent(in) :: sshMatePara
 !   ------------------------------------------------------------------------------------------------
 !
-        SSH_DBG_STRG('Objet matePara')
-        WRITE (SSH_DBG_UNIT, *) ' *S* mateBase       : ', sum(matePara%mateBase)
-        WRITE (SSH_DBG_UNIT, *) ' *S* elemHookeMatrix: ', sum(matePara%elemHookeMatrix)
-        ASSERT(matePara%jvMater .ne. 0)
+        SSH_DBG_STRG('Objet sshMatePara')
+        WRITE (SSH_DBG_UNIT, *) ' *S* elemHookeMatrix: ', sum(sshMatePara%elemHookeMatrix)
+        ASSERT(sshMatePara%materPara%jvMaterCode .ne. 0)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine

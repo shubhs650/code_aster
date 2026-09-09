@@ -187,11 +187,13 @@ class ExecutionParameter(metaclass=Singleton):
         if option in self._args:
             self._args[option] = value
             if option == "tpmax":
-                libaster.set_option(option, value)
+                libaster.reset_tpmax()
             elif option == "numthreads":
                 os.environ["OMP_NUM_THREADS"] = str(value)
         elif value is not None:
             if value:
+                if option == "HPCMode" and not ExecutionParameter().option & Options.HPCMode:
+                    print("""<INFO> Activation du mode parallélisme distribué.""")
                 self.enable(Options.by_name(option))
             else:
                 self.disable(Options.by_name(option))

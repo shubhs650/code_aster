@@ -45,7 +45,8 @@ void exportConstantFieldOnCellsToPython( py::module_ &mod ) {
     py::class_< ConstantFieldOnCellsReal, ConstantFieldOnCellsRealPtr, DataField >(
         mod, "ConstantFieldOnCellsReal" )
         .def( py::init( &initFactoryPtr< ConstantFieldOnCellsReal, BaseMeshPtr > ) )
-        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsReal, std::string, BaseMeshPtr > ) )
+        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsReal, const py::tuple & > ) )
+        .def( define_pickling< ConstantFieldOnCellsReal >() )
         .def( "getMesh", &ConstantFieldOnCellsReal::getMesh )
         .def( "size", &ConstantFieldOnCellsReal::size, R"(
             Return the size of field
@@ -77,12 +78,14 @@ Returns:
     py::class_< ConstantFieldOnCellsChar16, ConstantFieldOnCellsChar16Ptr, DataField >(
         mod, "ConstantFieldOnCellsChar16" )
         .def( py::init( &initFactoryPtr< ConstantFieldOnCellsChar16, BaseMeshPtr > ) )
-        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsChar16, std::string, BaseMeshPtr > ) )
+        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsChar16, const py::tuple & > ) )
+        .def( define_pickling< ConstantFieldOnCellsChar16 >() )
         .def( "getMesh", &ConstantFieldOnCellsChar16::getMesh );
 
     py::class_< ConstantFieldOnCellsLong, ConstantFieldOnCellsLongPtr, DataField >(
         mod, "ConstantFieldOnCellsLong" )
         .def( py::init( &initFactoryPtr< ConstantFieldOnCellsLong, BaseMeshPtr > ) )
-        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsLong, std::string, BaseMeshPtr > ) )
+        .def( py::init( &initFactoryPtr< ConstantFieldOnCellsLong, const py::tuple & > ) )
+        .def( define_pickling< ConstantFieldOnCellsLong >() )
         .def( "getMesh", &ConstantFieldOnCellsLong::getMesh );
 };

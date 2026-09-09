@@ -17,16 +17,15 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
+    subroutine enelpg(materPara, time, &
                       relaName, defoComp, &
                       f, sigmEner, &
                       nbVari, vari, &
                       enerElas)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: jvMaterCode
-        real(kind=8), intent(in) :: time, anglNaut(3)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        real(kind=8), intent(in) :: time
         character(len=16), intent(in) :: relaName, defoComp
-        integer(kind=8), intent(in) :: kpg
         real(kind=8), intent(in) :: f(3, 3), sigmEner(6)
         integer(kind=8), intent(in) :: nbVari
         real(kind=8), intent(in) :: vari(nbVari)

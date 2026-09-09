@@ -15,15 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dsqmas(xyzl, option, pgl, mas, ener)
-        real(kind=8) :: xyzl(3, *)
+    subroutine dsqmas(plateCara, plateOrie, &
+                      xyzl, option, pgl, &
+                      mas, ener)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
         character(len=16) :: option
-        real(kind=8) :: pgl(*)
-        real(kind=8) :: mas(*)
-        real(kind=8) :: ener(*)
     end subroutine dsqmas
 end interface

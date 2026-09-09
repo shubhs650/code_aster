@@ -18,25 +18,27 @@
 ! aslint: disable=W1504
 !
 subroutine nmas3d(BEHInteg, &
-                  fami, nno, npg, ipoids, ivf, &
-                  idfde, geom, typmod, option, imate, &
-                  compor, mult_comp, lgpg, carcri, instam, instap, &
-                  deplm, deplp, angmas, sigm, vim, &
+                  nno, npg, &
+                  ipoids, ivf, idfde, &
+                  geom, typmod, option, &
+                  compor, multComp, lgpg, carcri, instam, instap, &
+                  deplm, deplp, sigm, vim, &
                   dfdi, def, sigp, vip, matuu, &
                   vectu, codret)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/caatdb.h"
 #include "asterfort/calcdq.h"
 #include "asterfort/cast3d.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdm3d.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/elraga.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/invjac.h"
@@ -45,25 +47,21 @@ subroutine nmas3d(BEHInteg, &
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
-#include "asterfort/Behaviour_type.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
-    integer(kind=8) :: nno, imate, lgpg, codret, npg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), multComp
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    integer(kind=8) :: nno, npg, lgpg, codret
     integer(kind=8) :: ipoids, ivf, idfde
-    integer(kind=8) :: ipoid2, ivf2, idfde2
-    character(len=*) :: fami
-    character(len=8) :: typmod(*)
     character(len=16) :: option
-    character(len=16), intent(in) :: compor(*)
-    character(len=16), intent(in) :: mult_comp
-    real(kind=8), intent(in) :: carcri(*)
     real(kind=8) :: instam, instap
     real(kind=8) :: geom(3, nno)
     real(kind=8) :: deplm(3, nno), deplp(3, nno), dfdi(nno, 3)
     real(kind=8) :: def(6, 3, nno)
     real(kind=8) :: sigm(78, npg), sigp(78, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
-    real(kind=8) :: matuu(*), vectu(3, nno), angmas(3)
+    real(kind=8) :: matuu(*), vectu(3, nno)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -82,16 +80,13 @@ subroutine nmas3d(BEHInteg, &
 ! IN  GEOM    : COORDONEES DES NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  IMATE   : MATERIAU CODE
 ! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
-! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
 ! IN  INSTAM  : INSTANT PRECEDENT
 ! IN  INSTAP  : INSTANT DE CALCUL
 ! IN  DEPLM   : DEPLACEMENT A L'INSTANT PRECEDENT
 ! IN  DEPLP   : INCREMENT DE DEPLACEMENT
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  SIGM    : CONTRAINTES A L'INSTANT PRECEDENT
 ! IN  VIM     : VARIABLES INTERNES A L'INSTANT PRECEDENT
 ! OUT DFDI    : DERIVEE DES FONCTIONS DE FORME  AU DERNIER PT DE GAUSS
@@ -104,10 +99,13 @@ subroutine nmas3d(BEHInteg, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1
-    aster_logical :: grand, calbn, axi
-    integer(kind=8) :: kpg, i, ii, ino, ia, j, k, kl, proj, cod(9), nbpg2
-    integer(kind=8) :: nnos, jgano, kp, iaa, ndim2
+    aster_logical, parameter :: grand = ASTER_FALSE, axi = ASTER_FALSE
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
     integer(kind=8), parameter :: ndimLdc = 3
+    aster_logical :: calbn
+    integer(kind=8) :: kpg, i, ii, ino, ia, j, k, kl, proj, cod(9), nbpg2
+    integer(kind=8) :: kp, iaa, ndim2
+    integer(kind=8) :: ipoid2, ivf2, idfde2
     real(kind=8) :: d(6, 6), f(3, 3), eps(6), deps(6), r, s, sigma(6), sign(6)
     real(kind=8) :: poids, poipg2(8)
     real(kind=8) :: jac, sigas(6, 8), invja(3, 3), bi(3, 8), hx(3, 4)
@@ -116,15 +114,14 @@ subroutine nmas3d(BEHInteg, &
     real(kind=8) :: bn(6, 3, 8)
     real(kind=8) :: pqx(4), pqy(4), pqz(4)
     real(kind=8) :: dfdx(8), dfdy(8), dfdz(8)
-    real(kind=8) :: valres(2), nu, nub, den
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    integer(kind=8) :: icodre(1)
-    character(len=16) :: nomres(2)
+    real(kind=8) :: propVale(2), nu, nub, den
+    integer(kind=8) :: propCode(1)
+    character(len=16) :: propName(2)
     character(len=16) :: optios
-    data h/1.d0, 1.d0, -1.d0, -1.d0, -1.d0, -1.d0, 1.d0, 1.d0,&
-     &        1.d0, -1.d0, -1.d0, 1.d0, -1.d0, 1.d0, 1.d0, -1.d0,&
-     &        1.d0, -1.d0, 1.d0, -1.d0, 1.d0, -1.d0, 1.d0, -1.d0,&
-     &       -1.d0, 1.d0, -1.d0, 1.d0, 1.d0, -1.d0, 1.d0, -1.d0/
+    data h/1.d0, 1.d0, -1.d0, -1.d0, -1.d0, -1.d0, 1.d0, 1.d0, &
+        1.d0, -1.d0, -1.d0, 1.d0, -1.d0, 1.d0, 1.d0, -1.d0, &
+        1.d0, -1.d0, 1.d0, -1.d0, 1.d0, -1.d0, 1.d0, -1.d0, &
+        -1.d0, 1.d0, -1.d0, 1.d0, 1.d0, -1.d0, 1.d0, -1.d0/
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -138,25 +135,19 @@ subroutine nmas3d(BEHInteg, &
     else
         proj = 1
     end if
-    grand = .false.
     calbn = .false.
+    cod = 0
 
 ! - Prepare external state variables (geometry)
     call behaviourPrepESVAGeom(nno, npg, ndimLdc, &
                                ipoids, ivf, idfde, &
-                               geom, BEHinteg, &
+                               geom, BEHInteg, &
                                deplm, deplp)
-!
-! - INITIALISATION CODES RETOURS
-    do kpg = 1, npg
-        cod(kpg) = 0
-    end do
-!
+
 ! - INITIALISATION HEXAS8
-    call elraga('HE8', 'FPG8    ', ndim2, nbpg2, coopg2, &
-                poipg2)
-    call elrefe_info(elrefe='HE8', fami='MASS', nno=nno, nnos=nnos, &
-                     npg=nbpg2, jpoids=ipoid2, jvf=ivf2, jdfde=idfde2, jgano=jgano)
+    call elraga('HE8', 'FPG8    ', ndim2, nbpg2, coopg2, poipg2)
+    call elrefe_info(elrefe='HE8', fami='MASS', nno=nno, &
+                     npg=nbpg2, jpoids=ipoid2, jvf=ivf2, jdfde=idfde2)
 !
 ! - CALCUL DES COEFFICIENTS BI (MOYENNE DES DERIVEES DES FCTS DE FORME)
 !
@@ -178,9 +169,8 @@ subroutine nmas3d(BEHInteg, &
             bi(i, ino) = bi(i, ino)/den
         end do
     end do
-!
+
 ! - CALCUL DES COEFFICIENTS GAMMA
-!
     do i = 1, 4
         do k = 1, 3
             hx(k, i) = 0.d0
@@ -198,30 +188,26 @@ subroutine nmas3d(BEHInteg, &
             gam(i, j) = 0.125d0*(h(j, i)-s)
         end do
     end do
-!
+
 ! - CALCUL POUR LE POINT DE GAUSS CENTRAL
     kpg = 1
 
 ! - CALCUL DES ELEMENTS GEOMETRIQUES
-!     CALCUL DE DFDI,F,EPS,DEPS ET POIDS
-!
-    do j = 1, 6
-        eps(j) = 0.d0
-        deps(j) = 0.d0
-    end do
-    axi = .false.
+!   CALCUL DE DFDI,F,EPS,DEPS ET POIDS
+    eps = 0.d0
     call nmgeom(3, nno, axi, grand, geom, &
                 kpg, ipoids, ivf, idfde, deplm, &
                 .true._1, poids, dfdi, f, eps, &
                 r)
-!
-!     CALCUL DE DEPS
+
+!   CALCUL DE DEPS
+    deps = 0.d0
     call nmgeom(3, nno, axi, grand, geom, &
                 kpg, ipoids, ivf, idfde, deplp, &
                 .false._1, poids, dfdi, f, deps, &
                 r)
-!
-!      CALCUL DES PRODUITS SYMETR. DE F PAR N,
+
+!   CALCUL DES PRODUITS SYMETR. DE F PAR N,
     do i = 1, nno
         do j = 1, 3
             def(1, j, i) = f(j, 1)*dfdi(i, 1)
@@ -239,7 +225,7 @@ subroutine nmas3d(BEHInteg, &
     do i = 4, 6
         sign(i) = sigm(i, kpg)*rac2
     end do
-!
+
 ! - LOI DE COMPORTEMENT
     if (option(1:9) .eq. 'RAPH_MECA') then
         optios = 'FULL_MECA'
@@ -247,56 +233,56 @@ subroutine nmas3d(BEHInteg, &
         optios = option
     end if
 
-! - Set main parameters for behaviour (on point)
-    call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+! - Set main parameters for behaviour (on point) - (only one gauss point !)
+    call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! - Integrator
     sigma = 0.d0
-    call nmcomp(BEHinteg, &
-                fami, kpg, ksp, ndimLdc, typmod, &
-                imate, compor, carcri, instam, instap, &
-                6, eps, deps, 6, sign, &
-                vim(1, kpg), optios, angmas, &
-                sigma, vip(1, kpg), 36, d, cod(kpg), mult_comp)
-!
+    call nmcomp(BEHInteg, &
+                ndimLdc, optios, typmod, &
+                instam, instap, &
+                compor, carcri, multComp, &
+                6, eps, deps, &
+                6, sign, &
+                vim(1, kpg), &
+                sigma, vip(1, kpg), &
+                36, d, cod(kpg))
+
 ! - ERREUR D'INTEGRATION
     if (cod(kpg) .eq. 1) then
         goto 999
     end if
-!
+
 !  RECUP DU COEF DE POISSON POUR ASQBI
-!
     if (proj .eq. 2) then
-        nomres(1) = 'E'
-        if (compor(1) .eq. 'ELAS') then
-            nomres(2) = 'NU'
-        else if (compor(1) .eq. 'ELAS_ISTR') then
-            nomres(2) = 'NU_LT'
-        else if (compor(1) .eq. 'ELAS_ORTH') then
-            nomres(2) = 'NU_LT'
+        propName(1) = 'E'
+        if (BEHInteg%materPara%elasID .eq. ELAS_ISOT) then
+            propName(2) = 'NU'
+        else if (BEHInteg%materPara%elasID .eq. ELAS_ISTR) then
+            propName(2) = 'NU_LT'
+        else if (BEHInteg%materPara%elasID .eq. ELAS_ORTH) then
+            propName(2) = 'NU_LT'
         else
-            ASSERT(.false.)
+            ASSERT(ASTER_FALSE)
         end if
-!
-!
-        call rcvalb(fami, kpg, 1, '-', imate, &
-                    ' ', compor(1), 0, ' ', [0.d0], &
-                    1, nomres(2), valres(2), icodre, 1)
-        if (icodre(1) .eq. 0) then
-            nu = valres(2)
+        call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                    BEHInteg%materPara%schemePara%kpg, &
+                    BEHInteg%materPara%schemePara%ksp, &
+                    '-', BEHInteg%materPara%jvMaterCode, &
+                    ' ', BEHInteg%materPara%elasKeyword, &
+                    0, ' ', [0.d0], &
+                    1, propName(2), propVale(2), propCode, 1)
+        if (propCode(1) .eq. 0) then
+            nu = propVale(2)
         else
             call utmess('F', 'ELEMENTS4_72')
         end if
-!
         nub = nu/(1.d0-nu)
     end if
 !
     if (option(1:10) .eq. 'RIGI_MECA_' .or. option(1:9) .eq. 'FULL_MECA') then
-!
         call r8inir(300, 0.d0, matuu, 1)
-!
-!     CALCUL DE KC (MATRICE DE RIGIDITE AU CENTRE)
-!     --------------------------------------------
+!       CALCUL DE KC (MATRICE DE RIGIDITE AU CENTRE)
         call caatdb(nno, def, d, def, poids, &
                     matuu)
 !
@@ -318,18 +304,17 @@ subroutine nmas3d(BEHInteg, &
                 dh(3, 3*(kpg-1)+i) = coopg2(3*kpg-2)*invja(2, i)+coopg2(3*kpg-1)*invja(1, i)
             end do
             do i = 1, 3
-                dh(4, 3*(kpg-1)+i) = coopg2(3*kpg-2)*coopg2(3*kpg-1)*invja(3, i)+coopg2(3*kpg&
-                                    &-1)*coopg2(3*kpg)*invja(1, i)+coopg2(3*kpg-2)*coopg2(&
-                                    &3*kpg)*invja(2, i)
+                dh(4, 3*(kpg-1)+i) = coopg2(3*kpg-2)*coopg2(3*kpg-1)*invja(3, i)+ &
+                                     coopg2(3*kpg-1)*coopg2(3*kpg)*invja(1, i)+ &
+                                     coopg2(3*kpg-2)*coopg2(3*kpg)*invja(2, i)
             end do
             call cast3d(proj, gam, dh, def, nno, &
                         kpg, nub, nu, d, calbn, &
                         bn, jac, matuu)
         end do
     end if
-!
+
 ! - CALCUL DES FORCES INTERNES ET DES CONTRAINTES DE CAUCHY
-!
     if (option(1:9) .eq. 'FULL_MECA' .or. option(1:9) .eq. 'RAPH_MECA') then
 !
 !     INITIALISATION
@@ -339,8 +324,8 @@ subroutine nmas3d(BEHInteg, &
             pqy(ia) = 0.d0
             pqz(ia) = 0.d0
         end do
-!
-!     DEFORMATIONS GENERALISEES
+
+!       DEPLACEMENTS GENERALISES
         do ia = 1, 4
             do kl = 1, nno
                 pqx(ia) = pqx(ia)+gam(ia, kl)*deplp(1, kl)
@@ -348,9 +333,8 @@ subroutine nmas3d(BEHInteg, &
                 pqz(ia) = pqz(ia)+gam(ia, kl)*deplp(3, kl)
             end do
         end do
-!
+
 !      INCREMENT DES CONTRAINTES GENERALISEES
-!
         call calcdq(proj, nub, nu, d, pqx, &
                     pqy, pqz, dq)
 !
@@ -363,9 +347,8 @@ subroutine nmas3d(BEHInteg, &
         sigas(:, :) = 0.d0
 !
         calbn = .true.
-!
+
 !      OPERATEUR DE STABILISATION DU GRADIENT AUX 8 POINTS DE GAUSS
-!
         do kpg = 1, nbpg2
             kp = 3*(kpg-1)
             call invjac(nno, kpg, ipoid2, idfde2, geom, &
@@ -380,9 +363,9 @@ subroutine nmas3d(BEHInteg, &
                 dh(3, 3*(kpg-1)+i) = coopg2(3*kpg-2)*invja(2, i)+coopg2(3*kpg-1)*invja(1, i)
             end do
             do i = 1, 3
-                dh(4, 3*(kpg-1)+i) = coopg2(3*kpg-2)*coopg2(3*kpg-1)*invja(3, i)+coopg2(3*kpg&
-                                    &-1)*coopg2(3*kpg)*invja(1, i)+coopg2(3*kpg-2)*coopg2(&
-                                    &3*kpg)*invja(2, i)
+                dh(4, 3*(kpg-1)+i) = coopg2(3*kpg-2)*coopg2(3*kpg-1)*invja(3, i)+ &
+                                     coopg2(3*kpg-1)*coopg2(3*kpg)*invja(1, i)+ &
+                                     coopg2(3*kpg-2)*coopg2(3*kpg)*invja(2, i)
             end do
 !
 !  CALCUL DE BN AU POINT DE GAUSS KPG
@@ -408,9 +391,12 @@ subroutine nmas3d(BEHInteg, &
             do i = 1, nno
                 do j = 1, 3
                     do kl = 1, 3
-                        vectu(j, i) = vectu(j, i)+(def(kl, j, i)+bn(kl, j, i))*(sigas(kl, kpg)+sigm&
-                                     &a(kl))*jac+(rac2*def(kl+3, j, i)+bn(kl+3, j, i))*(sigas(kl&
-                                     &+3, kpg)+sigma(kl+3)/rac2)*jac
+                        vectu(j, i) = vectu(j, i)+ &
+                                      (def(kl, j, i)+bn(kl, j, i))*(sigas(kl, kpg)+ &
+                                                                    sigma(kl))*jac+ &
+                                      (rac2*def(kl+3, j, i)+ &
+                                       bn(kl+3, j, i))*(sigas(kl+3, kpg)+ &
+                                                        sigma(kl+3)/rac2)*jac
                     end do
                 end do
             end do

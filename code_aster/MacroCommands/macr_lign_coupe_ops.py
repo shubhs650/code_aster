@@ -771,7 +771,7 @@ def macr_lign_coupe_ops(
                     UTMESS("F", "POST0_15", valk=[group, str(cell + 1)])
             __mailla = COPIER(CONCEPT=m["MAILLAGE"])
 
-            m2 = m.cree_dict_valeurs(m.mc_liste)
+            m2 = m
             argsup = {}
             if m2.get("GROUP_NO_ORIG"):
                 argsup["GROUP_NO_ORIG"] = m2.get("GROUP_NO_ORIG")

@@ -16,49 +16,55 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dxeffi(option, nomte, pgl, cont, ind, &
+subroutine dxeffi(plateCara, plateOrie, &
+                  option, nomte, cont, nbEfgeNd, &
                   effint)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/dxdmul.h"
 #include "asterfort/dxmate.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/utmess.h"
-    real(kind=8) :: pgl(3, 3), cont(*), effint(*)
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8) :: cont(*), effint(*)
     character(len=16) :: nomte
     character(len=*) :: option
-    integer(kind=8) :: ind
+    integer(kind=8) :: nbEfgeNd
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN  NOMTE  : NOM DE L'ELEMENT TRAITE
 !     IN  XYZL   : COORDONNEES DES NOEUDS
 !     IN  UL     : DEPLACEMENT A L'INSTANT T
-!     IN  IND    : =6 : 6 CMP D'EFFORT PAR NOEUD
-!     IN  IND    : =8 : 8 CMP D'EFFORT PAR NOEUD
+!     IN  nbEfgeNd    : =6 : 6 CMP D'EFFORT PAR NOEUD
+!     IN  nbEfgeNd    : =8 : 8 CMP D'EFFORT PAR NOEUD
 !     OUT EFFINT : EFFORTS INTERNES
-!     ------------------------------------------------------------------
 !
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: nbcon, nbcou, npgh, k, ipg, icou, igauh, icpg, icacoq, jnbspi
-    real(kind=8) :: hic, h, zic, zmin, coef, zero, deux, distn, coehsd
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: zero = 0.d0, deux = 2.d0
+    integer(kind=8) :: npg
+    integer(kind=8) :: nbcon, nbLayer, npgh, k, ipg, iLayer, igauh, icpg
+    real(kind=8) :: hLayer, h, zic, zmin, coef, distn, coehsd
     real(kind=8) :: n(3), m(3), t(2)
-!
     integer(kind=8) :: multic, iniv
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
-    real(kind=8) :: t2iu(2, 2), t2ui(2, 2), t1ve(3, 3)
     real(kind=8) :: hm(3, 3)
     real(kind=8) :: d1i(2, 2), d2i(2, 4)
     aster_logical :: coupmf
-!     ------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    zero = 0.0d0
-    deux = 2.0d0
+    call elrefe_info(fami='RIGI', npg=npg)
 !
 !     RECUPERATION DES OBJETS &INEL ET DES CHAMPS PARAMETRES :
 !     --------------------------------------------------------
@@ -67,30 +73,28 @@ subroutine dxeffi(option, nomte, pgl, cont, ind, &
         call utmess('F', 'ELEMENTS_34', sk=nomte)
     end if
 !
-    call jevech('PNBSP_I', 'L', jnbspi)
     nbcon = 6
-    nbcou = zi(jnbspi-1+1)
-    if (nbcou .le. 0) then
-        call utmess('F', 'ELEMENTS_46')
+    nbLayer = plateCara%nbLayer
+    if (nbLayer .le. 0) then
+        call utmess('F', 'PLATE1_10')
     end if
-!
-!
+
+! - Multi-layers or not ?
     multic = 0
     if (option .eq. 'FORC_NODA') then
-!     ----- CARACTERISTIQUES DES MATERIAUX --------
-        call dxmate('RIGI', df, dm, dmf, dc, &
-                    dci, dmc, dfc, nno, pgl, &
-                    multic, coupmf, t2iu, t2ui, t1ve)
+        call dxmate(plateCara, plateOrie, &
+                    'RIGI', df, dm, dmf, dc, &
+                    dci, dmc, dfc, &
+                    multic, coupmf)
     end if
 !
 !     -- GRANDEURS GEOMETRIQUES :
 !     ---------------------------
     npgh = 3
     if (multic .eq. 0) then
-        call jevech('PCACOQU', 'L', icacoq)
-        h = zr(icacoq)
-        hic = h/nbcou
-        distn = zr(icacoq+4)
+        h = plateCara%thick
+        hLayer = h/nbLayer
+        distn = plateCara%offset
         zmin = -h/deux+distn
     end if
 !
@@ -104,29 +108,32 @@ subroutine dxeffi(option, nomte, pgl, cont, ind, &
         call r8inir(3, zero, m, 1)
         call r8inir(2, zero, t, 1)
 !
-        do icou = 1, nbcou
+        do iLayer = 1, nbLayer
             do igauh = 1, npgh
-                icpg = nbcon*npgh*nbcou*(ipg-1)+nbcon*npgh*(icou-1)+nbcon*(igauh-1)
+                icpg = nbcon*npgh*nbLayer*(ipg-1)+ &
+                       nbcon*npgh*(iLayer-1)+ &
+                       nbcon*(igauh-1)
 !
                 if (igauh .eq. 1) then
-                    zic = zmin+(icou-1)*hic
+                    zic = zmin+(iLayer-1)*hLayer
                     coef = 1.d0/3.d0
                 else if (igauh .eq. 2) then
-                    zic = zmin+hic/2.d0+(icou-1)*hic
+                    zic = zmin+hLayer/2.d0+(iLayer-1)*hLayer
                     coef = 4.d0/3.d0
                 else
-                    zic = zmin+hic+(icou-1)*hic
+                    zic = zmin+hLayer+(iLayer-1)*hLayer
                     coef = 1.d0/3.d0
                 end if
                 if (multic .gt. 0) then
                     iniv = igauh-2
-                    call dxdmul(.false._1, icou, iniv, t1ve, t2ui, &
-                                hm, d1i, d2i, zic, hic)
+                    call dxdmul(plateCara, plateOrie, &
+                                .false._1, iLayer, iniv, &
+                                hm, d1i, d2i, zic, hLayer)
                 end if
 !
 !         -- CALCUL DES EFFORTS GENERALISES DANS L'EPAISSEUR (N, M ET T)
 !         --------------------------------------------------------------
-                coehsd = coef*hic/2.d0
+                coehsd = coef*hLayer/2.d0
                 n(1) = n(1)+coehsd*cont(icpg+1)
                 n(2) = n(2)+coehsd*cont(icpg+2)
                 n(3) = n(3)+coehsd*cont(icpg+4)
@@ -135,19 +142,16 @@ subroutine dxeffi(option, nomte, pgl, cont, ind, &
                 m(3) = m(3)+coehsd*zic*cont(icpg+4)
                 t(1) = t(1)+coehsd*cont(icpg+5)
                 t(2) = t(2)+coehsd*cont(icpg+6)
-!
             end do
         end do
-!
         do k = 1, 3
-            effint((ipg-1)*ind+k) = n(k)
-            effint((ipg-1)*ind+k+3) = m(k)
+            effint((ipg-1)*nbEfgeNd+k) = n(k)
+            effint((ipg-1)*nbEfgeNd+k+3) = m(k)
         end do
-        if (ind .gt. 6) then
-            effint((ipg-1)*ind+7) = t(1)
-            effint((ipg-1)*ind+8) = t(2)
+        if (nbEfgeNd .gt. 6) then
+            effint((ipg-1)*nbEfgeNd+7) = t(1)
+            effint((ipg-1)*nbEfgeNd+8) = t(2)
         end if
-!
     end do
 !
 end subroutine

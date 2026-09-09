@@ -128,6 +128,30 @@ bool BehaviourProperty::hasBehaviour( const std::string &behaviour ) const {
     return false;
 };
 
+VectorString BehaviourProperty::variNameToCmp( const VectorLong &cells,
+                                               const VectorString &variNames ) const {
+
+    JeveuxVectorLong list_elem( "VARINAMETOCMP.ELEM" );
+    JeveuxVectorChar16 list_vari( "VARINAMETOCMP.VARI" );
+    JeveuxVectorChar8 list_cmp( "VARINAMETOCMP.CMP" );
+
+    ( *list_elem ) = cells;
+    std::vector< JeveuxChar16 > variNamesChar16;
+    variNamesChar16.insert( variNamesChar16.begin(), variNames.begin(), variNames.end() );
+    ( *list_vari ) = variNamesChar16;
+    list_cmp->allocate( cells.size() * variNames.size() );
+
+    CALLO_VARINONU_WRAP( getModel()->getFiniteElementDescriptor()->getName(), _COMPOR->getName(),
+                         list_elem->getName(), list_vari->getName(), list_cmp->getName() );
+
+    VectorString cmpNames;
+    cmpNames.reserve( list_cmp->size() );
+    for ( auto cmpName : list_cmp )
+        cmpNames.push_back( strip( cmpName.toString() ) );
+
+    return cmpNames;
+};
+
 void BehaviourProperty::detectFunctionnalities() {
     // Detect annealing
     std::string feature( "Annealing" );

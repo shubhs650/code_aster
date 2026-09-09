@@ -25,16 +25,17 @@ from ..Language.Syntax import *
 # liste des types de concept acceptes par la commande :
 copier_ltyp = (
     cabl_precont,
-    listr8_sdaster,
-    listis_sdaster,
-    fonction_sdaster,
-    nappe_sdaster,
-    table_sdaster,
-    maillage_sdaster,
-    modele_sdaster,
     evol_elas,
     evol_noli,
     evol_ther,
+    fonction_sdaster,
+    list_inst,
+    listis_sdaster,
+    listr8_sdaster,
+    maillage_sdaster,
+    modele_sdaster,
+    nappe_sdaster,
+    table_sdaster,
 )
 
 

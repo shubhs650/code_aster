@@ -26,11 +26,13 @@
 module Behaviour_module
 ! ==================================================================================================
     use Behaviour_type
+    use BehaviourMGIS_type
     use BehaviourStrain_module
     use BehaviourStrain_type
-    use BehaviourMGIS_type
     use HHO_quadrature_module
     use HHO_type
+    use MaterialPara_module
+    use MaterialPara_type
     use calcul_module, only: ca_jvcnom_, ca_nbcvrc_
 ! ==================================================================================================
     implicit none
@@ -61,7 +63,6 @@ module Behaviour_module
 #include "asterfort/dfdm2d.h"
 #include "asterfort/dfdm3d.h"
 #include "asterfort/ElasticityMaterial_type.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/isdeco.h"
 #include "asterfort/jevech.h"
 #include "asterfort/leverettIsotMeca.h"
@@ -84,22 +85,19 @@ contains
 !
 ! Detect external state variables
 !
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine detectVarc(BEHinteg)
+    subroutine detectVarc(BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Local
         character(len=1), parameter :: poum = "T"
 !   ------------------------------------------------------------------------------------------------
 !
-        call strainDetectVarc(poum, BEHinteg%behavPara%lTHM, &
-                              BEHInteg%behavPara%fami, &
-                              BEHInteg%behavPara%kpg, &
-                              BEHInteg%behavPara%ksp, &
-                              BEHinteg%allVarcStrain)
+        call strainDetectVarc(poum, BEHInteg%behavPara%lTHM, BEHInteg%materPara, &
+                              BEHInteg%allVarcStrain)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -109,13 +107,13 @@ contains
 !
 ! Initialisation of behaviour datastructure
 !
-! Out BEHinteg         : main object for managing the integration of behavior laws
+! Out BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourInit(BEHinteg)
+    subroutine behaviourInit(BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(Behaviour_Integ), intent(out) :: BEHinteg
+        type(Behaviour_Integ), intent(out) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
@@ -123,20 +121,20 @@ contains
         end if
 
 ! ----- Initialization of parameters
-        call initPara(BEHinteg%behavPara)
+        call initPara(BEHInteg%behavPara)
 
 ! ----- Initialization of parameters for external state variables
-        call initESVA(BEHinteg%behavESVA)
+        call initESVA(BEHInteg%behavESVA)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
 ! --------------------------------------------------------------------------------------------------
 !
-! initParaCell
+! initPara
 !
 ! Initialisation of parameters
 !
-! Out BEHinteg         : main object for managing the integration of behavior laws
+! Out BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
     subroutine initPara(behavPara)
@@ -195,37 +193,29 @@ contains
 !
 ! Set parameters on a cell
 !
-! In  ldcDime          : dimension of physic for behaviour
 ! In  typmod           : finite element model
 ! In  option           : option to compute
 ! In  compor           : map for behaviour
 ! In  carcri           : parameters for comportment
 ! In  timePrev         : time at beginning of time step
 ! In  timeCurr         : time at end of time step
-! In  fami             : Gauss family for integration point rule
-! In  jvMaterCode      : adress for material parameters
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! In  materPara        : parameters of material
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourSetParaCell(ldcDime, typmod, option, &
+    subroutine behaviourSetParaCell(typmod, option, &
                                     compor, carcri, &
                                     timePrev, timeCurr, &
-                                    fami, jvMaterCode, &
-                                    BEHinteg)
+                                    materPara, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        integer(kind=8), intent(in) :: ldcDime
         character(len=8), intent(in) :: typmod(2)
         character(len=16), intent(in) :: option
-        character(len=16), intent(in) :: compor(*)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: timePrev, timeCurr
-        character(len=4), intent(in) :: fami
-        integer(kind=8), intent(in) :: jvMaterCode
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
-! ----- Local
-        integer(kind=8) :: elasID, icodre
-        character(len=16) :: elasKeyword
+        type(Material_Para), intent(in) :: materPara
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
@@ -233,45 +223,36 @@ contains
         end if
 
 ! ----- Set general parameters on cell
-        BEHInteg%behavPara%ldcDime = ldcDime
+        BEHInteg%materPara = materPara
         BEHInteg%behavPara%timePrev = timePrev
         BEHInteg%behavPara%timeCurr = timeCurr
-        BEHInteg%behavPara%fami = fami
 
 ! ----- Set parameters for material properties
         if (LDC_PREP_DEBUG .eq. 1) then
             WRITE (6, *) '<DEBUG>  Récupération de l élasticité'
         end if
-        BEHInteg%behavPara%jvMaterCode = jvMaterCode
-        call rccoma(jvMaterCode, 'ELAS', 0, elasKeyword, icodre)
-        if (icodre .eq. 0) then
-            call get_elas_id(jvMaterCode, elasID, elasKeyword)
-            BEHInteg%behavPara%lElasIsMeta = (elasKeyword == 'ELAS_META')
-            BEHInteg%behavPara%elasID = elasID
-            BEHInteg%behavPara%elasKeyword = elasKeyword
-        end if
         if (LDC_PREP_DEBUG .eq. 1) then
-            WRITE (6, *) '<DEBUG>  Type d élasticité      : ', BEHInteg%behavPara%elasID
-            WRITE (6, *) '<DEBUG>  Mot-clef               : ', BEHInteg%behavPara%elasKeyword
-            WRITE (6, *) '<DEBUG>  Présence de métallurgie: ', BEHInteg%behavPara%lElasIsMeta
+            WRITE (6, *) '<DEBUG>  Type d élasticité      : ', BEHInteg%materPara%elasID
+            WRITE (6, *) '<DEBUG>  Mot-clef               : ', BEHInteg%materPara%elasKeyword
+            WRITE (6, *) '<DEBUG>  Présence de métallurgie: ', BEHInteg%materPara%lElasIsMeta
         end if
 
 ! ----- Detect VERI_BORNE
-        call chckBounds(fami, jvMaterCode, BEHinteg)
+        call chckBounds(BEHInteg)
 
 ! ----- Set parameters from option
-        call setFromOption(option, BEHinteg)
+        call setFromOption(option, BEHInteg)
 
 ! ----- Set parameters from COMPOR map
-        call setFromCompor(compor, BEHinteg)
+        call setFromCompor(compor, BEHInteg)
 
 ! ----- Set parameters from CARCRI map
-        if (BEHinteg%behavPara%lNonLinear) then
-            call setFromCarcri(carcri, BEHinteg)
+        if (BEHInteg%behavPara%lNonLinear) then
+            call setFromCarcri(carcri, BEHInteg)
         end if
 
 ! ----- Set finite element model
-        call behaviourPrepModel(typmod, BEHinteg)
+        call behaviourPrepModel(typmod, BEHInteg)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -280,27 +261,27 @@ contains
 ! setFromOption
 !
 ! In  option           : option to compute
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine setFromOption(option, BEHinteg)
+    subroutine setFromOption(option, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=16), intent(in) :: option
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
             WRITE (6, *) '<DEBUG>  From OPTION'
         end if
 
-        BEHinteg%behavPara%lImplex = option .eq. "RIGI_MECA_IMPLEX" .or. &
+        BEHInteg%behavPara%lImplex = option .eq. "RIGI_MECA_IMPLEX" .or. &
                                      option .eq. "RAPH_MECA_IMPLEX"
-        BEHinteg%behavPara%lVari = L_VARI(option)
-        BEHinteg%behavPara%lSigm = L_SIGM(option)
-        BEHinteg%behavPara%lMatr = L_MATR(option)
-        BEHinteg%behavPara%lPred = L_PRED(option)
-        BEHinteg%behavPara%lNonLinear = option .ne. "FORC_NODA"
+        BEHInteg%behavPara%lVari = L_VARI(option)
+        BEHInteg%behavPara%lSigm = L_SIGM(option)
+        BEHInteg%behavPara%lMatr = L_MATR(option)
+        BEHInteg%behavPara%lPred = L_PRED(option)
+        BEHInteg%behavPara%lNonLinear = option .ne. "FORC_NODA"
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -309,17 +290,18 @@ contains
 ! setFromCompor
 !
 ! In  compor           : map for behaviour
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine setFromCompor(compor, BEHinteg)
+    subroutine setFromCompor(compor, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=16), intent(in) :: compor(*)
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Locals
         character(len=16) :: relaComp, defoLDC, defoComp, reguVisc, postIncr, mgisAddr
         integer(kind=8) :: nvi, numlc
+        aster_logical :: lDeborst
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
@@ -337,28 +319,31 @@ contains
         read (compor(NVAR), '(I16)') nvi
 
 ! ----- Set flags from behaviour
-        BEHinteg%behavPara%lFiniteStrain = defoComp .eq. 'SIMO_MIEHE' .or. &
+        BEHInteg%behavPara%lFiniteStrain = defoComp .eq. 'SIMO_MIEHE' .or. &
                                            defoComp .eq. 'GROT_GDEP' .or. &
                                            defoComp .eq. 'GREEN_LAGRANGE'
-        BEHinteg%behavPara%lGdefLog = defoComp .eq. 'GDEF_LOG'
-        BEHinteg%behavPara%lAnnealing = postIncr .eq. "REST_ECRO"
-        BEHinteg%behavPara%lStrainMeca = defoLDC .eq. 'MECANIQUE'
-        BEHinteg%behavPara%lStrainAll = defoLDC .eq. 'TOTALE'
-        BEHinteg%behavPara%lStrainOld = defoLDC .eq. 'OLD'
-        BEHinteg%behavPara%lReguVisc = reguVisc .eq. 'REGU_VISC_ELAS'
-        BEHinteg%behavPara%lMetaLemaAni = relaComp .eq. 'META_LEMA_ANI'
-        BEHinteg%behavESVA%behavESVAExte%mgisAddr = mgisAddr
-        BEHinteg%behavPara%nvi = nvi
-        BEHinteg%behavPara%numlc = numlc
+        BEHInteg%behavPara%lGdefLog = defoComp .eq. 'GDEF_LOG'
+        BEHInteg%behavPara%lAnnealing = postIncr .eq. "REST_ECRO"
+        BEHInteg%behavPara%lStrainMeca = defoLDC .eq. 'MECANIQUE'
+        BEHInteg%behavPara%lStrainAll = defoLDC .eq. 'TOTALE'
+        BEHInteg%behavPara%lStrainOld = defoLDC .eq. 'OLD'
+        BEHInteg%behavPara%lReguVisc = reguVisc .eq. 'REGU_VISC_ELAS'
+        BEHInteg%materPara%lMetaLemaAni = relaComp .eq. 'META_LEMA_ANI'
+        BEHInteg%behavESVA%behavESVAExte%mgisAddr = mgisAddr
+        BEHInteg%behavPara%nvi = nvi
+        BEHInteg%behavPara%numlc = numlc
         if (LDC_PREP_DEBUG .eq. 1) then
-            WRITE (6, *) '<DEBUG>  From COMPOR - lFiniteStrain: ', BEHinteg%behavPara%lFiniteStrain
-            WRITE (6, *) '<DEBUG>  From COMPOR - lGdefLog: ', BEHinteg%behavPara%lGdefLog
-            WRITE (6, *) '<DEBUG>  From COMPOR - lAnnealing: ', BEHinteg%behavPara%lAnnealing
-            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainMeca: ', BEHinteg%behavPara%lStrainMeca
-            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainAll: ', BEHinteg%behavPara%lStrainAll
-            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainOld: ', BEHinteg%behavPara%lStrainOld
-            WRITE (6, *) '<DEBUG>  From COMPOR - lReguVisc: ', BEHinteg%behavPara%lReguVisc
+            WRITE (6, *) '<DEBUG>  From COMPOR - lFiniteStrain: ', BEHInteg%behavPara%lFiniteStrain
+            WRITE (6, *) '<DEBUG>  From COMPOR - lGdefLog: ', BEHInteg%behavPara%lGdefLog
+            WRITE (6, *) '<DEBUG>  From COMPOR - lAnnealing: ', BEHInteg%behavPara%lAnnealing
+            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainMeca: ', BEHInteg%behavPara%lStrainMeca
+            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainAll: ', BEHInteg%behavPara%lStrainAll
+            WRITE (6, *) '<DEBUG>  From COMPOR - lStrainOld: ', BEHInteg%behavPara%lStrainOld
+            WRITE (6, *) '<DEBUG>  From COMPOR - lReguVisc: ', BEHInteg%behavPara%lReguVisc
             WRITE (6, *) '<DEBUG>  From COMPOR - mgisAddr: ', mgisAddr
+            if (lDeborst) then
+                WRITE (6, *) '<DEBUG>  From COMPOR - De Borst algorithm'
+            end if
         end if
 !
 !   ------------------------------------------------------------------------------------------------
@@ -368,14 +353,14 @@ contains
 ! setFromCarcri
 !
 ! In  carcri           : parameters for comportment
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine setFromCarcri(carcri, BEHinteg)
+    subroutine setFromCarcri(carcri, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Locals
         aster_logical :: lMGIS, lUMAT
 !   ------------------------------------------------------------------------------------------------
@@ -386,9 +371,9 @@ contains
 
 ! ----- External solvers ?
         call isSolverIsExte(carcri, lMGIS, lUMAT)
-        BEHinteg%behavPara%lMGIS = lMGIS
-        BEHinteg%behavPara%lUMAT = lUMAT
-        BEHinteg%behavPara%lExteSolver = lUMAT .or. lMGIS
+        BEHInteg%behavPara%lMGIS = lMGIS
+        BEHInteg%behavPara%lUMAT = lUMAT
+        BEHInteg%behavPara%lExteSolver = lUMAT .or. lMGIS
 
 ! ----- DEBUG
         if (LDC_PREP_DEBUG .eq. 1) then
@@ -402,7 +387,7 @@ contains
         end if
 
 ! ----- Get list of external state variables from user
-        call getListUserESVA(carcri, BEHinteg%behavESVA%tabcod)
+        call getListUserESVA(carcri, BEHInteg%behavESVA%tabcod)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -411,15 +396,31 @@ contains
 ! behaviourPrepModel
 !
 ! In  typmod           : finite element model
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourPrepModel(typmod, BEHinteg)
+    subroutine behaviourPrepModel(typmod, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=8), intent(in) :: typmod(2)
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Locals
+        character(len=8), parameter:: &
+            allowedTypmod1(*) = [character(len=8):: '1D', 'PLAN', 'C_PLAN', 'D_PLAN', 'AXIS', '3D']
+        character(len=8), parameter:: &
+            allowedTypmod2(*) = [character(len=8):: ' ', 'GRADVARI', 'HHO', 'THM', 'GRADSIGM', &
+                                                                         'EJ_HYME', 'ELEMJOIN', &
+                                                                         'INTERFAC', 'INTSOLPI', &
+                                                                         'CABLE_GA', 'JHMS']
+        character(len=8), parameter:: featNdimsiEnabled(*) = &
+                                      [character(len=8):: ' ', 'GRADVARI', 'HHO', 'THM']
+        character(len=8), parameter:: featEpsComEnabled(*) = &
+                                      [character(len=8):: ' ', 'GRADVARI', 'HHO', 'THM']
+        character(len=8), parameter:: featDeborstEnabled(*) = [character(len=8):: ' ', 'HHO']
+        character(len=8), parameter:: featCtrlEpsEnabled(*) = [character(len=8):: ' ', 'HHO', 'THM']
+        character(len=8), parameter:: featReguViscEnabled(*) = &
+                                      [character(len=8):: ' ', 'GRADVARI', 'HHO']
+!   ------------------------------------------------------------------------------------------------
         integer(kind=8) :: lawOffset
 !   ------------------------------------------------------------------------------------------------
 !
@@ -427,24 +428,70 @@ contains
             WRITE (6, *) '<DEBUG>  Paramètres du modèle'
         end if
 
-        BEHinteg%behavPara%lStandardFE = typmod(2) .eq. ' ' .or. typmod(2) .eq. 'HHO'
-        BEHinteg%behavPara%lTHM = typmod(2) .eq. 'THM'
-        BEHinteg%behavPara%lCZM = typmod(2) .eq. 'ELEMJOIN'
-        BEHinteg%behavPara%lGradVari = typmod(2) .eq. 'GRADVARI' .or. typmod(2) .eq. 'HHO_GRAD'
-        BEHinteg%behavPara%lAxis = typmod(1) .eq. 'AXIS'
-        BEHinteg%behavPara%lThreeDim = typmod(1) (1:2) .eq. '3D'
-        BEHinteg%behavPara%lPlaneStrain = typmod(1) (1:6) .eq. 'D_PLAN'
-        BEHinteg%behavPara%lPlaneStress = typmod(1) (1:6) .eq. 'C_PLAN'
+        ! Exclusions
+        ! if (.not. any(typmod(1) == allowedTypmod1)) write(6,*) 'typmod1 =',typmod(1)
+        ! if (.not. any(typmod(2) == allowedTypmod2)) write(6,*) 'typmod2 =',typmod(2)
+        ASSERT(any(typmod(1) == allowedTypmod1))
+        ASSERT(any(typmod(2) == allowedTypmod2))
+
+        ! Type of element
+        BEHInteg%behavPara%lTHM = typmod(2) .eq. 'THM'
+        BEHInteg%behavPara%lGradVari = typmod(2) .eq. 'GRADVARI' .or. typmod(2) .eq. 'HHO_GRAD'
+
+        BEHInteg%behavPara%lAxis = typmod(1) .eq. 'AXIS'
+        BEHInteg%behavPara%lPlaneStrain = typmod(1) (1:6) .eq. 'D_PLAN'
+        BEHInteg%behavPara%lPlaneStress = typmod(1) (1:6) .eq. 'C_PLAN'
+        BEHInteg%BehavPara%lTwoDim = any(typmod(1) == ['PLAN  ', 'C_PLAN', 'D_PLAN', 'AXIS  '])
+        BEHInteg%BehavPara%lOneDim = typmod(1) .eq. '1D'
+        BEHInteg%behavPara%lThreeDim = typmod(1) (1:2) .eq. '3D'
+
+        ! Allowed features
+        BEHInteg%behavPara%lNdimsiEnabled = any(typmod(2) == featNdimsiEnabled)
+        BEHInteg%behavPara%lEpsComEnabled = any(typmod(2) == featEpsComEnabled)
+        BEHInteg%behavPara%lDeborstEnabled = any(typmod(2) == featDeborstEnabled)
+        BEHInteg%behavPara%lCtrlEpsEnabled = any(typmod(2) == featCtrlEpsEnabled)
+        BEHInteg%behavPara%lReguViscEnabled = any(typmod(2) == featReguViscEnabled)
+
+        ASSERT(.not. BEHInteg%behavPara%lDeborstEnabled .or. BEHInteg%behavPara%lNdimsiEnabled)
+        ASSERT(.not. BEHInteg%behavPara%lEpsComEnabled .or. BEHInteg%behavPara%lNdimsiEnabled)
+        ASSERT(.not. BEHInteg%behavPara%lCtrlEpsEnabled .or. BEHInteg%behavPara%lNdimsiEnabled)
+        ASSERT(.not. BEHInteg%behavPara%lReguViscEnabled .or. BEHInteg%behavPara%lNdimsiEnabled)
+
+        ASSERT(.not. BEHInteg%behavPara%lStrainMeca .or. BEHInteg%behavPara%lEpsComEnabled)
+        ASSERT(.not. BEHInteg%behavPara%lTHM .or. BEHInteg%behavPara%lEpsComEnabled)
+        ASSERT(.not. BEHInteg%behavPara%lReguVisc .or. BEHInteg%behavPara%lReguViscEnabled)
+
+        if (BEHInteg%behavPara%lFiniteStrain) then
+            ASSERT(.not. BEHInteg%behavPara%lTHM)
+            ASSERT(.not. BEHInteg%behavPara%lReguVisc)
+            ASSERT(.not. BEHInteg%behavPara%lStrainMeca .or. ca_nbcvrc_ .eq. 0)
+        end if
+
+        ! Default size of strain and stress tensors
+        if (BEHInteg%behavPara%lNdimsiEnabled) then
+            if (BEHInteg%behavPara%lThreeDim) then
+                BEHInteg%behavPara%ndimsi = 6
+            else if (BEHInteg%behavPara%lTwoDim) then
+                BEHInteg%behavPara%ndimsi = 4
+            else if (BEHInteg%BehavPara%lOneDim) then
+                BEHInteg%behavPara%ndimsi = 1
+            else
+                write (6, *) 'PROBLEME: typmod  -> ', typmod(1:2)
+                ASSERT(ASTER_FALSE)
+            end if
+        else
+            BEHInteg%behavPara%ndimsi = 0
+        end if
 
         lawOffset = 0
-        if (BEHinteg%behavPara%lImplex) then
+        if (BEHInteg%behavPara%lImplex) then
             lawOffset = lawOffset+2000
-        end if
-        if (typmod(2) .eq. 'GDVARINO') then
-            lawOffset = lawOffset+3000
         end if
         if (typmod(2) .eq. 'GRADSIGM') then
             lawOffset = lawOffset+4000
+        end if
+        if (typmod(1) .eq. '1D') then
+            lawOffset = lawOffset+5000
         end if
         if (typmod(2) .eq. 'GRADVARI') then
             lawOffset = lawOffset+6000
@@ -455,7 +502,10 @@ contains
         if (typmod(2) .eq. 'INTERFAC') then
             lawOffset = lawOffset+9000
         end if
-        BEHinteg%behavPara%lawIndexOffset = lawOffset
+        if (typmod(2) .eq. 'INTSOLPI') then
+            lawOffset = lawOffset+9500
+        end if
+        BEHInteg%behavPara%lawIndexOffset = lawOffset
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -467,40 +517,34 @@ contains
 !    -> If defoLDC = 'MECANIQUE', prepare mechanical strain
 !    -> If defoLDC = 'TOTALE' or 'OLD', keep total strain
 !
-! In  neps             : number of components of strains
+! In  BEHInteg         : main object for managing the integration of behavior laws
 ! IO  epsm             : In : total strains at beginning of current step time
 !                        Out : mechanical strains at beginning of current step time
 ! IO  deps             : In : increment of total strains during current step time
 !                        Out : increment of mechanical strains during current step time
-! In  BEHinteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourPrepStrain(neps, epsm, deps, BEHinteg)
+    subroutine behaviourPrepStrain(BEHInteg, epsm, deps)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        integer(kind=8), intent(in) :: neps
-        real(kind=8), intent(inout) :: epsm(neps), deps(neps)
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        real(kind=8), intent(inout) :: epsm(:), deps(:)
 ! ----- Local
-        aster_logical :: lFiniteStrain, lPtot, lStrainMeca, lStrainAll
+        aster_logical :: lPtot, lStrainMeca
 !   ------------------------------------------------------------------------------------------------
 !
         if (ca_nbcvrc_ .ne. 0) then
-            lStrainMeca = BEHinteg%behavPara%lStrainMeca
-            lStrainAll = BEHinteg%behavPara%lStrainAll
-            lFiniteStrain = BEHinteg%behavPara%lFiniteStrain
-            lPtot = BEHinteg%allVarcStrain%list(VARC_STRAIN_PTOT)%exist
+            lStrainMeca = BEHInteg%behavPara%lStrainMeca
+            lPtot = BEHInteg%allVarcStrain%list(VARC_STRAIN_PTOT)%exist
             if (lStrainMeca .or. lPtot) then
                 if (LDC_PREP_DEBUG .eq. 1) then
                     WRITE (6, *) '<DEBUG>  Présence de VARC avec nouveau système ou PTOT'
                 end if
-                ASSERT(.not. lFiniteStrain)
 ! ------------- Compute non-mechanic strains for some external state variables
-                call computeStrainESVA(BEHinteg%allVarcStrain, &
-                                       BEHinteg%behavESVA, neps)
+                call computeStrainESVA(BEHInteg%allVarcStrain, BEHInteg%behavESVA)
 
 ! ------------- Subtract to get mechanical strain epsm and deps become mechanical strains
-                call computeStrainMeca(BEHinteg, neps, epsm, deps)
+                call computeStrainMeca(BEHInteg, epsm, deps)
             end if
         else
             if (LDC_PREP_DEBUG .eq. 1) then
@@ -516,18 +560,18 @@ contains
 !
 ! In  kpg              : index of quadrature point
 ! In  ksp              : index of "sub"-point (plates, pipes, beams, etc.)
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourSetParaPoin(kpg, ksp, BEHinteg)
+    subroutine behaviourSetParaPoin(kpg, ksp, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         integer(kind=8), intent(in) :: kpg, ksp
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
-        BEHinteg%behavPara%kpg = kpg
-        BEHinteg%behavPara%ksp = ksp
+        BEHInteg%materPara%schemePara%kpg = kpg
+        BEHInteg%materPara%schemePara%ksp = ksp
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -538,28 +582,28 @@ contains
 ! Initialisation of behaviour datastructure - Special for SIMU_POINT_MAT
 !
 ! In  relaComp         : RELATION in COMPORTemENT
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourInitPoint(relaComp, BEHinteg)
+    subroutine behaviourInitPoint(relaComp, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=16), intent(in) :: relaComp
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
 
 ! ----- Set "real" zero
-        BEHinteg%behavESVA%behavESVAGeom%coorElga = 0.d0
+        BEHInteg%behavESVA%behavESVAGeom%coorElga = 0.d0
 
 ! ----- Special for GRAD_VELO
-        if (BEHinteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
             call utmess('A', 'COMPOR2_39')
-            BEHinteg%behavESVA%behavESVAGeom%gradVelo = 0.d0
+            BEHInteg%behavESVA%behavESVAGeom%gradVelo = 0.d0
         end if
 
 ! ----- Special for ELTSIZE1
-        if (BEHinteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
             if (relaComp .ne. 'BETON_DOUBLE_DP') then
                 call utmess('F', 'COMPOR2_12')
             end if
@@ -612,21 +656,21 @@ contains
 ! In  jv_func          : JEVEUX adress for shape functions
 ! In  jv_dfunc         : JEVEUX adress for derivative of shape functions
 ! In  geom             : initial coordinates of nodes
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 ! In  deplm            : displacements of nodes at beginning of time step
 ! In  ddepl            : displacements of nodes since beginning of time step
 !
 ! --------------------------------------------------------------------------------------------------
     subroutine behaviourPrepESVAGeom(nno, npg, ndim, &
                                      jv_poids, jv_func, jv_dfunc, &
-                                     geom, BEHinteg, &
+                                     geom, BEHInteg, &
                                      deplm_, ddepl_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         integer(kind=8), intent(in) :: nno, npg, ndim
         integer(kind=8), intent(in) :: jv_poids, jv_func, jv_dfunc
         real(kind=8), intent(in) :: geom(ndim, nno)
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
         real(kind=8), optional, intent(in) :: deplm_(ndim, nno), ddepl_(ndim, nno)
 !   ------------------------------------------------------------------------------------------------
 !
@@ -635,15 +679,15 @@ contains
         end if
 
 ! ----- Compute element size 1
-        if (BEHinteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
             call prepEltSize1(nno, npg, ndim, &
                               jv_poids, jv_func, jv_dfunc, &
-                              geom, BEHinteg%behavPara, &
+                              geom, BEHInteg%behavPara, &
                               BEHInteg%behavESVA%behavESVAGeom)
         end if
 
 ! ----- Compute gradient of velocity
-        if (BEHinteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
             if (.not. present(deplm_) .or. .not. present(ddepl_)) then
                 call utmess('F', 'COMPOR2_26')
             end if
@@ -662,7 +706,7 @@ contains
     end subroutine
 ! --------------------------------------------------------------------------------------------------
 !
-! behaviourPrepESVAGeom
+! behaviourPrepESVAGeomHHO
 !
 ! Prepare external state variables - Geometry
 !
@@ -673,17 +717,17 @@ contains
 ! In  jv_func          : JEVEUX adress for shape functions
 ! In  jv_dfunc         : JEVEUX adress for derivative of shape functions
 ! In  geom             : initial coordinates of nodes
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 ! In  deplm            : displacements of nodes at beginning of time step
 ! In  ddepl            : displacements of nodes since beginning of time step
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourPrepESVAGeomHHO(hhoCell, hhoQuad, BEHinteg)
+    subroutine behaviourPrepESVAGeomHHO(hhoCell, hhoQuad, BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         type(HHO_Cell), intent(in) :: hhoCell
         type(HHO_Quadrature), intent(in) :: hhoQuad
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 !   ------------------------------------------------------------------------------------------------
 !
         integer(kind=8) :: ndim, npg
@@ -697,7 +741,7 @@ contains
         npg = hhoQuad%nbQuadPoints
 
 ! ----- Compute element size 1
-        if (BEHinteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(ELTSIZE1) .eq. 1) then
             if (ndim == 3) then
                 if (npg .ge. 9) then
                     lc = hhoCell%measure**0.33333333333333d0
@@ -717,7 +761,7 @@ contains
         end if
 
 ! ----- Compute gradient of velocity
-        if (BEHinteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
+        if (BEHInteg%behavESVA%tabcod(GRADVELO) .eq. 1) then
             ASSERT(ASTER_FALSE)
         end if
 
@@ -740,13 +784,13 @@ contains
 !
 ! Prepare external state variables at Gauss point
 !
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourPrepESVAPoin(BEHinteg)
+    subroutine behaviourPrepESVAPoin(BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Local
         aster_logical :: lExteSolver, lStrainMeca, lhasInelasticStrains
 !   ------------------------------------------------------------------------------------------------
@@ -756,59 +800,42 @@ contains
         end if
 
 ! ----- Flags for external solvers
-        lExteSolver = BEHinteg%behavPara%lExteSolver
+        lExteSolver = BEHInteg%behavPara%lExteSolver
 
 ! ----- Flag for strain decomposition
-        lStrainMeca = BEHinteg%behavPara%lStrainMeca
+        lStrainMeca = BEHInteg%behavPara%lStrainMeca
 
 ! ----- Prepare hygrometry (not in AFFE_VARC)
-        if (BEHinteg%behavESVA%tabcod(HYGR) .eq. 1) then
-            call prepHygr(BEHinteg%behavPara%fami, &
-                          BEHinteg%behavPara%kpg, &
-                          BEHinteg%behavPara%ksp, &
-                          BEHinteg%behavPara%jvMaterCode, &
-                          BEHinteg%behavESVA)
+        if (BEHInteg%behavESVA%tabcod(HYGR) .eq. 1) then
+            call prepHygr(BEHInteg%materPara, BEHInteg%behavESVA)
         end if
 
 ! ----- Prepare external PTOT state variables (in AFFE_VARC)
         if (ca_nbcvrc_ .ne. 0) then
-            if (BEHinteg%allVarcStrain%list(VARC_STRAIN_PTOT)%exist) then
-                call compPtotStrainField(BEHinteg%behavPara%fami, &
-                                         'T', &
-                                         BEHinteg%behavPara%kpg, &
-                                         BEHinteg%behavPara%ksp, &
-                                         BEHinteg%behavPara%jvMaterCode, &
-                                         BEHInteg%behavPara%elasID, &
-                                         BEHInteg%behavPara%elasKeyword, &
-                                         BEHinteg%allVarcStrain%list(VARC_STRAIN_PTOT))
+            if (BEHInteg%allVarcStrain%list(VARC_STRAIN_PTOT)%exist) then
+                call compPtotStrainField('T', BEHInteg%materPara, &
+                                         BEHInteg%allVarcStrain%list(VARC_STRAIN_PTOT))
             end if
         end if
 
 ! ----- Prepare external state variables from fields (in AFFE_VARC)
-        if (ca_nbcvrc_ .ne. 0 .or. BEHinteg%behavPara%lTHM) then
+        if (ca_nbcvrc_ .ne. 0 .or. BEHInteg%behavPara%lTHM) then
             if (lExteSolver .or. lStrainMeca) then
-                call compVarcStrain(BEHinteg%behavPara%fami, &
-                                    'T', &
-                                    BEHinteg%behavPara%kpg, &
-                                    BEHinteg%behavPara%ksp, &
-                                    BEHinteg%behavPara%jvMaterCode, &
-                                    BEHinteg%behavPara%lMetaLemaAni, &
-                                    BEHInteg%behavPara%elasID, &
-                                    BEHInteg%behavPara%elasKeyword, &
-                                    BEHinteg%allVarcStrain)
+                call compVarcStrain('T', BEHInteg%materPara, &
+                                    BEHInteg%allVarcStrain)
             end if
         end if
 
 ! ----- Detect inelastic strains
         lhasInelasticStrains = ASTER_FALSE
         if (ca_nbcvrc_ .ne. 0) then
-            lhasInelasticStrains = BEHinteg%allVarcStrain%hasInelasticStrains
+            lhasInelasticStrains = BEHInteg%allVarcStrain%hasInelasticStrains
         end if
-        BEHinteg%behavESVA%lhasInelasticStrains = lhasInelasticStrains
+        BEHInteg%behavESVA%lhasInelasticStrains = lhasInelasticStrains
 
 ! ----- Prepare other external state variables (For temperature: see preparation of fields)
         if (lExteSolver) then
-            BEHinteg%behavESVA%behavESVAOther%time = BEHinteg%behavPara%timePrev
+            BEHInteg%behavESVA%behavESVAOther%time = BEHInteg%behavPara%timePrev
         end if
 !
 !   ------------------------------------------------------------------------------------------------
@@ -900,13 +927,13 @@ contains
 !
 ! Prepare external state variables for external solvers (UMAT/MFRONT)
 !
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine behaviourPrepESVAExte(BEHinteg)
+    subroutine behaviourPrepESVAExte(BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
 ! ----- Local
         character(len=8), parameter :: nameUMAT(VARC_EXTE_NBMAXI) = (/ &
                                        'SECH    ', 'HYDR    ', 'IRRA    ', &
@@ -919,8 +946,6 @@ contains
         integer(kind=8) :: iESVA, nbESVA, indxVarcStrain, iret
         aster_logical :: lMGIS, lUMAT, exist
         character(len=16) :: mgisAddr
-        character(len=4) :: fami
-        integer(kind=8) :: ksp, kpg
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
@@ -928,16 +953,13 @@ contains
         end if
 
 ! ----- Get parameters
-        fami = BEHinteg%behavPara%fami
-        kpg = BEHinteg%behavPara%kpg
-        ksp = BEHinteg%behavPara%ksp
-        lMGIS = BEHinteg%behavPara%lMGIS
-        lUMAT = BEHinteg%behavPara%lUMAT
+        lMGIS = BEHInteg%behavPara%lMGIS
+        lUMAT = BEHInteg%behavPara%lUMAT
 
 ! ----- Get list of external state variables in external solvers
         nbESVA = 0
         if (lMGIS) then
-            mgisAddr = BEHinteg%behavESVA%behavESVAExte%mgisAddr
+            mgisAddr = BEHInteg%behavESVA%behavESVAExte%mgisAddr
             call mgis_get_number_of_esvs(mgisAddr, nbESVA)
             ASSERT(nbESVA .le. VARC_EXTE_NBMAXI)
             call mgis_get_esvs(mgisAddr, exteNameESVA)
@@ -949,7 +971,7 @@ contains
         end if
 
 ! ----- Default: all external states variables are scalar (not strain )
-        BEHinteg%behavESVA%behavESVAExte%nbESVAScal = nbESVA
+        BEHInteg%behavESVA%behavESVAExte%nbESVAScal = nbESVA
 
         if (LDC_PREP_DEBUG .eq. 1) then
             if (nbESVA .eq. 0) then
@@ -961,8 +983,8 @@ contains
         end if
 
 ! ----- Set values of ExternalStateVariables
-        BEHinteg%behavESVA%behavESVAExte%scalESVAPrev = 0.d0
-        BEHinteg%behavESVA%behavESVAExte%scalESVAIncr = 0.d0
+        BEHInteg%behavESVA%behavESVAExte%scalESVAPrev = 0.d0
+        BEHInteg%behavESVA%behavESVAExte%scalESVAIncr = 0.d0
 
         do iESVA = 1, nbESVA
 ! --------- Translate names of external state variable
@@ -988,9 +1010,9 @@ contains
                 indxVarcStrain = VARC_STRAIN_SECH
                 exist = BEHInteg%allVarcStrain%list(indxVarcStrain)%exist
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcPrev(1)
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcIncr(1)
                 else
                     if (.not. lUMAT) then
@@ -1002,14 +1024,14 @@ contains
                 indxVarcStrain = VARC_STRAIN_HYDR
                 exist = BEHInteg%allVarcStrain%list(indxVarcStrain)%exist
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcPrev(1)
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcIncr(1)
                 else
                     if (BEHInteg%behavESVA%behavESVAOther%lHygr) then
-                        BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = 0.d0
-                        BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = 0.d0
+                        BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = 0.d0
+                        BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = 0.d0
                     else
                         if (.not. lUMAT) then
                             call logUndefinedVariable(exteNameAster)
@@ -1021,9 +1043,9 @@ contains
                 ASSERT(lMGIS)
                 exist = BEHInteg%behavESVA%behavESVAOther%lHygr
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%behavESVA%behavESVAOther%hygrPrev
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
                         BEHInteg%behavESVA%behavESVAOther%hygrIncr
                 else
                     call utmess('F', 'COMPOR4_26', sk=exteNameAster)
@@ -1034,9 +1056,9 @@ contains
                 indxVarcStrain = VARC_STRAIN_TEMP
                 exist = BEHInteg%allVarcStrain%list(indxVarcStrain)%exist
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcPrev(1)
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcIncr(1)
                 else
                     call utmess('A', 'COMPOR4_26', sk=exteNameAster)
@@ -1045,7 +1067,7 @@ contains
             case ('ElementSize')
                 ASSERT(lMGIS)
                 ASSERT(BEHInteg%behavESVA%behavESVAGeom%lElemSize1)
-                BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                     BEHInteg%behavESVA%behavESVAGeom%elemSize1
 
             CASE ('ReferenceTemperature')
@@ -1053,7 +1075,7 @@ contains
                 indxVarcStrain = VARC_STRAIN_TEMP
                 exist = BEHInteg%allVarcStrain%list(indxVarcStrain)%exist
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcRefe
                 else
                     call utmess('F', 'COMPOR4_26', sk=exteNameAster)
@@ -1061,7 +1083,7 @@ contains
 
             CASE ('Time')
                 ASSERT(lMGIS)
-                BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                     BEHInteg%behavESVA%behavESVAOther%time
 
             CASE ('TEMP')
@@ -1069,21 +1091,35 @@ contains
                 indxVarcStrain = VARC_STRAIN_TEMP
                 exist = BEHInteg%allVarcStrain%list(indxVarcStrain)%exist
                 if (exist) then
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcPrev(1)
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = &
                         BEHInteg%allVarcStrain%list(indxVarcStrain)%varcIncr(1)
                 else
                     call utmess('F', "COMPOR4_76")
                 end if
 
             case default
-                call rcvarc(' ', exteNameAster, '-', fami, kpg, ksp, valePrev, iret)
+                call rcvarc(' ', exteNameAster, '-', &
+                            BEHInteg%materPara%schemePara%fami, &
+                            BEHInteg%materPara%schemePara%kpg, &
+                            BEHInteg%materPara%schemePara%ksp, &
+                            valePrev, iret)
+
+                call rcvarc(' ', exteNameAster, '-', &
+                            BEHInteg%materPara%schemePara%fami, &
+                            BEHInteg%materPara%schemePara%kpg, &
+                            BEHInteg%materPara%schemePara%ksp, &
+                            valePrev, iret)
                 if (iret .eq. 0) then
                     iret = 0
-                    call rcvarc('F', exteNameAster, '+', fami, kpg, ksp, valeCurr, iret)
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = valePrev
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = valeCurr-valePrev
+                    call rcvarc('F', exteNameAster, '+', &
+                                BEHInteg%materPara%schemePara%fami, &
+                                BEHInteg%materPara%schemePara%kpg, &
+                                BEHInteg%materPara%schemePara%ksp, &
+                                valeCurr, iret)
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA) = valePrev
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA) = valeCurr-valePrev
                 else
                     if (.not. lUMAT) then
                         call logUndefinedVariable(exteNameAster)
@@ -1092,9 +1128,9 @@ contains
             end select
             if (LDC_PREP_DEBUG .eq. 1) then
                 WRITE (6, *) '<DEBUG>  Valeur précédente   : ', &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA)
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev(iESVA)
                 WRITE (6, *) '<DEBUG>  Valeur incrémentale : ', &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA)
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr(iESVA)
             end if
         end do
 !
@@ -1106,25 +1142,22 @@ contains
 !
 ! Prepare external state variable HYGR (specific)
 !
-! In  fami             : Gauss family for integration point rule
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  imate            : coded material address
+! In  materPara        : parameters of material
 ! IO  behavESVA        : parameters for External State Variables
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine prepHygr(fami, kpg, ksp, imate, &
-                        behavESVA)
+    subroutine prepHygr(materPara, behavESVA)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: kpg, ksp, imate
+        type(Material_Para), intent(in) :: materPara
         type(BehaviourESVA), intent(inout) :: behavESVA
 ! ----- Local
         integer(kind=8), parameter :: nbPara = 1
         integer(kind=8)  :: codret(nbPara)
         real(kind=8) :: paraVale(nbPara)
         character(len=16), parameter :: paraName(nbPara) = (/'FONC_DESORP'/)
+        character(len=8) :: fami
+        integer(kind=8) :: kpg, ksp, jvMaterCode
         character(len=16) :: phenom
         real(kind=8) :: funcDesorpPrev, funcDesorpCurr
         aster_logical :: exist
@@ -1134,28 +1167,33 @@ contains
             WRITE (6, *) '<DEBUG>  Prepare HYGR'
         end if
 
+        fami = materPara%schemePara%fami
+        kpg = materPara%schemePara%kpg
+        ksp = materPara%schemePara%ksp
+        jvMaterCode = materPara%jvMaterCode
+
 ! ----- Get parameters
         funcDesorpPrev = 0.d0
         funcDesorpCurr = 0.d0
         exist = ASTER_FALSE
-        call rccoma(imate, 'BETON_DESORP', 0, phenom, codret(1))
+        call rccoma(jvMaterCode, 'BETON_DESORP', 0, phenom, codret(1))
         if (codret(1) .ne. 0) then
             call utmess('F', 'COMPOR2_94')
         end if
         exist = ASTER_TRUE
-        call rcvalb(fami, kpg, ksp, '-', imate, &
+        call rcvalb(fami, kpg, ksp, '-', jvMaterCode, &
                     ' ', 'BETON_DESORP', 0, ' ', [0.d0], &
                     nbPara, paraName, paraVale, codret, 0)
         if (codret(1) .eq. 0) then
             funcDesorpPrev = paraVale(1)
-            call rcvalb(fami, kpg, ksp, '+', imate, &
+            call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
                         ' ', 'BETON_DESORP', 0, ' ', [0.d0], &
                         nbPara, paraName, paraVale, codret, 0)
             ASSERT(codret(1) .eq. 0)
             funcDesorpCurr = paraVale(1)
         else
             !   leverett isotherm
-            call leverettIsotMeca(fami, kpg, ksp, imate, funcDesorpPrev, &
+            call leverettIsotMeca(fami, kpg, ksp, jvMaterCode, funcDesorpPrev, &
                                   funcDesorpCurr)
         end if
 
@@ -1200,10 +1238,7 @@ contains
 !
         if (ca_nbcvrc_ .ne. 0) then
             ndimsi = size(sig)
-            ASSERT(ndimsi .le. 6)
-            ASSERT(size(dsidep, 1) .ge. ndimsi)
-            ASSERT(size(dsidep, 2) .ge. ndimsi)
-            sig = sig-matmul(dsidep(1:ndimsi, 1:ndimsi), behavESVA%depsi_varc(1:ndimsi))
+            sig = sig-matmul(dsidep, behavESVA%depsi_varc(1:ndimsi))
             if (LDC_PREP_DEBUG .eq. 1) then
                 WRITE (6, *) '<DEBUG>  Prediction stress: ', sig
             end if
@@ -1437,12 +1472,11 @@ contains
 ! In  neps             : number of components of strains
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine computeStrainESVA(allVarcStrain, behavESVA, neps)
+    subroutine computeStrainESVA(allVarcStrain, behavESVA)
 !   -----------------------------------------------------------------------------------------------
 ! ----- Parameters
         type(All_Varc_Strain), intent(in) :: allVarcStrain
         type(BehaviourESVA), intent(inout) :: behavESVA
-        integer(kind=8), intent(in) :: neps
 ! ----- Local
         aster_logical :: hasAnelastiStrains
 !   ------------------------------------------------------------------------------------------------
@@ -1455,15 +1489,15 @@ contains
         behavESVA%epsi_varc = 0.d0
         hasAnelastiStrains = ASTER_FALSE
 
-        call getVarcStrain('-', VARC_STRAIN_ALL, allVarcStrain, neps, behavESVA%epsi_varc)
-        call getVarcStrain('T', VARC_STRAIN_ALL, allVarcStrain, neps, behavESVA%depsi_varc)
+        call getVarcStrain('-', VARC_STRAIN_ALL, allVarcStrain, behavESVA%epsi_varc)
+        call getVarcStrain('T', VARC_STRAIN_ALL, allVarcStrain, behavESVA%depsi_varc)
 
 ! ----- DEBUG
         if (LDC_PREP_DEBUG .eq. 1) then
             WRITE (6, *) '<DEBUG>  Strains from external state variables - Prev: ', &
-                neps, behavESVA%epsi_varc(1:neps)
+                behavESVA%epsi_varc
             WRITE (6, *) '<DEBUG>  Strains from external state variables - Incr: ', &
-                neps, behavESVA%depsi_varc(1:neps)
+                behavESVA%depsi_varc
         end if
 !
 !   ------------------------------------------------------------------------------------------------
@@ -1474,71 +1508,33 @@ contains
 !
 ! Prepare strains (substracting "thermic" strains to total strains to get mechanical part)
 !
-! In  BEHinteg         : main object for managing the integration of behavior laws
-! In  neps             : number of components of strains
+! In  BEHInteg         : main object for managing the integration of behavior laws
 ! IO  epsm             : In : total strains at beginning of current step time
 !                        Out : mechanical strains at beginning of current step time
 ! IO  deps             : In : increment of total strains during current step time
 !                        Out : increment of mechanical strains during current step time
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine computeStrainMeca(BEHinteg, neps, epsm, deps)
+    subroutine computeStrainMeca(BEHInteg, epsm, deps)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(Behaviour_Integ), intent(in) :: BEHinteg
-        integer(kind=8), intent(in) :: neps
-        real(kind=8), intent(inout) :: epsm(neps), deps(neps)
+        type(Behaviour_Integ), intent(in) :: BEHInteg
+        real(kind=8), intent(inout) :: epsm(:), deps(:)
 ! ----- Local
-        real(kind=8) :: stran(12), dstran(12)
-        integer(kind=8) :: nepu
-        aster_logical :: lGradVari, lCZM, lEpsa
+        integer(kind=8):: ndimsi
 !   ------------------------------------------------------------------------------------------------
 !
         if (LDC_PREP_DEBUG .eq. 1) then
             WRITE (6, *) '<DEBUG> Calcul des déformations mécaniques'
         end if
-        lCZM = BEHinteg%behavPara%lCZM
-        lGradVari = BEHinteg%behavPara%lGradVari
-        lEpsa = BEHInteg%allVarcStrain%list(VARC_STRAIN_EPSA)%exist
-        dstran = 0.d0
-        stran = 0.d0
-        if ((neps .eq. 6) .or. (neps .eq. 4)) then
-            dstran(1:neps) = deps(1:neps)-BEHinteg%behavESVA%depsi_varc(1:neps)
-            stran(1:neps) = epsm(1:neps)-BEHinteg%behavESVA%epsi_varc(1:neps)
-        else if ((neps .eq. 3) .and. lCZM) then
-! --------- No thermic strains for cohesive elements
-            dstran(1:neps) = deps(1:neps)
-            stran(1:neps) = epsm(1:neps)
-        else if ((neps .eq. 12) .and. .not. lEpsa) then
-! --------- For ENDO_HETEROGENE
-            dstran(1:neps) = deps(1:neps)
-            dstran(1:3) = dstran(1:3)-BEHinteg%behavESVA%depsi_varc(1:3)
-        else if (lGradVari) then
-! --------- For GRAD_VARI et GRAD_INCO
-            ASSERT(neps .eq. 11 .or. neps .eq. 8)
-            if (neps .eq. 11) then
-                nepu = 6
-            else if (neps .eq. 8) then
-                nepu = 4
-            end if
-            dstran(1:nepu) = deps(1:nepu)-BEHinteg%behavESVA%depsi_varc(1:nepu)
-            stran(1:nepu) = epsm(1:nepu)-BEHinteg%behavESVA%epsi_varc(1:nepu)
-        else
-            ASSERT(ASTER_FALSE)
-        end if
+        ASSERT(BEHInteg%behavPara%lEpsComEnabled)
 
-! ----- epsm and deps become mechanical strains
-        if (lGradVari) then
-            epsm(1:nepu) = stran(1:nepu)
-            deps(1:nepu) = dstran(1:nepu)
-        else
-            epsm(1:neps) = stran(1:neps)
-            deps(1:neps) = dstran(1:neps)
-        end if
+        ndimsi = BEHInteg%behavPara%ndimsi
+        epsm(1:ndimsi) = epsm(1:ndimsi)-BEHInteg%behavESVA%epsi_varc(1:ndimsi)
+        deps(1:ndimsi) = deps(1:ndimsi)-BEHInteg%behavESVA%depsi_varc(1:ndimsi)
 
         if (LDC_PREP_DEBUG .eq. 1) then
-            WRITE (6, *) '<DEBUG>  Prepare strains for integration: ', &
-                neps, epsm(1:neps), deps(1:neps)
+            WRITE (6, *) '<DEBUG>  Prepare strains for integration: ', epsm, deps
         end if
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -1692,20 +1688,16 @@ contains
 !
 ! Detect VERI_BORNE
 !
-! In  fami             : Gauss family for integration point rule
-! In  jvMaterCode      : adress for material parameters
-! IO  BEHinteg         : main object for managing the integration of behavior laws
+! IO  BEHInteg         : main object for managing the integration of behavior laws
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine chckBounds(fami, jvMaterCode, BEHinteg)
+    subroutine chckBounds(BEHInteg)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=4), intent(in) :: fami
-        integer(kind=8), intent(in) :: jvMaterCode
-        type(Behaviour_Integ), intent(inout) :: BEHinteg
-! ----- Local
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+! ----- Localfami, jvMaterCode,
         integer(kind=8), parameter :: kpg = 1, ksp = 1
-        character(len=8), parameter :: materi = ' '
+        character(len=8), parameter :: materPoin = ' '
         integer(kind=8), parameter :: nbProp = 4
         character(len=16), parameter :: propName(nbProp) = (/'EPSI_MAXI', 'VEPS_MAXI', &
                                                              'TEMP_MINI', 'TEMP_MAXI'/)
@@ -1713,10 +1705,12 @@ contains
         integer(kind=8) :: propCode(nbProp)
 !   ------------------------------------------------------------------------------------------------
 !
-        call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
-                    materi, 'VERI_BORNE', 0, ' ', [0.d0], &
+        call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                    kpg, ksp, '+', &
+                    BEHInteg%materPara%jvMaterCode, &
+                    materPoin, 'VERI_BORNE', 0, ' ', [0.d0], &
                     nbProp, propName, propVale, propCode, 0)
-        BEHinteg%behavPara%lChckBounds = propCode(1) .eq. 0 .or. &
+        BEHInteg%behavPara%lChckBounds = propCode(1) .eq. 0 .or. &
                                          propCode(2) .eq. 0 .or. &
                                          propCode(3) .eq. 0 .or. &
                                          propCode(4) .eq. 0

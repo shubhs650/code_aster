@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmdocn(ds_conv)
+subroutine nmdocn(ds_conv, mesh)
 !
     use NonLin_Datastructure_type
 !
@@ -33,6 +33,7 @@ subroutine nmdocn(ds_conv)
 #include "asterfort/SetResiRefe.h"
 !
     type(NL_DS_Conv), intent(inout) :: ds_conv
+    character(len=8), optional:: mesh
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -43,6 +44,7 @@ subroutine nmdocn(ds_conv)
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_conv          : datastructure for convergence management
+! IN  mesh             : mesh name
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -113,61 +115,8 @@ subroutine nmdocn(ds_conv)
 
 ! - Reference residuals
     if (iret_refe .eq. 1) then
-        call getvr8(factorKeyword, 'SIGM_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='SIGM_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'EPSI_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='EPSI_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'FLUX_THER_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='FLUX_THER_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'FLUX_HYD1_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='FLUX_HYD1_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'FLUX_HYD2_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='FLUX_HYD2_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'VARI_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='VARI_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'EFFORT_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='EFFORT_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'MOMENT_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='MOMENT_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'DEPL_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='DEPL_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'LAGR_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='LAGR_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
-        call getvr8(factorKeyword, 'PI_REFE', iocc=1, scal=para_real, nbret=iret)
-        if (iret .eq. 1) then
-            call SetResiRefe(ds_conv, type_='PI_REFE', &
-                             user_para_=para_real, l_refe_test_=.true._1)
-        end if
+        ASSERT(present(mesh))
+        call SetResiRefe(mesh, ds_conv)
     end if
 
 ! - Forced convergence

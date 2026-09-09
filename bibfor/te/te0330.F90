@@ -20,7 +20,7 @@ subroutine te0330(option, nomte)
     implicit none
 !
 !     CALCUL DES TERMES ELEMENTAIRES DE LAGRANGE
-!     ELEMENTS  D_DEPL_R_.... / D_TEMP_R_.... / D_PRES_C_....
+!     ELEMENTS  DDEPL_R_.... / DTEMP_R_.... / DPRES_C_....
 !
 !     EN ENTREE :
 !        OPTION : NOM DE L'OPTION A CALCULER

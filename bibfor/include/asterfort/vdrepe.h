@@ -15,13 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vdrepe(nomtez, matevn, matevg)
-        character(len=*) :: nomtez
-        real(kind=8) :: matevn(2, 2, 1)
-        real(kind=8) :: matevg(2, 2, 1)
+    subroutine vdrepe(plateOrie, nomtez, matevn, matevg)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=*), intent(in) :: nomtez
+        real(kind=8), intent(out) :: matevn(2, 2, 1), matevg(2, 2, 1)
     end subroutine vdrepe
 end interface

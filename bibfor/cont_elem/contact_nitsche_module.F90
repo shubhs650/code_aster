@@ -33,6 +33,7 @@ module contact_nitsche_module
 #include "blas/dgemv.h"
 #include "contact_module.h"
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -171,7 +172,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dshape_func_vo(3, 27)
+        real(kind=8), intent(in) :: dshape_func_vo(3, MT_NNOMAX3D)
         real(kind=8), intent(out) :: grad(3, 3), eps(3, 3)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -183,7 +184,7 @@ contains
 !
 !
         integer(kind=8) :: n, i, j
-        real(kind=8) :: dfunc_dx(3, 27)
+        real(kind=8) :: dfunc_dx(3, MT_NNOMAX3D)
 !
         call gradFuncDispVolu(geom, dshape_func_vo, dfunc_dx)
 !
@@ -241,7 +242,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
         real(kind=8) :: coor_qp_vo(3), mu, lambda
-        real(kind=8) :: dshape_func_vo(3, 27), grad(3, 3), eps(3, 3)
+        real(kind=8) :: dshape_func_vo(3, MT_NNOMAX3D), grad(3, 3), eps(3, 3)
         integer(kind=8) :: i_node, iret
 !
         call lameCoeff(nits%E, nits%nu, mu, lambda)

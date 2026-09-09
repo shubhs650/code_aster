@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmelnl(BEHinteg, &
+subroutine nmelnl(BEHInteg, &
                   fami, kpg, ksp, ndim, &
                   typmod, imate, compor, &
                   eps, gonf, pres, sig, energi)
@@ -42,7 +42,7 @@ subroutine nmelnl(BEHinteg, &
 #include "asterfort/zerofr.h"
 #include "asterfort/get_elas_para.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*) :: fami
     character(len=8) :: typmod(*)
     character(len=16) :: compor(*)
@@ -144,7 +144,7 @@ subroutine nmelnl(BEHinteg, &
     if (iret .ne. 0) secref = 0.d0
     call get_elas_para(fami, imate, '+', kpg, ksp, &
                        elas_id, elas_keyword, &
-                       e_=e, nu_=nu, BEHinteg=BEHinteg)
+                       e_=e, nu_=nu, BEHInteg=BEHInteg)
     if (elas .or. line .or. puis) then
         call rcvalb(fami, kpg, ksp, '+', imate, &
                     ' ', 'ELAS', 0, ' ', [0.d0], &

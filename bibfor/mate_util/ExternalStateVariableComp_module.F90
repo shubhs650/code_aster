@@ -25,6 +25,7 @@
 module ExternalStateVariableComp_module
 ! ==================================================================================================
 ! ==================================================================================================
+    use coorSyst_module, only: setOrieFields
 ! ==================================================================================================
     implicit none
 ! ==================================================================================================
@@ -35,15 +36,16 @@ module ExternalStateVariableComp_module
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/corich.h"
+#include "asterfort/detrsd.h"
+#include "asterfort/dismoi.h"
 #include "asterfort/gcnco2.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/meharm.h"
 #include "asterfort/reajre.h"
-#include "asterfort/detrsd.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/utmess.h"
-#include "asterfort/vemare.h"
 #include "asterfort/varcDetect.h"
+#include "asterfort/vemare.h"
 ! ==================================================================================================
 contains
 ! ==================================================================================================
@@ -55,7 +57,7 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
     subroutine varcCompElem(line, &
-                            numeHarm, modelZ, caraElemZ, materFieldZ, matecoZ, &
+                            numeHarm, modelZ, caraElemZ, materFieldZ, materCodeZ, &
                             chtimeZ, varcRefeZ, varcZ, &
                             jvBase, vectElemZ, &
                             lCumul_)
@@ -63,26 +65,27 @@ contains
 ! ----- Parameters
         aster_logical, intent(in) :: line
         integer(kind=8), intent(in) :: numeHarm
-        character(len=*), intent(in) :: modelZ, caraElemZ, materFieldZ, matecoZ
+        character(len=*), intent(in) :: modelZ, caraElemZ, materFieldZ, materCodeZ
         character(len=*), intent(in) :: chtimeZ, varcRefeZ, varcZ
         character(len=1), intent(in) :: jvBase
         character(len=*), intent(in) :: vectElemZ
         aster_logical, optional, intent(in) :: lCumul_
 ! ----- Locals
-        integer(kind=8), parameter :: nbFieldIn = 18, nbFieldOut = 1
-        character(len=8) :: lpain(nbFieldIn), lpaout(nbFieldOut)
-        character(len=24) :: lchin(nbFieldIn), lchout(nbFieldOut)
+        integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+        character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+        character(len=24) :: lchin(nbFieldInMax), lchout(nbFieldOut)
         character(len=8) :: newnom
         character(len=16) :: option
         character(len=24) :: modelLigrel, resuElem
-        character(len=24) :: chgeom, chcara(18), chharm
+        character(len=24) :: chgeom, chharm
         aster_logical :: lTemp, lHydr, lPtot, lSech, lEpsa, lMeta, lCumul
+        integer(kind=8) :: nbFieldIn
 !   ------------------------------------------------------------------------------------------------
 !
         ASSERT(line)
 
 ! ----- Initializations
-        modelLigrel = modelZ(1:8)//'.MODELE'
+        call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
         lpain = " "
         lpaout = " "
         lchin = " "
@@ -100,54 +103,35 @@ contains
             end if
         end if
 
-! ----- Geometry field
+! ----- Get geometry field
         call megeom(modelZ, chgeom)
 
-! ----- Elementary characteristics
-        call mecara(caraElemZ, chcara)
-
-! ----- Fourier
+! ----- Create field for Fourier
         call meharm(modelZ, numeHarm, chharm)
 
-! ----- Input fields
+! ----- Add input fields
         lpain(1) = 'PGEOMER'
         lchin(1) = chgeom
         lpain(2) = 'PMATERC'
-        lchin(2) = matecoZ
-        lpain(3) = 'PCACOQU'
-        lchin(3) = chcara(7) (1:19)
-        lpain(4) = 'PCAGNPO'
-        lchin(4) = chcara(6) (1:19)
-        lpain(5) = 'PCADISM'
-        lchin(5) = chcara(3) (1:19)
-        lpain(6) = 'PCAORIE'
-        lchin(6) = chcara(1) (1:19)
-        lpain(7) = 'PCAGNBA'
-        lchin(7) = chcara(11) (1:19)
-        lpain(8) = 'PCAARPO'
-        lchin(8) = chcara(9) (1:19)
-        lpain(9) = 'PCAMASS'
-        lchin(9) = chcara(12) (1:19)
-        lpain(10) = 'PCAGEPO'
-        lchin(10) = chcara(5) (1:19)
-        lpain(11) = 'PNBSP_I'
-        lchin(11) = chcara(1) (1:8)//'.CANBSP'
-        lpain(12) = 'PFIBRES'
-        lchin(12) = chcara(1) (1:8)//'.CAFIBR'
-        lpain(13) = 'PHARMON'
-        lchin(13) = chharm
-        lpain(14) = 'PCINFDI'
-        lchin(14) = chcara(15)
-        lpain(15) = 'PCADISK'
-        lchin(15) = chcara(2)
-        lpain(16) = 'PINSTR'
-        lchin(16) = chtimeZ
-        lpain(17) = 'PVARCRR'
-        lchin(17) = varcRefeZ
-        lpain(18) = 'PVARCPR'
-        lchin(18) = varcZ
+        lchin(2) = materCodeZ
+        lpain(3) = 'PHARMON'
+        lchin(3) = chharm
+        lpain(4) = 'PINSTR'
+        lchin(4) = chtimeZ
+        lpain(5) = 'PVARCRR'
+        lchin(5) = varcRefeZ
+        lpain(6) = 'PVARCPR'
+        lchin(6) = varcZ
+        nbFieldIn = 6
 
-! ----- Output field
+! ----- Add fields for structural elements
+        call setStructFields(caraElemZ, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! ----- Add fields for orientation
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElemZ)
+
+! ----- Set output field
         lpaout(1) = 'PVECTUR'
 
 ! ----- Allocate result

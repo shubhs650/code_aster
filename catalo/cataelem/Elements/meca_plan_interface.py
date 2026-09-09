@@ -73,9 +73,6 @@ ECOPILO = LocatedComponents(
 )
 
 
-EREFCO = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("SIGM", "DEPL"))
-
-
 ECONTPG = LocatedComponents(
     phys=PHY.SIEF_R, type="ELGA", location="RIGI", components=("SIGN", "SITX", "CONT_X", "CONT_Y")
 )
@@ -119,7 +116,7 @@ class EIPLQU8(Element):
         OP.FORC_NODA(
             te=361,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCOMPOR, LC.CCOMPOR),
                 (SP.PSIEFR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -131,7 +128,7 @@ class EIPLQU8(Element):
         OP.FULL_MECA(
             te=360,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA.PCONTMR, ECONTPG),
@@ -159,7 +156,7 @@ class EIPLQU8(Element):
         OP.FULL_MECA_ELAS(
             te=360,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA_ELAS.PCONTMR, ECONTPG),
@@ -190,11 +187,25 @@ class EIPLQU8(Element):
             para_in=((OP.NSPG_NBVA.PCOMPOR, LC.CCOMPO2),),
             para_out=((SP.PDCEL_I, LC.EDCEL_I),),
         ),
+        OP.PILO_PRED_DEFO(
+            te=349,
+            para_in=(
+                (SP.PCAMASS, LC.CCAMASS),
+                (OP.PILO_PRED_DEFO.PCOMPOR, LC.CCOMPOR),
+                (SP.PDDEPLR, DDL_MECA),
+                (SP.PDEPL0R, DDL_MECA),
+                (SP.PDEPL1R, DDL_MECA),
+                (SP.PDEPLMR, DDL_MECA),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PCDTAU, LC.CCDTAU),
+            ),
+            para_out=((OP.PILO_PRED_DEFO.PCOPILO, ECOPILO),),
+        ),
         OP.PILO_PRED_ELAS(
             te=359,
             para_in=(
                 (SP.PBORNPI, LC.CBORNPI),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PCDTAU, LC.CCDTAU),
                 (OP.PILO_PRED_ELAS.PCOMPOR, LC.CCOMPOR),
@@ -213,7 +224,7 @@ class EIPLQU8(Element):
         OP.RAPH_MECA(
             te=360,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.RAPH_MECA.PCONTMR, ECONTPG),
@@ -238,13 +249,18 @@ class EIPLQU8(Element):
         ),
         OP.REFE_FORC_NODA(
             te=361,
-            para_in=((SP.PCAMASS, LC.CCAMA2D), (SP.PGEOMER, NGEOMER), (SP.PREFCO, EREFCO)),
+            para_in=(
+                (SP.PCAMASS, LC.CCAMASS),
+                (SP.PGEOMER, NGEOMER),
+                (SP.PRESIREF, LC.CRESIREF),
+                (SP.PRESICMP, LC.CRESICMP),
+            ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.RIGI_MECA_ELAS(
             te=360,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_ELAS.PCONTMR, ECONTPG),
@@ -264,7 +280,7 @@ class EIPLQU8(Element):
         OP.RIGI_MECA_TANG(
             te=360,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_TANG.PCONTMR, ECONTPG),
@@ -298,22 +314,33 @@ class EIPLQU8(Element):
             para_out=(
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
                 (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, ENGEOM_R),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARI_ELNO(

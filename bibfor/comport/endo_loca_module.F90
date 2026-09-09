@@ -410,16 +410,17 @@ contains
 !  PATH FOLLOWING
 ! =====================================================================
 
-    subroutine PathFollowing(self, targetDamage, eps0, eps1, etamin, etamax, cvb, &
+    subroutine PathFollowing(self, tau, vim, eps0, eps1, etamin, etamax, cvb, &
                              nsol, sol, sgn)
 
         implicit none
         type(CONSTITUTIVE_LAW), intent(inout):: self
-        real(kind=8), intent(in) :: targetDamage, eps0(:), eps1(:), etamin, etamax, cvb
+        real(kind=8), intent(in) :: tau, vim(:), eps0(:), eps1(:), etamin, etamax, cvb
         integer(kind=8), intent(out)     :: nsol, sgn(2)
         real(kind=8), intent(out):: sol(2)
 ! ---------------------------------------------------------------------
-! targetDamage  damage to be reached
+! tau           target increment damage
+! vim           internal variables at the beginning of the time-step
 ! eps0          constant strain
 ! eps1          path-following strain
 ! etamin        lower bound for eta
@@ -431,12 +432,15 @@ contains
 ! sgn           for each solution, -1 if decreasing function, +1 otherwise
 ! ---------------------------------------------------------------------
         aster_logical         :: empty, croiss, gauche, droite
-        integer(kind=8)               :: n
-        real(kind=8)          :: lcst, cvequ, cvquad, etam, etap, etal
+        integer(kind=8)       :: n
+        real(kind=8)          :: targetDamage, lcst, cvequ, cvquad, etam, etap, etal
         real(kind=8)          :: gm, dgm, gp, dgp, gl, dgl
         type(CRITERION)       :: crit
         real(kind=8), parameter:: red = 1.d-2
 ! ---------------------------------------------------------------------
+
+        ! Initialisation
+        targetDamage = vim(1)+tau
 
         !  Non controlable point (too close to the bound)
         if (targetDamage .ge. 0.99d0) then

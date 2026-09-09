@@ -17,19 +17,20 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
+    subroutine epsvmc(nno, ndim, nbEpsi, npg, &
                       jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                       nodeCoor, nodeDisp, &
-                      time, anglNaut, nharm, &
-                      strainType, lStrainMeca, &
+                      time, nharm, &
+                      strainType, lStrainMeca, materPara, &
                       epsi)
-        character(len=*), intent(in) :: fami
+        use MaterialPara_type
         integer(kind=8), intent(in) :: nno, ndim, nbEpsi, npg
         integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
         real(kind=8), intent(in) :: nodeCoor(ndim*nno), nodeDisp(ndim*nno)
-        real(kind=8), intent(in) :: time, anglNaut(3), nharm
+        real(kind=8), intent(in) :: time, nharm
         integer(kind=8), intent(in) :: strainType
         aster_logical, intent(in) :: lStrainMeca
+        type(Material_Para), intent(inout) :: materPara
         real(kind=8), intent(out) :: epsi(nbEpsi*npg)
     end subroutine epsvmc
 end interface

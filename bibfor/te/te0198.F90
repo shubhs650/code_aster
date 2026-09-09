@@ -18,6 +18,8 @@
 !
 subroutine te0198(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -26,7 +28,6 @@ subroutine te0198(option, nomte)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/sigtmc.h"
@@ -46,15 +47,16 @@ subroutine te0198(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     integer(kind=8), parameter :: dimmod = 3
     real(kind=8) :: nharm
     real(kind=8) :: forcTher(3*MT_NNOMAX), sigmTher(162)
-    real(kind=8) :: anglNaut(3), time
-    integer(kind=8) :: jvTime, jvVect, jvHarm
+    real(kind=8) :: time
+    integer(kind=8) :: jvTime, jvVect, jvHarmon
     integer(kind=8) :: ndim, nno, npg, nbsig, i, iret
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
-    integer(kind=8) :: jvGeom, jvMater
+    integer(kind=8) :: jvGeom, jvMaterc
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -69,10 +71,13 @@ subroutine te0198(option, nomte)
     call jevech('PGEOMER', 'L', jvGeom)
 
 ! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
+    call jevech('PMATERC', 'L', jvMaterc)
 
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! - Get time
     time = r8vide()
@@ -82,12 +87,12 @@ subroutine te0198(option, nomte)
     end if
 
 ! - Get Fourier mode
-    call jevech('PHARMON', 'L', jvHarm)
-    nharm = dble(zi(jvHarm))
+    call jevech('PHARMON', 'L', jvHarmon)
+    nharm = dble(zi(jvHarmon))
 
 ! - Calcul des contraintes thermiques
-    call sigtmc(fami, nbsig, npg, ndim, &
-                time, zi(jvMater), anglNaut, &
+    call sigtmc(materPara, time, &
+                nbsig, npg, ndim, &
                 VARC_STRAIN_TEMP, sigmTher)
 
 ! - Compute CHAR_MECA_TEMP_R: [B]Tx{SIGTH}

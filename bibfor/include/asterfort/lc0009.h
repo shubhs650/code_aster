@@ -15,34 +15,29 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc0009(fami, kpg, ksp, ndim, imate,&
-                      compor, crit, instam, instap, epsm,&
-                      deps, sigm, vim, option, angmas,&
-                      sigp, vip, typmod, icomp,&
+    subroutine lc0009(fami, kpg, ksp, ndim, imate, &
+                      instam, instap, epsm, &
+                      deps, sigm, vim, option, &
+                      sigp, vip, typmod, &
                       nvi, dsidep, codret)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: ndim
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: crit(*)
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: epsm(*)
         real(kind=8) :: deps(*)
         real(kind=8) :: sigm(*)
-        real(kind=8) :: vim(*)
+        real(kind=8) :: vim(nvi)
         character(len=16) :: option
-        real(kind=8) :: angmas(*)
         real(kind=8) :: sigp(*)
-        real(kind=8) :: vip(*)
+        real(kind=8) :: vip(nvi)
         character(len=8) :: typmod(*)
-        integer(kind=8) :: icomp
         integer(kind=8) :: nvi
         real(kind=8) :: dsidep(*)
         integer(kind=8) :: codret

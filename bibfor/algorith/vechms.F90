@@ -15,14 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine vechms(nomo, mate, mateco, carele, varplu, lischa, &
-                  partps, vecele)
 !
+subroutine vechms(model, materField, materCode, caraElem, varplu, listLoad, &
+                  partps, vectElem)
 !
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/exixfe.h"
@@ -37,21 +36,22 @@ subroutine vechms(nomo, mate, mateco, carele, varplu, lischa, &
 #include "asterfort/lisnol.h"
 #include "asterfort/vechmp.h"
 #include "asterfort/vechmx.h"
-    character(len=8) :: nomo
-    character(len=24) :: mate, carele, mateco
-    real(kind=8) :: partps(3)
-    character(len=19) :: lischa, varplu
-    character(len=19) :: vecele
+#include "jeveux.h"
 !
-! ----------------------------------------------------------------------
+    character(len=8), intent(in) :: model
+    character(len=24), intent(in) :: materField, caraElem, materCode
+    real(kind=8), intent(in) :: partps(3)
+    character(len=19), intent(in) :: listLoad, varplu
+    character(len=19), intent(in) :: vectElem
+!
+! --------------------------------------------------------------------------------------------------
 !
 ! CALCUL DES VECTEURS ELEMENTAIRES DES CHARGEMENTS MECANIQUES
 ! DE NEUMANN STANDARD (VOIR DEFINITION DANS LISDEF)
 !
 ! CALCUL EFFECTIF - BOUCLE SUR LES CHARGES
 !
-! ----------------------------------------------------------------------
-!
+! --------------------------------------------------------------------------------------------------
 !
 ! IN  NOMO   : NOM DU MODELE
 ! IN  LISCHA : SD LISTE DES CHARGES
@@ -59,77 +59,57 @@ subroutine vechms(nomo, mate, mateco, carele, varplu, lischa, &
 ! IN  CARELE : CARACTERISTIQUES DES POUTRES ET COQUES
 ! IN  MATE   : MATERIAU CODE
 ! IN  VARPLU : VARIABLES DE COMMANDE A L'INSTANT T+
-! IN  nbin_maxi   : NOMBRE MAXI DE CHAMPS D'ENTREE
+! IN  nbFieldInMax   : NOMBRE MAXI DE CHAMPS D'ENTREE
 ! IN  LPAIN  : LISTE DES PARAMETRES IN
 ! IN  LCHIN  : LISTE DES CHAMPS IN
 ! IN  LASTIN : NOMBRE EFFECTIF DE CHAMPS IN
 ! OUT VECELE : VECT_ELEM RESULTAT
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbin_maxi
-    parameter(nbin_maxi=42)
-    character(len=8) :: lpain(nbin_maxi)
-    character(len=19) :: lchin(nbin_maxi)
-!
-    integer(kind=8) :: ichar, nbchar, lastin
-    character(len=8) :: nomch0
-    character(len=24) :: nomlis
+    integer(kind=8), parameter :: nbFieldInMax = 100
+    character(len=8) :: lpain(nbFieldInMax)
+    character(len=19) :: lchin(nbFieldInMax)
+    integer(kind=8) :: iLoad, nbLoad, nbFieldIn
+    character(len=24), parameter :: listLoadIndxJv = '&&NOMLIS'
     integer(kind=8) :: genrec, ier
-    aster_logical :: lneum, lxfem
-    integer(kind=8) :: nbch, nbneum
+    aster_logical :: lneum, lXFEM
+    integer(kind=8) :: nbLoadIndx, nbneum
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
+
+! - INITIALISATIONS
+    call exixfe(model, ier)
+    lXFEM = ier .ne. 0
+    call detrsd('VECT_ELEM', vectElem)
+
+! - Get parameters for loads
+    call lisnnb(listLoad, nbLoad)
+    nbneum = lisnbg(listLoad, 'NEUM_MECA')
+
+    if (nbneum .gt. 0) then
+! ----- Set input fields
+        call vechmp(model, materField, materCode, caraElem, &
+                    varplu, lXFEM, partps, &
+                    nbFieldInMax, lpain, lchin, nbFieldIn)
+
+! ----- LISTE DES INDEX DES CHARGES
+        call lisnol(listLoad, 'NEUM_MECA', listLoadIndxJv, nbLoadIndx)
+        ASSERT(nbLoadIndx .gt. 0)
+
+        do iLoad = 1, nbLoad
+            call lislco(listLoad, iLoad, genrec)
+            lneum = lisico('NEUM_MECA', genrec)
+            if (lneum) then
+                call vechmx(model, listLoad, iLoad, nbLoadIndx, listLoadIndxJv, &
+                            nbFieldInMax, lpain, lchin, nbFieldIn, vectElem)
+            end if
+        end do
+    end if
 !
-! --- INITIALISATIONS
-!
-    nomlis = '&&NOMLIS'
-    call exixfe(nomo, ier)
-    lxfem = ier .ne. 0
-    call detrsd('VECT_ELEM', vecele)
-!
-! --- NOMBRE DE CHARGES
-!
-    call lisnnb(lischa, nbchar)
-!
-! --- NOMBRE DE CHARGES DE TYPE NEUMANN MECANIQUE
-!
-    nbneum = lisnbg(lischa, 'NEUM_MECA')
-    if (nbneum .eq. 0) goto 99
-!
-! --- CHAMPS D'ENTREES STANDARDS
-!
-    call vechmp(nomo, mate, mateco, carele, varplu, lxfem, &
-                partps, nbin_maxi, lpain, lchin, lastin)
-!
-! --- LISTE DES INDEX DES CHARGES
-!
-    call lisnol(lischa, 'NEUM_MECA', nomlis, nbch)
-    ASSERT(nbch .gt. 0)
-!
-! --- CALCUL
-!
-    do ichar = 1, nbchar
-        call lislco(lischa, ichar, genrec)
-        lneum = lisico('NEUM_MECA', genrec)
-        if (lneum) then
-!
-! ------- CALCUL DE LA CHARGE ?
-!
-            call lislch(lischa, ichar, nomch0)
-!
-! ------- BOUCLE SUR LES TOUS LES TYPES DE CHARGE PREVUS
-!
-            call vechmx(nomo, lischa, ichar, nbch, nomlis, &
-                        nbin_maxi, lpain, lchin, lastin, vecele)
-        end if
-    end do
-!
-99  continue
-!
-    call jedetr(nomlis)
+    call jedetr(listLoadIndxJv)
 !
     call jedema()
 end subroutine

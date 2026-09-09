@@ -52,6 +52,7 @@ subroutine nmeceb(sderro, loopName, loopState)
 !               'EVEN' - EVENEMENT PENDANT LA BOUCLE
 !               'ERRE' - ON STOPPE LA BOUCLE : ERREUR TRAITEE
 !               'STOP' - ON STOPPE LA BOUCLE : ERREUR NON TRAITEE
+!               'ARCH' - ON ARCHIVE LE DERNIER PAS DE TEMPS ET ON ARRETE LE CALCUL
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -84,6 +85,8 @@ subroutine nmeceb(sderro, loopName, loopState)
         convState = LOOP_STATE_STOP
     else if (loopState .eq. 'CTCD') then
         convState = LOOP_STATE_CTCD
+    else if (loopState .eq. 'ARCH') then
+        convState = LOOP_STATE_ARCH
     else
         ASSERT(ASTER_FALSE)
     end if

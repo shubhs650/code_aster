@@ -15,8 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine kitPrepBehaviour(compor, nvi_tot, compor_creep, compor_plas)
+!
+subroutine kitPrepBehaviour(compor, nvi_tot, comporFlua, comporPlas)
 !
     implicit none
 !
@@ -24,10 +24,10 @@ subroutine kitPrepBehaviour(compor, nvi_tot, compor_creep, compor_plas)
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 !
-    character(len=16), intent(in) :: compor(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
     integer(kind=8), intent(in) :: nvi_tot
-    character(len=16), intent(out) :: compor_creep(:)
-    character(len=16), intent(out) :: compor_plas(:)
+    character(len=16), intent(out) :: comporFlua(COMPOR_SIZE)
+    character(len=16), intent(out) :: comporPlas(COMPOR_SIZE)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -39,8 +39,8 @@ subroutine kitPrepBehaviour(compor, nvi_tot, compor_creep, compor_plas)
 !
 ! In  compor          : behaviour
 ! In  nvi_tot         : total number of internal variables
-! Out compor_creep    : behaviour for creep
-! Out compor_plas     : behaviour for plasticity
+! Out comporFlua      : behaviour for creep
+! Out comporPlas      : behaviour for plasticity
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -49,30 +49,24 @@ subroutine kitPrepBehaviour(compor, nvi_tot, compor_creep, compor_plas)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    compor_creep = 'VIDE'
-    compor_plas = 'VIDE'
-
+    comporFlua = 'VIDE'
+    comporPlas = 'VIDE'
     read (compor(CREEP_NVAR), '(I16)') nvi_flua
     read (compor(PLAS_NVAR), '(I16)') nvi_plas
     read (compor(PLAS_NUME), '(I16)') nume_plas
     read (compor(CREEP_NUME), '(I16)') nume_flua
-!
-! - Check number of internal variables
-!
     ASSERT(nvi_tot .eq. (nvi_flua+nvi_plas))
-!
+
 ! - Prepare COMPOR <CARTE> for creeping
-!
-    compor_creep(RELA_NAME) = compor(CREEP_NAME)
-    write (compor_creep(NVAR), '(I16)') nvi_flua
-    compor_creep(DEFO) = compor(DEFO)
-    write (compor_creep(NUME), '(I16)') nume_flua
-!
+    comporFlua(RELA_NAME) = compor(CREEP_NAME)
+    write (comporFlua(NVAR), '(I16)') nvi_flua
+    comporFlua(DEFO) = compor(DEFO)
+    write (comporFlua(NUME), '(I16)') nume_flua
+
 ! - Prepare COMPOR <CARTE> for plasticity
-!
-    compor_plas(RELA_NAME) = compor(PLAS_NAME)
-    write (compor_plas(NVAR), '(I16)') nvi_plas
-    compor_plas(DEFO) = compor(DEFO)
-    write (compor_plas(NUME), '(I16)') nume_plas
+    comporPlas(RELA_NAME) = compor(PLAS_NAME)
+    write (comporPlas(NVAR), '(I16)') nvi_plas
+    comporPlas(DEFO) = compor(DEFO)
+    write (comporPlas(NUME), '(I16)') nume_plas
 !
 end subroutine

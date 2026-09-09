@@ -17,15 +17,17 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine mertth(model, loadNameJv, loadInfoJv, caraElem, mateco, &
-                      time, time_move, temp_prev, temp_iter, matr_elem)
-        character(len=8), intent(in) :: model, caraElem
+    subroutine mertth(model, loadNameJv, loadInfoJv, &
+                      caraElem, materCode, &
+                      timeMapMatr, timeMapMove, &
+                      tempPrev, tempIter, &
+                      matrElem)
+        character(len=8), intent(in) :: model
         character(len=24), intent(in) :: loadNameJv, loadInfoJv
-        character(len=24), intent(in) :: mateco
-        character(len=24), intent(in) :: time
-        character(len=24), intent(in) :: time_move
-        character(len=24), intent(in) :: temp_prev
-        character(len=24), intent(in) :: temp_iter
-        character(len=19), intent(inout) :: matr_elem
+        character(len=8), intent(in) :: caraElem
+        character(len=24), intent(in) :: materCode
+        character(len=24), intent(in) :: timeMapMatr, timeMapMove
+        character(len=24), intent(in) :: tempPrev, tempIter
+        character(len=19), intent(inout) :: matrElem
     end subroutine mertth
 end interface

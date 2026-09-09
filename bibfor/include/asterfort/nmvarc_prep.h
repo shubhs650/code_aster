@@ -15,35 +15,30 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine nmvarc_prep(type_comp, model    , cara_elem, mateco   , varc_refe,&
-                           compor   , exis_temp, mxchin   , nbin     , lpain    ,&
-                           lchin    , mxchout  , nbout    , lpaout   , lchout   ,&
-                           sigm_prev, vari_prev, varc_prev, varc_curr, nume_harm)
-        character(len=1), intent(in) :: type_comp
+    subroutine nmvarc_prep(poum, model, caraElem, materCode, varcRefe, &
+                           compor, exis_temp, &
+                           nbFieldInMax, nbFieldIn, lpain, lchin, &
+                           nbFieldOutMax, nbFieldOut, lpaout, lchout, &
+                           sigmPrev, variPrev, varcPrev, varcCurr)
+        character(len=1), intent(in) :: poum
         character(len=24), intent(in) :: model
-        character(len=24), intent(in) :: mateco
-        character(len=24), intent(in) :: varc_refe
-        character(len=24), intent(in) :: cara_elem
+        character(len=24), intent(in) :: materCode
+        character(len=24), intent(in) :: varcRefe
+        character(len=24), intent(in) :: caraElem
         character(len=24), intent(in) :: compor
         aster_logical, intent(in) :: exis_temp
-        integer(kind=8), intent(in) :: mxchin
-        character(len=8), intent(inout) :: lpain(mxchin)
-        character(len=19), intent(inout) :: lchin(mxchin)
-        integer(kind=8), intent(out) :: nbin
-        integer(kind=8), intent(in) :: mxchout
-        character(len=8), intent(inout) :: lpaout(mxchout)
-        character(len=19), intent(inout) :: lchout(mxchout)
-        integer(kind=8), intent(out) :: nbout
-        character(len=19), intent(in) :: sigm_prev
-        character(len=19), intent(in) :: vari_prev
-        character(len=19), intent(in) :: varc_prev
-        character(len=19), intent(in) :: varc_curr
-        integer(kind=8), intent(in) :: nume_harm
+        integer(kind=8), intent(in) :: nbFieldInMax
+        character(len=8), intent(inout) :: lpain(nbFieldInMax)
+        character(len=19), intent(inout) :: lchin(nbFieldInMax)
+        integer(kind=8), intent(out) :: nbFieldIn
+        integer(kind=8), intent(in) :: nbFieldOutMax
+        character(len=8), intent(inout) :: lpaout(nbFieldOutMax)
+        character(len=19), intent(inout) :: lchout(nbFieldOutMax)
+        integer(kind=8), intent(out) :: nbFieldOut
+        character(len=19), intent(in) :: sigmPrev, variPrev
+        character(len=19), intent(in) :: varcPrev, varcCurr
     end subroutine nmvarc_prep
 end interface

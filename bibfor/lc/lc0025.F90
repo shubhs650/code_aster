@@ -15,58 +15,48 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0025(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, &
-                  epsm, deps, sigm, vim, option, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, numlc, dsidep, codret)
+                  instam, instap, &
+                  epsm, deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  numlc, dsidep, codret)
 !
     implicit none
 !
-! ======================================================================
-!
-! aslint: disable=W1504,W0104
+#include "asterf_types.h"
+#include "asterfort/lcrank.h"
+#include "asterfort/mctgel.h"
+#include "asterfort/rcvala.h"
+#include "asterfort/rcvarc.h"
+#include "asterfort/Behaviour_type.h"
 !
     character(len=*) :: fami
     integer(kind=8) :: kpg
     integer(kind=8) :: ksp
     integer(kind=8) :: ndim
     integer(kind=8) :: imate
-    character(len=16) :: compor(*)
-    real(kind=8) :: crit(*)
     real(kind=8) :: instam
     real(kind=8) :: instap
     real(kind=8) :: epsm(6)
     real(kind=8) :: deps(6)
     real(kind=8) :: sigm(6)
-    real(kind=8) :: vim(*)
+    integer(kind=8), intent(in) :: nvi
+    real(kind=8) :: vim(nvi)
     character(len=16) :: option
     real(kind=8) :: sigp(6)
-    real(kind=8) :: vip(*)
+    real(kind=8) :: vip(nvi)
     character(len=8) :: typmod(*)
-    integer(kind=8) :: icomp
-    integer(kind=8) :: nvi
     integer(kind=8) :: numlc
     real(kind=8) :: dsidep(6, 6)
     integer(kind=8) :: codret
-! Declaration of integer type variables
-#include "asterf_types.h"
-#include "asterfort/lcrank.h"
-#include "asterfort/mctgel.h"
-#include "asterfort/rcvala.h"
-#include "asterfort/rcvarc.h"
+! ======================================================================
 !
     integer(kind=8) :: iret, icode(3)
-!
-! Declaration of real type variables
     real(kind=8) :: tp, tm, tref, rprops(3), r0
-!
-! Declaration of character variables
     character(len=16) :: nomres(3)
     aster_logical     :: epflag
-!
-! Declaration of constant variables
     data r0/0.0d0/
 !
     common/debug/epflag
@@ -74,11 +64,6 @@ subroutine lc0025(fami, kpg, ksp, ndim, imate, &
 ! Remarque: Utilise RESI_INTE = instant_post > 0.
 ! --------  pour activation affichage detaille
 !
-!     if (instam.ge.crit(3) .and. crit(3).gt.1.d-5) then
-!         epflag = .true.
-!     else
-!         epflag = .false.
-!     endif
 !
 ! ======================================================================
 !

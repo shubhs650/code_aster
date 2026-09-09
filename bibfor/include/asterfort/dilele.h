@@ -19,21 +19,27 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine dilele(option, typmod, ds_dil, ndim, nnos, &
-                      nnom, npg, nddl, dimdef, iw, vff, &
-                      vffb, idff, idffb, geomi, compor, &
-                      mate, lgpg, carcri, instam, instap, &
+    subroutine dilele(ds_dil, option, typmod, &
+                      BEHInteg, compor, carcri, &
+                      ndim, nnos, nnom, npg, nddl, dimdef, &
+                      iw, vff, &
+                      vffb, idff, idffb, geomi, &
+                      lgpg, instam, instap, &
                       ddlm, ddld, siefm, vim, &
                       siefp, vip, fint, matr, &
                       lMatr, lVect, lSigm, codret)
         use dil_type
-        aster_logical :: lSigm, lMatr, lVect
+        use Behaviour_type
+        type(dil_modelisation), intent(in) :: ds_dil
+        character(len=16), intent(in) :: option
         character(len=8), intent(in) :: typmod(2)
-        character(len=16), intent(in):: option, compor(COMPOR_SIZE)
-        type(dil_modelisation) :: ds_dil
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        aster_logical :: lSigm, lMatr, lVect
         integer(kind=8), intent(in)          :: ndim, nnos, nnom, npg, nddl, lgpg, dimdef
-        integer(kind=8), intent(in)          :: mate, iw, idff, idffb
-        real(kind=8), intent(in)     :: carcri(CARCRI_SIZE), instam, instap
+        integer(kind=8), intent(in)          :: iw, idff, idffb
+        real(kind=8), intent(in)     :: instam, instap
         real(kind=8), intent(in)     :: geomi(ndim, nnos+nnom)
         real(kind=8), intent(in)     :: vff(nnos+nnom, npg), vffb(nnos, npg)
         real(kind=8), intent(in)     :: ddlm(nddl), ddld(nddl)

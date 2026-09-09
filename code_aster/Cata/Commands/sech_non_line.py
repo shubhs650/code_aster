@@ -91,9 +91,9 @@ SECH_NON_LINE = OPER(
     # -------------------------------------------------------------------
     AFFICHAGE=C_AFFICHAGE(),
     # -------------------------------------------------------------------
-    METHODE=SIMP(statut="f", typ="TXM", defaut="NEWTON", into=("NEWTON", "NEWTON_KRYLOV")),
+    METHODE=SIMP(statut="f", typ="TXM", defaut="NEWTON", into=("NEWTON",)),
     b_meth_newton=BLOC(
-        condition="""equal_to("METHODE", 'NEWTON') or equal_to("METHODE", 'NEWTON_KRYLOV')""",
+        condition="""equal_to("METHODE", 'NEWTON')""",
         NEWTON=FACT(
             statut="d",
             REAC_ITER=SIMP(statut="f", typ="I", defaut=0, val_min=0),

@@ -15,28 +15,30 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc0034(fami, kpg, ksp, imate,&
-                      carcri, epsm,&
-                      deps, sigm, vim, option, angmas,&
-                      sigp, vip, typmod, icomp,&
+    subroutine lc0034(BEHinteg, &
+                      fami, kpg, ksp, imate, &
+                      carcri, epsm, &
+                      deps, sigm, nvi, vim, option, &
+                      sigp, vip, typmod, &
                       dsidep, codret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg
         integer(kind=8), intent(in) :: ksp
         integer(kind=8), intent(in) :: imate
-        real(kind=8) :: carcri(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: epsm(*)
         real(kind=8), intent(in) :: deps(*)
         real(kind=8), intent(in) :: sigm(6)
-        real(kind=8) :: vim(50)
+        real(kind=8) :: vim(nvi)
         character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(3)
         real(kind=8), intent(out) :: sigp(6)
-        real(kind=8) :: vip(50)
+        real(kind=8) :: vip(nvi)
         character(len=8), intent(in) :: typmod(*)
-        integer(kind=8), intent(in) :: icomp
         real(kind=8), intent(out) :: dsidep(6, 6)
         integer(kind=8), intent(out) :: codret
     end subroutine lc0034

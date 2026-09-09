@@ -27,7 +27,7 @@ subroutine nmfici(nno, nddl, wref, vff, dfde, &
 #include "blas/dcopy.h"
 #include "blas/dscal.h"
     integer(kind=8) :: nno, nddl
-    real(kind=8) :: wref, vff(nno), dfde(2, nno), geom(3, nddl/3)
+    real(kind=8) :: wref, vff(nno), dfde(2, nno), geom(3, 2*nno)
     real(kind=8) :: poids, b(3, 3, nddl/3)
 !-----------------------------------------------------------------------
 !  MATRICE CINEMATIQUE POUR LES JOINTS 3D (EN UN POINT DE GAUSS DONNE)
@@ -51,7 +51,7 @@ subroutine nmfici(nno, nddl, wref, vff, dfde, &
 !
 !
 !    CALCUL DE LA BASE COVARIANTE LOCALE ET JACOBIEN
-    call subaco(nno, dfde, geom, cova)
+    call subaco(nno, dfde, geom(:, 1:nno), cova)
     call sumetr(cova, metr, jac)
     poids = wref*jac
 !

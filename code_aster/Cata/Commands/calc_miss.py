@@ -125,7 +125,13 @@ CALC_MISS = MACRO(
             max="**",
             fr=tr("Groupe de mailles fluide-sol"),
         ),
-        GROUP_MA_SOL_SOL=SIMP(statut="f", typ=grma, max="**", fr=tr("Groupe de mailles sol-sol")),
+        SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
+        b_gr_ma_sol_sol=BLOC(
+            condition="""SURF == 'NON'""",
+            GROUP_MA_SOL_SOL=SIMP(
+                statut="f", typ=grma, max="**", fr=tr("Groupe de mailles sol-sol")
+            ),
+        ),
         UNITE_IMPR_ASTER=SIMP(
             statut="f",
             typ=UnitType(),
@@ -198,6 +204,7 @@ CALC_MISS = MACRO(
             max="**",
             fr=tr("Groupe de mailles fluide-sol"),
         ),
+        SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
         GROUP_MA_SOL_SOL=SIMP(statut="f", typ=grma, max="**", fr=tr("Groupe de mailles sol-sol")),
         UNITE_IMPR_ASTER=SIMP(
             statut="f",
@@ -349,9 +356,6 @@ CALC_MISS = MACRO(
             GROUP_MA_INTERF=SIMP(
                 statut="f", typ=grma, max="**", fr=tr("Groupe de mailles de l'interface")
             ),
-            GROUP_MA_SOL_SOL=SIMP(
-                statut="f", typ=grma, max="**", fr=tr("Groupe de mailles sol-sol")
-            ),
             GROUP_MA_FLU_STR=SIMP(
                 condition="""is_in("ISSF", ('OUI'))""",
                 statut="f",
@@ -365,6 +369,13 @@ CALC_MISS = MACRO(
                 typ=grma,
                 max="**",
                 fr=tr("Groupe de mailles fluide-sol"),
+            ),
+            SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
+            b_gr_ma_sol_sol=BLOC(
+                condition="""SURF == 'NON')""",
+                GROUP_MA_SOL_SOL=SIMP(
+                    statut="f", typ=grma, max="**", fr=tr("Groupe de mailles sol-sol")
+                ),
             ),
             SOURCE_SOL=FACT(
                 statut="f",
@@ -395,7 +406,6 @@ CALC_MISS = MACRO(
                 Z0=SIMP(statut="f", typ="R", defaut=0.0),
                 TYPE=SIMP(statut="f", typ="TXM", into=("BINAIRE", "ASCII"), defaut="ASCII"),
                 ALLU=SIMP(statut="f", typ="R", defaut=0.0),
-                SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
                 DREF=SIMP(statut="f", typ="R"),
                 OFFSET_MAX=SIMP(statut="f", typ="R"),
                 OFFSET_NB=SIMP(statut="f", typ="I"),
@@ -413,7 +423,6 @@ CALC_MISS = MACRO(
                 b_noauto=BLOC(
                     condition="""equal_to("AUTO", 'NON')""",
                     regles=(ENSEMBLE("SPEC_MAX", "SPEC_NB"),),
-                    ALGO=SIMP(statut="f", typ="TXM", into=("DEPL", "REGU")),
                     RFIC=SIMP(statut="f", typ="R", defaut=0.0),
                     SPEC_MAX=SIMP(statut="f", typ="R"),
                     SPEC_NB=SIMP(statut="f", typ="I"),
@@ -445,7 +454,6 @@ CALC_MISS = MACRO(
             Z0=SIMP(statut="f", typ="R", defaut=0.0),
             TYPE=SIMP(statut="f", typ="TXM", into=("BINAIRE", "ASCII"), defaut="ASCII"),
             ALLU=SIMP(statut="f", typ="R", defaut=0.0),
-            SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
             DREF=SIMP(statut="f", typ="R"),
             OFFSET_MAX=SIMP(statut="f", typ="R"),
             OFFSET_NB=SIMP(statut="f", typ="I"),
@@ -463,7 +471,6 @@ CALC_MISS = MACRO(
             b_noauto=BLOC(
                 condition="""equal_to("AUTO", 'NON')""",
                 regles=(ENSEMBLE("SPEC_MAX", "SPEC_NB"),),
-                ALGO=SIMP(statut="f", typ="TXM", into=("DEPL", "REGU")),
                 RFIC=SIMP(statut="f", typ="R", defaut=0.0),
                 SPEC_MAX=SIMP(statut="f", typ="R"),
                 SPEC_NB=SIMP(statut="f", typ="I"),

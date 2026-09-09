@@ -19,12 +19,13 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmresi(alias, nno, ndim, coorma, coorpt,&
                       ksi1, ksi2, valeur)
         character(len=8) :: alias
         integer(kind=8) :: nno
         integer(kind=8) :: ndim
-        real(kind=8) :: coorma(27)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
         real(kind=8) :: coorpt(3)
         real(kind=8) :: ksi1
         real(kind=8) :: ksi2

@@ -15,24 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine mmvalp(nb_dim, elem_type, elem_nbno, nb_cmp, ksi1, &
-                  ksi2, vale_node, vale_poin)
+!
+subroutine mmvalp(cellCode, cellNbNode, ksi1, ksi2, valeCell, valePoin)
 !
     implicit none
 !
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmnonf.h"
 !
-!
-    integer(kind=8), intent(in) :: nb_dim
-    character(len=8), intent(in) :: elem_type
-    integer(kind=8), intent(in) :: elem_nbno
-    integer(kind=8), intent(in) :: nb_cmp
-    real(kind=8), intent(in) :: ksi1
-    real(kind=8), intent(in) :: ksi2
-    real(kind=8), intent(in) :: vale_node(*)
-    real(kind=8), intent(out) :: vale_poin(*)
+    character(len=8), intent(in) :: cellCode
+    integer(kind=8), intent(in) :: cellNbNode
+    real(kind=8), intent(in) :: ksi1, ksi2
+    real(kind=8), intent(in) :: valeCell(3, MT_NNOMAX2D)
+    real(kind=8), intent(out) :: valePoin(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -42,38 +38,32 @@ subroutine mmvalp(nb_dim, elem_type, elem_nbno, nb_cmp, ksi1, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  nb_dim           : dimension of element
-! In  elem_type        : type of element
-! In  elem_nbno        : number of nodes
-! In  nb_cmp           : number of components to interpolate
+! In  cellCode         : type of element
+! In  cellNbNode       : number of nodes
 ! In  ksi1             : first parametric coordinate of the point
 ! In  ksi2             : second parametric coordinate of the point
-! In  vale_node        : value of components at nodes
-! Out vale_poin        : value of components at point
+! In  valeCell         : value of components at nodes
+! Out valePoin         : value of components at point
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: shape_func(9)
-    integer(kind=8) :: i_node, i_cmp
+    integer(kind=8), parameter :: nbCmp = 3
+    real(kind=8) :: shape_func(MT_NNOMAX2D)
+    integer(kind=8) :: iNode, iCmp
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    do i_cmp = 1, nb_cmp
-        vale_poin(i_cmp) = 0.d0
-    end do
-    ASSERT(elem_nbno .le. 9)
-!
+    valePoin = 0.d0
+    ASSERT(cellNbNode .le. 9)
+
 ! - Shape functions
-!
-    call mmnonf(nb_dim, elem_nbno, elem_type, ksi1, ksi2, &
-                shape_func)
-!
+    call mmnonf(cellCode, ksi1, ksi2, shape_func)
+
 ! - Compute
-!
-    do i_cmp = 1, nb_cmp
-        do i_node = 1, elem_nbno
-            vale_poin(i_cmp) = shape_func(i_node)*vale_node((i_node-1)*nb_cmp+i_cmp)+ &
-                               vale_poin(i_cmp)
+    do iCmp = 1, nbCmp
+        do iNode = 1, cellNbNode
+            valePoin(iCmp) = shape_func(iNode)*valeCell(iCmp, iNode)+ &
+                             valePoin(iCmp)
         end do
     end do
 !

@@ -47,3 +47,15 @@ void ForwardModeResultPtr::setPointer( const ModeResultPtr &ptr ) {
     _ptr = ptr;
     _isSet = true;
 };
+
+const std::string ForwardModeResultPtr::getName() {
+    if ( !_isSet )
+        throw std::runtime_error( "No pointer set" );
+    return _ptr->getName();
+};
+
+const ASTERINTEGER ForwardModeResultPtr::getNumberOfIndexes() {
+    if ( !_isSet )
+        throw std::runtime_error( "No pointer set" );
+    return _ptr->getNumberOfIndexes();
+};

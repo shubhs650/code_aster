@@ -34,6 +34,7 @@ subroutine mmCompMatrCont(phase, l_pena_cont, i_reso_geom, &
 !
 #include "asterf_types.h"
 #include "asterfort/mmmtas.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmgnuu.h"
 #include "Contact_type.h"
 !
@@ -43,7 +44,7 @@ subroutine mmCompMatrCont(phase, l_pena_cont, i_reso_geom, &
     integer(kind=8), intent(in) :: nbdm
     integer(kind=8), intent(in) :: ndim, nne, nnm, nnl
     real(kind=8), intent(in) :: wpg, jacobi, coefac
-    real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2, 9)
+    real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2, MT_NNOMAX2D)
     real(kind=8), intent(in) :: norm(3), mprojn(3, 3)
     real(kind=8), intent(in) :: jeu, dlagrc
     real(kind=8), intent(in) :: mprt1n(3, 3), mprt2n(3, 3), mprnt1(3, 3), mprnt2(3, 3)

@@ -15,18 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine c3drep(nomte, epais, alpha, beta, coord,&
-                      numnoe, pgl)
-        character(len=16) :: nomte
-        real(kind=8) :: epais
-        real(kind=8) :: alpha
-        real(kind=8) :: beta
-        real(kind=8) :: coord(3, 9)
-        integer(kind=8) :: numnoe
-        real(kind=8) :: pgl(3, 3)
+    subroutine c3drep(nomte, &
+                      epais, alpha, beta, &
+                      nodeCoor, nodeNume, &
+                      pgl)
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: epais, alpha, beta
+        real(kind=8), intent(in) :: nodeCoor(3, *)
+        integer(kind=8), intent(in) :: nodeNume
+        real(kind=8), intent(out) :: pgl(3, 3)
     end subroutine c3drep
 end interface

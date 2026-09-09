@@ -20,9 +20,10 @@ interface
     subroutine lcgeominit(elem_dime     , &
                           nb_node_slav  , nb_node_mast  ,&
                           elem_mast_init, elem_slav_init)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: elem_dime
         integer(kind=8), intent(in) :: nb_node_slav,  nb_node_mast
-        real(kind=8), intent(out) :: elem_slav_init(nb_node_slav, elem_dime)
-        real(kind=8), intent(out) :: elem_mast_init(nb_node_mast, elem_dime)
+        real(kind=8), intent(out) :: elem_slav_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(out) :: elem_mast_init(3, MT_NNOMAX2D)
     end subroutine lcgeominit
 end interface

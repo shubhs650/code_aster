@@ -63,8 +63,8 @@ subroutine te0459(option, nomte)
     type(HHO_Data) :: hhoData
     type(HHO_Face) :: hhoFace
     type(HHO_Quadrature) :: hhoQuadFace
-    real(kind=8) :: rhs_forces(MSIZE_FACE_VEC), NeumValuesQP(3, MAX_QP_FACE), PresQP(MAX_QP_FACE)
-    real(kind=8) :: normal(3)
+    real(kind=8) :: rhs_forces(MSIZE_FACE_VEC), NeumValuesQP(3, MSIZE_QP_FACE)
+    real(kind=8) :: normal(3), PresQP(MSIZE_QP_FACE)
     integer(kind=8) :: fbs, celldim, ipg, nbpara, idim
     integer(kind=8) :: j_time, j_pres, j_forc
 !
@@ -72,7 +72,7 @@ subroutine te0459(option, nomte)
 !
     call hhoInfoInitFace(hhoFace, hhoData, hhoQuadFace=hhoQuadFace)
 !
-    ASSERT(hhoQuadFace%nbQuadPoints <= MAX_QP_FACE)
+    ASSERT(hhoQuadFace%nbQuadPoints <= MSIZE_QP_FACE)
 !
     celldim = hhoFace%ndim+1
     PresQP = 0.d0
@@ -156,7 +156,7 @@ subroutine te0459(option, nomte)
 !
         do idim = 1, celldim
             call hhoFuncFScalEvalQp(hhoQuadFace, zk8(j_forc-1+idim), nbpara, nompar, valpar, &
-                                    celldim, NeumValuesQP(idim, 1:MAX_QP_FACE))
+                                    celldim, NeumValuesQP(idim, 1:MSIZE_QP_FACE))
         end do
 !
     else if (option .eq. 'CHAR_MECA_FR1D2D' .or. option .eq. 'CHAR_MECA_FR2D3D') then

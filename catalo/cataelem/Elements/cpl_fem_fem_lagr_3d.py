@@ -100,8 +100,25 @@ class CL_Q4Q4(Element):
             para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PPAIRR, LC.CPAIRR)),
             para_out=((SP.PMATUUR, MMATUUR),),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),)),
-        OP.TOU_INI_ELNO(te=99, para_out=((OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
     )
 
 
@@ -797,6 +814,23 @@ class CL_POI3D(CL_Q4Q4):
         OP.RIGI_ELAS_CPL(
             te=524, para_in=((SP.PGEOMER, LC.EGEOM2D),), para_out=((SP.PMATUUR, MMATUUR),)
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
-        OP.TOU_INI_ELNO(te=99, para_out=((OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
     )

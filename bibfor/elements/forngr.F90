@@ -18,10 +18,16 @@
 ! aslint: disable=W0413
 ! => real zero (init by calcul.F90)
 !
-subroutine forngr(option, nomte)
+subroutine forngr(plateCara, plateOrie, &
+                  option, nomte)
+!
+    use plate_type
+    use resi_refe_module, only: RESI_REFE
     implicit none
-#include "jeveux.h"
+!
+#include "asterfort/assert.h"
 #include "asterfort/btsig.h"
+#include "asterfort/cosiro.h"
 #include "asterfort/jacbm1.h"
 #include "asterfort/jevech.h"
 #include "asterfort/jevete.h"
@@ -34,72 +40,46 @@ subroutine forngr(option, nomte)
 #include "asterfort/promat.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
-#include "asterfort/vectan.h"
 #include "asterfort/vectgt.h"
 #include "asterfort/vectpe.h"
 #include "asterfort/vectrn.h"
 #include "blas/daxpy.h"
-    character(len=16) :: option, nomte
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     FONCTION  :  FORC_NODA DES COQUE_3D
 !                  GEOMETRIQUE AVEC GRANDES ROTATIONS
 !
-!     ARGUMENTS :
-!     DONNEES   :      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
+! --------------------------------------------------------------------------------------------------
 !
-!     OPTIONS   :     FORC_NODA      : FORCE INTERNE
-!
-! ......................................................................
-!
-!
-!---- DECLARATIONS BIDONS
-!
+    integer(kind=8), parameter :: npge = 3
     real(kind=8) :: bid33(3, 3)
-!
-!---- DECLARATIONS LOCALES
-!
     integer(kind=8) :: i, j, in, ii, nval, k1, iret, itab(7)
-!
-!---- DECLARATIONS RIGIDITE GEOMETRIQUE
-!
     real(kind=8) :: stild(5)
-!
-!---- DECLARATIONS STANDARDS
-!
-    integer(kind=8) :: igeom, icontm, ivectu
-    integer(kind=8) :: lzi, lzr, jcara
+    integer(kind=8) :: jvGeom, icontm, ivectu
+    integer(kind=8) :: lzi, lzr
     integer(kind=8) :: nb1, nb2
-!
-!---- DECLARATIONS PROPRES COQUE_3D NON LINEAIRE
-!
     integer(kind=8) :: inte, intsr, intsn
     real(kind=8) :: eptot
-    integer(kind=8) :: npge, npgsr, npgsn
-    parameter(npge=3)
-    real(kind=8) :: vecta(9, 2, 3)
-    real(kind=8) :: vectn(9, 3), vectpt(9, 2, 3)
+    integer(kind=8) :: npgsr, npgsn
     real(kind=8) :: vecnph(9, 3)
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
+    real(kind=8) :: vectTangKpg(2, 3), vectBaseKpg(3, 3)
     real(kind=8) :: jm1(3, 3), detj
     real(kind=8) :: jdn1ri(9, 51), jdn1rc(9, 51)
     real(kind=8) :: jdn1ni(9, 51), jdn1nc(9, 51)
     real(kind=8) :: jdn2rc(9, 51)
     real(kind=8) :: jdn2nc(9, 51)
     real(kind=8) :: ksi3s2
-!
-!---- DECLARATIONS COUCHES
-!
-    integer(kind=8) :: nbcou, nbsp
-    integer(kind=8) :: icou
-    real(kind=8) :: zic, zmin, epais, coef
-! --- CONTRAINTE DE REFERENCE POUR REFE_FORC_NODA
+    integer(kind=8) :: nbLayer, nbsp
+    integer(kind=8) :: iLayer
+    real(kind=8) :: zic, zmin, hLayer, coef
     real(kind=8) :: sigref
-!
-!---- DECLARATIONS COQUE NON LINEAIRE
-!
     integer(kind=8) :: jvDisp
     real(kind=8) :: b1su(5, 51), b2su(5, 51)
     real(kind=8) :: b1src(2, 51, 4)
@@ -110,164 +90,83 @@ subroutine forngr(option, nomte)
     real(kind=8) :: b2mri(3, 51, 4)
     real(kind=8) :: dudxri(9), dudxni(9)
     real(kind=8) :: dudxrc(9), dudxnc(9)
-    real(kind=8) :: vecu(8, 3), vecthe(9, 3)
+    real(kind=8) :: vectDisp(8, 3), vectRota(9, 3)
     real(kind=8) :: vecpe(51)
-!    POUR_RESI_REFE_RELA
     real(kind=8) :: sigtmp(5), ftemp(51), effint(51)
     character(len=16) :: kmess(2)
-!
-!---- DECLARATIONS ROTATION GLOBAL LOCAL AU NOEUDS
-!
-    integer(kind=8) :: jnbspi
-!
     real(kind=8) :: blam(9, 3, 3)
     blas_int :: b_incx, b_incy, b_n
+    type(RESI_REFE):: refe
 !
+! --------------------------------------------------------------------------------------------------
 !
-! DEB
-!
-!---- LE NOMBRE DE COUCHES
-!
-    call jevech('PNBSP_I', 'L', jnbspi)
-    nbcou = zi(jnbspi-1+1)
-!
-    if (nbcou .le. 0) then
-        call utmess('F', 'ELEMENTS_12')
-    end if
-!
-!______________________________________________________________________
-!
-!---- RECUPERATION DES POINTEURS ( L : LECTURE )
-!______________________________________________________________________
-!
-!....... GEOMETRIE INITIALE ( COORDONNEES INITIALE DES NOEUDS )
-!
-    call jevech('PGEOMER', 'L', igeom)
-!
-!---- RECUPERATION DES OBJETS INITIALISES
-!
-!....... LES ENTIERS
-!
+
+! - Get plate parameters
+    nbLayer = plateCara%nbLayer
+    ASSERT(nbLayer .ge. 1)
+    eptot = plateCara%thick
+    zmin = -eptot/2.d0
+    hLayer = eptot/nbLayer
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
-!
-!------- NOMBRE DE NOEUDS ( NB1 : SERENDIP , NB2 : LAGRANGE )
-!
     nb1 = zi(lzi-1+1)
     nb2 = zi(lzi-1+2)
-!
-!------- NBRE POINTS INTEGRATIONS ( NPGSR : REDUITE , NPGSN : NORMALE )
-!
     npgsr = zi(lzi-1+3)
     npgsn = zi(lzi-1+4)
-!
-!....... LES REELS ( FONCTIONS DE FORMES, DERIVEES ET POIDS )
-!
     call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
-!
-!------- CONTRAINTES DE CAUCHY AUX POINTS DE GAUSS
-!
+
+! - Get stress (in good frame !)
     if (option .eq. 'FORC_NODA') then
-!
-        call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, &
-                    itab=itab)
-        icontm = itab(1)
+        call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, itab=itab)
         nbsp = itab(7)
-        if (nbsp .ne. npge*nbcou) then
+        if (nbsp .ne. npge*nbLayer) then
             call utmess('F', 'ELEMENTS_4')
         end if
-!
+        call cosiro(plateCara, plateOrie, &
+                    'PSIEFR', 'L', 'UI', 'G', &
+                    icontm)
     else if (option .eq. 'REFE_FORC_NODA') then
-!
-        call terefe('SIGM_REFE', 'MECA_COQUE3D', sigref)
-!
+        call refe%Init(nomte)
+        sigref = refe%GetRef('SIGM')
+        call refe%Check()
     end if
-!
-!______________________________________________________________________
-!
-!---- RECUPERATION DES POINTEURS ( E : ECRITURE ) SELON OPTION
-!______________________________________________________________________
-!
-!------- VECTEUR DES FORCES INTERNES
-!
-    call jevech('PVECTUR', 'E', ivectu)
-!
-!______________________________________________________________________
-!
-!---- CARACTERISTIQUES DE COQUE
-!
-    call jevech('PCACOQU', 'L', jcara)
-!
-!---- EPAISSEUR TOTALE
-!
-    eptot = zr(jcara)
-!
-!---- COORDONNEE MINIMALE SUIVANT L EPAISSEUR
-!
-    zmin = -eptot/2.d0
-!
-!---- EPAISSEUR D UNE COUCHE
-!
-    epais = eptot/nbcou
-!
-!______________________________________________________________________
-!
-!---- RECUPERATION DE L ADRESSE DES VARIABLES NODALES TOTALES
-!
-!---- A L INSTANT MOINS  ( PAS PRECEDENT )
-!
+
+! - Get displacements
     if (option .eq. "FORC_NODA") then
         call jevech('PDEPLAR', 'L', jvDisp)
     else
         call jevech('PDEPLMR', 'L', jvDisp)
     end if
-!
-!______________________________________________________________________
-!
-!---- REPERE LOCAUX AUX NOEUDS SUR LA CONFIGURATION INITIALE
-!
-    call vectan(nb1, nb2, zr(igeom), zr(lzr), vecta, &
-                vectn, vectpt)
-!
-!---- DEPLACEMENT TOTAL AUX NOEUDS DE SERENDIP
-!
-    call r8inir(8*3, 0.d0, vecu, 1)
-!
+
+! - DEPLACEMENT TOTAL AUX NOEUDS DE SERENDIP
+    vectDisp = 0.d0
     do in = 1, nb1
         do ii = 1, 3
-            vecu(in, ii) = zr(jvDisp-1+6*(in-1)+ii)
+            vectDisp(in, ii) = zr(jvDisp-1+6*(in-1)+ii)
         end do
     end do
-!
-!---- ROTATION TOTALE AUX NOEUDS
-!
-    call r8inir(9*3, 0.d0, vecthe, 1)
-!
-!
-!------- EN ACCORD AVEC LA MISE A JOUR DES GRANDES ROTATIONS AUFAURE
-!
-!------- NOEUDS DE SERENDIP
-!
+
+! - ROTATION TOTALE AUX NOEUDS
+    vectRota = 0.d0
     do in = 1, nb1
         do ii = 1, 3
-            vecthe(in, ii) = zr(jvDisp-1+6*(in-1)+ii+3)
+            vectRota(in, ii) = zr(jvDisp-1+6*(in-1)+ii+3)
         end do
     end do
-!
-!--------- SUPERNOEUD
-!
     do ii = 1, 3
-        vecthe(nb2, ii) = zr(jvDisp-1+6*nb1+ii)
+        vectRota(nb2, ii) = zr(jvDisp-1+6*nb1+ii)
     end do
-!
-!
-!---- TRANSFORMEES NORMALES ET MATRICES DE ROTATION AUX NOEUDS
-!
-    call vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
+
+! - TRANSFORMEES NORMALES ET MATRICES DE ROTATION AUX NOEUDS
+    call vectrn(nb2, plateOrie%vectTang, plateOrie%vectNorm, vectRota, vecnph, &
                 blam)
-!
-!---- VECTEUR PE DES VARIABLES NODALES TOTALES GENERALISEES
-!
-    call vectpe(nb1, nb2, vecu, vectn, vecnph, &
+
+! - VECTEUR PE DES VARIABLES NODALES TOTALES GENERALISEES
+    call vectpe(nb1, nb2, vectDisp, plateOrie%vectNorm, vecnph, &
                 vecpe)
 !
 !______________________________________________________________________
@@ -285,55 +184,40 @@ subroutine forngr(option, nomte)
     call r8inir(2*51*4, 0.d0, b1src, 1)
 !
     call r8inir(2*51*4, 0.d0, b2src, 1)
-!
-! POUR RESI_REFE_RELA
-!
-    if (option .eq. 'REFE_FORC_NODA') then
-!
-        call r8inir(51, 0.d0, ftemp, 1)
-!
-    end if
-!
-!
-!==== BOUCLE SUR LES COUCHES
-!
-    do icou = 1, nbcou
-!
-!======= BOUCLE SUR LES POINTS D INTEGRATION SUR L EPAISSEUR
-!
+
+    call jevech('PVECTUR', 'E', ivectu)
+    ftemp = 0.d0
+    do iLayer = 1, nbLayer
         do inte = 1, npge
-!
-!---------- POSITION SUR L EPAISSEUR ET POIDS D INTEGRATION
-!
+! --------- POSITION SUR L EPAISSEUR ET POIDS D INTEGRATION
             if (inte .eq. 1) then
-                zic = zmin+(icou-1)*epais
+                zic = zmin+(iLayer-1)*hLayer
                 coef = 1.d0/3.d0
             else if (inte .eq. 2) then
-                zic = zmin+epais/2.d0+(icou-1)*epais
+                zic = zmin+hLayer/2.d0+(iLayer-1)*hLayer
                 coef = 4.d0/3.d0
             else
-                zic = zmin+epais+(icou-1)*epais
+                zic = zmin+hLayer+(iLayer-1)*hLayer
                 coef = 1.d0/3.d0
             end if
-!
+
 !---------- COORDONNEE ISOP.  SUR L EPAISSEUR  DIVISEE PAR DEUX
-!
-            ksi3s2 = zic/epais
-!
-!========== 1 ERE BOUCLE SUR POINTS INTEGRATION REDUITE SURFACE MOYENNE
-!
+            ksi3s2 = zic/hLayer
+
             do intsr = 1, npgsr
+! ------------- Compute local base at integration point
+                call vectgt(plateOrie, 0, nb1, &
+                            zr(jvGeom), ksi3s2, intsr, &
+                            hLayer, zr(lzr), &
+                            vectBaseKpg, vectTangKpg)
 !
-                call vectgt(0, nb1, zr(igeom), ksi3s2, intsr, &
-                            zr(lzr), epais, vectn, vectg, vectt)
-!
-                call jacbm1(epais, vectg, vectt, bid33, jm1, &
+                call jacbm1(hLayer, vectTangKpg, vectBaseKpg, bid33, jm1, &
                             detj)
 !
 !------------- J1DN1RI ( 9 , 6 * NB1 + 3 ) INDN = 0 REDUIT
 !                                          INDC = 0 INCOMPLET
                 call jm1dn1(0, 0, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsr, jm1, jdn1ri)
+                            hLayer, ksi3s2, intsr, jm1, jdn1ri)
 !
 !------------- CALCUL DE    DUDXRI ( 9 ) REDUIT INCOMPLET
 !
@@ -343,14 +227,14 @@ subroutine forngr(option, nomte)
 !+++++++++++++ B1MRI ( 3 , 51 , 4 ) MEMBRANE REDUIT INCOMPLET
 !              B2MRI ( 3 , 51 , 4 )
 !
-                call matbmr(nb1, vectt, dudxri, intsr, jdn1ri, &
+                call matbmr(nb1, vectBaseKpg, dudxri, intsr, jdn1ri, &
                             b1mri, b2mri)
 !
 !------------- J1DN1RC ( 9 , 6 * NB1 + 3 ) INDN = 0 REDUIT
 !                                          INDC = 1 COMPLET
 !
                 call jm1dn1(0, 1, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsr, jm1, jdn1rc)
+                            hLayer, ksi3s2, intsr, jm1, jdn1rc)
 !
 !------------- CALCUL DE    DUDXRC ( 9 ) REDUIT COMPLET
 !
@@ -361,35 +245,31 @@ subroutine forngr(option, nomte)
 !                                          INDC = 1 COMPLET
 !
                 call jm1dn2(0, 1, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsr, vecnph, jm1, &
+                            hLayer, ksi3s2, intsr, vecnph, jm1, &
                             jdn2rc)
 !
 !+++++++++++++ B1SRC ( 2 , 51 , 4 ) SHEAR REDUIT COMPLET
 !              B2SRC ( 2 , 51 , 4 )
 !
-                call matbsr(nb1, vectt, dudxrc, intsr, jdn1rc, &
+                call matbsr(nb1, vectBaseKpg, dudxrc, intsr, jdn1rc, &
                             jdn2rc, b1src, b2src)
-!
-!========== FIN 1 ERE BOUCLE NPGSR
-!
             end do
-!
-!========== BOUCLE SUR POINTS INTEGRATION NORMALE SURFACE MOYENNE
-!
+
             do intsn = 1, npgsn
+! ------------- Compute local base at integration point
+                call vectgt(plateOrie, 1, nb1, &
+                            zr(jvGeom), ksi3s2, intsn, &
+                            hLayer, zr(lzr), &
+                            vectBaseKpg, vectTangKpg)
 !
-!
-                call vectgt(1, nb1, zr(igeom), ksi3s2, intsn, &
-                            zr(lzr), epais, vectn, vectg, vectt)
-!
-                call jacbm1(epais, vectg, vectt, bid33, jm1, &
+                call jacbm1(hLayer, vectTangKpg, vectBaseKpg, bid33, jm1, &
                             detj)
 !
 !------------- J1DN1NC ( 9 , 6 * NB1 + 3 ) INDN = 1 NORMAL
 !                                          INDC = 1 COMPLET
 !
                 call jm1dn1(1, 1, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsn, jm1, jdn1nc)
+                            hLayer, ksi3s2, intsn, jm1, jdn1nc)
 !
 !------------- CALCUL DE     DUDXNC ( 9 ) NORMAL COMPLET
 !
@@ -400,20 +280,20 @@ subroutine forngr(option, nomte)
 !                                          INDC = 1 COMPLET
 !
                 call jm1dn2(1, 1, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsn, vecnph, jm1, &
+                            hLayer, ksi3s2, intsn, vecnph, jm1, &
                             jdn2nc)
 !
 !+++++++++++++ B1MNC ( 3 , 51 ) MEMBRANE NORMAL COMPLET
 !              B2MNC ( 3 , 51 )
 !
-                call matbmn(nb1, vectt, dudxnc, jdn1nc, jdn2nc, &
+                call matbmn(nb1, vectBaseKpg, dudxnc, jdn1nc, jdn2nc, &
                             b1mnc, b2mnc)
 !
 !------------- J1DN1NI ( 9 , 6 * NB1 + 3 ) INDN = 1 NORMAL
 !                                          INDC = 0 INCOMPLET
 !
                 call jm1dn1(1, 0, nb1, nb2, zr(lzr), &
-                            epais, ksi3s2, intsn, jm1, jdn1ni)
+                            hLayer, ksi3s2, intsn, jm1, jdn1ni)
 !
 !------------- CALCUL DE     DUDXNI ( 9 ) NORMAL INCOMPLET
 !
@@ -423,7 +303,7 @@ subroutine forngr(option, nomte)
 !+++++++++++++ B1MNI ( 3 , 51 ) MEMBRANE NORMAL INCOMPLET
 !              B2MNI ( 3 , 51 )
 !
-                call matbmn(nb1, vectt, dudxni, jdn1ni, jdn1ni, &
+                call matbmn(nb1, vectBaseKpg, dudxni, jdn1ni, jdn1ni, &
                             b1mni, b2mni)
 !
 !============= B1SU ( 5 , 51 ) SUBSTITUTION TOTAL
@@ -437,7 +317,7 @@ subroutine forngr(option, nomte)
 !
 !------- CONTRAINTES DE CAUCHY = PK2 AUX POINTS DE GAUSS
 !
-                    k1 = 6*((intsn-1)*npge*nbcou+(icou-1)*npge+inte-1)
+                    k1 = 6*((intsn-1)*npge*nbLayer+(iLayer-1)*npge+inte-1)
                     stild(1) = zr(icontm-1+k1+1)
                     stild(2) = zr(icontm-1+k1+2)
                     stild(3) = zr(icontm-1+k1+4)
@@ -454,11 +334,6 @@ subroutine forngr(option, nomte)
 !------------- VARIABLES INTERNES INACTIVES COMPORTEMENT NON PLASTIQUE
 !
                 else if (option .eq. 'REFE_FORC_NODA') then
-!
-!            CALCUL DES FORCES NODALES DE REFERENCE EN AFFECTANT
-!            LA VALEUR SIGM_REFE A CHAQUE CMP SUCCESSIVEMENT
-!            POUR CHAQUE POINT D'INTEGRATION
-!
                     call r8inir(5, 0.d0, sigtmp, 1)
                     call r8inir(51, 0.d0, effint, 1)
 !
@@ -479,12 +354,11 @@ subroutine forngr(option, nomte)
 !      ON PREND LA VALEUR MOYENNE DES FORCES NODALES DE REFERENCE
 !
     if (option .eq. 'REFE_FORC_NODA') then
-        nval = nbcou*npge*npgsn*5
+        nval = nbLayer*npge*npgsn*5
         b_n = to_blas_int(51)
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)
-        call daxpy(b_n, 1.d0/nval, ftemp, b_incx, zr(ivectu), &
-                   b_incy)
+        call daxpy(b_n, 1.d0/nval, ftemp, b_incx, zr(ivectu), b_incy)
         do j = 1, 51
             if (zr(ivectu+j-1) .eq. 0.) then
                 kmess(1) = 'COQUE3D'

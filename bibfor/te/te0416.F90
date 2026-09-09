@@ -15,66 +15,64 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0416(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
-#include "jeveux.h"
+!
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cosiro.h"
 #include "asterfort/forngr.h"
 #include "asterfort/fornpd.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
-#include "asterfort/Behaviour_type.h"
-    character(len=16) :: option, nomte
-!     CALCUL DES OPTIONS DES ELEMENTS DE COQUE : COQUE_3D
-!     ----------------------------------------------------------------
+#include "jeveux.h"
 !
+    character(len=16) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! COQUE_3D - FORC_NODA / REFE_FORC_NODA
+!
+! --------------------------------------------------------------------------------------------------
 !
     character(len=16), pointer :: compor(:) => null()
-    integer(kind=8) :: ibid, iret, icompo
+    integer(kind=8) ::  iret, icompo, jvGeom
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
-! DEB
-!
-    if (option .eq. 'FORC_NODA') then
-!        -- PASSAGE DES CONTRAINTES DANS LE REPERE INTRINSEQUE :
-        call cosiro(nomte, 'PSIEFR', 'L', 'UI', 'G', &
-                    ibid, 'S')
-    end if
-!
-!
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
+
+! - Compute vector
     call tecach('ONO', 'PCOMPOR', 'L', iret, iad=icompo)
     if (icompo .eq. 0) then
-        call fornpd(option, nomte)
-        goto 999
+        call fornpd(plateCara, plateOrie, &
+                    option, nomte)
     else
-
         call jevech('PCOMPOR', 'L', vk16=compor)
-
         if (compor(DEFO) .eq. 'GROT_GDEP') then
-
-!           DEFORMATION DE GREEN
-
-            call forngr(option, nomte)
-!
-            goto 999
-!
+            call forngr(plateCara, plateOrie, &
+                        option, nomte)
         else if (compor(DEFO) (1:5) .eq. 'PETIT') then
-
-            call fornpd(option, nomte)
+            call fornpd(plateCara, plateOrie, &
+                        option, nomte)
         else
-
-!----------- AUTRES MESURES DE DEFORMATIONS
-!
             call utmess('F', 'ELEMENTS3_93', sk=compor(DEFO))
-!
         end if
     end if
-!
-!
-999 continue
-!
-!
 !
 end subroutine

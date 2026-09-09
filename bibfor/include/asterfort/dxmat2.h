@@ -15,19 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxmat2(pgl, icou, npg, ordi, epi,&
-                      epais, dm, indith)
-        real(kind=8) :: pgl(3, 3)
-        integer(kind=8) :: icou
-        integer(kind=8) :: npg
-        real(kind=8) :: ordi
-        real(kind=8) :: epi
-        real(kind=8) :: epais
-        real(kind=8) :: dm(3, 3)
-        integer(kind=8) :: indith
+    subroutine dxmat2(plateCara, plateOrie, &
+                      iLayer, npg, &
+                      ordi, epi, &
+                      epais, dm)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: iLayer, npg
+        real(kind=8), intent(out) :: ordi, epi
+        real(kind=8), intent(out) :: epais, dm(3, 3)
     end subroutine dxmat2
 end interface

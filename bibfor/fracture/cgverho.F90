@@ -47,7 +47,7 @@ function cgverho(imate)
     aster_logical :: rhoabs
     real(kind=8) :: rhobid(1)
     character(len=16) :: phenom
-    character(len=4) :: fami
+    character(len=8) :: fami
 !
 ! ----------------------------------------------------------------------
 !

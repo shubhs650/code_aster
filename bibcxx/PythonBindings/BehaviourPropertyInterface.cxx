@@ -74,6 +74,17 @@ Returns:
     bool: *True* if present, *False* otherwise.
         )",
               py::arg( "behaviour" ) )
+        .def( "variNameToCmp", &BehaviourProperty::variNameToCmp, R"(
+Return the components ("V1", "V1", "V3", etc.) corresponding to variNames for a given set of cells
+
+Arguments:
+    cells (list[int]): the cells
+    variNames (list[string]): the variNames
+
+Returns:
+    list[string]: return the components
+        )",
+              py::arg( "cells" ), py::arg( "variNames" ) )
         .def( "hasAnnealing", &BehaviourProperty::hasAnnealing, R"(
 Returns a flag if annealing post-processing is enabled
 

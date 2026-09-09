@@ -35,11 +35,11 @@ subroutine ap_infast_n(mesh, newgeo, pair_tole, dist_ratio, nb_elem_mast, &
 #include "asterfort/aptype.h"
 #include "asterfort/prjint_ray.h"
 #include "asterfort/gtctma.h"
-!#include "asterfort/gtclno.h"
 #include "asterfort/gtclno_n.h"
 #include "asterfort/gtlmex.h"
 #include "asterfort/codent.h"
 #include "asterfort/int_to_char8.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: mesh
     character(len=19), intent(in) :: newgeo
@@ -87,18 +87,18 @@ subroutine ap_infast_n(mesh, newgeo, pair_tole, dist_ratio, nb_elem_mast, &
     integer(kind=8) :: elem_slav_nbnode, elem_slav_dime, elem_slav_nume, elem_slav_indx
     character(len=24) :: conx_inve
     character(len=8) :: elem_slav_type, elem_slav_code, knuzo
-    real(kind=8) :: elem_slav_coor(27)
+    real(kind=8) :: elem_slav_coor(3, MT_NNOMAX2D)
     integer(kind=8) ::  elin_slav_nbnode
     integer(kind=8) :: elem_mast_nbnode, elem_mast_dime, elem_mast_nume, elem_mast_indx
     character(len=8) :: elem_mast_type, elem_mast_code, elem_slav_name, elem_mast_name
-    real(kind=8) :: elem_mast_coor(27)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8) :: elin_mast_nbnode
     character(len=8) :: elin_mast_code, elin_slav_code
     integer(kind=8) :: slav_indx_mini, mast_indx_mini
     integer(kind=8) :: jv_geom, i_zone
     integer(kind=8) :: i_elem_slav, i_elem_mast
     integer(kind=8) :: nb_poin_inte, nume_node_cl, nb_el_ma_ax
-    real(kind=8) :: poin_inte_es(32), poin_inte_ma(32), inte_weight, center(3)
+    real(kind=8) :: poin_inte_es(2, 8), poin_inte_ma(2, 8), inte_weight, center(3)
     integer(kind=8), pointer :: v_mesh_typmail(:) => null()
     integer(kind=8), pointer :: v_mesh_connex(:) => null()
     integer(kind=8), pointer :: v_connex_lcum(:) => null()

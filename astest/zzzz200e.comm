@@ -950,12 +950,12 @@ CALC_MISS(
     UNITE_IMPR_ASTER=26,
     UNITE_RESU_IMPE=31,
     UNITE_RESU_FORC=41,
+    SURF="OUI",
     PARAMETRE=_F(
         FREQ_MIN=3.0,  # 0.3,
         FREQ_MAX=3.0,
         FREQ_PAS=2.7,
         Z0=-6.05,
-        SURF="OUI",
         AUTO="OUI",
         OPTION_DREF="NON",
         OPTION_RFIC="NON",
@@ -1035,6 +1035,7 @@ CALC_MISS(
     PRECISION=1e-10,
     UNITE_RESU_RIGI=35,
     UNITE_RESU_AMOR=37,
+    SURF="OUI",
     # UNITE_RESU_MASS = 38,
     # TYPE_FICHIER_TEMPS='BINAIRE',
     MATR_GENE=_F(
@@ -1045,15 +1046,7 @@ CALC_MISS(
         DECOMP_IMPE="PRODUIT",
     ),
     PARAMETRE=_F(
-        FREQ_IMAG=1.0,
-        Z0=-6.05,
-        SURF="OUI",
-        DREF=15,
-        ALGO="DEPL",
-        OFFSET_MAX=60,
-        OFFSET_NB=400,
-        SPEC_MAX=0.03,
-        SPEC_NB=2048,
+        FREQ_IMAG=1.0, Z0=-6.05, DREF=15, OFFSET_MAX=60, OFFSET_NB=400, SPEC_MAX=0.03, SPEC_NB=2048
     ),
 )
 

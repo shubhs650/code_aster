@@ -15,13 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine nmvple(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, typmod, instam, instap, &
+                  carcri, typmod, instam, instap, &
                   deps, sigm, vim, option, sigp, &
                   vip, dsidep, iret)
-! aslint: disable=
+!
     implicit none
+!
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/ggplem.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
@@ -29,11 +32,13 @@ subroutine nmvple(fami, kpg, ksp, ndim, imate, &
 #include "asterfort/verift.h"
 #include "asterfort/vpalem.h"
 #include "asterfort/zerofr.h"
+!
     integer(kind=8) :: ndim, imate, iret, kpg, ksp
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
-    real(kind=8) :: crit(4), instam, instap
+    character(len=16) :: option
+    real(kind=8) :: instam, instap
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: deps(6)
     real(kind=8) :: sigm(6), vim(1), sigp(6), vip(1), dsidep(6, 6)
 ! ----------------------------------------------------------------------
@@ -96,7 +101,7 @@ subroutine nmvple(fami, kpg, ksp, ndim, imate, &
                 epsth_=epsthe)
 !
     iret = 0
-    theta = crit(4)
+    theta = carcri(4)
     t1 = abs(theta-0.5d0)
     t2 = abs(theta-1.d0)
     prec = 0.01d0
@@ -228,8 +233,8 @@ subroutine nmvple(fami, kpg, ksp, ndim, imate, &
 !
 !----RESOLUTION DE L'EQUATION SCALAIRE----
 !
-    prec = crit(3)
-    niter = nint(crit(1))
+    prec = carcri(3)
+    niter = nint(carcri(1))
 !
     a0 = -sieleq
 !

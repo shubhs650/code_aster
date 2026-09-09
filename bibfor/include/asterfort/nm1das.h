@@ -15,26 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nm1das(fami, kpg, ksp, e, syc,&
-                      syt, etc, ett, cr, tmoins,&
-                      tplus, icodma, sigm, deps, vim,&
+    subroutine nm1das(materPara, &
+                      e, syc, &
+                      syt, etc, ett, &
+                      sigm, deps, vim, &
                       sig, vip, dsdem, dsdep)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         real(kind=8) :: e
         real(kind=8) :: syc
         real(kind=8) :: syt
         real(kind=8) :: etc
         real(kind=8) :: ett
-        real(kind=8) :: cr
-        real(kind=8) :: tmoins
-        real(kind=8) :: tplus
-        integer(kind=8) :: icodma
         real(kind=8) :: sigm
         real(kind=8) :: deps
         real(kind=8) :: vim(4)

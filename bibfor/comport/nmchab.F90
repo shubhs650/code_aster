@@ -15,16 +15,42 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, crit, instam, instap, &
+subroutine nmchab(fami, kpg, ksp, ndim, &
+                  imate, relaComp, carcri, instam, instap, &
                   deps, sigm, vim, option, sigp, &
                   vip, dsidep, iret)
-!.======================================================================
-!
 !
     implicit none
 !
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/nmcham.h"
+#include "asterfort/nmchat.h"
+#include "asterfort/nmchdp.h"
+#include "asterfort/r8inir.h"
+#include "asterfort/radial.h"
+#include "asterfort/trace.h"
+#include "blas/daxpy.h"
+#include "blas/dcopy.h"
+#include "blas/dscal.h"
+!
+    character(len=*) :: fami
+    integer(kind=8) :: kpg
+    integer(kind=8) :: ksp
+    integer(kind=8) :: ndim
+    integer(kind=8) :: imate
+    character(len=16), intent(in) :: relaComp, option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8) :: instam
+    real(kind=8) :: instap
+    real(kind=8) :: deps(6)
+    real(kind=8) :: sigm(6)
+    real(kind=8) :: vim(*)
+    real(kind=8) :: sigp(6)
+    real(kind=8) :: vip(*)
+    real(kind=8) :: dsidep(6, 6)
+    integer(kind=8) :: iret
 !     INTEGRATION LOCALE DES LOIS DE COMPORTEMENT DE CHABOCHE
 !          RELATIONS : 'VMIS_CIN1_CHAB' 'VMIS_CIN2_CHAB'
 !          RELATIONS : 'VISC_CIN1_CHAB' 'VISC_CIN2_CHAB'
@@ -66,18 +92,10 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
 !               L'ORDRE :  XX,YY,ZZ,SQRT(2)*XY,SQRT(2)*XZ,SQRT(2)*YZ
 !               -----------------------------------------------------
 !
-#include "asterfort/nmcham.h"
-#include "asterfort/nmchat.h"
-#include "asterfort/nmchdp.h"
-#include "asterfort/r8inir.h"
-#include "asterfort/radial.h"
-#include "asterfort/trace.h"
-#include "blas/daxpy.h"
-#include "blas/dcopy.h"
-#include "blas/dscal.h"
-    integer(kind=8) :: kpg, ksp, ndim, imate, nbvar, iret
+
+    integer(kind=8) ::  nbvar
     real(kind=8) :: depsth(6), pm, c2inf, gamm20
-    real(kind=8) :: plast, depsmo, sigmmo, e, nu, troisk, deps(6), deuxmu
+    real(kind=8) :: plast, depsmo, sigmmo, e, nu, troisk, deuxmu
     real(kind=8) :: rpm, sieleq, seuil, dp, cm, ainf, cp, rpvm, rpvp
     real(kind=8) :: coef, sigedv(6), kron(6), depsdv(6), epspm(6)
     real(kind=8) :: sigmdv(6), sigpdv(6), em, num, ksip(6), qp
@@ -85,12 +103,8 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
     real(kind=8) :: un, rac2, c2p, radi, gamma0, gammap, delta1, delta2
     real(kind=8) :: r0, rinf, b, cinf, k, w, mat(18), c2m, gamm2p, unrac2
     real(kind=8) :: depsp(6), alfam(6), alfa(6), dalfa(6), n1, n2
-    real(kind=8) :: sigm(6), vim(*), sigp(6), vip(*), dsidep(6, 6)
     real(kind=8) :: alfa2m(6), alfa2(6), dalfa2(6), matel(4), xm(6), xp(6)
-    real(kind=8) :: dt, ksim(6), qm, crit(10), instam, instap, beta1, beta2
-    character(len=*) :: fami
-    character(len=8) :: typmod(*)
-    character(len=16) :: compor(3), option
+    real(kind=8) :: dt, ksim(6), qm, beta1, beta2
     common/fchab/mat, pm, sigedv, epspm, alfam, alfa2m, deuxmu, rpvm, rpvp,&
      &    qm, qp, ksim, ksip, dt, n1, n2, depsp,&
      &    beta1, beta2, ndimsi, nbvar, visc, memo, idelta
@@ -99,7 +113,7 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
     data kron/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/
 !
     iret = 0
-    call nmcham(fami, kpg, ksp, imate, compor, &
+    call nmcham(fami, kpg, ksp, imate, relaComp, &
                 matel, mat, nbvar, memo, visc, &
                 idelta, coef)
 !
@@ -243,7 +257,7 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
             dp = 0.d0
         else
 ! ---       DETERMINATION DE DP SOLUTION D'UNE EQUATION NON LINEAIRE
-            call nmchdp(crit, seuil, dp, iret, niter)
+            call nmchdp(carcri, seuil, dp, iret, niter)
             if (iret .gt. 0) goto 999
             plast = un
         end if
@@ -337,7 +351,7 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
 !
 !     Critere de radialite
     if (option(1:9) .ne. 'RIGI_MECA') then
-        if (crit(10) .gt. 0.d0) then
+        if (carcri(10) .gt. 0.d0) then
 !           CALCUL DE X1, X2
             cp = cinf*(un+(k-un)*exp(-w*pp))
             c2p = c2inf*(un+(k-un)*exp(-w*pp))
@@ -370,7 +384,7 @@ subroutine nmchab(fami, kpg, ksp, ndim, typmod, &
             call radial(ndimsi, sigm, sigp, vim(2), vip(2), &
                         1, xm, xp, radi)
 !
-            if (radi .gt. crit(10)) then
+            if (radi .gt. carcri(10)) then
                 iret = 2
             end if
         end if

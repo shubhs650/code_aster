@@ -104,11 +104,12 @@ void createExceptions( py::module_ &mod ) {
     } );
 }
 
-void raiseAsterError( const std::string idmess ) {
+void raiseAsterError( const std::string idmess, const VectorString &valk, const VectorLong &vali,
+                      const VectorReal &valr ) {
 #ifdef ASTER_DEBUG_CXX
     std::cout << "Raising C++ AsterError with id '" << idmess << "'..." << std::endl;
 #endif
-    throw AsterErrorCpp( idmess );
+    throw AsterErrorCpp( idmess, valk, vali, valr );
 }
 
 extern "C" void DEFPSPSPPPP( UEXCEP, uexcep, _IN ASTERINTEGER *exc_id, _IN char *idmess,

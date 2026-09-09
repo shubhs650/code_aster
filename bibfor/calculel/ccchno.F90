@@ -35,7 +35,6 @@ subroutine ccchno(option, numeStore, resultIn, resultOut, fieldNameOut, &
 #include "asterfort/exisd.h"
 #include "asterfort/inigrl.h"
 #include "asterfort/jedema.h"
-#include "asterfort/jeexin.h"
 #include "asterfort/jelira.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"

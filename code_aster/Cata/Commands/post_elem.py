@@ -376,7 +376,10 @@ POST_ELEM = OPER(
     INTEGRALE=FACT(
         statut="f",
         max="**",
-        regles=(UN_PARMI("TOUT", "GROUP_MA", "MAILLE"), UN_PARMI("NOM_CMP", "NOM_VARI")),
+        regles=(
+            UN_PARMI("TOUT", "GROUP_MA", "MAILLE", TOUT="OUI"),
+            UN_PARMI("NOM_CMP", "NOM_VARI"),
+        ),
         TOUT=SIMP(statut="f", typ="TXM", into=("OUI",)),
         MAILLE=SIMP(statut="c", typ=ma, validators=NoRepeat(), max="**"),
         GROUP_MA=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
@@ -458,7 +461,7 @@ POST_ELEM = OPER(
             "calcul des extrema en espace d'une CMP d'un champ, pour tous les instants spécifiés"
         ),
         regles=(
-            UN_PARMI("TOUT", "GROUP_MA"),
+            UN_PARMI("TOUT", "GROUP_MA", TOUT="OUI"),
             UN_PARMI("CHAM_GD", "RESULTAT"),
             PRESENT_PRESENT("CHAM_GD", "MODELE"),
             PRESENT_PRESENT("RESULTAT", "NOM_CHAM"),

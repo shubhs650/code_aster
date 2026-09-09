@@ -16,30 +16,34 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmdlog(FECell, FEBasis, FEQuad    , option  , typmod  , ndim     , nno     ,&
-                      npg     ,  compor  , mult_comp, mate    , lgpg,&
-                      carcri  , angmas  , instm   , instp    , matsym  ,&
-                      dispPrev, dispIncr, sigmPrev, vim      , sigmCurr,&
-                      vip     , fint    , matuu   , codret)
-
-                      use FE_topo_module
-                      use FE_quadrature_module
-                      use FE_basis_module
-
-                      type(FE_Cell), intent(in) :: FECell
-type(FE_Quadrature), intent(in) :: FEQuad
-type(FE_basis), intent(in) :: FEBasis
-        integer(kind=8) :: lgpg
-        integer(kind=8), intent(in) :: ndim, nno, npg
+    subroutine nmdlog(FECell, FEBasis, FEQuad, &
+                      nno, npg, ndim, &
+                      typmod, option, &
+                      compor, carcri, multComp, &
+                      BEHInteg, &
+                      instm, instp, &
+                      dispPrev, dispIncr, &
+                      lgpg, sigmPrev, vim, &
+                      sigmCurr, vip, &
+                      matsym, fint, matuu, &
+                      codret)
+        use FE_topo_module
+        use FE_quadrature_module
+        use FE_basis_module
+        use Behaviour_type
+        type(FE_Cell), intent(in) :: FECell
+        type(FE_Quadrature), intent(in) :: FEQuad
+        type(FE_basis), intent(in) :: FEBasis
+        integer(kind=8), intent(in) :: ndim, nno, npg, lgpg
+        character(len=8) :: typmod(2)
         character(len=16) :: option
-        character(len=8) :: typmod(*)
-        character(len=16), intent(in) :: compor(*)
-        character(len=16), intent(in) :: mult_comp
-        real(kind=8), intent(in) :: carcri(*)
-        integer(kind=8) :: mate
-        real(kind=8) :: angmas(3)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        character(len=16), intent(in) :: multComp
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
         real(kind=8) :: instm
         real(kind=8) :: instp
         aster_logical :: matsym

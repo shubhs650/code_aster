@@ -19,10 +19,9 @@
 !
 !
 interface
-    subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, option,&
-                  materi, sigp, vip, dsde)
+    subroutine relax_acier_cable(fami, kpg, ksp, imate, sigm, epsm, deps, vim, &
+                                 sigp, vip, dsde)
         character(len=*)  :: fami
-        character(len=*)  :: materi
         integer(kind=8)           :: kpg
         integer(kind=8)           :: ksp
         integer(kind=8)           :: imate
@@ -33,6 +32,5 @@ interface
         real(kind=8)      :: sigp
         real(kind=8)      :: vip(*)
         real(kind=8)      :: dsde
-        character(len=16) :: option
     end subroutine relax_acier_cable
 end interface

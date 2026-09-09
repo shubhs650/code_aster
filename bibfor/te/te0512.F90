@@ -101,7 +101,7 @@ subroutine te0512(option, nomte)
     real(kind=8) :: xes, ts
 !
     character(len=16), pointer :: compor(:) => null()
-    character(len=4) :: fami
+    character(len=8) :: fami
     integer(kind=8) :: codres(nbres), codre2(nbres2)
     character(len=16) :: nomres(nbres)
     character(len=16) :: nomre2(nbres2)

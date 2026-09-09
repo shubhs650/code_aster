@@ -20,7 +20,6 @@ subroutine xdeffe(r, theta, fe)
 !
 !
     implicit none
-!#include "asterfort/assert.h"
 !
     real(kind=8) :: r, theta, fe(4)
 !

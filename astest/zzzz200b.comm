@@ -955,12 +955,12 @@ CALC_MISS(
     UNITE_IMPR_ASTER=26,
     UNITE_RESU_IMPE=25,
     UNITE_RESU_FORC=38,
+    SURF="OUI",
     PARAMETRE=_F(
         FREQ_MIN=1.0,
         FREQ_MAX=10.0,
         FREQ_PAS=1.0,
         Z0=-6.05,
-        SURF="OUI",
         AUTO="OUI",
         OPTION_DREF="NON",
         OPTION_RFIC="NON",

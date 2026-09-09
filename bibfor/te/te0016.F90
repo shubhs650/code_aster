@@ -34,7 +34,7 @@ subroutine te0016(option, nomte)
 !
 ! Elements: MECA_3D, MECA_3D_SI
 !           MECA_3D_INCO_UPO, MECA_3D_INCO_UPG, MECA_INCO_3D_UP
-!           MECA_3D_GRAD_INCO, MECA_3D_GRAD_VARI, MECA_3D_GVNO
+!           MECA_3D_GRAD_INCO, MECA_3D_GRAD_VARI,
 !           MECA_3D_DIL (FORMULATIONS DIL AND DIL_INCO)
 !
 ! Options: CHAR_MECA_FR3D3D

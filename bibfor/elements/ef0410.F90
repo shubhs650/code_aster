@@ -18,14 +18,17 @@
 !
 subroutine ef0410(nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
 !
-#include "jeveux.h"
+#include "asterfort/assert.h"
 #include "asterfort/jevech.h"
 #include "asterfort/jevete.h"
 #include "asterfort/vdefro.h"
-#include "asterfort/vdrepe.h"
 #include "asterfort/vdxefgeElno.h"
+#include "asterfort/vectan.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: nomte
 !
@@ -38,30 +41,36 @@ subroutine ef0410(nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: npgt = 10
-    integer(kind=8) :: jvNbsp, jvEfge, jvGeom, lzi, nb2
-    integer(kind=8) :: nbLayer
-    real(kind=8) :: efgeElno(8, 9)
-    real(kind=8) :: matevn(2, 2, npgt), matevg(2, 2, npgt)
+    integer(kind=8) :: jvEfge, jvGeom, lzi
+    integer(kind=8) :: nbLayer, nb2, npgsr
+    real(kind=8) :: efgeElno(8, 9), matevn(2, 2, npgt)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PEFFORR', 'E', jvEfge)
 
-! - Get objects
+! - Access objects
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
     nb2 = zi(lzi-1+2)
+    npgsr = zi(lzi-1+3)
+    ASSERT(npgsr .le. 10)
 
 ! - Get properties of shell
-    call jevech('PNBSP_I', 'L', jvNbsp)
-    nbLayer = zi(jvNbsp)
+    call getCara(plateCara, plateOrie)
+    nbLayer = plateCara%nbLayer
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
 
 ! - Compute
-    call vdxefgeElno(nomte, zr(jvGeom), &
-                     nbLayer, efgeElno)
-
-! - Compute matrix to change base
-    call vdrepe(nomte, matevn, matevg)
+    call vdxefgeElno(plateCara, plateOrie, &
+                     nomte, zr(jvGeom), &
+                     nbLayer, efgeElno, &
+                     matevn)
 
 ! - From local to global
     call vdefro(nb2, matevn, efgeElno, zr(jvEfge))

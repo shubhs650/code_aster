@@ -15,16 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine glrc_lc(epsm, deps, vim, option, sig,&
-                       vip, dsidep, lambda, deuxmu, lamf,&
-                       deumuf, gmt, gmc, gf, seuil,&
-                       alf, alfmc, crit,&
-                       epsic, epsiels, epsilim, codret,&
-                       ep, is_param_opt, val_param_opt, t2iu)
+    subroutine glrc_lc(plateOrie, &
+                       epsm, deps, vim, option, sig, &
+                       vip, dsidep, lambda, deuxmu, lamf, &
+                       deumuf, gmt, gmc, gf, seuil, &
+                       alf, alfmc, carcri, &
+                       epsic, epsiels, epsilim, codret, &
+                       ep, is_param_opt, val_param_opt)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
         real(kind=8) :: epsm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: vim(*)
@@ -42,7 +44,7 @@ interface
         real(kind=8) :: seuil
         real(kind=8) :: alf
         real(kind=8) :: alfmc
-        real(kind=8) :: crit(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: epsic
         real(kind=8) :: epsiels
         real(kind=8) :: epsilim
@@ -50,6 +52,5 @@ interface
         real(kind=8) :: ep
         aster_logical :: is_param_opt(*)
         real(kind=8) :: val_param_opt(*)
-        real(kind=8) :: t2iu(4)
     end subroutine glrc_lc
 end interface

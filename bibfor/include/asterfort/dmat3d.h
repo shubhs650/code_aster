@@ -17,15 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine dmat3d(fami, mater, time, poum, ipg, &
-                      ispg, anglNaut, dr_, di_)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: mater
-        real(kind=8), intent(in) :: time
+    subroutine dmat3d(materPara, poum, time, &
+                      dr_, di_)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         character(len=*), intent(in) :: poum
-        integer(kind=8), intent(in) :: ipg, ispg
-        real(kind=8), intent(in) :: anglNaut(3)
-        real(kind=8), optional, intent(out) :: dr_(6, 6)
-        real(kind=8), optional, intent(out) :: di_(6, 6)
+        real(kind=8), intent(in) :: time
+        real(kind=8), optional, intent(out) :: dr_(6, 6), di_(6, 6)
     end subroutine dmat3d
 end interface

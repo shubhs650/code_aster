@@ -201,26 +201,36 @@ class MECA3DQU9_HHO4_F(Element):
             para_out=((SP.PDCEL_I, LC.EDCEL_I),),
         ),
         OP.TOU_INI_ELEM(
-            te=99, para_out=((SP.PFORC_R, CFORCER), (OP.TOU_INI_ELEM.PPRES_R, CPRES_R))
+            te=99,
+            para_out=(
+                (SP.PFORC_R, CFORCER),
+                (OP.TOU_INI_ELEM.PPRES_R, CPRES_R),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELGA.PDEPL_R, EDEPLPG),
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PPRES_R, LC.EPRESGA),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PPRES_R, EPRESNO),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
     )

@@ -78,7 +78,7 @@ subroutine varinonu(ligrelZ, comporZ, &
 ! - Prepare informations about internal variables
     call jeexin(comporInfo(1:19)//'.ZONE', iret)
     if (iret .eq. 0) then
-        call comp_meca_pvar(ligrel_=ligrel, comporMap_=compor, comporInfo=comporInfo)
+        call comp_meca_pvar(ligrel, compor, comporInfo)
     end if
 !
 ! - Access to informations

@@ -27,10 +27,10 @@ subroutine getQuadCont(parameters, elem_dime, &
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 #include "asterfort/mesh_pairing_type.h"
 #include "asterfort/getQuadContSegBased.h"
 #include "asterfort/getQuadContEleBased.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     type(ContactParameters), intent(in) :: parameters
@@ -41,7 +41,7 @@ subroutine getQuadCont(parameters, elem_dime, &
     real(kind=8), intent(out) :: coor_qp(2, MAX_NB_QUAD)
     integer(kind=8), intent(out) :: nb_qp
     integer(kind=8), optional, intent(in) :: nb_node_slav_
-    real(kind=8), optional, intent(in) :: elem_slav_coor_(3, 9)
+    real(kind=8), optional, intent(in) :: elem_slav_coor_(3, MT_NNOMAX2D)
     aster_logical, optional, intent(in) :: l_axis_
     real(kind=8), optional, intent(out) :: weight_qp_(MAX_NB_QUAD)
 !

@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W1306
 !
-subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
+subroutine calcft(ds_thm, lMatr, lSigm, &
                   ndim, dimdef, dimcon, &
                   adcote, &
                   addeme, addete, addep1, addep2, &
-                  temp, grad_temp, &
+                  temp, gradTemp, &
                   tbiot, &
                   phi, rho11, satur_, dsatur_, &
                   pvp, h11, h12, &
@@ -40,11 +40,10 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
 !
     type(THM_DS), intent(in) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm
-    real(kind=8), intent(in) :: angl_naut(3)
     integer(kind=8), intent(in) :: ndim, dimdef, dimcon
     integer(kind=8), intent(in) :: adcote
     integer(kind=8), intent(in) :: addeme, addete, addep1, addep2
-    real(kind=8), intent(in) :: temp, grad_temp(3)
+    real(kind=8), intent(in) :: temp, gradTemp(3)
     real(kind=8), intent(in) :: tbiot(6)
     real(kind=8), intent(in) :: phi, rho11, satur_, dsatur_
     real(kind=8), intent(in) :: pvp, h11, h12
@@ -64,7 +63,6 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
 ! In  ndim             : dimension of space (2 or 3)
 ! In  dimdef           : dimension of generalized strains vector
 ! In  dimcon           : dimension of generalized stresses vector
@@ -74,7 +72,7 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
 ! In  addep1           : adress of capillary pressure in generalized strains vector
 ! In  addep2           : adress of gaz pressure in generalized strains vector
 ! In  temp             : temperature - At end of current step
-! In  grad_temp        : gradient of temperature
+! In  gradTemp        : gradient of temperature
 ! In  tbiot            : Biot tensor
 ! In  phi              : porosity
 ! In  rho11            : volumic mass for liquid
@@ -139,7 +137,7 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
     biot(3, 2) = biot(2, 3)
 !
     if (ds_thm%ds_elem%l_dof_meca) then
-        call dilata(ds_thm, angl_naut, phi, tbiot, alphfi)
+        call dilata(ds_thm, phi, tbiot, alphfi)
         call unsmfi(ds_thm, phi, tbiot, cs)
     else
         alphfi = 0.d0
@@ -207,25 +205,25 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
         do i = 1, ndim
             do j = 1, ndim
                 dsde(adcote+i, addete+j) = dsde(adcote+i, addete+j)-lamdt1(i, j)
-                dsde(adcote+i, addete) = dsde(adcote+i, addete)-lamdt5(i, j)*grad_temp(j)
+                dsde(adcote+i, addete) = dsde(adcote+i, addete)-lamdt5(i, j)*gradTemp(j)
             end do
             if (ds_thm%ds_elem%l_dof_meca) then
                 do j = 1, 6
                     do k = 1, ndim
                         dsde(adcote+i, addeme+ndim-1+j) = dsde(adcote+i, addeme+ndim-1+j)- &
-                                                          lamdt2(i, k)*grad_temp(k)
+                                                          lamdt2(i, k)*gradTemp(k)
                     end do
                 end do
             end if
             if (ds_thm%ds_elem%l_dof_pre1) then
                 do j = 1, ndim
                     dsde(adcote+i, addep1) = dsde(adcote+i, addep1)- &
-                                             lamdt3(i, j)*grad_temp(j)
+                                             lamdt3(i, j)*gradTemp(j)
                 end do
                 if (ds_thm%ds_elem%l_dof_pre2) then
                     do j = 1, ndim
                         dsde(adcote+i, addep2) = dsde(adcote+i, addep2)- &
-                                                 lamdt4(i, j)*grad_temp(j)
+                                                 lamdt4(i, j)*gradTemp(j)
                     end do
                 end if
             end if
@@ -238,7 +236,7 @@ subroutine calcft(ds_thm, lMatr, lSigm, angl_naut, &
         do i = 1, ndim
             congep(adcote+i) = 0.d0
             do j = 1, ndim
-                congep(adcote+i) = congep(adcote+i)-lamdt1(i, j)*grad_temp(j)
+                congep(adcote+i) = congep(adcote+i)-lamdt1(i, j)*gradTemp(j)
             end do
         end do
     end if

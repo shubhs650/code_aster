@@ -20,16 +20,17 @@
 !
 interface
     subroutine eimatb(nomte, ndim, axi, nno1, nno2, npg, &
-                  wref, vff1, vff2, dffr2, geom, &
-                  ang, b, wg, ni2ldc)
+                      wref, vff1, vff2, dffr2, geom, &
+                      anglNautPg, b, wg, ni2ldc)
         character(len=16) :: nomte
-        aster_logical, intent(in):: axi
-        integer(kind=8), intent(in)      :: ndim, nno1, nno2, npg
+        aster_logical, intent(in) :: axi
+        integer(kind=8), intent(in) :: ndim, nno1, nno2, npg
         real(kind=8), intent(in) :: vff1(nno1, npg), vff2(nno2, npg), geom(ndim, nno2)
         real(kind=8), intent(in) :: wref(npg)
-        real(kind=8), intent(in) :: dffr2(ndim-1, nno2, npg), ang(merge(1,3,ndim.eq.2),nno2)
-        real(kind=8), intent(out):: b(2*ndim, npg, 2*ndim*nno1+ndim*nno2)
-        real(kind=8), intent(out):: wg(2*ndim, npg)
-        real(kind=8), intent(out):: ni2ldc(2*ndim, npg)
-    end subroutine 
+        real(kind=8), intent(in) :: dffr2(ndim-1, nno2, npg)
+        real(kind=8), intent(in) :: anglNautPg(merge(1, 3, ndim .eq. 2), nno2)
+        real(kind=8), intent(out) :: b(2*ndim, npg, 2*ndim*nno1+ndim*nno2)
+        real(kind=8), intent(out) :: wg(2*ndim, npg)
+        real(kind=8), intent(out) :: ni2ldc(2*ndim, npg)
+    end subroutine
 end interface

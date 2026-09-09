@@ -21,10 +21,10 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
-        aster_logical :: lnoue2
-        integer(kind=8) :: iliai
-        integer(kind=8) :: ddlcho(*)
-        integer(kind=8) :: ier
+    subroutine mdchdl(lnoue2, iliai, ddlcho, ier, l_rotaz)
+        aster_logical, intent(in) :: lnoue2
+        integer(kind=8), intent(in) :: iliai 
+        integer(kind=8), intent(out) :: ddlcho(*), ier
+        aster_logical, intent(in), optional :: l_rotaz
     end subroutine mdchdl
 end interface

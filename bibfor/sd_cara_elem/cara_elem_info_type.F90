@@ -55,7 +55,6 @@ module cara_elem_info_type
     type cara_elem_info
         character(len=8)  :: nomu
         character(len=16) :: concept
-        character(len=16) :: commande
         character(len=8)  :: modele
         character(len=8)  :: maillage
         character(len=24) :: modmail

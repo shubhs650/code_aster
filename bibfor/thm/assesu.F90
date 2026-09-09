@@ -20,8 +20,7 @@
 subroutine assesu(ds_thm, &
                   lMatr, lVect, lSigm, &
                   lVari, lMatrPred, &
-                  option, j_mater, &
-                  type_elem, &
+                  option, typmod, &
                   ndim, nbvari, &
                   nno, nnos, nface, &
                   dimdef, dimcon, dimuel, &
@@ -36,39 +35,37 @@ subroutine assesu(ds_thm, &
                   matuu, vectu)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cabhvf.h"
 #include "asterfort/cacdsu.h"
 #include "asterfort/cafmes.h"
 #include "asterfort/cafves.h"
 #include "asterfort/comthm_vf.h"
 #include "asterfort/inices.h"
-#include "asterfort/utmess.h"
-#include "asterfort/vfcfks.h"
+#include "asterfort/THM_type.h"
 #include "asterfort/thmGetBehaviour.h"
+#include "asterfort/thmGetBehaviourChck.h"
 #include "asterfort/thmGetBehaviourVari.h"
 #include "asterfort/thmGetParaInit.h"
-#include "asterfort/THM_type.h"
-#include "asterfort/thmGetBehaviourChck.h"
-#include "asterfort/Behaviour_type.h"
+#include "asterfort/utmess.h"
+#include "asterfort/vfcfks.h"
+#include "jeveux.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
     aster_logical, intent(in) :: lVect, lMatr, lVari, lSigm, lMatrPred
     integer(kind=8), parameter :: maxfa = 6
     character(len=16), intent(in) :: option
-    integer(kind=8), intent(in) :: j_mater
-    character(len=8), intent(in) :: type_elem(2)
+    character(len=8), intent(in) :: typmod(2)
     integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: nno, nnos, nface
     integer(kind=8), intent(in) :: dimdef, dimcon, dimuel
     integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5)
-    character(len=16), intent(in)  :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: elem_coor(ndim, nno)
     real(kind=8), intent(in) :: dispm(dimuel), dispp(dimuel)
     real(kind=8), intent(inout) :: defgem(dimdef), defgep(dimdef)
@@ -90,9 +87,8 @@ subroutine assesu(ds_thm, &
 !
 ! IO  ds_thm           : datastructure for THM
 ! In  option           : name of option to compute
-! In  j_mater          : coded material address
 ! In  l_axi            : flag is axisymmetric model
-! In  type_elem        : type of modelization (TYPMOD2)
+! In  typmod           : type of modelization (TYPMOD2)
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  nno              : total number of nodes
@@ -263,7 +259,7 @@ subroutine assesu(ds_thm, &
     real(kind=8) :: diad2f(maxfa), dias1f(maxfa), dias2f(maxfa), divp1f(maxfa), divp2f(maxfa)
     real(kind=8) :: xg(3)
     real(kind=8) :: rhol, rhog, drhol1, drhol2, drhog1, drhog2
-    real(kind=8) :: parm_alpha, angl_naut(3)
+    real(kind=8) :: parm_alpha
     real(kind=8), parameter :: zero = 0.d0
     integer(kind=8) :: iadp1k, iadp2k
     integer(kind=8) :: adcm1, adcm2
@@ -292,7 +288,6 @@ subroutine assesu(ds_thm, &
     iadp2k = 2*nface+2
     adcm1 = 2*nface+1
     adcm2 = 2*nface+2
-    angl_naut(:) = zero
     dsde(1:dimcon, 1:dimdef) = zero
     pcpf(1:maxfa) = zero
     pgpf(1:maxfa) = zero
@@ -357,68 +352,56 @@ subroutine assesu(ds_thm, &
     if (lVect) then
         vectu(1:dimuel) = zero
     end if
-!
+
 ! - Initialization of FV quantities
-!
     call inices(maxfa, valcen, valfac)
-!
+
 ! - Parameter for scheme
-!
     parm_alpha = carcri(PARM_ALPHA_THM)
-!
+
 ! - Get center of cell (last node nno is center ! )
-!
     do idim = 1, ndim
         xg(idim) = elem_coor(idim, nno)
     end do
-!
+
 ! - Get address in generalized stress vector
-!
     adcome = mecani(3)
     adcote = tempe(3)
     adcp11 = press1(4)
     adcp12 = press1(5)
     adcp21 = press2(4)
     adcp22 = press2(5)
-!
+
 ! - Get address in generalized strain vector
-!
     addeme = mecani(2)
     addep1 = press1(3)
     addep2 = press2(3)
     addete = tempe(2)
-!
+
 ! - Get parameters for behaviour
-!
     call thmGetBehaviour(compor, ds_thm)
-!
+
 ! - Get parameters for internal variables
-!
     call thmGetBehaviourVari(ds_thm)
-!
+
 ! - Some checks between behaviour and model
-!
     call thmGetBehaviourChck(ds_thm)
-!
+
 ! - Get storage parameters for behaviours
-!
     nume_thmc = ds_thm%ds_behaviour%nume_thmc
     advico = ds_thm%ds_behaviour%advico
     vicpr1 = ds_thm%ds_behaviour%vicpr1
     vicpr2 = ds_thm%ds_behaviour%vicpr2
-!
+
 ! - Get initial parameters (THM_INIT)
-!
-    call thmGetParaInit(j_mater, ds_thm, l_check_=ASTER_TRUE)
-!
+    call thmGetParaInit(ds_thm, l_check_=ASTER_TRUE)
+
 ! - Compute geometric parameters for current cell
-!
     call cabhvf(maxfa, ndim, nno, nnos, nface, &
                 elem_coor, &
                 vol, mface, dface, xface, normfa)
-!
+
 ! - Compute generalized strains
-!
     if (ds_thm%ds_elem%l_dof_pre1) then
         defgem(addep1) = dispm(iadp1k)
         defgep(addep1) = dispp(iadp1k)
@@ -441,8 +424,7 @@ subroutine assesu(ds_thm, &
     call comthm_vf(ds_thm, &
                    lMatr, lVect, lSigm, &
                    lVari, lMatrPred, &
-                   option, j_mater, &
-                   type_elem, angl_naut, &
+                   option, typmod, &
                    ndim, nbvari, &
                    dimdef, dimcon, &
                    0, valfac, valcen, &
@@ -481,12 +463,12 @@ subroutine assesu(ds_thm, &
                 dsde(i, j) = zero
             end do
         end do
+
 ! ----- Compute generalized stresses and derivatives
         call comthm_vf(ds_thm, &
                        lMatr, lVect, lSigm, &
                        lVari, lMatrPred, &
-                       option, j_mater, &
-                       type_elem, angl_naut, &
+                       option, typmod, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        fa, valfac, valcen, &
@@ -502,9 +484,8 @@ subroutine assesu(ds_thm, &
             call utmess('F', 'COMPOR1_9')
         end if
     end do
-!
+
 ! - Set
-!
     if (lVect) then
         vectu(adcm1) = valcen(masse, eau)*vol
         vectu(adcm2) = valcen(masse, air)*vol
@@ -536,18 +517,16 @@ subroutine assesu(ds_thm, &
         kintvf(5) = valcen(vkint, kyz)
         kintvf(6) = valcen(vkint, kzx)
     end if
-!
+
 ! - Compute what ?
-!
     call cacdsu(maxfa, parm_alpha, &
                 ndim, nno, nface, &
                 elem_coor, &
                 vol, mface, dface, &
                 xface, normfa, kintvf, &
                 yss, c, d)
-!
+
 ! - Get pressures and derivatives
-!
     pcp = dispp(iadp1k)
     pgp = dispp(iadp2k)
     dpgp1 = zero
@@ -582,18 +561,16 @@ subroutine assesu(ds_thm, &
         dcad1f(ifa) = valfac(ifa, dconp1, airdis)
         dcad2f(ifa) = valfac(ifa, dconp2, airdis)
     end do
-!
+
 ! - Save pressures in internal variables
-!
     if (nume_thmc .eq. LIQU_AD_GAZ) then
         do ipg = 1, nface+1
             vintp(advico+vicpr1, ipg) = pcp
             vintp(advico+vicpr2, ipg) = pgp
         end do
     end if
-!
+
 ! - Compute "volumic" flux
-!
     call vfcfks(lMatr, maxfa, ndim, nface, &
                 cvp, dcvp1, dcvp2, &
                 cvpf, dcvp1f, dcvp2f, &
@@ -622,9 +599,8 @@ subroutine assesu(ds_thm, &
                 rhog, drhog1, drhog2, &
                 xg, xface, &
                 fgks, dfgks1, dfgks2)
-!
+
 ! - Get diffusion
-!
     do ifa = 1, nface
         difuvp(ifa) = valcen(diffu, wvap)
         difuas(ifa) = -valcen(diffu, airsec)
@@ -642,9 +618,8 @@ subroutine assesu(ds_thm, &
         diad1f(ifa) = zero
         diad2f(ifa) = zero
     end do
-!
+
 ! - Get mobility
-!
     do ifa = 1, nface
         if (flks(ifa) .ge. zero) then
             mobwf(ifa) = valcen(mob, wliq)
@@ -693,9 +668,8 @@ subroutine assesu(ds_thm, &
             dvp2ff(ifa) = valfac(ifa, dmobp2, wvap)
         end if
     end do
-!
+
 ! - Compute "massic" flux
-!
     do ifa = 1, nface
         call cafmes(ifa, ASTER_TRUE, lMatr, maxfa, nface, &
                     flks(ifa), dflks1, dflks2, &
@@ -733,9 +707,8 @@ subroutine assesu(ds_thm, &
                     diad1f, diad2f, &
                     fmads, fm1ads, fm2ads)
     end do
-!
+
 ! - Compute total "volumic" flux
-!
     call cafves(lMatr, maxfa, nface, &
                 flks, dflks1, dflks2, &
                 mobwf, dw1f, dw2f, &
@@ -771,9 +744,8 @@ subroutine assesu(ds_thm, &
                 difuad, diad1, diad2, &
                 diad1f, diad2f, &
                 fluads, fad1s, fad2s)
-!
+
 ! - Compute residual
-!
     if (lVect) then
 ! ----- Continuity of flux
         do ifa = 1, nface
@@ -790,9 +762,8 @@ subroutine assesu(ds_thm, &
         vectu(adcm1) = vectu(adcm1)+congep(adcp11+1, 1)+congep(adcp12+1, 1)
         vectu(adcm2) = vectu(adcm2)+congep(adcp21+1, 1)+congep(adcp22+1, 1)
     end if
-!
+
 ! - Compute matrix
-!
     if (lMatr) then
         matuu(zzadma(0, adcm1, iadp1k)) = matuu(zzadma(0, adcm1, iadp1k))+fw1s(1)+fvp1s(1)
         matuu(zzadma(0, adcm1, iadp2k)) = matuu(zzadma(0, adcm1, iadp2k))+fw2s(1)+fvp2s(1)

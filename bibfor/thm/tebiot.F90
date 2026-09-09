@@ -16,19 +16,19 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine tebiot(ds_thm, angl_naut, tbiot)
+subroutine tebiot(ds_thm, tbiot)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/matrot.h"
-#include "asterfort/utbtab.h"
 #include "asterfort/THM_type.h"
+#include "asterfort/utbtab.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3)
     real(kind=8), intent(out) :: tbiot(6)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -40,10 +40,6 @@ subroutine tebiot(ds_thm, angl_naut, tbiot)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
 ! Out tbiot            : Biot tensor
 !
 ! --------------------------------------------------------------------------------------------------
@@ -53,14 +49,13 @@ subroutine tebiot(ds_thm, angl_naut, tbiot)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    bt(:, :) = 0.d0
-    pass(:, :) = 0.d0
-    work(:, :) = 0.d0
-    bgl(:, :) = 0.d0
-    tbiot(:) = 0.d0
-!
+    bt = 0.d0
+    pass = 0.d0
+    work = 0.d0
+    bgl = 0.d0
+    tbiot = 0.d0
+
 ! - Local tensor
-!
     if (ds_thm%ds_material%biot%type .eq. BIOT_TYPE_ISOT) then
         bt(1, 1) = ds_thm%ds_material%biot%coef
         bt(2, 2) = ds_thm%ds_material%biot%coef
@@ -76,17 +71,14 @@ subroutine tebiot(ds_thm, angl_naut, tbiot)
     else
         ASSERT(.false.)
     end if
-!
+
 ! - Construct transition matrix from nautical angles
-!
-    call matrot(angl_naut, pass)
-!
+    call matrot(ds_thm%ds_behaviour%BEHInteg%materPara%lcsPara%lcsAngle, pass)
+
 ! - Change reference frame
-!
     call utbtab('ZERO', 3, 3, bt, pass, work, bgl)
-!
+
 ! - Transform in vector
-!
     tbiot(1) = bgl(1, 1)
     tbiot(2) = bgl(2, 2)
     tbiot(3) = bgl(3, 3)

@@ -78,6 +78,7 @@ import os.path as osp
 import platform
 import re
 
+from .base_params import RUNASTER_PLATFORM, RUNASTER_ROOT
 from .logger import logger
 from .settings import (
     DEPRECATED,
@@ -88,8 +89,8 @@ from .settings import (
     ParameterListStr,
     ParameterStr,
     Store,
+    subst_vars,
 )
-from .utils import RUNASTER_PLATFORM, RUNASTER_ROOT
 
 PARAMS_TYPE = {
     "actions": "list[str]",
@@ -239,6 +240,7 @@ class File:
 
     @path.setter
     def path(self, path):
+        path = subst_vars(path)
         if osp.exists(path):
             self._dir = osp.isdir(path)
         self._path = path

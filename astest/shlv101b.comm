@@ -1,0 +1,476 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# mise en place d'un cas test pour mettre en place une source de pression sur une modélisation U-P
+
+import code_aster
+
+from code_aster.Commands import *
+from code_aster import CA
+
+DEBUT(CODE="OUI")
+
+# ------------------------------------------------------#
+# --                                                  --#
+# -- DEFINITION D'UN PREMIER CALCUL SUR MODELE REDUIT --#
+# --     ET ASSSEMBLAGE DU MODELE EF DE REFERENCE     --#
+# --                                                  --#
+# ------------------------------------------------------#
+
+# ORIENTER LES MAILLES !!!
+
+# -- MAILLAGES DES DEUX BOUTS DE TUYAU
+MAILLA1 = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+MAILLA1 = MODI_MAILLAGE(
+    reuse=MAILLA1,
+    MAILLAGE=MAILLA1,
+    ORIE_NORM_COQUE=_F(GROUP_MA=("IFS_2D",), GROUP_NO=("nNormDZ",), VECT_NORM=(0.0, 0.0, 1.0)),
+)
+MAILLA1 = DEFI_GROUP(reuse=MAILLA1, MAILLAGE=MAILLA1, CREA_GROUP_NO=_F(TOUT_GROUP_MA="OUI"))
+
+# -- CONSTRUCTION DES MODELES
+MODELE1 = AFFE_MODELE(
+    AFFE=(
+        _F(GROUP_MA=("s1Tuyau", "s2Tuyau", "Tuyau"), MODELISATION="3D", PHENOMENE="MECANIQUE"),
+        _F(
+            FORMULATION="U_P",
+            GROUP_MA=("s1Eau", "s2Eau", "Eau"),
+            MODELISATION="3D_FLUIDE",
+            PHENOMENE="MECANIQUE",
+        ),
+        _F(
+            FORMULATION="U_P", GROUP_MA=("IFS_2D",), MODELISATION="FLUI_STRU", PHENOMENE="MECANIQUE"
+        ),
+    ),
+    MAILLAGE=MAILLA1,
+)
+
+
+# -- DEFINITION DU MATERIAU
+scaling = 1.0e10  # terme de mise à l'échelle
+acier = DEFI_MATERIAU(ELAS=_F(E=190.0e9 / scaling, NU=0.3, RHO=7800.0 / scaling))
+
+rhof = 732.0 / scaling
+eau = DEFI_MATERIAU(FLUIDE=_F(CELE_R=970.0, RHO=rhof))
+
+# -- AFFECTATION DES MATERIAUX
+CHAMAT1 = AFFE_MATERIAU(
+    AFFE=(_F(GROUP_MA=("Tuyau"), MATER=(acier,)), _F(GROUP_MA=("IFS_2D", "Eau"), MATER=(eau,))),
+    MODELE=MODELE1,
+)
+
+# -- DEFINITION DES CONDITIONS AUX LIMITES
+
+CHARGE_1 = AFFE_CHAR_MECA(
+    FACE_IMPO=(_F(DX=0.0, DY=0.0, DZ=0.0, GROUP_MA=("s1Tuyau", "s2Tuyau")),), MODELE=MODELE1
+)
+
+# Paramètres de l'analyse harmonique
+n_freq = 90
+f0 = 10
+f1 = 100
+
+# -----------------------------------------------------------------------------------
+#
+#  RESOLUTION
+#
+# -----------------------------------------------------------------------------------
+
+# -- CALCULS DES MODES AVEC LES C.L. ASSOCIEES AUX TYPES D'INTERFACE
+
+MPC = AFFE_CHAR_MECA(
+    MODELE=MODELE1, DDL_IMPO=(_F(GROUP_NO="s1Eau", PRES=0), _F(GROUP_NO="s2Eau", PRES=0))
+)
+
+# -- ASSEMBLAGE DES MATRICES
+ASSEMBLAGE(
+    MODELE=MODELE1,
+    NUME_DDL=CO("NUME"),
+    CHARGE=(CHARGE_1, MPC),
+    CHAM_MATER=CHAMAT1,
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGIDITE"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASSE"), OPTION="MASS_MECA"),
+    ),
+)
+
+eq = NUME.getEquationNumbering()
+
+# ==================================================================================================
+
+# Modes à droite
+# ==============
+
+# -------------------------
+# Modes dynamiques à droite
+# -------------------------
+
+# -- DETERMINATION DES MODES DE LA STRUCTURE
+elim = False
+if elim:
+    RIGI_elim = ELIM_LAGR(MATR_RIGI=RIGIDITE)
+    MASS_elim = ELIM_LAGR(MATR_ASSE=MASSE, MATR_RIGI=RIGIDITE)
+
+myRIGI = RIGI_elim if elim else RIGIDITE
+myMASS = MASS_elim if elim else MASSE
+
+nModes1 = 20
+
+MODES_R_elim = CALC_MODES(
+    OPTION="PLUS_PETITE",
+    CALC_FREQ=_F(NMAX_FREQ=nModes1),
+    MATR_RIGI=myRIGI,
+    MATR_MASS=myMASS,
+    TYPE_RESU="DYNAMIQUE",
+    SOLVEUR=_F(METHODE="MUMPS", NPREC=11),
+    VERI_MODE=_F(STOP_ERREUR="NON"),
+)
+
+if elim:
+    MODES_R = REST_GENE_PHYS(RESU_GENE=MODES_R_elim)
+else:
+    MODES_R = MODES_R_elim
+
+# ------------------------
+# Modes statiques à droite
+# ------------------------
+
+RIGIDITE = FACTORISER(reuse=RIGIDITE, MATR_ASSE=RIGIDITE)
+
+# ruse pour resoudre sur le même NUME_DDL : on change la valeur des LAGR du rhs
+VECTAS = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:PRES"], ["s1Eau"])[-1]:
+    VECTAS[i] = 1.0
+
+vstat1_r = RESOUDRE(MATR=RIGIDITE, CHAM_NO=VECTAS)
+
+VECTAS = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:PRES"], ["s2Eau"])[-1]:
+    VECTAS[i] = 1.0
+
+vstat2_r = RESOUDRE(MATR=RIGIDITE, CHAM_NO=VECTAS)
+
+# -------------
+# Base à droite
+# -------------
+
+nb_mode_dyn = MODES_R.getNumberOfIndexes()
+
+base_r = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="MODE_MECA",
+    MATR_RIGI=RIGIDITE,
+    MATR_MASS=MASSE,
+    AFFE=[
+        {
+            "CHAM_GD": CREA_CHAMP(
+                OPERATION="C2R",
+                TYPE_CHAM="NOEU_DEPL_R",
+                CHAM_GD=MODES_R.getField("DEPL", idx + 1),
+                PARTIE="REEL",
+            ),
+            "NOM_CHAM": "DEPL",
+            "NUME_MODE": idx + 1,
+        }
+        for idx in range(nb_mode_dyn)
+    ]
+    + [
+        _F(CHAM_GD=vstat1_r, NOM_CHAM="DEPL", NUME_MODE=nb_mode_dyn + 1),
+        _F(CHAM_GD=vstat2_r, NOM_CHAM="DEPL", NUME_MODE=nb_mode_dyn + 2),
+    ],
+)
+
+# ==================================================================================================
+
+# Modes à gauche
+# ==============
+
+# -------------------------
+# Modes dynamiques à gauche
+# -------------------------
+
+myRIGI_T = myRIGI.copy()
+myMASS_T = myMASS.copy()
+myRIGI_T.transpose()
+myMASS_T.transpose()
+
+MODES_L_elim = CALC_MODES(
+    OPTION="PLUS_PETITE",
+    CALC_FREQ=_F(NMAX_FREQ=nModes1),
+    MATR_RIGI=myRIGI_T,
+    MATR_MASS=myMASS_T,
+    TYPE_RESU="DYNAMIQUE",
+    SOLVEUR=_F(METHODE="MUMPS", NPREC=11),
+    VERI_MODE=_F(STOP_ERREUR="NON"),
+)
+
+if elim:
+    MODES_L = REST_GENE_PHYS(RESU_GENE=MODES_L_elim)
+else:
+    MODES_L = MODES_R_elim
+
+# ------------------------
+# Modes statiques à gauche
+# ------------------------
+
+# Copy the transpose of the stiffness matrix
+RIGIDITE_T = RIGIDITE.copy()
+RIGIDITE_T.transpose()
+
+RIGIDITE_T = FACTORISER(reuse=RIGIDITE_T, MATR_ASSE=RIGIDITE_T)
+
+# ruse pour resoudre sur le même NUME_DDL : on change la valeur des LAGR du rhs
+VECTAS = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:PRES"], ["s1Eau"])[-1]:
+    VECTAS[i] = 1.0
+
+vstat1_l = RESOUDRE(MATR=RIGIDITE, CHAM_NO=VECTAS)
+
+VECTAS = CA.FieldOnNodesReal(NUME)
+for i in eq.getDOFsWithDescription(["LAGR:PRES"], ["s2Eau"])[-1]:
+    VECTAS[i] = 1.0
+
+vstat2_l = RESOUDRE(MATR=RIGIDITE, CHAM_NO=VECTAS)
+
+# -------------
+# base à gauche
+# -------------
+
+nb_mode_dyn = MODES_L.getNumberOfIndexes()
+
+base_l = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="MODE_MECA",
+    MATR_RIGI=RIGIDITE,
+    MATR_MASS=MASSE,
+    AFFE=[
+        {
+            "CHAM_GD": CREA_CHAMP(
+                OPERATION="C2R",
+                TYPE_CHAM="NOEU_DEPL_R",
+                CHAM_GD=MODES_L.getField("DEPL", idx + 1),
+                PARTIE="REEL",
+            ),
+            "NOM_CHAM": "DEPL",
+            "NUME_MODE": idx + 1,
+        }
+        for idx in range(nb_mode_dyn)
+    ]
+    + [
+        _F(CHAM_GD=vstat1_l, NOM_CHAM="DEPL", NUME_MODE=nb_mode_dyn + 1),
+        _F(CHAM_GD=vstat2_l, NOM_CHAM="DEPL", NUME_MODE=nb_mode_dyn + 2),
+    ],
+)
+
+# ==================================================================================================
+
+
+def PROJ_MATR_BASE_2(MATR_ASSE, BASE_L, BASE_R, NUME_DDL_GENE):
+    """REimpl PROJ_MATR_BASE with left and right basis"""
+
+    import numpy as np
+
+    nb_dofs = MATR_ASSE.size()[0]
+    nb_modes = BASE_R.getNumberOfIndexes()
+    assert nb_modes == BASE_L.getNumberOfIndexes()
+    assert NUME_DDL_GENE.getModalBasis() == BASE_R
+
+    matrix_dot_phy_r = np.empty((nb_modes, nb_dofs))
+    for idx in range(nb_modes):
+        mode = BASE_R.getField("DEPL", idx + 1)
+        mode.applyLagrangeScaling(0.0)
+        matrix_dot_phy_r[idx] = (MATR_ASSE * mode).getValues()
+
+    phy_l = np.empty((nb_modes, nb_dofs))
+    for idx in range(nb_modes):
+        mode = BASE_L.getField("DEPL", idx + 1)
+        mode.applyLagrangeScaling(0.0)
+        phy_l[idx] = mode.getValues()
+
+    phy_l_dot_matrix_dot_phy_r = phy_l.dot(matrix_dot_phy_r.T)
+
+    matr_gene = CA.GeneralizedAssemblyMatrixReal()
+    matr_gene.setGeneralizedDOFNumbering(NUME_DDL_GENE)
+    matr_gene.setModalBasis(BASE_R)
+    matr_gene.allocate(False)
+    matr_gene.fromNumpy(phy_l_dot_matrix_dot_phy_r)
+
+    return matr_gene
+
+
+nume_gene = NUME_DDL_GENE(BASE=base_r, STOCKAGE="PLEIN")
+
+rigiGen = PROJ_MATR_BASE_2(
+    MATR_ASSE=RIGIDITE, BASE_L=base_l, BASE_R=base_r, NUME_DDL_GENE=nume_gene
+)
+massGen = PROJ_MATR_BASE_2(MATR_ASSE=MASSE, BASE_L=base_l, BASE_R=base_r, NUME_DDL_GENE=nume_gene)
+
+char_gene = AFFE_CHAR_GENE(
+    NUME_DDL_GENE=nume_gene,
+    LIAISON=_F(NUME_MODE=(nb_mode_dyn + 1, nb_mode_dyn + 2), COEF_MULT=(1.0, -1.0), COEF_IMPO=1.0),
+)
+
+L_FREQ = DEFI_LIST_REEL(DEBUT=f0, INTERVALLE=_F(JUSQU_A=f1, NOMBRE=n_freq))
+
+dyna_harm_gene = DYNA_VIBRA(
+    TYPE_CALCUL="HARM",
+    BASE_CALCUL="GENE",
+    MATR_MASS=massGen,
+    MATR_RIGI=rigiGen,
+    LIST_FREQ=L_FREQ,
+    CHAR_GENE=char_gene,
+)
+
+l_cmp = ["PRES", "DX"]
+rep = []
+
+for cmp in l_cmp:
+    REP = RECU_FONCTION(
+        RESU_GENE=dyna_harm_gene,
+        NOM_CHAM="ACCE",
+        NOM_CMP=cmp,
+        GROUP_NO="node_accel",
+        LIST_FREQ=L_FREQ,
+    )
+    ABS = CALC_FONCTION(EXTRACTION=_F(FONCTION=REP, PARTIE="MODULE"))
+    rep.append(ABS)
+
+for idx, cmp in enumerate(l_cmp):
+    IMPR_FONCTION(
+        FORMAT="XMGRACE",
+        COURBE=_F(FONCTION=rep[idx], MARQUEUR=0, LEGENDE=f"Acc {cmp} "),
+        ECHELLE_Y="LOG",
+        LEGENDE_X="Freq (Hz)",
+        LEGENDE_Y=r"Amplitude (m.s\S-2\N )",
+        UNITE=28,
+    )
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(
+            VALE_CALC=417.92638,
+            VALE_REFE=417.87028,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=10.0,
+            FONCTION=rep[0],
+        ),
+        _F(
+            VALE_CALC=9571.3686,
+            VALE_REFE=9568.055,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=28.0,
+            FONCTION=rep[0],
+        ),
+        _F(
+            VALE_CALC=1366.3511,
+            VALE_REFE=1370.4434,
+            PRECISION=0.004,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=29.0,
+            FONCTION=rep[0],
+        ),
+        _F(
+            VALE_CALC=13518.143,
+            VALE_REFE=13413.085,
+            PRECISION=0.009,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=68.0,
+            FONCTION=rep[0],
+        ),
+        _F(
+            VALE_CALC=91563.403,
+            VALE_REFE=91364.607,
+            PRECISION=0.003,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=70.0,
+            FONCTION=rep[0],
+        ),
+        _F(
+            VALE_CALC=151136.8,
+            VALE_REFE=150570.41,
+            PRECISION=0.005,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=100.0,
+            FONCTION=rep[0],
+        ),
+    )
+)
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(
+            VALE_CALC=18589.363,
+            VALE_REFE=18589.322,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=10.0,
+            FONCTION=rep[1],
+        ),
+        _F(
+            VALE_CALC=4058181.3,
+            VALE_REFE=4058265.4,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=28.0,
+            FONCTION=rep[1],
+        ),
+        _F(
+            VALE_CALC=3118039.3,
+            VALE_REFE=3118121.7,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=29.0,
+            FONCTION=rep[1],
+        ),
+        _F(
+            VALE_CALC=2836079.5,
+            VALE_REFE=2832890.0,
+            PRECISION=0.002,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=68.0,
+            FONCTION=rep[1],
+        ),
+        _F(
+            VALE_CALC=11007687.0,
+            VALE_REFE=10996385.0,
+            PRECISION=0.002,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=70.0,
+            FONCTION=rep[1],
+        ),
+        _F(
+            VALE_CALC=864440.74,
+            VALE_REFE=864262.14,
+            REFERENCE="AUTRE_ASTER",
+            CRITERE="RELATIF",
+            VALE_PARA=100.0,
+            FONCTION=rep[1],
+        ),
+    )
+)
+
+FIN()

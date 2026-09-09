@@ -26,7 +26,6 @@ subroutine elimun(mesh, model, zoneKeyword, nbUnilZone, &
 #include "asterfort/exiscp.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jedetr.h"
-#include "asterfort/jelira.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/palino.h"

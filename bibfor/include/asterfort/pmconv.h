@@ -15,26 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine pmconv(r, rini, r1, inst, sigp,&
-                      coef, iter, indimp, ds_conv, conver,&
-                      itemax)
+    subroutine pmconv(resi, resiInit, resiEval, &
+                      ds_conv, &
+                      timeCurr, iterNewt, &
+                      coefAdim, sigmCurr, &
+                      conver, lIterNewtMaxi)
         use NonLin_Datastructure_type
-        real(kind=8) :: r(12)
-        real(kind=8) :: rini(12)
-        real(kind=8) :: r1(12)
-        real(kind=8) :: inst
-        real(kind=8) :: sigp(6)
-        real(kind=8) :: coef
-        integer(kind=8) :: iter
-        integer(kind=8) :: indimp(6)
+        real(kind=8), intent(in) :: resi(12), resiInit(12)
+        real(kind=8), intent(inout) :: resiEval(12)
         type(NL_DS_Conv), intent(in) :: ds_conv
-        aster_logical :: conver
-        aster_logical :: itemax
+        real(kind=8), intent(in) :: timeCurr
+        integer(kind=8), intent(in) :: iterNewt
+        real(kind=8), intent(in) :: coefAdim, sigmCurr(6)
+        aster_logical, intent(out) :: conver, lIterNewtMaxi
     end subroutine pmconv
 end interface

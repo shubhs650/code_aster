@@ -35,7 +35,7 @@ subroutine te0520(option, nomte)
 #include "asterfort/coupling_type.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/writeVector.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 !
     character(len=16), intent(in) :: option, nomte
 !

@@ -18,6 +18,7 @@
 !
 subroutine te0508(option, nomte)
 !
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "asterf_types.h"
@@ -32,7 +33,6 @@ subroutine te0508(option, nomte)
 #include "asterfort/nmgvmb.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
 !
     character(len=16), intent(in) :: option, nomte
@@ -55,7 +55,7 @@ subroutine te0508(option, nomte)
 !
     character(len=16) :: defo_comp
     character(len=8) :: typmod(2)
-    aster_logical :: axi, grand, inco, refe
+    aster_logical :: axi, grand, inco, lrefe
     integer(kind=8) :: nnoQ, nnoL, npg, ndim, nddl, neps, itab(2)
     integer(kind=8) :: iret, nnos, jv_ganoQ, jv_poids, jv_vfQ, jv_dfdeQ, jv_vfL, jv_dfdeL, jv_ganoL
     integer(kind=8) :: igeom, icont, ivectu, idepl
@@ -64,10 +64,11 @@ subroutine te0508(option, nomte)
     real(kind=8), allocatable:: b(:, :, :), w(:, :), ni2ldc(:, :)
     real(kind=8), allocatable:: sref(:)
     real(kind=8), allocatable:: ddl(:)
+    type(RESI_REFE):: refe
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    refe = option .eq. 'REFE_FORC_NODA'
+    lrefe = option .eq. 'REFE_FORC_NODA'
 !
 ! - Type of modelling
 !
@@ -92,7 +93,7 @@ subroutine te0508(option, nomte)
     call tecach('OOO', 'PVECTUR', 'E', iret, nval=2, itab=itab)
     ivectu = itab(1)
     nddl = itab(2)
-    if (.not. refe) then
+    if (.not. lrefe) then
         call jevech('PSIEFR', 'L', icont)
         call jevech('PDEPLAR', 'L', idepl)
     else
@@ -115,11 +116,13 @@ subroutine te0508(option, nomte)
 
     if (inco .and. grand) then
 
-        if (refe) then
-            call terefe('SIGM_REFE', 'MECA_GRADVARI', sigref)
-            call terefe('VARI_REFE', 'MECA_GRADVARI', varref)
-            call terefe('LAGR_REFE', 'MECA_GRADVARI', lagref)
-            call terefe('EPSI_REFE', 'MECA_INCO', epsref)
+        if (lrefe) then
+            call refe%Init(nomte)
+            sigref = refe%GetRef('SIGM')
+            varref = refe%GetRef('VARI')
+            lagref = refe%GetRef('LAGR')
+            epsref = refe%GetRef('EPSI')
+            call refe%Check()
 
             if (ndim .eq. 2) then
                 sref(1:neps) = [sigref, sigref, sigref, sigref, epsref, &
@@ -130,13 +133,13 @@ subroutine te0508(option, nomte)
                                 0.d0, 0.d0, 0.d0]
             end if
 
-            call lgicfc(refe, ndim, nnoQ, nnoL, npg, nddl, axi, &
+            call lgicfc(lrefe, ndim, nnoQ, nnoL, npg, nddl, axi, &
                         zr(igeom), ddl, zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
                         jv_poids, transpose(spread(sref, 1, npg)), &
                         zr(ivectu))
 
         else
-            call lgicfc(refe, ndim, nnoQ, nnoL, npg, nddl, axi, &
+            call lgicfc(lrefe, ndim, nnoQ, nnoL, npg, nddl, axi, &
                         zr(igeom), zr(idepl), zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
                         jv_poids, zr(icont), zr(ivectu))
 
@@ -148,10 +151,12 @@ subroutine te0508(option, nomte)
 
     else if (.not. inco .and. grand) then
 
-        if (refe) then
-            call terefe('SIGM_REFE', 'MECA_GRADVARI', sigref)
-            call terefe('VARI_REFE', 'MECA_GRADVARI', varref)
-            call terefe('LAGR_REFE', 'MECA_GRADVARI', lagref)
+        if (lrefe) then
+            call refe%Init(nomte)
+            sigref = refe%GetRef('SIGM')
+            varref = refe%GetRef('VARI')
+            lagref = refe%GetRef('LAGR')
+            call refe%Check()
 
             if (ndim .eq. 2) then
                 sref(1:neps) = [sigref, sigref, sigref, sigref, lagref, &
@@ -161,13 +166,13 @@ subroutine te0508(option, nomte)
                                 sigref, lagref, varref, 0.d0, 0.d0, 0.d0]
             end if
 
-            call lggvfc(refe, ndim, nnoQ, nnoL, npg, nddl, axi, &
+            call lggvfc(lrefe, ndim, nnoQ, nnoL, npg, nddl, axi, &
                         zr(igeom), ddl, zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
                         jv_poids, transpose(spread(sref, 1, npg)), &
                         zr(ivectu))
 
         else
-            call lggvfc(refe, ndim, nnoQ, nnoL, npg, nddl, axi, &
+            call lggvfc(lrefe, ndim, nnoQ, nnoL, npg, nddl, axi, &
                         zr(igeom), zr(idepl), zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
                         jv_poids, zr(icont), zr(ivectu))
 
@@ -182,10 +187,12 @@ subroutine te0508(option, nomte)
                     zr(igeom), zr(jv_vfQ), zr(jv_vfL), jv_dfdeQ, jv_dfdeL, &
                     jv_poids, nddl, neps, b, w, ni2ldc)
 
-        if (refe) then
-            call terefe('SIGM_REFE', 'MECA_GRADVARI', sigref)
-            call terefe('VARI_REFE', 'MECA_GRADVARI', varref)
-            call terefe('LAGR_REFE', 'MECA_GRADVARI', lagref)
+        if (lrefe) then
+            call refe%Init(nomte)
+            sigref = refe%GetRef('SIGM')
+            varref = refe%GetRef('VARI')
+            lagref = refe%GetRef('LAGR')
+            call refe%Check()
 
             if (ndim .eq. 2) then
                 sref(1:neps) = [sigref, sigref, sigref, sigref, lagref, &
@@ -209,7 +216,7 @@ subroutine te0508(option, nomte)
         ! Combinaison inconnue
     end if
 
-    if (refe) then
+    if (lrefe) then
         deallocate (ddl)
         deallocate (sref)
     end if

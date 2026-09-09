@@ -82,7 +82,7 @@ check_requirements_main() {
     args=( "-v" )
     [ ${ASTER_REQS_USE_DEBUG} -eq 1 ] && args=()
 
-    found=$(find build -name "codeaster-prerequisites-${VERSION}-*" -type d | grep ${args[@]} debug)
+    found=$(find build -name "codeaster-prerequisites-${VERSION}-*" -type d 2> /dev/null | grep ${args[@]} debug)
     if [ -z "${found}" ]; then
         echo
         echo "code_aster requirements not found in 'build/'."
@@ -90,7 +90,7 @@ check_requirements_main() {
             "to the environment file."
         do_install || return 4
     fi
-    found=$(find build -name "codeaster-prerequisites-${VERSION}-*" -type d | grep ${args[@]} debug)
+    found=$(find build -name "codeaster-prerequisites-${VERSION}-*" -type d 2> /dev/null | grep ${args[@]} debug)
     if [ -z "${found}" ]; then
         return 1
     fi

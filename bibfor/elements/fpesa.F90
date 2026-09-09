@@ -16,8 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine fpesa(nomte, xi, nb1, vecl)
+subroutine fpesa(plateCara, &
+                 nomte, xi, nb1, &
+                 vecl)
+!
+    use plate_type
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/dxroep.h"
 #include "asterfort/forpes.h"
@@ -26,13 +31,17 @@ subroutine fpesa(nomte, xi, nb1, vecl)
 #include "asterfort/r8inir.h"
 #include "asterfort/vectci.h"
 #include "asterfort/vexpan.h"
-    character(len=16) :: nomte
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    character(len=16), intent(in) :: nomte
+    real(kind=8), intent(in) :: xi(3, *)
+    integer(kind=8), intent(in) :: nb1
+    real(kind=8), intent(out) :: vecl(51)
 !
-    integer(kind=8) :: nb1, npgsn
+    integer(kind=8) :: npgsn
     real(kind=8) :: rho, epais, pesan, rnormc
-    real(kind=8) :: xi(3, *), vpesan(3), vecl(51), vecl1(42)
-!     REAL*8 VECTC(3),VECPTX(3,3)
+    real(kind=8) :: vpesan(3), vecl1(42)
+
 !
 !-----------------------------------------------------------------------
     integer(kind=8) :: i, intsn, jpesa, lzi, lzr
@@ -44,12 +53,12 @@ subroutine fpesa(nomte, xi, nb1, vecl)
     end do
 !
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
-    nb1 = zi(lzi-1+1)
     npgsn = zi(lzi-1+4)
 !
     call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
-!
-    call dxroep(rho, epais)
+
+! - Get plate parameters
+    call dxroep(plateCara, rho, epais)
 !
     call r8inir(42, 0.d0, vecl1, 1)
 !

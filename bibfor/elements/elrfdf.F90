@@ -129,6 +129,42 @@ subroutine elrfdf(elrefz, x, dff, nno_, ndim_)
         dff(2, 9) = zero
         dff(3, 9) = zero
 
+    case ('H10')
+        x0 = x(1)
+        y0 = x(2)
+        z0 = x(3)
+        dff(1, 1) = -(un-y0)*(un-z0)*uns8
+        dff(2, 1) = -(un-x0)*(un-z0)*uns8
+        dff(3, 1) = -(un-x0)*(un-y0)*uns8
+        dff(1, 2) = (un-y0)*(un-z0)*uns8
+        dff(2, 2) = -(un+x0)*(un-z0)*uns8
+        dff(3, 2) = -(un+x0)*(un-y0)*uns8
+        dff(1, 3) = (un+y0)*(un-z0)*uns8
+        dff(2, 3) = (un+x0)*(un-z0)*uns8
+        dff(3, 3) = -(un+x0)*(un+y0)*uns8
+        dff(1, 4) = -(un+y0)*(un-z0)*uns8
+        dff(2, 4) = (un-x0)*(un-z0)*uns8
+        dff(3, 4) = -(un-x0)*(un+y0)*uns8
+        dff(1, 5) = -(un-y0)*(un+z0)*uns8
+        dff(2, 5) = -(un-x0)*(un+z0)*uns8
+        dff(3, 5) = (un-x0)*(un-y0)*uns8
+        dff(1, 6) = (un-y0)*(un+z0)*uns8
+        dff(2, 6) = -(un+x0)*(un+z0)*uns8
+        dff(3, 6) = (un+x0)*(un-y0)*uns8
+        dff(1, 7) = (un+y0)*(un+z0)*uns8
+        dff(2, 7) = (un+x0)*(un+z0)*uns8
+        dff(3, 7) = (un+x0)*(un+y0)*uns8
+        dff(1, 8) = -(un+y0)*(un+z0)*uns8
+        dff(2, 8) = (un-x0)*(un+z0)*uns8
+        dff(3, 8) = (un-x0)*(un+y0)*uns8
+        dff(1:3, 9:27) = zero
+        dff(1, 23) = undemi
+        dff(2, 23) = zero
+        dff(3, 23) = zero
+        dff(1, 25) = -undemi
+        dff(2, 25) = zero
+        dff(3, 25) = zero
+
     case ('H20')
         x0 = x(1)
         y0 = x(2)

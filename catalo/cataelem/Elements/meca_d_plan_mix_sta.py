@@ -45,9 +45,6 @@ ECONTNO = LocatedComponents(
     components=("SIXX", "SIYY", "SIZZ", "SIXY", "SIPXX", "SIPYY", "SIPZZ", "SIPXY"),
 )
 
-EREFCO = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("SIGM", "LAG_GV"))
-
-
 MVECTUR = ArrayOfComponents(phys=PHY.VDEP_R, locatedComponents=DDL_MECA)
 
 MVECTDR = ArrayOfComponents(phys=PHY.VDEP_R, locatedComponents=NDEPLAR)
@@ -91,7 +88,7 @@ class MEMS_QU4(Element):
         OP.CHAR_MECA_EPSI_F(
             te=284,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINF, LC.CEPS2DF),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
@@ -103,7 +100,7 @@ class MEMS_QU4(Element):
         OP.CHAR_MECA_EPSI_R(
             te=284,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINR, LC.EGPS2DR),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
@@ -124,7 +121,7 @@ class MEMS_QU4(Element):
         OP.CHAR_MECA_HYDR_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -170,7 +167,7 @@ class MEMS_QU4(Element):
         OP.CHAR_MECA_SECH_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -182,7 +179,7 @@ class MEMS_QU4(Element):
         OP.CHAR_MECA_TEMP_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -251,7 +248,7 @@ class MEMS_QU4(Element):
         OP.EPME_ELGA(
             te=87,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.EPME_ELGA.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLAR, NDEPLAR),
                 (SP.PGEOMER, LC.EGEOM2D),
@@ -286,7 +283,7 @@ class MEMS_QU4(Element):
         OP.EPSI_ELGA(
             te=87,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, NDEPLAR),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
@@ -329,7 +326,7 @@ class MEMS_QU4(Element):
         OP.FULL_MECA(
             te=54,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA.PCONTMR, ECONTPG),
@@ -357,7 +354,7 @@ class MEMS_QU4(Element):
         OP.FULL_MECA_ELAS(
             te=54,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA_ELAS.PCONTMR, ECONTPG),
@@ -400,7 +397,7 @@ class MEMS_QU4(Element):
         OP.RAPH_MECA(
             te=54,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.RAPH_MECA.PCONTMR, ECONTPG),
@@ -425,18 +422,22 @@ class MEMS_QU4(Element):
         ),
         OP.REFE_FORC_NODA(
             te=54,
-            para_in=((SP.PGEOMER, LC.EGEOM2D), (SP.PREFCO, EREFCO)),
+            para_in=(
+                (SP.PGEOMER, LC.EGEOM2D),
+                (SP.PRESIREF, LC.CRESIREF),
+                (SP.PRESICMP, LC.CRESICMP),
+            ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.REPERE_LOCAL(
             te=133,
-            para_in=((SP.PCAMASS, LC.CCAMA2D), (SP.PGEOMER, LC.EGEOM2D)),
+            para_in=((SP.PCAMASS, LC.CCAMASS), (SP.PGEOMER, LC.EGEOM2D)),
             para_out=((SP.PREPLO1, LC.CGEOM2D), (SP.PREPLO2, LC.CGEOM2D), (SP.PREPLO3, LC.CGEOM2D)),
         ),
         OP.RIGI_MECA_ELAS(
             te=54,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_ELAS.PCONTMR, ECONTPG),
@@ -456,7 +457,7 @@ class MEMS_QU4(Element):
         OP.RIGI_MECA_TANG(
             te=54,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_TANG.PCONTMR, ECONTPG),
@@ -512,7 +513,16 @@ class MEMS_QU4(Element):
         ),
         OP.SING_ELEM(te=99, para_out=((SP.PSING_R, LC.ESINGUL),)),
         OP.SING_ELNO(te=99, para_out=((SP.PSINGNO, LC.ESINGNO),)),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
@@ -525,6 +535,7 @@ class MEMS_QU4(Element):
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (SP.PVALO_R, LC.EGTINIV),
                 (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -534,11 +545,12 @@ class MEMS_QU4(Element):
                 (OP.TOU_INI_ELNO.PEPSI_R, LC.EEPS2DR),
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (SP.PTEMPN_R, LC.ETEMPNO),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARC_ELGA(

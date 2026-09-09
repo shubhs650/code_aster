@@ -18,19 +18,22 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine lcjohm(imate, lSigm, lMatr, lVari, kpi, npg,&
-                      nomail, addeme, advico, ndim, dimdef,&
-                      dimcon, nbvari, defgem, defgep, varim,&
-                      varip, sigm, sigp, drde, ouvh,&
+    subroutine lcjohm(materParaFPG1, &
+                      lSigm, lMatr, lVari, &
+                      kpg, npg, &
+                      addeme, advico, ndim, dimdef, &
+                      dimcon, nbvari, defgem, defgep, varim, &
+                      varip, sigm, sigp, drde, ouvh, &
                       retcom)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materParaFPG1
         integer(kind=8) :: nbvari
         integer(kind=8) :: dimcon
         integer(kind=8) :: dimdef
-        integer(kind=8) :: imate
         aster_logical, intent(in) :: lSigm, lMatr, lVari
-        integer(kind=8) :: kpi
+        integer(kind=8) :: kpg
+        integer(kind=8) :: jvMaterCode
         integer(kind=8) :: npg
-        character(len=8) :: nomail
         integer(kind=8) :: addeme
         integer(kind=8) :: advico
         integer(kind=8) :: ndim

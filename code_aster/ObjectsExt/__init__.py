@@ -60,6 +60,7 @@ from .generalizedassemblyvector_ext import (
     GeneralizedAssemblyVectorComplex,
     GeneralizedAssemblyVectorReal,
 )
+from .generalizedload_ext import GeneralizedLoad
 from .generalizedmodel_ext import GeneralizedModel
 from .equationnumbering_ext import EquationNumbering
 from .linearsolver_ext import (
@@ -75,7 +76,6 @@ from .listofintegers_ext import ListOfIntegers
 from .listofloads_ext import ListOfLoads
 from .material_ext import Material
 from .materialfield_ext import MaterialField
-from .mechanicalload_ext import MechanicalLoadReal, MechanicalLoadFunction, MechanicalLoadComplex
 from .mesh_ext import Mesh
 from .meshcoordinatesfield_ext import MeshCoordinatesField
 from .mgis_behaviour_ext import MGISBehaviour

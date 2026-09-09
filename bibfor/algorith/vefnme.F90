@@ -16,14 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vefnme(optionz, modelz, mate, cara_elem, &
-                  compor, nh, ligrelz, &
-                  varcz, sigmz, strxz, &
-                  dispz, &
-                  base, vect_elemz)
+subroutine vefnme(optionZ, modelZ, materCode, caraElem, &
+                  compor, nh, ligrelInZ, &
+                  varcz, sigmz, strxz, dispz, &
+                  jvBase, vectElemZ)
 !
     use HHO_precalc_module, only: hhoAddInputField
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -40,16 +39,17 @@ subroutine vefnme(optionz, modelz, mate, cara_elem, &
 #include "asterfort/mecact.h"
 #include "asterfort/mecara.h"
 #include "asterfort/reajre.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/xajcin.h"
 !
-    character(len=*), intent(in) :: optionz, modelz
-    character(len=24), intent(in) :: cara_elem, mate
+    character(len=*), intent(in) :: optionZ, modelZ
+    character(len=24), intent(in) :: materCode, caraElem
     character(len=19), intent(in) :: compor
     integer(kind=8), intent(in) :: nh
-    character(len=*), intent(in) :: ligrelz
+    character(len=*), intent(in) :: ligrelInZ
     character(len=*), intent(in) :: sigmz, varcz, strxz, dispz
-    character(len=1), intent(in) :: base
-    character(len=*), intent(in) :: vect_elemz
+    character(len=1), intent(in) :: jvBase
+    character(len=*), intent(in) :: vectElemZ
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -77,49 +77,47 @@ subroutine vefnme(optionz, modelz, mate, cara_elem, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: mxchin = 35, nbout = 1
-    character(len=8) :: lpaout(nbout), lpain(mxchin)
-    character(len=19) :: lchout(nbout), lchin(mxchin)
-    aster_logical :: l_xfem
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    character(len=19), parameter :: chharm = '&&VEFNME.NUME_HARM'
+    aster_logical :: lXFEM
     character(len=8) :: mesh, newnom, model
     character(len=16) :: option
-    character(len=19) :: vect_elem, resu_elem
-    character(len=19) :: chharm, ligrel_local, ligrel
-    character(len=19) :: chgeom, chcara(18)
-    integer(kind=8) :: iret, nbin
+    character(len=19) :: vectElem, resuElem
+    character(len=19) :: ligrelCalc, ligrelIn
+    character(len=19) :: chgeom
+    integer(kind=8) :: iret, nbFieldIn
     character(len=19) :: sigm, varc, strx, disp
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
+
 ! - Initializations
-!
-    lpaout = ' '
-    lpain = ' '
-    lchout = ' '
-    lchin = ' '
-    model = modelz
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+    model = modelZ
     sigm = sigmz
     varc = varcz
     strx = strxz
     disp = dispz
-    ligrel = ligrelz
-    newnom = '.0000000'
-    vect_elem = vect_elemz
-    resu_elem = vect_elem(1:8)//'.0000000'
+    option = optionZ
     call exixfe(model, iret)
-    l_xfem = (iret .eq. 1)
-    chharm = '&&VEFNME.NUME_HARM'
-    option = optionz
-    if (ligrel .eq. ' ') then
-        call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrel_local)
+    lXFEM = (iret .eq. 1)
+
+! - Get FED to compute
+    ligrelCalc = " "
+    ligrelIn = ligrelInZ
+    if (ligrelIn .eq. ' ') then
+        call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrelCalc)
     else
-        ligrel_local = ligrel
+        ligrelCalc = ligrelIn
     end if
-!
-! - Geometry field
-!
+
+! - Get mesh
     if (disp .ne. ' ') then
         call dismoi('NOM_MAILLA', disp, 'CHAM_NO', repk=mesh)
     else if (sigm .ne. ' ') then
@@ -128,89 +126,68 @@ subroutine vefnme(optionz, modelz, mate, cara_elem, &
         ASSERT(ASTER_FALSE)
     end if
     chgeom = mesh(1:8)//'.COORDO'
-!
-! - Field for structural elements
-!
-    call mecara(cara_elem(1:8), chcara)
-!
-! - Field for Fourier mode
-!
+
+! - Create field for Fourier mode
     call mecact('V', chharm, 'MAILLA', mesh, 'HARMON', &
                 ncmp=1, nomcmp='NH', si=nh)
-!
-! - Suppress old vect_elem result
-!
-    call maveElemCreate(base, vect_elem, model)
-!
+
+! - Suppress old vectElem result
+    vectElem = vectElemZ
+    call maveElemCreate(jvBase, vectElem, model)
+
 ! - Input fields
-!
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom
     lpain(2) = 'PMATERC'
-    lchin(2) = mate(1:19)
-    lpain(3) = 'PCAGNPO'
-    lchin(3) = chcara(6)
-    lpain(4) = 'PCAORIE'
-    lchin(4) = chcara(1)
-    lpain(5) = 'PCOMPOR'
-    lchin(5) = compor
-    lpain(6) = 'PSIEFR'
-    lchin(6) = sigm
-    lpain(7) = 'PDEPLAR'
-    lchin(7) = disp
-    lpain(9) = 'PCAARPO'
-    lchin(9) = chcara(9)
-    lpain(10) = 'PCADISK'
-    lchin(10) = chcara(2)
-    lpain(11) = 'PCACOQU'
-    lchin(11) = chcara(7)
-    lpain(12) = 'PHARMON'
-    lchin(12) = chharm
-    lpain(13) = 'PCAMASS'
-    lchin(13) = chcara(12)
-    lpain(16) = 'PVARCPR'
-    lchin(16) = varc
-    lpain(17) = 'PCAGEPO'
-    lchin(17) = chcara(5)
-    lpain(18) = 'PNBSP_I'
-    lchin(18) = chcara(16)
-    lpain(19) = 'PFIBRES'
-    lchin(19) = chcara(17)
-    lpain(20) = 'PCINFDI'
-    lchin(20) = chcara(15)
-    lpain(21) = 'PSTRXMR'
-    lchin(21) = strx
-    nbin = 21
-!
-! - XFEM fields
-!
-    if (l_xfem) then
-        call xajcin(model, option, mxchin, lchin, lpain, nbin)
+    lchin(2) = materCode(1:19)
+    lpain(3) = 'PCOMPOR'
+    lchin(3) = compor
+    lpain(4) = 'PSIEFR'
+    lchin(4) = sigm
+    lpain(5) = 'PDEPLAR'
+    lchin(5) = disp
+    lpain(6) = 'PHARMON'
+    lchin(6) = chharm
+    lpain(7) = 'PVARCPR'
+    lchin(7) = varc
+    lpain(8) = 'PSTRXMR'
+    lchin(8) = strx
+    nbFieldIn = 8
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Add XFEM fields
+    if (lXFEM) then
+        call xajcin(model, option, nbFieldInMax, lchin, lpain, nbFieldIn)
     end if
-!
-    call hhoAddInputField(model, mxchin, lchin, lpain, nbin)
-!
-!
-! - Output field
-!
-    lpaout(1) = 'PVECTUR'
+
+! - Add HHO field
+    call hhoAddInputField(model, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Set output field
+    newnom = '.0000000'
+    resuElem = vectElem(1:8)//'.0000000'
     call gcnco2(newnom)
-    resu_elem(10:16) = newnom(2:8)
-    call corich('E', resu_elem, ichin_=-1)
-    lchout(1) = resu_elem
-!
+    resuElem(10:16) = newnom(2:8)
+    call corich('E', resuElem, ichin_=-1)
+    lpaout(1) = 'PVECTUR'
+    lchout(1) = resuElem
+
 ! - Computation
-!
-    call calcul('S', option, ligrel_local, nbin, lchin, &
-                lpain, nbout, lchout, lpaout, base, &
-                'OUI')
-!
+    call calcul('S', option, ligrelCalc, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
+
 ! - Copying output field
-!
-    call reajre(vect_elem, resu_elem, base)
-!
+    call reajre(vectElem, resuElem, jvBase)
+
 ! - Clean
-!
     call detrsd('CHAMP_GD', chharm)
 !
     call jedema()

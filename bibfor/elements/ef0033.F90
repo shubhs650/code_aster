@@ -15,73 +15,68 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine ef0033(nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterfort/coqrep.h"
 #include "asterfort/dxefgv.h"
 #include "asterfort/dxefro.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
     character(len=16) :: nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCUL DE EFGE_ELNO EN LINEAIRE
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: jcara
-    integer(kind=8) :: jdepg, jeffg, jgeom
-    integer(kind=8) :: np
 !
-    real(kind=8) :: alpha, beta
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: nno, npg
+    integer(kind=8) :: jvDisp, jvEfge, jvGeom
     real(kind=8) :: pgl(3, 3), xyzl(3, 4)
-    real(kind=8) :: depl(24)
-    real(kind=8) :: effgt(32)
-    real(kind=8) :: t2iu(4), t2ui(4), c, s
+    real(kind=8) :: depl(24), efgeElno(32)
+    character(len=8), parameter :: fami = 'NOEU'
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    character(len=4) :: fami
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-!
-    fami = 'NOEU'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, jpoids=ipoids, &
-                     jvf=ivf, jdfde=idfdx, jgano=jgano)
-!
-!
-    call r8inir(32, 0.d0, effgt, 1)
-!
-    call jevech('PGEOMER', 'L', jgeom)
-!
-    np = nno
-!
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, c, s)
-!
-    call jevech('PDEPLAR', 'L', jdepg)
-    call utpvgl(nno, 6, pgl, zr(jdepg), depl)
-!
-!
-! --- CALCUL DES EFFORTS GENERALISES VRAIS AUX POINTS DE CALCUL
-    call dxefgv(nomte, 'EFGE_ELNO', xyzl, pgl, depl, effgt)
-!
-! ---   PASSAGE DES EFFORTS GENERALISES DU REPERE INTRINSEQUE
-! ---   A L'ELEMENT AU REPERE LOCAL DE LA COQUE
-!       ---------------------------------------
-    call jevech('PEFFORR', 'E', jeffg)
-    call dxefro(np, t2iu, effgt, zr(jeffg))
+    call elrefe_info(fami=fami, nno=nno, npg=npg)
+    efgeElno = 0.d0
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Displacements
+    call jevech('PDEPLAR', 'L', jvDisp)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry and displacements
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+    call utpvgl(nno, 6, pgl, zr(jvDisp), depl)
+
+! - CALCUL DES EFFORTS GENERALISES VRAIS AUX POINTS DE CALCUL
+    call dxefgv(plateCara, plateOrie, &
+                nomte, 'EFGE_ELNO', xyzl, pgl, depl, efgeElno)
+
+! - PASSAGE DES EFFORTS GENERALISES DU REPERE INTRINSEQUE A L'ELEMENT AU REPERE LOCAL DE LA COQUE
+    call jevech('PEFFORR', 'E', jvEfge)
+    call dxefro(nno, plateOrie%t2iu, efgeElno, zr(jvEfge))
 !
 end subroutine

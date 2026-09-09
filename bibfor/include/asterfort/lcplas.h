@@ -18,13 +18,13 @@
 !
 interface
     subroutine lcplas(BEHinteg, &
-                      fami, kpg, ksp, loi, toler,&
-                      itmax, mod, imat, nmat, materd,&
-                      materf, nr, nvi, timed, timef,&
-                      deps, epsd, sigd, vind, sigf,&
-                      vinf, comp, nbcomm, cpmono, pgl,&
-                      nfs, nsg, toutms, hsr, icomp,&
-                      codret, theta, vp, vecp, seuil,&
+                      fami, kpg, ksp, loi, toler, &
+                      itmax, mod, imat, nmat, materd, &
+                      materf, nr, nvi, timed, timef, &
+                      deps, epsd, sigd, vind, sigf, &
+                      vinf, comp, nbcomm, cpmono, pgl, &
+                      nfs, nsg, toutms, hsr, &
+                      codret, theta, vp, seuil, &
                       devg, devgii, drdy, crit)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
@@ -57,11 +57,9 @@ interface
         real(kind=8) :: pgl(3, 3)
         real(kind=8) :: toutms(nfs, nsg, 6)
         real(kind=8) :: hsr(nsg, nsg)
-        integer(kind=8) :: icomp
         integer(kind=8) :: codret
         real(kind=8) :: theta
         real(kind=8) :: vp(3)
-        real(kind=8) :: vecp(3, 3)
         real(kind=8) :: seuil
         real(kind=8) :: devg(*)
         real(kind=8) :: devgii

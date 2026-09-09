@@ -89,7 +89,7 @@ subroutine te0537(option, nomte)
     real(kind=8) :: a, xiy, xiz, alfay, alfaz, phiy, phiz, ey, ez
     real(kind=8) :: epsthe, temp, d1b(7, 14), eps(7)
     integer(kind=8) :: lmater, itemp, j
-    character(len=4) :: fami
+    character(len=8) :: fami
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: nb_cara = 9

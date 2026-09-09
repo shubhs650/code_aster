@@ -37,7 +37,8 @@ subroutine xrige2(elrefp, elrese, ndim, coorse, igeom, &
 #include "asterfort/xnbddl.h"
 #include "asterfort/iimatu.h"
 #include "asterfort/iipff.h"
-    integer(kind=8) :: ndim, igeom, nnop, npg, ddlh, ddlc, nfe, heavn(27, 5)
+#include "MeshTypes_type.h"
+    integer(kind=8) :: ndim, igeom, nnop, npg, ddlh, ddlc, nfe, heavn(MT_NNOMAX, 5)
     integer(kind=8) :: jstno, imate
     character(len=8) :: elrefp
     character(len=8) :: elrese
@@ -81,7 +82,7 @@ subroutine xrige2(elrefp, elrese, ndim, coorse, igeom, &
     real(kind=8) :: xg(ndim), xe(ndim), ff(nnop), jac
     real(kind=8) :: dfdi(nnop, ndim), pff(1+ddlh+nfe*ndim**2, nnop, ndim)
     real(kind=8) :: rac2
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX, 3, 3), dkdgl(MT_NNOMAX, 3, 3, 3), ka, mu
     integer(kind=8) :: nnops
 !
     aster_logical :: axi
@@ -167,9 +168,8 @@ subroutine xrige2(elrefp, elrese, ndim, coorse, igeom, &
                 do i = 1, ddldn
                     do j = 1, ddldn
                         tmp1 = sig( &
-                               (kpg-1)*4+1)*pff(i, n, 1)*pff(j, m, 1)+sig((kpg-1)*4+2)*pff(i, &
-                                                                                   n, 2)*pff(j, m, &
-                                                                                           2)+sig( &
+                               (kpg-1)*4+1)*pff(i, n, 1)*pff(j, m, 1)+ &
+                               sig((kpg-1)*4+2)*pff(i, n, 2)*pff(j, m, 2)+sig( &
                                (kpg-1)*4+4)*(pff(i, n, 1)*pff(j, m, 2)+pff(i, n, 2)*pff(j, m, 1) &
                                              )/rac2
 !              STOCKAGE EN TENANT COMPTE DE LA SYMETRIE

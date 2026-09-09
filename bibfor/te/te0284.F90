@@ -15,139 +15,110 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0284(option, nomte)
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8vide.h"
+#include "asterfort/assert.h"
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/epsimc.h"
 #include "asterfort/jevech.h"
+#include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/sigimc.h"
 #include "asterfort/tecach.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES VECTEURS ELEMENTAIRES EN 2D
-!                      OPTION : 'CHAR_MECA_EPSI_R  ','CHAR_MECA_EPSI_F '
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
+    character(len=16), intent(in) :: option, nomte
 !
-    character(len=4) :: fami
-    real(kind=8) :: sigi(162), epsi(162), bsigmEner(81), angl_naut(3)
-    real(kind=8) :: instan, nharm, xyz(81)
-    integer(kind=8) :: dimcoo, idim
+! --------------------------------------------------------------------------------------------------
 !
+! Elementary computation
 !
+! Elements: 2D
 !
-! ---- CARACTERISTIQUES DU TYPE D'ELEMENT :
-! ---- GEOMETRIE ET INTEGRATION
-!      ------------------------
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, idfde, igeom, iharmo, imate, ipoids, iret
-    integer(kind=8) :: itemps, ivectu, ivf, jgano, nbsig, ndim, nno
-    integer(kind=8) :: nnos, npg
-    real(kind=8) :: zero
-!-----------------------------------------------------------------------
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-    dimcoo = ndim
+! Options: CHAR_MECA_EPSI_*
 !
-! --- INITIALISATIONS :
-!     -----------------
-    zero = 0.0d0
-    instan = r8vide()
+! --------------------------------------------------------------------------------------------------
 !
-! ---- NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
-!      -----------------------------------------
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8), parameter :: zero = 0.d0
+    real(kind=8) :: sigi(162), epsi(162), bsigmEner(81)
+    real(kind=8) :: time, nharm
+    integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
+    integer(kind=8) :: jvGeom, jvHarmon, jvMaterc
+    integer(kind=8) :: jvInstr, ivectu
+    integer(kind=8) :: i, iret
+    integer(kind=8) :: nbsig, ndim, nno, npg
+    type(Material_Para) :: materPara
+!
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=jvGaussWeight, jvf=jvBaseFunc, jdfde=jvDBaseFunc)
+
+! - Initializations
+    if (lteatt('FOURIER', 'OUI')) then
+        ndim = 3
+    end if
     nbsig = nbsigm()
-    if (nbsig .eq. 6) ndim = 3
-!
-    do i = 1, nbsig*npg
-        epsi(i) = zero
-        sigi(i) = zero
-    end do
-!
-    do i = 1, ndim*nno
-        bsigmEner(i) = zero
-    end do
-!
-! ---- RECUPERATION DE L'HARMONIQUE DE FOURIER
-!      ---------------------------------------
-    call tecach('NNO', 'PHARMON', 'L', iret, iad=iharmo)
-    if (iharmo .eq. 0) then
+    epsi = zero
+    sigi = zero
+    bsigmEner = zero
+    ASSERT(nbsig .le. 6)
+    ASSERT(npg .le. 27)
+
+! - Get Fourier mode
+    nharm = 0.d0
+    call tecach('NNO', 'PHARMON', 'L', iret, iad=jvHarmon)
+    if (jvHarmon .eq. 0) then
         nharm = zero
     else
-        nharm = dble(zi(iharmo))
+        nharm = dble(zi(jvHarmon))
     end if
-!
-! ---- RECUPERATION DES COORDONNEES DES CONNECTIVITES
-!      ----------------------------------------------
-    call jevech('PGEOMER', 'L', igeom)
-    if (ndim .eq. dimcoo) then
-        do i = 1, ndim*nno
-            xyz(i) = zr(igeom+i-1)
-        end do
-    else
-        do i = 1, nno
-            do idim = 1, ndim
-                if (idim .le. dimcoo) then
-                    xyz(idim+ndim*(i-1)) = zr(igeom-1+idim+dimcoo*(i-1))
-                else
-                    xyz(idim+ndim*(i-1)) = 0.d0
-                end if
-            end do
-        end do
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Get current time
+    time = r8vide()
+    call tecach('NNO', 'PINSTR', 'L', iret, iad=jvInstr)
+    if (jvInstr .ne. 0) then
+        time = zr(jvInstr)
     end if
-!
-! ---- RECUPERATION DU MATERIAU
-!      ------------------------
-    call jevech('PMATERC', 'L', imate)
-!
-! ---- RECUPERATION  DES DONNEEES RELATIVES AU REPERE D'ORTHOTROPIE
-!      ------------------------------------------------------------
-    call getElemOrientation(dimcoo, nno, igeom, angl_naut)
-!
-!
-! ---- RECUPERATION DE L'INSTANT
-!      -------------------------
-    call tecach('NNO', 'PINSTR', 'L', iret, iad=itemps)
-    if (itemps .ne. 0) instan = zr(itemps)
-!
-! ---- CONSTRUCTION DU VECTEUR DES DEFORMATIONS INITIALES DEFINIES AUX
-! ---- POINTS D'INTEGRATION A PARTIR DES DONNEES UTILISATEUR
-!      -----------------------------------------------------
-    call epsimc(option, zr(igeom), nno, npg, ndim, &
-                nbsig, zr(ivf), epsi)
-!
-! ---- CALCUL DU VECTEUR DES CONTRAINTES INITIALES AUX POINTS
-! ---- D'INTEGRATION
-!      -------------
-    call sigimc(fami, nno, ndim, nbsig, npg, &
-                instan, zi(imate), angl_naut, &
+
+! - Compute initial strains
+    call epsimc(option, zr(jvGeom), nno, npg, ndim, &
+                nbsig, zr(jvBaseFunc), epsi)
+
+! - Compute initial stresses
+    call sigimc(materPara, &
+                nbsig, npg, time, &
                 epsi, sigi)
-!
-! ---- CALCUL DU VECTEUR DES FORCES DUES AUX CONTRAINTES INITIALES
-! ---- (I.E. BT*SIG_INITIALES)
-!      ----------------------
-    call bsigmc(nno, ndim, nbsig, npg, ipoids, &
-                ivf, idfde, zr(igeom), nharm, sigi, &
+
+! - Compute CHAR_MECA_EPSI
+    call bsigmc(nno, ndim, nbsig, npg, jvGaussWeight, &
+                jvBaseFunc, jvDBaseFunc, zr(jvGeom), nharm, sigi, &
                 bsigmEner)
-!
-! ---- RECUPERATION ET AFFECTATION DU VECTEUR EN SORTIE AVEC LE
-! ---- VECTEUR DES FORCES DUES AUX CONTRAINTES INITIALES
-!      -------------------------------------------------
+
+! - Set output
     call jevech('PVECTUR', 'E', ivectu)
-!
     do i = 1, ndim*nno
         zr(ivectu+i-1) = bsigmEner(i)
     end do
 !
-! FIN ------------------------------------------------------------------
 end subroutine

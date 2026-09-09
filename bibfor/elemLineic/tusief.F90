@@ -54,7 +54,7 @@ subroutine tusief(nbNode, nbFourier, nbDof)
     integer(kind=8) :: jvSigm
     real(kind=8) :: sigm(PIPE_TENS_SIZE)
     real(kind=8) :: radiusLayer
-    integer(kind=8) :: jvMaterCode
+    integer(kind=8) :: jvMaterc
     real(kind=8) :: meanTemp
     real(kind=8) :: elasMatr(PIPE_TENS_SIZE, PIPE_TENS_SIZE)
     real(kind=8) :: xpg(PIPE_MAX_NPG)
@@ -96,8 +96,8 @@ subroutine tusief(nbNode, nbFourier, nbDof)
     end if
 
 ! - Get elastic properties
-    call jevech('PMATERC', 'L', jvMaterCode)
-    call pipeGetElasProp(jvMaterCode, temp_=meanTemp, &
+    call jevech('PMATERC', 'L', jvMaterc)
+    call pipeGetElasProp(zi(jvMaterc), temp_=meanTemp, &
                          c_=elasMatr)
 
 ! - Get displacements  (in local base)
@@ -109,7 +109,7 @@ subroutine tusief(nbNode, nbFourier, nbDof)
     sigmTher = 0.d0
     do kpg = 1, npg
 ! ----- Compute thermal strain and stress
-        call verifg('RIGI', kpg, nspg, '+', zi(jvMaterCode), epsiTher)
+        call verifg('RIGI', kpg, nspg, '+', zi(jvMaterc), epsiTher)
         sigmTher(1) = (elasMatr(1, 1)+elasMatr(1, 2))*epsiTher
         sigmTher(2) = (elasMatr(2, 1)+elasMatr(2, 2))*epsiTher
 

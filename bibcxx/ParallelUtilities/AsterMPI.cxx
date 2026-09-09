@@ -54,4 +54,8 @@ aster_comm_t *AsterMPI::splitCommunicator( int color, aster_comm_t *_commCurrent
                              std::string( "COMM_SPLIT" ).data() );
 };
 
+void AsterMPI::bcast( std::string &value, int root, aster_comm_t *_commCurrent ) {
+    aster_mpi_bcast( value.data(), value.size(), MPI_CHAR, root, _commCurrent );
+}
+
 #endif

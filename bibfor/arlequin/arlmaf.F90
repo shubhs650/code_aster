@@ -51,6 +51,7 @@ subroutine arlmaf(mail, mailar, dime, ngrma, ima, &
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnum.h"
+#include "MeshTypes_type.h"
 !
 !     ARGUMENTS:
 !     ----------
@@ -61,7 +62,7 @@ subroutine arlmaf(mail, mailar, dime, ngrma, ima, &
     integer(kind=8) :: imail
     integer(kind=8) :: ima, nummai, cxcumu
     integer(kind=8) :: itypma
-    integer(kind=8) :: cxno(27), nbno, ino, cxmax
+    integer(kind=8) :: cxno(MT_NNOMAX), nbno, ino, cxmax
     integer(kind=8) :: jgcnx, jtypm
     character(len=8) :: nomel, nommai, k8bid
     character(len=24) :: mconn, mtypm

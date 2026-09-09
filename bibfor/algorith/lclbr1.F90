@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 
 subroutine lclbr1(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, epsm, deps, option, &
+                  imate, epsm, deps, option, &
                   sig, dsidep)
     implicit none
 #include "asterf_types.h"
@@ -29,7 +29,7 @@ subroutine lclbr1(fami, kpg, ksp, ndim, typmod, &
 #include "asterc/r8prem.h"
     character(len=*) :: fami
     character(len=8) :: typmod(2)
-    character(len=16) :: compor(*), option
+    character(len=16) :: option
     integer(kind=8) :: kpg, ksp, ndim, imate
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sig(6), dsidep(6, 12)
@@ -81,8 +81,8 @@ subroutine lclbr1(fami, kpg, ksp, ndim, typmod, &
 !
 ! -- INITIALISATION
 !
-    call lclbr2(fami, kpg, ksp, imate, compor, &
-                ndim, epsm, t, e, sigmt, &
+    call lclbr2(fami, kpg, ksp, imate, &
+                t, e, sigmt, &
                 sigmc, epsic, compn, gamma)
 !
 !

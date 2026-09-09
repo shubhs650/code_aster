@@ -27,16 +27,17 @@ subroutine apinte_prma_n(proj_tole, elem_dime, &
 #include "asterfort/apnorm.h"
 #include "asterfort/assert.h"
 #include "asterfort/gapGetParamCoor.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmnewd.h"
 !
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code, elem_slav_code
-    real(kind=8), intent(out) :: proj_coor(elem_dime-1, 9)
+    real(kind=8), intent(out) :: proj_coor(2, 9)
     integer(kind=8), intent(out) :: iret, nb_node_proj
 !
 ! --------------------------------------------------------------------------------------------------
@@ -61,7 +62,7 @@ subroutine apinte_prma_n(proj_tole, elem_dime, &
     aster_logical, parameter :: debug = ASTER_FALSE
     integer(kind=8) :: i_node, i_dime, elem_mast_line_nbnode
     real(kind=8) :: nosl_coor(3), ksi1_line, ksi2_line
-    real(kind=8) :: ksi1, ksi2, tau1(3), tau2(3), para_coor(2, 9)
+    real(kind=8) :: ksi1, ksi2, tau1(3), tau2(3), para_coor(2, MT_NNOMAX2D)
     real(kind=8) :: norm_slav(3)
     character(len=8) :: elem_mast_line_code
 

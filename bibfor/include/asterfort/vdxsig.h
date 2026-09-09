@@ -17,8 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine vdxsig(nomte, nodeCoor, &
+    subroutine vdxsig(plateCara, plateOrie, &
+                      nomte, nodeCoor, &
                       nbLayer, siefElga)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         character(len=16), intent(in) :: nomte
         real(kind=8), intent(in) :: nodeCoor(3, 9)
         integer(kind=8), intent(in) :: nbLayer

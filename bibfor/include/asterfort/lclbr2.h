@@ -15,20 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lclbr2(fami, kpg, ksp, imate, compor,&
-                      ndim, epsm, t, e, sigmt,&
+    subroutine lclbr2(fami, kpg, ksp, imate, &
+                      t, e, sigmt, &
                       sigmc, epsic, compn, gamma)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        integer(kind=8) :: ndim
-        real(kind=8) :: epsm(6)
         integer(kind=8) :: t(3, 3)
         real(kind=8) :: e
         real(kind=8) :: sigmt

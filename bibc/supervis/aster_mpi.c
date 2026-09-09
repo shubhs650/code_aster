@@ -1207,6 +1207,40 @@ void DEFSPSPPP( ASMPI_ALLGATHERV_CHAR16, asmpi_allgatherv_char16, char *sendbuf,
     return;
 }
 
+void DEFSPSPPP( ASMPI_ALLGATHERV_CHAR24, asmpi_allgatherv_char24, char *sendbuf, STRING_SIZE sbuff,
+                ASTERINTEGER4 *sendcnt, char *recvbuf, STRING_SIZE rbuff, ASTERINTEGER4 *recvcnt,
+                ASTERINTEGER4 *displs, MPI_Fint *comm ) {
+#ifdef ASTER_HAVE_MPI
+    MPI_Comm mpicom;
+
+    mpicom = MPI_Comm_f2c( *comm );
+    DEBUG_MPI( "MPI_Allgatherv: %d gather char24 values by all ...%s\n", *sendcnt, " " );
+    double start = MPI_Wtime();
+    // We have to change size because of size of K24
+    ASTERINTEGER4 size = 0;
+    AS_MPICHECK( MPI_Comm_size( mpicom, &size ) );
+    ASTERINTEGER4 *recvcnt_k24, *displs_k24;
+    recvcnt_k24 = (ASTERINTEGER4 *)malloc( sizeof( ASTERINTEGER4 ) * size );
+    displs_k24 = (ASTERINTEGER4 *)malloc( sizeof( ASTERINTEGER4 ) * size );
+
+    ASTERINTEGER4 i;
+    for ( i = 0; i < size; i++ ) {
+        recvcnt_k24[i] = 24 * recvcnt[i];
+        displs_k24[i] = 24 * displs[i];
+    }
+
+    AS_MPICHECK( MPI_Allgatherv( (void *)sendbuf, ( *sendcnt ) * 24, MPI_CHAR, (void *)recvbuf,
+                                 recvcnt_k24, displs_k24, MPI_CHAR, mpicom ) );
+
+    free( recvcnt_k24 );
+    free( displs_k24 );
+
+    double end = MPI_Wtime();
+    DEBUG_MPI( "MPI_Allgatherv: ... in %f sec %s\n", ( end - start ), " " );
+#endif
+    return;
+}
+
 void DEFSPSPPP( ASMPI_ALLGATHERV_CHAR80, asmpi_allgatherv_char80, char *sendbuf, STRING_SIZE sbuff,
                 ASTERINTEGER4 *sendcnt, char *recvbuf, STRING_SIZE rbuff, ASTERINTEGER4 *recvcnt,
                 ASTERINTEGER4 *displs, MPI_Fint *comm ) {

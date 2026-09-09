@@ -27,7 +27,7 @@ subroutine projInsideCell(pair_tole, elem_dime, elem_code, &
     real(kind=8), intent(in) :: pair_tole
     integer(kind=8), intent(in) :: elem_dime
     character(len=8), intent(in) :: elem_code
-    real(kind=8), intent(in) :: poin_coor(elem_dime-1)
+    real(kind=8), intent(in) :: poin_coor(2)
     integer(kind=8), intent(out) :: iret
 !
 ! --------------------------------------------------------------------------------------------------

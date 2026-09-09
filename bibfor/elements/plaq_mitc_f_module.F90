@@ -43,5 +43,26 @@ module c_interface_plaq_mitc_f
             ! Tableau de sortie Matrice de rigidité (taille supposée connue)
             real(c_double), intent(out) :: A(*)
         end subroutine BP1_qu9_Fortran
+        subroutine BP2_qu9_Fortran(w, nw, coordinate_dofs, ncd,&
+            & entity_local_index, ne, cst, ncst, A) bind(C, name="BP2_qu9_Fortran")
+            import :: c_double, c_int
+            implicit none
+!
+            ! Longueurs des tableaux w, coord_dofs, cst, entity_loc_index
+            integer(c_int), value, intent(in) :: nw
+            integer(c_int), value, intent(in) :: ncd
+            integer(c_int), value, intent(in) :: ncst
+            integer(c_int), value, intent(in) :: ne
+!
+            ! Tableaux d'entrée : w = 0.d0
+            ! cst : paramètres matériau
+            real(c_double), intent(in) :: w(*)
+            real(c_double), intent(in) :: coordinate_dofs(*)
+            real(c_double), intent(in) :: cst(*)
+            integer(c_int), intent(in) :: entity_local_index(*)
+!
+            ! Tableau de sortie Matrice de rigidité (taille supposée connue)
+            real(c_double), intent(out) :: A(*)
+        end subroutine BP2_qu9_Fortran
     end interface
 end module c_interface_plaq_mitc_f

@@ -17,10 +17,10 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine coeihm(ds_thm, option, &
+subroutine coeihm(ds_thm, &
                   lSigm, lVari, lMatr, lVect, &
-                  j_mater, &
-                  time_prev, time_curr, nomail, &
+                  option, &
+                  time_prev, time_curr, &
                   ndim, dimdef, dimcon, nbvari, &
                   addeme, adcome, &
                   addep1, adcp11, adcp12, addlh1, adcop1, &
@@ -29,27 +29,25 @@ subroutine coeihm(ds_thm, option, &
                   sigm, sigp, varim, varip, res, &
                   drde, retcom)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/calcco.h"
 #include "asterfort/calcfh.h"
-#include "asterfort/coeime.h"
 #include "asterfort/calcva.h"
-#include "asterfort/utmess.h"
-#include "asterfort/thmGetParaBiot.h"
-#include "asterfort/thmGetParaHydr.h"
+#include "asterfort/coeime.h"
 #include "asterfort/tebiot.h"
-#include "asterfort/thmEvalSatuFinal.h"
+#include "asterfort/THM_type.h"
 #include "asterfort/thmEvalConductivity.h"
 #include "asterfort/thmEvalGravity.h"
-#include "asterfort/THM_type.h"
+#include "asterfort/thmEvalSatuFinal.h"
+#include "asterfort/thmGetParaBiot.h"
+#include "asterfort/thmGetParaHydr.h"
+#include "asterfort/utmess.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
-    character(len=8), intent(in) :: nomail
     character(len=16), intent(in) :: option
     integer(kind=8), intent(in) :: dimdef, dimcon, npg, kpi, npi, ndim
     integer(kind=8), intent(in) :: nbvari
@@ -76,10 +74,7 @@ subroutine coeihm(ds_thm, option, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
-! IN OPTION : OPTION DE CALCUL
-! IN IMATE  : MATERIAU CODE
-! IN COMPOR : COMPORTEMENT
-! IN CRIT   : CRITERES DE CONVERGENCE LOCAUX
+! In  option           : name of option- to compute
 ! IN INSTAM : TEMPS MOINS
 ! IN INSTAP : TEMPS PLUS
 ! IN NOMAIL : NUMERO DE MAILLE
@@ -126,28 +121,28 @@ subroutine coeihm(ds_thm, option, &
 !
     integer(kind=8) :: i, j, f
     real(kind=8) :: depsv, epsv, deps(6)
-    real(kind=8) :: t, p1, p2, dt, dp1, dp2, grat(3), grap1(3), grap2(3)
+    real(kind=8) :: temp, p1, p2, dtemp, dp1, dp2, gradTemp(3), gradP1(3), gradP2(3)
     real(kind=8) :: pvp, pad, h11, h12, rho11, phi, nl
-    real(kind=8) :: tperm(ndim, ndim), sat, tbiot(6), satur, dsatur, pesa(3)
+    real(kind=8) :: tperm(ndim, ndim), sat, tbiot(6), satur, dsatur, gravity(3)
     real(kind=8) :: lambp, dlambp, lambs, dlambs, viscl, viscg
     real(kind=8) :: tlambt(ndim, ndim), tdlamt(ndim, ndim)
     real(kind=8) :: tlamct(ndim, ndim)
     real(kind=8) :: dsde(dimcon, dimdef)
     real(kind=8) :: tlint, ouvh, deltat
-    real(kind=8) :: angl_naut(3)
     integer(kind=8) :: nume_thmc
-    character(len=16) :: meca
+    character(len=16) :: relaMeca
     aster_logical :: lMatrPred
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
     retcom = 0
     deltat = time_curr-time_prev
     tperm(:, :) = 0.d0
-    angl_naut(:) = 0.d0
-    grat(:) = 0.d0
-    grap1(:) = 0.d0
-    grap2(:) = 0.d0
+    gradTemp(:) = 0.d0
+    gradP1(:) = 0.d0
+    gradP2(:) = 0.d0
     if (lVari) then
         varip(1:nbvari) = 0.d0
     end if
@@ -162,48 +157,42 @@ subroutine coeihm(ds_thm, option, &
         drde(1:dimdef, 1:dimdef) = 0.d0
     end if
     lMatrPred = option .eq. 'RIGI_MECA_TANG'
-!
+
 ! - Get storage parameters for behaviours
-!
-    meca = ds_thm%ds_behaviour%rela_meca
+    relaMeca = ds_thm%ds_behaviour%rela_meca
     nume_thmc = ds_thm%ds_behaviour%nume_thmc
-!
+
 ! - Update unknowns
-!
     call calcva(ds_thm, ndim-1, &
                 defgem, defgep, &
                 addeme, addep1, addep2, addete, &
                 depsv, epsv, deps, &
-                t, dt, grat, &
-                p1, dp1, grap1, &
-                p2, dp2, grap2, &
+                temp, dtemp, gradTemp, &
+                p1, dp1, gradP1, &
+                p2, dp2, gradP2, &
                 retcom)
-!
+
 ! - Mechanic - Not fully coupled
-!
     epsv = 0.d0
     depsv = 0.d0
-!
+
 ! - Get hydraulic parameters
-!
-    call thmGetParaHydr(j_mater, ds_thm)
-!
+    call thmGetParaHydr(ds_thm)
+
 ! - Get Biot parameters (for porosity evolution)
-!
-    call thmGetParaBiot(j_mater, ds_thm)
-!
+    call thmGetParaBiot(ds_thm)
+
 ! - Compute Biot tensor
-!
-    call tebiot(ds_thm, angl_naut, tbiot)
-!
+    call tebiot(ds_thm, tbiot)
+
 ! - Compute generalized stresses and matrix for mechanical behaviour
-!
-    if ((meca .ne. 'JOINT_BANDIS') .and. (meca .ne. 'CZM_LIN_REG') .and. &
-        (meca .ne. 'CZM_EXP_REG')) then
-        call utmess('F', 'ALGORITH17_10', sk=meca)
+    if ((relaMeca .ne. 'JOINT_BANDIS') .and. (relaMeca .ne. 'CZM_LIN_REG') .and. &
+        (relaMeca .ne. 'CZM_EXP_REG')) then
+        call utmess('F', 'ALGORITH17_10', sk=relaMeca)
     end if
-    call coeime(ds_thm, j_mater, nomail, option, &
+    call coeime(ds_thm, &
                 lSigm, lVari, lMatr, &
+                option, &
                 ndim, dimdef, dimcon, &
                 addeme, addep1, &
                 nbvari, npg, npi, &
@@ -213,22 +202,19 @@ subroutine coeihm(ds_thm, option, &
     if (retcom .ne. 0) then
         goto 99
     end if
-!
+
 ! - For JHMS element => initial porosity is non-sense
-!
     ds_thm%ds_parainit%poro_init = 0.d0
-!
+
 ! - Compute generalized stresses and matrix for coupled quantities
-!
     call calcco(ds_thm, &
-                lMatr, lSigm, lVari, lMatrPred, angl_naut, &
-                j_mater, &
+                lMatr, lSigm, lVari, lMatrPred, &
                 ndim-1, nbvari, &
                 dimdef, dimcon, &
                 adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
                 addeme, addete, addep1, addep2, &
-                t, p1, p2, &
-                dt, dp1, dp2, &
+                temp, p1, p2, &
+                dtemp, dp1, dp2, &
                 deps, epsv, depsv, &
                 tbiot, &
                 phi, rho11, satur, nl, &
@@ -239,57 +225,51 @@ subroutine coeihm(ds_thm, option, &
     if (retcom .ne. 0) then
         goto 99
     end if
-!
+
 ! - Evaluation of final saturation
-!
-    call thmEvalSatuFinal(ds_thm, j_mater, p1, t, &
+    call thmEvalSatuFinal(ds_thm, &
+                          p1, temp, &
                           satur, dsatur, retcom)
-!
+
 ! - Evaluate thermal conductivity
-!
     call thmEvalConductivity(ds_thm, &
-                             angl_naut, ndim, j_mater, &
+                             ndim, &
                              satur, phi, &
                              lambs, dlambs, lambp, dlambp, &
                              tlambt, tlamct, tdlamt)
-!
+
 ! - Compute gravity
-!
-    call thmEvalGravity(j_mater, time_curr, pesa)
-!
+    call thmEvalGravity(ds_thm, time_curr, gravity)
+
 ! - (re)-compute Biot tensor
-!
-    call tebiot(ds_thm, angl_naut, tbiot)
-!
+    call tebiot(ds_thm, tbiot)
+
 ! - Get parameters
-!
     viscl = ds_thm%ds_material%liquid%visc
     viscg = ds_thm%ds_material%gaz%visc
-!
+
 ! - Compute flux
-!
     do i = 1, ndim-1
         tperm(i, i) = tlint
     end do
     if (ds_thm%ds_elem%l_dof_pre1) then
         call calcfh(ds_thm, &
-                    lMatr, lSigm, ndim-1, j_mater, &
+                    lMatr, lSigm, ndim-1, materPara%jvMaterCode, &
                     dimdef, dimcon, &
                     addep1, addep2, &
                     adcp11, adcp12, adcp21, adcp22, &
                     addeme, addete, &
-                    t, p1, p2, pvp, pad, &
-                    grat, grap1, grap2, &
+                    temp, p1, p2, pvp, pad, &
+                    gradTemp, gradP1, gradP2, &
                     rho11, h11, h12, &
-                    sat, dsatur, pesa, tperm, &
+                    sat, dsatur, gravity, tperm, &
                     sigp, dsde)
         if (retcom .ne. 0) then
             goto 99
         end if
     end if
-!
+
 ! - Generalized stress and residual
-!
     if (lSigm) then
         if (ds_thm%ds_elem%l_dof_pre1) then
             sigp(adcp11+1) = ouvh*sigp(adcp11+1)
@@ -343,12 +323,12 @@ subroutine coeihm(ds_thm, option, &
                         if (nume_thmc .eq. GAZ) then
                             drde(addep1+i, 1) = drde(addep1+i, 1)+ &
                                                 deltat*3.d0* &
-                                                tlint*rho11/viscg*(-grap1(i)+rho11*pesa(i))
+                                                tlint*rho11/viscg*(-gradP1(i)+rho11*gravity(i))
                         end if
                         if (nume_thmc .eq. LIQU_SATU) then
                             drde(addep1+i, 1) = drde(addep1+i, 1)+ &
                                                 deltat*3.d0* &
-                                                tlint*rho11/viscl*(-grap1(i)+rho11*pesa(i))
+                                                tlint*rho11/viscl*(-gradP1(i)+rho11*gravity(i))
                         end if
                         drde(addep1+i, addep1) = drde(addep1+i, addep1)+ &
                                                  deltat*ouvh*dsde(adcp11+j, addep1)

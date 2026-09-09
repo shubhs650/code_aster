@@ -178,6 +178,20 @@ Returns:
                 list[str]: list of components
             )" )
         // ---------------------------------------------------------------------
+        .def( "getComponentsIdToName", &EquationNumbering::getComponentsIdToName, R"(
+            Get map between id and name of components
+
+            Returns:
+                dict[int]: map between id and name
+            )" )
+        // ---------------------------------------------------------------------
+        .def( "getComponentsNameToId", &EquationNumbering::getComponentsNameToId, R"(
+            Get map between id and name of components
+
+            Returns:
+                dict[int]: map between id and name
+            )" )
+        // ---------------------------------------------------------------------
         .def( "getDOFsWithDescription",
               py::overload_cast< const VectorString &, const VectorString &, const bool,
                                  const ASTERINTEGER >( &EquationNumbering::getDOFsWithDescription,

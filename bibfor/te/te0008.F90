@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0008(option, nomte)
-!
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "asterfort/assert.h"
@@ -26,10 +26,10 @@ subroutine te0008(option, nomte)
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "MeshTypes_type.h"
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
+#include "FE_module.h"
 #include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
@@ -48,14 +48,14 @@ subroutine te0008(option, nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: sigref, sigtmp(6*MT_NNOMAX)
-    real(kind=8) :: nharm, bsigm(3*MT_NNOMAX), geo(3*MT_NNOMAX), ftemp(3*MT_NNOMAX)
+    real(kind=8) :: nharm, bsigm(MAX_BV_CG), geo(3*MT_NNOMAX), ftemp(MAX_BV_CG)
     integer(kind=8) :: nbsig, ndim, nno, npg
     integer(kind=8) :: ipoids, ivf, idfde
     integer(kind=8) :: igeom, ivectu
     integer(kind=8) :: jvDisp, jvSief, jvCompor
     integer(kind=8) :: i, j, nbinco, iretCompor, iretDisp
     blas_int :: b_incx, b_incy, b_n
-!
+    type(RESI_REFE):: refe
 ! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, npg=npg, jpoids=ipoids, &
@@ -64,7 +64,7 @@ subroutine te0008(option, nomte)
 ! - Initializations
     nharm = 0.d0
     nbinco = nno*ndim
-    ASSERT(nbinco .le. 3*MT_NNOMAX)
+    ASSERT(nbinco .le. MAX_BV_CG)
     nbsig = nbsigm()
     ASSERT(nbsig .le. 6)
 !
@@ -104,7 +104,9 @@ subroutine te0008(option, nomte)
         call dcopy(b_n, bsigm, b_incx, zr(ivectu), b_incy)
 !
     else if (option .eq. 'REFE_FORC_NODA') then
-        call terefe('SIGM_REFE', 'MECA_ISO', sigref)
+        call refe%Init(nomte)
+        sigref = refe%GetRef('SIGM')
+        call refe%Check()
         sigtmp = 0.d0
         ftemp = 0.d0
         do i = 1, nbsig*npg

@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: fetch
-  # depth must be higher than the range used to search the last tag
+  # only 'prepare' download more revisions to search the last tag
   GIT_DEPTH: 100
   MINIO_URL: https://minio.retd.edf.fr
   ROOT_URL: https://$GITLAB_TOKEN_NAME:$GITLAB_TOKEN@gitlab.pleiade.edf.fr/codeaster
@@ -8,6 +8,7 @@ variables:
   OSNAME: debian-12
   IMAGE_URL: ${DOCKER_NEXUS_URL}/codeaster-prerequisites:${PREREQ_VERSION}-${OSNAME}
   ASTER_BUILD: mpi
+  ASTER_SKIP_CHECK_UPDATES: 1
   # BUILDTYPE: ci, nightly, nightly-coverage, nightly-sanitize, code-checking, docker
   BUILDTYPE: ci
   # RUNNER_TAG_TEST: allow to override the runner for running tests (in schedule parameters)
@@ -58,17 +59,23 @@ before_script:
 .prepare:
   interruptible: true
   stage: setup
+  variables:
+    GIT_DEPTH: 300
   script:
     - .gitlabci/setup_pixi.sh
     - .gitlabci/prepare.sh
+    - .gitlabci/version_info.sh
   artifacts:
+    reports:
+      dotenv: version.env
     paths:
       - devtools/*
       - data-src/*
       - .pixi/*
+      - code_aster/pkginfo.py
     expire_in: 6 hours
   rules:
-    - if: $BUILDTYPE != "code-checking" && $BUILDTYPE != "docker"
+    - if: $BUILDTYPE != "code-checking"
 
 .compile:
   interruptible: true
@@ -226,19 +233,51 @@ sonarqube:
 
 docker:
   stage: build
-  image:
-    name: nexus.retd.edf.fr/kaniko-project/executor:debug
-    entrypoint: [""]
+  image: docker:29.4.0-cli
+  services:
+    - docker:29.4.0-dind
+  before_script:
+    - docker info
+  needs:
+    - job: prepare
+  variables:
+    # When you use the dind service, you must instruct Docker to talk with
+    # the daemon started inside of the service. The daemon is available
+    # with a network connection instead of the default
+    # /var/run/docker.sock socket. Docker 19.03 does this automatically
+    # by setting the DOCKER_HOST in
+    # https://github.com/docker-library/docker/blob/d45051476babc297257df490d22cbd806f1b11e4/19.03/docker-entrypoint.sh#L23-L29
+    #
+    # The 'docker' hostname is the alias of the service container as described at
+    # https://docs.gitlab.com/ci/services/#accessing-the-services.
+    #
+    # This instructs Docker not to start over TLS.
+    DOCKER_TLS_CERTDIR: ""
+    variant: "${OSNAME}"
+    baseimage: "${DOCKER_NEXUS_URL}/codeaster-prerequisites:${PREREQ_VERSION}-${variant}"
   script:
-    - sh .gitlabci/build_docker_codeaster.sh ${OSNAME}
+    - echo "+ $(date) - building code_aster Docker image from ${baseimage}..."
+    - echo "${DOCKER_NEXUS_PASSWD}" | docker login ${DOCKER_NEXUS_URL} -u "${DOCKER_NEXUS_USER}" --password-stdin
+    - imgtag="main-${variant}"
+    - test "${VERSION_DISTANCE}" = "0" && imgtag="${VERSION_TAG}-${variant}"
+    - dest="${DOCKER_NEXUS_URL}/codeaster:${imgtag}"
+    - docker build
+        --build-arg baseimage=${baseimage}
+        --build-arg variant=${variant}
+        --build-arg BRANCH=${VERSION_BRANCH}
+        --build-arg PKGINFO="$(cat code_aster/pkginfo.py)"
+        -t ${dest}
+        -f containers/Containerfile .
+    - docker image push ${dest}
+
   allow_failure: true
-  artifacts:
-    paths:
-      - artf/codeaster-main-*.dockerfile
-    expire_in: 1 day
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $BUILDTYPE == "nightly"
     - if: $BUILDTYPE == "docker"
+    - if: $BUILDTYPE == "code-checking"
+      when: never
+    - when: manual
+      allow_failure: true
 
 # --- default build
 prepare:

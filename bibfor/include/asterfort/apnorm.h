@@ -23,10 +23,11 @@
 interface
     subroutine apnorm(elem_nbnode, elem_code, elem_dime, elem_coor,&
                       ksi1       , ksi2     , elem_norm, elem_tau1, elem_tau2)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: elem_nbnode
         character(len=8), intent(in) :: elem_code
         integer(kind=8), intent(in) :: elem_dime
-        real(kind=8), intent(in) :: elem_coor(3,9)
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: ksi1
         real(kind=8), intent(in) :: ksi2
         real(kind=8), intent(out) :: elem_norm(3)

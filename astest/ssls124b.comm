@@ -1,0 +1,164 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------
+#  CAS DE SPHERE SOUS PRESSION INTERNE  + PLASTICITE PARFAITE
+# --------------------------------------------------------------
+
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+
+# Global variables
+T = 0.1
+R = 1.0
+R2 = 0.3
+P = -9668.0
+E = 1.0e06
+nu = 0.3
+a = 0.95
+b = 1.05
+r = 0.95
+c = 1.0
+sigy = 50000
+
+
+# Ci-dessous la formule pour le calcul de la pression tel que
+# la zone plastique s'arrête à la surface moyenne
+# P = 2 / 3 * sigy * (1 + 3 * np.log(c / a) - c ** 3 / b ** 3)
+
+
+# calcul du déplacement à un rayon donné
+def compute_plas_disp(r):
+    return (
+        sigy
+        / E
+        * r
+        * ((1 - nu) * c**3 / r**3 - 2 / 3 * (1 - 2 * nu) * (1 + 3 * np.log(c / r) - c**3 / b**3))
+    )
+
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+MAILL0 = LIRE_MAILLAGE(UNITE=20)
+MAILL = CREA_MAILLAGE(MAILLAGE=MAILL0, MODI_HHO=_F(TOUT="OUI"))
+
+MAILL = MODI_MAILLAGE(
+    reuse=MAILL,
+    MAILLAGE=MAILL,
+    ORIE_PEAU=_F(GROUP_MA_PEAU=("INTRADOS", "EXTRADOS", "SYM_X", "SYM_Y")),
+)
+
+MATER = DEFI_MATERIAU(ELAS=_F(E=E, NU=nu), ECRO_LINE=_F(D_SIGM_EPSI=0e0, SY=sigy))
+CHMAT = AFFE_MATERIAU(MAILLAGE=MAILL, AFFE=_F(TOUT="OUI", MATER=MATER))
+
+MODEL = AFFE_MODELE(
+    MAILLAGE=MAILL, AFFE=(_F(TOUT="OUI", MODELISATION="AXIS_HHO", PHENOMENE="MECANIQUE"),)
+)
+
+CHARGE = AFFE_CHAR_MECA(MODELE=MODEL, PRES_REP=_F(GROUP_MA="INTRADOS", PRES=-P))
+
+BLOQ1 = AFFE_CHAR_CINE(
+    MODELE=MODEL, MECA_IMPO=(_F(GROUP_MA="SYM_X", DX=0.0), _F(GROUP_MA="SYM_Y", DY=0.0))
+)
+
+LINST = DEFI_LIST_REEL(
+    DEBUT=0.0,
+    INTERVALLE=(
+        _F(JUSQU_A=0.9, NOMBRE=3),
+        _F(JUSQU_A=0.93, NOMBRE=3),
+        _F(JUSQU_A=0.94, NOMBRE=3),
+        _F(JUSQU_A=1.0, NOMBRE=30),
+    ),
+)
+
+F_INST = DEFI_FONCTION(NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0))
+
+RESU1 = STAT_NON_LINE(
+    MODELE=MODEL,
+    CHAM_MATER=CHMAT,
+    EXCIT=(_F(CHARGE=CHARGE, FONC_MULT=F_INST), _F(CHARGE=BLOQ1)),
+    SOLVEUR=_F(METHODE="MUMPS", NPREC=12),
+    INCREMENT=_F(LIST_INST=LINST),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=10),
+    COMPORTEMENT=_F(RELATION="VMIS_ISOT_LINE", ITER_INTE_MAXI=500),
+)
+
+CALC_CHAMP(reuse=RESU1, RESULTAT=RESU1, CONTRAINTE=("SIGM_NOEU"), INST=1.0)
+
+CALC_CHAMP(reuse=RESU1, RESULTAT=RESU1, CRITERES=("SIEQ_NOEU", "SIEQ_ELGA"), INST=1.0)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=39,
+        GROUP_NO="AY",
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=RESU1,
+        NOM_CHAM="SIGM_NOEU",
+        NOM_CMP="SIYY",
+        VALE_CALC=-4746.798166495463,
+        VALE_REFE=-4538.746715617465,
+        PRECISION=5.0000000000000001e-2,
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=39,
+        GROUP_NO="AY",
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=RESU1,
+        NOM_CHAM="SIGM_NOEU",
+        NOM_CMP="SIXX",
+        VALE_CALC=45442.61549828977,
+        VALE_REFE=45461.25328438253,
+        PRECISION=8.0000000000000001e-3,
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=39,
+        GROUP_NO="AY",
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=RESU1,
+        NOM_CHAM="HHO_DEPL",
+        NOM_CMP="DY",
+        VALE_CALC=0.033208979649368545,
+        VALE_REFE=0.033184501313753015,
+        PRECISION=0.001,
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=39,
+        GROUP_NO="AY",
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=RESU1,
+        NOM_CHAM="SIEQ_NOEU",
+        NOM_CMP="VMIS",
+        VALE_CALC=50189.556986872965,
+        VALE_REFE=sigy,
+        PRECISION=0.01,
+    )
+)
+
+FIN()

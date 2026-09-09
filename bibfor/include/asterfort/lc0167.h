@@ -15,21 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc0167(fami  , kpg   , ksp   , ndim  , imate,&
-                      compor, carcri, instam, instap, epsm  ,&
-                      deps  , sigm  , vim   , option,&
-                      sigp  , vip   , typmod, &
+    subroutine lc0167(fami, kpg, ksp, ndim, imate, &
+                      compor, carcri, instam, instap, epsm, &
+                      deps, sigm, nvi, vim, option, &
+                      sigp, vip, typmod, &
                       dsidep, codret)
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: imate, ndim, kpg, ksp
         real(kind=8), intent(in)  :: instam, instap
         real(kind=8), intent(in)  :: epsm(6), deps(6)
-        real(kind=8), intent(in)  :: sigm(6), vim(*)
-        real(kind=8), intent(out) :: vip(*), sigp(6), dsidep(6, 6)
-        character(len=16), intent(in) :: compor(*), option
-        real(kind=8), intent(in) :: carcri(*)
+        real(kind=8), intent(in)  :: sigm(6), vim(nvi)
+        real(kind=8), intent(out) :: vip(nvi), sigp(6), dsidep(6, 6)
+        character(len=16), intent(in) :: option
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         character(len=8), intent(in) :: typmod(*)
         integer(kind=8), intent(out) :: codret
     end subroutine lc0167

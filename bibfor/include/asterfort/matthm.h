@@ -18,11 +18,12 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine matthm(ds_thm, ndim, axi, nno1, nno2, dimuel,&
-                      dimdef, iu, ip, ipf, iq,&
-                      addep1,&
-                      addlh1, vff1, vff2, dffr2, wref,&
-                      geom, ang, wi, q)
+    subroutine matthm(ds_thm, &
+                      ndim, axi, nno1, nno2, dimuel, &
+                      dimdef, iu, ip, ipf, iq, &
+                      addep1, &
+                      addlh1, vff1, vff2, dffr2, wref, &
+                      geom, wi, q)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         integer(kind=8) :: dimdef
@@ -42,7 +43,6 @@ interface
         real(kind=8) :: dffr2(ndim-1, nno2)
         real(kind=8) :: wref
         real(kind=8) :: geom(ndim, nno2)
-        real(kind=8) :: ang(24)
         real(kind=8) :: wi
         real(kind=8) :: q(dimdef, dimuel)
     end subroutine matthm

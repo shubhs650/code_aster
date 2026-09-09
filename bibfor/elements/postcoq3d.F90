@@ -16,8 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine postcoq3d(optionZ, nomteZ, nbLayer)
+subroutine postcoq3d(plateCara, plateOrie, &
+                     optionZ, nomteZ, nbLayer)
 !
+    use plateGeom_module, only: updateCoorSystCO3D
+    use plate_type
     implicit none
 !
 #include "asterf_types.h"
@@ -26,13 +29,14 @@ subroutine postcoq3d(optionZ, nomteZ, nbLayer)
 #include "asterfort/jevete.h"
 #include "asterfort/tecach.h"
 #include "asterfort/vdefro.h"
-#include "asterfort/vdrepe.h"
 #include "asterfort/vdsiro.h"
 #include "asterfort/vdxedg.h"
 #include "asterfort/vdxeps.h"
 #include "asterfort/vdxsig.h"
 #include "jeveux.h"
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(inout) :: plateOrie
     character(len=*), intent(in) :: optionZ, nomteZ
     integer(kind=8), intent(in) :: nbLayer
 !
@@ -51,13 +55,13 @@ subroutine postcoq3d(optionZ, nomteZ, nbLayer)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: npgt = 10
-    real(kind=8) :: matevn(2, 2, npgt), matevg(2, 2, npgt)
-    integer(kind=8) :: jvSigm, jvGeom, lzi, jvDege, jvEpsi
-    integer(kind=8) :: nb1, npgsn
+    integer(kind=8) :: jvSigm, jvGeom, lzi, lzr, jvDege, jvEpsi
+    integer(kind=8) :: nb1, npgsn, npgsr
     character(len=16) :: option, nomte
     integer(kind=8) :: itab(7), iret
     real(kind=8) :: degeElga(72), degeElno(8, 9)
     real(kind=8) :: siefElga(6*27*nbLayer), epsiElga(6*27*nbLayer)
+    real(kind=8) :: matevn(2, 2, npgt), matevg(2, 2, npgt)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -67,55 +71,59 @@ subroutine postcoq3d(optionZ, nomteZ, nbLayer)
 ! - Acces to geometry
     call jevech('PGEOMER', 'L', jvGeom)
 
-! - Get parameters
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
     nb1 = zi(lzi-1+1)
+    npgsr = zi(lzi-1+3)
     npgsn = zi(lzi-1+4)
+    call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
+    ASSERT(npgsr .le. 10)
 
 ! - Compute option
     if (option .eq. 'DEGE_ELGA' .or. option .eq. 'DEGE_ELNO') then
-        call vdxedg(nomte, option, zr(jvGeom), &
+        call vdxedg(plateCara, plateOrie, &
+                    nomte, option, zr(jvGeom), &
                     degeElga, degeElno)
 
     elseif (option .eq. 'SIEF_ELGA') then
-        call vdxsig(nomte, zr(jvGeom), &
+        call vdxsig(plateCara, plateOrie, &
+                    nomte, zr(jvGeom), &
                     nbLayer, siefElga)
 
     elseif (option .eq. 'EPSI_ELGA') then
-        call vdxeps(nomte, zr(jvGeom), &
+        call vdxeps(plateCara, plateOrie, &
+                    nomte, zr(jvGeom), &
                     nbLayer, epsiElga)
 
     else
         ASSERT(ASTER_FALSE)
     end if
 
-! - DETERMINATION DES MATRICES DE PASSAGE DES REPERES INTRINSEQUES
-! - AUX NOEUDS ET AUX POINTS D'INTEGRATION DE L'ELEMENT
-! - AU REPERE UTILISATEUR
-    call vdrepe(nomte, matevn, matevg)
+! - Update basis
+    call updateCoorSystCO3D(plateCara, plateOrie, &
+                            nomte, zr(jvGeom), &
+                            npgsr, nb1, lzr, &
+                            matevn, matevg)
+
     if (option .eq. 'EPSI_ELGA') then
-        call tecach('OOO', 'PDEFOPG', 'E', iret, nval=7, &
-                    itab=itab)
+        call tecach('OOO', 'PDEFOPG', 'E', iret, nval=7, itab=itab)
         jvEpsi = itab(1)
         call vdsiro(itab(3), itab(7), matevg, 'IU', 'G', &
                     epsiElga, zr(jvEpsi))
 
     else if (option .eq. 'SIEF_ELGA') then
-        call tecach('OOO', 'PCONTRR', 'E', iret, nval=7, &
-                    itab=itab)
+        call tecach('OOO', 'PCONTRR', 'E', iret, nval=7, itab=itab)
         jvSigm = itab(1)
         call vdsiro(itab(3), itab(7), matevg, 'IU', 'G', &
                     siefElga, zr(jvSigm))
 
     else if (option(1:9) .eq. 'DEGE_ELGA') then
-        call tecach('OOO', 'PDEFOPG', 'E', iret, nval=7, &
-                    itab=itab)
+        call tecach('OOO', 'PDEFOPG', 'E', iret, nval=7, itab=itab)
         jvDege = itab(1)
         call vdefro(npgsn, matevn, degeElga, zr(jvDege))
 
     else if (option(1:9) .eq. 'DEGE_ELNO') then
-        call tecach('OOO', 'PDEFOGR', 'E', iret, nval=7, &
-                    itab=itab)
+        call tecach('OOO', 'PDEFOGR', 'E', iret, nval=7, itab=itab)
         jvDege = itab(1)
         call vdefro((nb1+1), matevn, degeElno, zr(jvDege))
 

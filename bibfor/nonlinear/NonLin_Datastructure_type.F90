@@ -122,14 +122,6 @@ module NonLin_Datastructure_type
         aster_logical     :: l_conv = ASTER_FALSE
     end type NL_DS_Resi
 !
-! - Type: reference residuals
-!
-    type NL_DS_RefeResi
-        character(len=16) :: type = ' '
-        real(kind=8)      :: user_para = 0.d0
-        character(len=8)  :: cmp_name = ' '
-    end type NL_DS_RefeResi
-!
 ! - Type: convergence management
 !
     type NL_DS_Conv
@@ -139,10 +131,8 @@ module NonLin_Datastructure_type
         type(NL_DS_Resi) :: list_resi(7)
         aster_logical :: l_resi_test(7) = ASTER_FALSE
         aster_logical :: l_resi_test_save(7) = ASTER_FALSE
-        integer(kind=8) :: nb_refe = 0
-        integer(kind=8) :: nb_refe_maxi = 11
-        type(NL_DS_RefeResi) :: list_refe(11)
-        aster_logical :: l_refe_test(11) = ASTER_FALSE
+        character(len=19):: cresiref = ' '
+        character(len=19):: cresicmp = ' '
         integer(kind=8) :: iter_glob_maxi = 0
         integer(kind=8) :: iter_glob_elas = 0
         aster_logical :: l_stop = ASTER_FALSE

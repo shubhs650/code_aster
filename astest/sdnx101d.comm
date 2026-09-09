@@ -353,14 +353,13 @@ CALC_MISS(
     GROUP_MA_INTERF="SRADIE2",
     UNITE_IMPR_ASTER=26,
     UNITE_RESU_IMPE=25,
+    SURF="OUI",
     PARAMETRE=_F(
         FREQ_MIN=3.0,  # 2.5
         FREQ_MAX=3.0,  # 3.5,
         FREQ_PAS=0.5,
         Z0=-11.60,
         DREF=30.0,
-        SURF="OUI",
-        ALGO="DEPL",
         OFFSET_MAX=60,
         OFFSET_NB=300,
         TYPE="BINAIRE",

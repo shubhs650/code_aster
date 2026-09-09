@@ -18,15 +18,15 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
-                           post_iter, mult_comp, regu_visc, post_incr, &
-                           extern_type, extern_addr, &
+    subroutine comp_nbvari(relaComp, defoComp, typeCpla, kitComp, &
+                           postIter, multComp, reguVisc, postIncr, &
+                           solvBehavType, adrsMGIS, &
                            nbVariUMAT, &
                            nbVari, numeLaw, nbVariKit, numeLawKit)
-        character(len=16), intent(in) :: rela_comp, defo_comp, type_cpla
-        character(len=16), intent(in) :: kit_comp(4), post_iter
-        character(len=16), intent(in) :: mult_comp, regu_visc, extern_addr, post_incr
-        integer(kind=8), intent(in) :: extern_type
+        character(len=16), intent(in) :: relaComp, defoComp, typeCpla, kitComp(4)
+        character(len=16), intent(in) :: postIter, multComp, reguVisc, postIncr
+        integer(kind=8), intent(in) :: solvBehavType
+        character(len=16), intent(in) :: adrsMGIS
         integer(kind=8), intent(in) :: nbVariUMAT
         integer(kind=8), intent(out) :: nbVari, numeLaw, nbVariKit(4), numeLawKit(4)
     end subroutine comp_nbvari

@@ -38,6 +38,8 @@ class ParallelEquationNumbering : public EquationNumbering {
     JeveuxVectorLong _localToGlobal;
     /** @brief Objet Jeveux '.PDDL' */
     JeveuxVectorLong _localToRank;
+    /** @brief Objet Jeveux '.LILT' */
+    JeveuxVectorLong _globalDofNumIds;
     /** @brief List of joints */
     JointsPtr _joints;
 

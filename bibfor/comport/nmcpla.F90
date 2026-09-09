@@ -17,16 +17,15 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine nmcpla(BEHinteg, &
-                  fami, kpg, ksp, ndim, typmod, imat, &
-                  compor_plas, compor_creep, carcri, &
+subroutine nmcpla(BEHInteg, &
+                  fami, kpg, ksp, ndim, typmod, jvMaterCode, &
+                  comporPlas, comporCreep, carcri, &
                   timed, timef, neps, epsdt, depst, &
                   nsig, sigd, vind, option, &
                   sigf, vinf, ndsde, dsde, iret)
 !
     use calcul_module, only: ca_ctempl_, ca_ctempr_, ca_ctempm_, ca_ctempp_
     use Behaviour_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -37,11 +36,11 @@ subroutine nmcpla(BEHinteg, &
 #include "asterfort/rcvarc.h"
 #include "asterfort/Behaviour_type.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
-    integer(kind=8) :: imat, ndim, kpg, ksp, iret
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8) :: jvMaterCode, ndim, kpg, ksp, iret
     integer(kind=8) :: neps, nsig, ndsde
-    character(len=16), intent(in) :: compor_plas(COMPOR_SIZE)
-    character(len=16), intent(in) :: compor_creep(COMPOR_SIZE)
+    character(len=16), intent(in) :: comporPlas(COMPOR_SIZE)
+    character(len=16), intent(in) :: comporCreep(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: timed, timef, tempd, tempf, tref
     real(kind=8) :: epsdt(6), depst(6)
@@ -116,6 +115,7 @@ subroutine nmcpla(BEHinteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8) :: ndt_local, ndi_local
     integer(kind=8) :: ndt, ndi
     integer(kind=8) :: nvi_flua, nvi_plas, idx_vi_plas
@@ -125,7 +125,7 @@ subroutine nmcpla(BEHinteg, &
     integer(kind=8) :: cerr(5)
     character(len=8) :: elem_model, nomc(5)
     character(len=16) :: rela_flua, rela_plas
-    real(kind=8) :: nu, angmas(3)
+    real(kind=8) :: nu
     real(kind=8) :: espi_creep(6), epsfld(6), epsflf(6), depsfl(6)
     real(kind=8) :: deps(6), kooh(6, 6)
     real(kind=8) :: materd(5), materf(5), depst2(6), depsel(6)
@@ -144,16 +144,16 @@ subroutine nmcpla(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 !
     l_inte_forc = option .eq. 'RAPH_MECA' .or. option .eq. 'FULL_MECA'
-    rela_flua = compor_creep(RELA_NAME)
-    rela_plas = compor_plas(RELA_NAME)
+    rela_flua = comporCreep(RELA_NAME)
+    rela_plas = comporPlas(RELA_NAME)
     elem_model = typmod(1)
-    read (compor_creep(NVAR), '(I16)') nvi_flua
-    read (compor_plas(NVAR), '(I16)') nvi_plas
-    read (compor_plas(NUME), '(I16)') nume_plas
-    read (compor_creep(NUME), '(I16)') nume_flua
-    ASSERT(compor_creep(RELA_NAME) (1:13) .eq. 'BETON_GRANGER')
-    nvi = BEHinteg%behavPara%nvi
-    numlc = BEHinteg%behavPara%numlc
+    read (comporCreep(NVAR), '(I16)') nvi_flua
+    read (comporPlas(NVAR), '(I16)') nvi_plas
+    read (comporPlas(NUME), '(I16)') nume_plas
+    read (comporCreep(NUME), '(I16)') nume_flua
+    ASSERT(comporCreep(RELA_NAME) (1:13) .eq. 'BETON_GRANGER')
+    nvi = BEHInteg%behavPara%nvi
+    numlc = BEHInteg%behavPara%numlc
 !
 ! - Get size for tensors
 !
@@ -208,17 +208,20 @@ subroutine nmcpla(BEHinteg, &
 !
         l_epsi_varc = ASTER_TRUE
         sigf2 = 0.d0
-        BEHinteg%behavPara%nvi = nvi_flua
-        BEHinteg%behavPara%numlc = nume_flua
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    imat, compor_creep, carcri, timed, timef, &
-                    neps, epsdt, depst2, nsig, sigd, &
-                    vind, option, angmas, &
-                    sigf2, vinf, ndsde, dsde, &
-                    iret, l_epsi_varc_=l_epsi_varc)
-        BEHinteg%behavPara%nvi = nvi
-        BEHinteg%behavPara%numlc = numlc
+        BEHInteg%behavPara%nvi = nvi_flua
+        BEHInteg%behavPara%numlc = nume_flua
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    timed, timef, &
+                    comporCreep, carcri, multComp, &
+                    neps, epsdt, depst2, &
+                    nsig, sigd, &
+                    vind, &
+                    sigf2, vinf, &
+                    ndsde, dsde, iret, &
+                    l_epsi_varc_=l_epsi_varc)
+        BEHInteg%behavPara%nvi = nvi
+        BEHInteg%behavPara%numlc = numlc
 !
 ! ----- Get material parameters
 !
@@ -227,10 +230,10 @@ subroutine nmcpla(BEHinteg, &
         nomc(3) = 'ALPHA   '
         nomc(4) = 'B_ENDOGE'
         nomc(5) = 'K_DESSIC'
-        call rcvalb(fami, 1, 1, '+', imat, &
+        call rcvalb(fami, 1, 1, '+', jvMaterCode, &
                     ' ', 'ELAS', 1, 'TEMP', [tmpdmx], &
                     1, nomc(2), materd(2), cerr(1), 2)
-        call rcvalb(fami, 1, 1, '+', imat, &
+        call rcvalb(fami, 1, 1, '+', jvMaterCode, &
                     ' ', 'ELAS', 1, 'TEMP', [tmpfmx], &
                     1, nomc(2), materf(2), cerr(1), 2)
         materd(1) = 1.d0
@@ -286,17 +289,20 @@ subroutine nmcpla(BEHinteg, &
     l_epsi_varc = ASTER_FALSE
     idx_vi_plas = nvi_flua+1
     sigf = 0.d0
-    BEHinteg%behavPara%nvi = nvi_plas
-    BEHinteg%behavPara%numlc = nume_plas
-    call nmcomp(BEHinteg, &
-                fami, kpg, ksp, ndim, typmod, &
-                imat, compor_plas, carcri, timed, timef, &
-                neps, epsdt, deps, nsig, sigd, &
-                vind(idx_vi_plas), option, angmas, &
-                sigf, vinf(idx_vi_plas), ndsde, dsde, &
+    BEHInteg%behavPara%nvi = nvi_plas
+    BEHInteg%behavPara%numlc = nume_plas
+    call nmcomp(BEHInteg, &
+                ndim, option, typmod, &
+                timed, timef, &
+                comporPlas, carcri, multComp, &
+                neps, epsdt, deps, &
+                nsig, sigd, &
+                vind(idx_vi_plas), &
+                sigf, vinf(idx_vi_plas), &
+                ndsde, dsde, &
                 retcom, l_epsi_varc_=l_epsi_varc)
-    BEHinteg%behavPara%nvi = nvi
-    BEHinteg%behavPara%numlc = numlc
+    BEHInteg%behavPara%nvi = nvi
+    BEHInteg%behavPara%numlc = numlc
     if (retcom .eq. 1) then
         iret = 1
         goto 999
@@ -313,13 +319,13 @@ subroutine nmcpla(BEHinteg, &
 !
 ! ----- Get material parameters
 !
-        call rcvalb(fami, kpg, ksp, '-', imat, &
+        call rcvalb(fami, kpg, ksp, '-', jvMaterCode, &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
                     5, nomc(1), materd(1), cerr(1), 2)
         if (cerr(3) .ne. 0) materd(3) = 0.d0
         if (cerr(4) .ne. 0) materd(4) = 0.d0
         if (cerr(5) .ne. 0) materd(5) = 0.d0
-        call rcvalb(fami, kpg, ksp, '+', imat, &
+        call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
                     5, nomc(1), materf(1), cerr(1), 2)
         if (cerr(3) .ne. 0) materf(3) = 0.d0

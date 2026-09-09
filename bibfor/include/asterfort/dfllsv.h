@@ -22,8 +22,7 @@ interface
                   event_typek, vale_ref, nom_cham, nom_cmp, &
                   crit_cmp, lst_loca, etat_loca, pene_maxi, resi_glob_maxi, &
                   action_typek, subd_methode, subd_auto, subd_pas_mini, &
-                  subd_pas, subd_niveau, pcent_iter_plus, coef_maxi, &
-                  subd_inst, subd_duree)
+                  subd_pas, subd_niveau, subd_inst, subd_duree)
         real(kind=8), pointer :: v_sdlist_linfor(:)
         real(kind=8), pointer :: v_sdlist_eevenr(:)
         character(len=16), pointer :: v_sdlist_eevenk(:)
@@ -47,7 +46,5 @@ interface
         character(len=16), intent(in) :: subd_auto
         real(kind=8), intent(in) :: subd_inst
         real(kind=8), intent(in) :: subd_duree
-        real(kind=8), intent(in) :: pcent_iter_plus
-        real(kind=8), intent(in) :: coef_maxi
     end subroutine dfllsv
 end interface

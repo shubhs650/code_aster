@@ -21,6 +21,8 @@ subroutine te0491(option, nomte)
 !
     use Behaviour_module
     use BehaviourStrain_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8prem.h"
@@ -35,9 +37,7 @@ subroutine te0491(option, nomte)
 #include "asterfort/enelpg.h"
 #include "asterfort/eps1mc.h"
 #include "asterfort/epsvmc.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/get_elas_para.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/nmgeom.h"
@@ -138,7 +138,7 @@ subroutine te0491(option, nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     aster_logical, parameter :: axi = ASTER_FALSE
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8), parameter :: ksp = 1
     integer(kind=8), parameter :: mxcmel = 162, nbsgm = 6
     real(kind=8), parameter :: zero = 0.d0, undemi = 0.5d0, un = 1.d0
@@ -149,7 +149,7 @@ subroutine te0491(option, nomte)
     real(kind=8) :: propVale(nbProp)
     real(kind=8), parameter :: nharm = 0.d0
     integer(kind=8) :: idconm, idene1, idene2, jvDisp, ideplm, jvDispPrev
-    integer(kind=8) :: jvDBaseFunc, jvSigm, jvSigmPrev, jvVari, kpg, jvGeom, jvMater
+    integer(kind=8) :: jvDBaseFunc, jvSigm, jvSigmPrev, jvVari, kpg, jvGeom, jvMaterc
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jprol, jvale, jvTime
     integer(kind=8) :: nbsig, nbsig2, nbval, nbvari, ndim, nno, npg, nbEpsi
     integer(kind=8) :: iret, iret1, i, jtab(7)
@@ -164,7 +164,7 @@ subroutine te0491(option, nomte)
     real(kind=8) :: epsiElas(nbsgm), epsiPlas(nbsgm), x(nbsgm)
     real(kind=8) :: epsim(nbsgm), delta(nbsgm), sigmm(nbsgm)
     real(kind=8) :: epsi(nbsgm), epssm(mxcmel), epss(mxcmel)
-    real(kind=8) :: anglNaut(3), time, integ, integ1
+    real(kind=8) :: time, integ, integ1
     real(kind=8) :: epsiMeca(mxcmel), integ2, nu, k, indigl, para_vale
     real(kind=8) :: f(3, 3), r, trav(81)
     character(len=8) :: para_type
@@ -172,8 +172,7 @@ subroutine te0491(option, nomte)
     aster_logical :: largeStrain
     integer(kind=8) :: strainType
     aster_logical :: lStrainMeca
-    integer(kind=8) :: elasID
-    character(len=16) :: elasKeyword
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -202,10 +201,7 @@ subroutine te0491(option, nomte)
     call jevech('PGEOMER', 'L', jvGeom)
 
 ! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
-
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+    call jevech('PMATERC', 'L', jvMaterc)
 
 ! - Get displacements
     call jevech('PDEPLR', 'L', jvDisp)
@@ -277,21 +273,20 @@ subroutine te0491(option, nomte)
         end if
     end if
 
-! ---- CALCUL DES DEFORMATIONS HORS THERMIQUES CORRESPONDANTES AU
-! ---- CHAMP DE DEPLACEMENT I.E. EPSM = EPST - EPSTH
-! ---- OU EPST  SONT LES DEFORMATIONS TOTALES
-! ----    EPST = B.U
-! ---- ET EPSTH SONT LES DEFORMATIONS THERMIQUES
-! ----    EPSTH = ALPHA*(T-TREF) :
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! - Compute mechanical strains
     strainType = STRAIN_TYPE_SMALL
     lStrainMeca = ASTER_TRUE
-    call epsvmc(fami, nno, ndim, nbEpsi, npg, &
+    call epsvmc(nno, ndim, nbEpsi, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 zr(jvGeom), zr(jvDisp), &
-                time, anglNaut, nharm, &
-                strainType, lStrainMeca, &
+                time, nharm, &
+                strainType, lStrainMeca, materPara, &
                 epsiMeca)
 
     if (option .eq. 'INDIC_ENER' .or. option .eq. 'ENEL_ELEM' .or. &
@@ -299,6 +294,9 @@ subroutine te0491(option, nomte)
         do kpg = 1, npg
             omega = zero
             psi = zero
+
+! --------- Initializations of material parameters on current integration point
+            call initParaPoin(kpg, ksp, materPara)
 
 !---------- TENSEUR DES CONTRAINTES AU POINT D'INTEGRATION COURANT
             sigmEner = 0.d0
@@ -314,7 +312,7 @@ subroutine te0491(option, nomte)
                         r)
 
 ! --------- CALCUL DE L'ENERGIE DE DEFORMATION ELASTIQUE
-            call enelpg(fami, zi(jvMater), time, kpg, anglNaut, &
+            call enelpg(materPara, time, &
                         relaName, defoComp, &
                         f, sigmEner, &
                         nbvari, zr(jvVari+(kpg-1)*nbvari), &
@@ -326,12 +324,11 @@ subroutine te0491(option, nomte)
             end if
 
 ! --------- Get elastic parameters
-            call get_elas_id(zi(jvMater), elasID, elasKeyword)
-            if (elasID .ne. ELAS_ISOT) then
-                call utmess("F", "ENERGY1_4", nk=2, valk=[option, elasKeyword])
+            if (materPara%elasID .ne. ELAS_ISOT) then
+                call utmess("F", "ENERGY1_4", nk=2, valk=[option, materPara%elasKeyword])
             end if
-            call get_elas_para(fami, zi(jvMater), '+', kpg, ksp, &
-                               elasID, elasKeyword, &
+            call get_elas_para(fami, zi(jvMaterc), '+', kpg, ksp, &
+                               materPara%elasID, materPara%elasKeyword, &
                                e_=e, nu_=nu)
             deuxmu = e/(un+nu)
             k = untier*e/(un-deux*nu)
@@ -383,19 +380,18 @@ subroutine te0491(option, nomte)
             end if
 
 ! --------- Get elastic parameters
-            call get_elas_id(zi(jvMater), elasID, elasKeyword)
-            if (elasID .ne. ELAS_ISOT) then
-                call utmess("F", "ENERGY1_4", nk=2, valk=[option, elasKeyword])
+            if (materPara%elasID .ne. ELAS_ISOT) then
+                call utmess("F", "ENERGY1_4", nk=2, valk=[option, materPara%elasKeyword])
             end if
-            call get_elas_para(fami, zi(jvMater), '+', kpg, ksp, &
-                               elasID, elasKeyword, &
+            call get_elas_para(fami, zi(jvMaterc), '+', kpg, ksp, &
+                               materPara%elasID, materPara%elasKeyword, &
                                e_=e, nu_=nu)
 
 ! --------- CALCUL DU TERME OMEGA REPRESENTANT L'ENERGIE TOTALE
 ! --------- OMEGA = SOMME_0->T(SIGMA:D(EPS)/DT).DTAU
             if (relaName .eq. 'VMIS_ISOT_LINE') then
 ! ------------- Parameters from linear traction
-                call rcvalb(fami, kpg, ksp, '+', zi(jvMater), &
+                call rcvalb(fami, kpg, ksp, '+', zi(jvMaterc), &
                             ' ', 'ECRO_LINE', 0, ' ', [0.d0], &
                             nbProp, propName, propVale, &
                             propCodret, 2)
@@ -418,14 +414,14 @@ subroutine te0491(option, nomte)
 ! ------------- TEMPERATURE AU POINT D'INTEGRATION COURANT
                 call rcvarc(' ', 'TEMP', '+', fami, kpg, &
                             1, tempg, iret1)
-                call rctype(zi(jvMater), 1, 'TEMP', [tempg], para_vale, &
+                call rctype(zi(jvMaterc), 1, 'TEMP', [tempg], para_vale, &
                             para_type)
                 if ((para_type(1:4) .eq. 'TEMP') .and. (iret1 .eq. 1)) then
                     call utmess('F', 'COMPOR5_5', sk=para_type)
                 end if
 
 ! ------------- RECUPERATION DE LA COURBE DE TRACTION
-                call rctrac(zi(jvMater), 1, 'SIGM', para_vale, jprol, &
+                call rctrac(zi(jvMaterc), 1, 'SIGM', para_vale, jprol, &
                             jvale, nbval, e)
 
 ! ------------- RECUPERATION DE LA DEFORMATION PLASTIQUE CUMULEE
@@ -543,7 +539,7 @@ subroutine te0491(option, nomte)
 
             if (relaName .eq. 'VMIS_ISOT_LINE') then
 ! ------------- Parameters from linear traction
-                call rcvalb(fami, kpg, ksp, '+', zi(jvMater), &
+                call rcvalb(fami, kpg, ksp, '+', zi(jvMaterc), &
                             ' ', 'ECRO_LINE', 0, ' ', [0.d0], &
                             nbProp, propName, propVale, &
                             propCodret, 2)
@@ -569,7 +565,7 @@ subroutine te0491(option, nomte)
 
 ! ------------- RECUPERATION DE LA COURBE DE TRACTION :
 
-                call rctrac(zi(jvMater), 1, 'SIGM', tempg, jprol, &
+                call rctrac(zi(jvMaterc), 1, 'SIGM', tempg, jprol, &
                             jvale, nbval, e)
 
 ! ------------- CALCUL DE LA LIMITE ELASTIQUE SIGY :
@@ -650,12 +646,11 @@ subroutine te0491(option, nomte)
     else if (option .eq. 'INDIC_SEUIL') then
         do kpg = 1, npg
 ! --------- Get elastic parameters
-            call get_elas_id(zi(jvMater), elasID, elasKeyword)
-            if (elasID .ne. ELAS_ISOT) then
-                call utmess("F", "ENERGY1_4", nk=2, valk=[option, elasKeyword])
+            if (materPara%elasID .ne. ELAS_ISOT) then
+                call utmess("F", "ENERGY1_4", nk=2, valk=[option, materPara%elasKeyword])
             end if
-            call get_elas_para(fami, zi(jvMater), '+', kpg, ksp, &
-                               elasID, elasKeyword, &
+            call get_elas_para(fami, zi(jvMaterc), '+', kpg, ksp, &
+                               materPara%elasID, materPara%elasKeyword, &
                                e_=e, nu_=nu)
             c1 = (un+nu)/e
             c2 = nu/e
@@ -713,7 +708,7 @@ subroutine te0491(option, nomte)
 ! --------- TRAITEMENT DU CAS DE L'ECROUISSAGE LINEAIRE
             if (relaName .eq. 'VMIS_ISOT_LINE' .or. relaName .eq. 'VMIS_CINE_LINE') then
 ! ------------- Parameters from linear traction
-                call rcvalb(fami, kpg, ksp, '+', zi(jvMater), &
+                call rcvalb(fami, kpg, ksp, '+', zi(jvMaterc), &
                             ' ', 'ECRO_LINE', 0, ' ', [0.d0], &
                             nbProp, propName, propVale, &
                             propCodret, 2)
@@ -749,7 +744,7 @@ subroutine te0491(option, nomte)
 ! ------------- RECUPERATION DE LA COURBE DE TRACTION :
                 call rcvarc(' ', 'TEMP', '+', fami, kpg, &
                             ksp, tempg, iret1)
-                call rctrac(zi(jvMater), 1, 'SIGM', tempg, jprol, &
+                call rctrac(zi(jvMaterc), 1, 'SIGM', tempg, jprol, &
                             jvale, nbval, e)
 
 ! ------------- RECUPERATION DE LA DEFORMATION PLASTIQUE CUMULEE

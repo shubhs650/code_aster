@@ -1,0 +1,300 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------------------------
+#  Test de la loi ELAS_ISOT_INCR en 1D
+# --------------------------------------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+# Température, degré d'hydratation, concentration en eau, déformation anélastique, module de Young,
+# contrainte initiale, déformation et aire de la barre
+
+Tref = 0.0
+Tmin = 20.0
+Tmax = 120.0
+Xmin = 0.0
+Xmax = 1.0
+Cref = 500.0
+Cmin = 500.0
+Cmax = 300.0
+amin = 1.0e-3
+amax = 3.0e-3
+
+Emin = 1.0e5
+Emax = 2.0e5
+alpha = 1.0e-5
+beta = 1.0e-5
+k = 1.0e-5
+
+epsmin = 1.0e-3
+epsmax = 3.0e-3
+sig_init = 1.0e2
+
+aire = 5.0
+
+
+# Solution en fin de chargement
+sigmax = sig_init / Emin * Emax + Emax * (
+    epsmax
+    - epsmin
+    - alpha * (Tmax - Tmin)
+    + beta * (Xmax - Xmin)
+    - k * (Cmax - Cmin)
+    - (amax - amin)
+)
+
+# --------------------------------------------------------------------------------------------------
+
+
+msh = LIRE_MAILLAGE(FORMAT="MED")
+
+
+mdl = AFFE_MODELE(
+    MAILLAGE=msh, AFFE=_F(GROUP_MA="line", PHENOMENE="MECANIQUE", MODELISATION="BARRE_3D_NL")
+)
+
+
+cara = (AFFE_CARA_ELEM(MODELE=mdl, BARRE=_F(GROUP_MA="line", SECTION="GENERALE", AIRE=aire)),)
+
+# --------------------------------------------------------------------------------------------------
+
+
+young = DEFI_FONCTION(NOM_PARA="TEMP", ABSCISSE=(Tmin, Tmax), ORDONNEE=(Emin, Emax))
+
+
+mat = DEFI_MATERIAU(
+    ELAS_FO=_F(
+        E=young,
+        NU=DEFI_CONSTANTE(VALE=0.3),
+        ALPHA=DEFI_CONSTANTE(VALE=alpha),
+        B_ENDOGE=beta,
+        K_DESSIC=k,
+        TEMP_DEF_ALPHA=Tref,
+    )
+)
+
+
+ch_Tmin = CREA_CHAMP(
+    TYPE_CHAM="NOEU_TEMP_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="TEMP", VALE=Tmin),
+)
+
+
+ch_Tmax = CREA_CHAMP(
+    TYPE_CHAM="NOEU_TEMP_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="TEMP", VALE=Tmax),
+)
+
+
+rampe_ther = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_THER",
+    AFFE=(
+        _F(NOM_CHAM="TEMP", CHAM_GD=ch_Tmin, INST=0, MODELE=mdl),
+        _F(NOM_CHAM="TEMP", CHAM_GD=ch_Tmax, INST=2, MODELE=mdl),
+    ),
+)
+
+
+ch_Xmin = CREA_CHAMP(
+    TYPE_CHAM="NOEU_HYDR_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="HYDR", VALE=Xmin),
+)
+
+
+ch_Xmax = CREA_CHAMP(
+    TYPE_CHAM="NOEU_HYDR_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="HYDR", VALE=Xmax),
+)
+
+
+rampe_hydr = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_THER",
+    AFFE=(
+        _F(NOM_CHAM="HYDR_NOEU", CHAM_GD=ch_Xmin, INST=0, MODELE=mdl),
+        _F(NOM_CHAM="HYDR_NOEU", CHAM_GD=ch_Xmax, INST=2, MODELE=mdl),
+    ),
+)
+
+
+ch_Cmin = CREA_CHAMP(
+    TYPE_CHAM="NOEU_TEMP_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="SECH", VALE=Cmin),
+)
+
+
+ch_Cmax = CREA_CHAMP(
+    TYPE_CHAM="NOEU_TEMP_R",
+    OPERATION="AFFE",
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="SECH", VALE=Cmax),
+)
+
+
+rampe_sech = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_SECH",
+    AFFE=(
+        _F(NOM_CHAM="SECH", CHAM_GD=ch_Cmin, INST=0, MODELE=mdl),
+        _F(NOM_CHAM="SECH", CHAM_GD=ch_Cmax, INST=2, MODELE=mdl),
+    ),
+)
+
+
+ch_amin = CREA_CHAMP(
+    TYPE_CHAM="ELNO_EPSI_R",
+    OPERATION="AFFE",
+    MODELE=mdl,
+    PROL_ZERO="OUI",
+    AFFE=_F(GROUP_MA="line", NOM_CMP="EPXX", VALE=amin),
+)
+
+
+ch_amax = CREA_CHAMP(
+    TYPE_CHAM="ELNO_EPSI_R",
+    OPERATION="AFFE",
+    MODELE=mdl,
+    PROL_ZERO="OUI",
+    AFFE=_F(GROUP_MA="line", NOM_CMP="EPXX", VALE=amax),
+)
+
+
+rampe_epsa = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_VARC",
+    AFFE=(
+        _F(NOM_CHAM="EPSA_ELNO", CHAM_GD=ch_amin, INST=0, MODELE=mdl),
+        _F(NOM_CHAM="EPSA_ELNO", CHAM_GD=ch_amax, INST=2, MODELE=mdl),
+    ),
+)
+
+
+ch_sig_init = CREA_CHAMP(
+    TYPE_CHAM="ELGA_SIEF_R",
+    OPERATION="AFFE",
+    MODELE=mdl,
+    AFFE=_F(GROUP_MA="line", NOM_CMP="N", VALE=aire * sig_init),
+)
+
+ch_mat = AFFE_MATERIAU(
+    MAILLAGE=msh,
+    AFFE=_F(GROUP_MA="line", MATER=mat),
+    AFFE_VARC=(
+        _F(GROUP_MA="line", NOM_VARC="TEMP", EVOL=rampe_ther, NOM_CHAM="TEMP", VALE_REF=Tref),
+        _F(GROUP_MA="line", NOM_VARC="HYDR", EVOL=rampe_hydr, NOM_CHAM="HYDR_NOEU"),
+        _F(GROUP_MA="line", NOM_VARC="SECH", EVOL=rampe_sech, NOM_CHAM="SECH", VALE_REF=Cref),
+        _F(GROUP_MA="line", NOM_VARC="EPSA", EVOL=rampe_epsa, NOM_CHAM="EPSA_ELNO"),
+    ),
+)
+
+
+ux = FORMULE(NOM_PARA="X", VALE="(X-2)")
+uy = FORMULE(NOM_PARA="Y", VALE="(Y-1)")
+zero = DEFI_CONSTANTE(VALE=0)
+
+ampl = DEFI_FONCTION(NOM_PARA="INST", VALE=(0, epsmin, 2, epsmax))
+
+load = AFFE_CHAR_MECA_F(MODELE=mdl, DDL_IMPO=_F(GROUP_MA="line", DX=ux, DY=uy, DZ=zero))
+
+
+# --------------------------------------------------------------------------------------------------
+
+# Calcul du champ de déplacement initial
+
+mat_simple = DEFI_MATERIAU(ELAS=_F(E=1, NU=0))
+
+
+ch_mat_simple = AFFE_MATERIAU(MAILLAGE=msh, AFFE=_F(GROUP_MA="line", MATER=mat_simple))
+
+
+disc_0 = DEFI_LIST_INST(DEFI_LIST=_F(VALE=(-1, 0)))
+
+
+init = MECA_NON_LINE(
+    MODELE=mdl,
+    CHAM_MATER=ch_mat_simple,
+    CARA_ELEM=cara,
+    EXCIT=_F(CHARGE=load, FONC_MULT=DEFI_CONSTANTE(VALE=epsmin)),
+    COMPORTEMENT=_F(GROUP_MA="line", RELATION="ELAS_ISOT_ENER", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=disc_0),
+    NEWTON=_F(PREDICTION="TANGENTE", MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(EFFORT_REFE=5e3, RESI_REFE_RELA=1.0e-3),
+)
+
+
+ch_depl_init = CREA_CHAMP(
+    TYPE_CHAM="NOEU_DEPL_R", OPERATION="EXTR", RESULTAT=init, NOM_CHAM="DEPL", INST=0
+)
+
+
+# --------------------------------------------------------------------------------------------------
+
+
+disc = DEFI_LIST_INST(DEFI_LIST=_F(VALE=(0, 1, 2)))
+
+
+resu = MECA_NON_LINE(
+    MODELE=mdl,
+    CHAM_MATER=ch_mat,
+    CARA_ELEM=cara,
+    ETAT_INIT=_F(SIGM=ch_sig_init, DEPL=ch_depl_init),
+    EXCIT=_F(CHARGE=load, FONC_MULT=ampl),
+    COMPORTEMENT=_F(GROUP_MA="line", RELATION="ELAS_ISOT_INCR", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=disc),
+    NEWTON=_F(PREDICTION="TANGENTE", MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(EFFORT_REFE=5e3, RESI_REFE_RELA=1.0e-3),
+)
+
+
+CALC_CHAMP(reuse=resu, RESULTAT=resu, CONTRAINTE="SIEF_NOEU")
+
+
+# --------------------------------------------------------------------------------------------------
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            RESULTAT=resu,
+            INST=2,
+            NOM_CHAM="SIEF_NOEU",
+            NOM_CMP="N",
+            GROUP_NO="extr",
+            CRITERE="ABSOLU",
+            REFERENCE="ANALYTIQUE",
+            PRECISION=1.0e-6,
+            VALE_CALC=aire * sigmax,
+            VALE_REFE=aire * sigmax,
+        ),
+    )
+)
+
+FIN()

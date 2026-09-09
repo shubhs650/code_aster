@@ -61,6 +61,7 @@ subroutine xvetth(ndim, elrefp, nnop, imate, itps, &
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/reeref.h"
+#include "MeshTypes_type.h"
 #include "asterfort/utmess.h"
 #include "asterfort/xcalf2.h"
 #include "asterfort/xcalfe.h"
@@ -70,7 +71,7 @@ subroutine xvetth(ndim, elrefp, nnop, imate, itps, &
 !
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, nnop, imate, itps, igeom, nfh, nfe, jpintt
-    integer(kind=8) :: lonch(10), cnset(4*32), heavt(36), heavn(27, 5)
+    integer(kind=8) :: lonch(10), cnset(4*32), heavt(36), heavn(MT_NNOMAX3D, 5)
     real(kind=8) :: temper(nnop*(1+nfh+nfe)), lsn(nnop), lst(nnop)
     real(kind=8) :: basloc(*), vectt(*)
 !

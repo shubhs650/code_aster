@@ -108,6 +108,11 @@ cata_msg = {
  section circulaire uniquement
 """
     ),
+    56: _(
+        """
+ La poutre dont on cherche à orienter la section ne peut posséder qu'une section rectangulaire ou circulaire
+"""
+    ),
     57: _(
         """
        La modélisation T3G ne permet pas de bien prendre en compte l'excentrement à cause de son interpolation de la flèche.

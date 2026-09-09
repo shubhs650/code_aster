@@ -15,19 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1501
 !
-subroutine peepot(resu, modele, mate, mateco, cara, &
-                  nh, nbocc)
+subroutine peepot(tablOutZ, &
+                  modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                  numeHarm, nbFactorKeyword)
 !
     implicit none
 !
-#include "asterf_types.h"
-#include "jeveux.h"
 #include "asterc/asmpi_comm.h"
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/asmpi_info.h"
 #include "asterfort/assert.h"
 #include "asterfort/celver.h"
+#include "asterfort/char8_to_int.h"
 #include "asterfort/chpve2.h"
 #include "asterfort/compEnergyPotential.h"
 #include "asterfort/digdel.h"
@@ -66,62 +68,76 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
 #include "asterfort/vrcins.h"
 #include "asterfort/vrcref.h"
 #include "asterfort/wkvect.h"
-#include "asterfort/char8_to_int.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: nh, nbocc
-    character(len=*) :: resu, modele, mate, mateco, cara
+    character(len=*), intent(in) :: tablOutZ, modelZ, materFieldZ, materCodeZ, caraElemZ
+    integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     OPERATEUR   POST_ELEM
 !     TRAITEMENT DU MOT CLE-FACTEUR "ENER_POT"
-!     ------------------------------------------------------------------
 !
-    integer(kind=8) :: nd, nr, ni, iret, np, nc, jord, jins, jad, nbordr, iord, numord, iainst
-    integer(kind=8) :: ire1, ire2, nt, nm, ng, nbgrma, ig, jgr, nbma, nume, im
-    integer(kind=8) :: iocc, jma, icheml, ier, nbMaiT, nbparr, nbpard, nbpaep, jnmo, ibid
-    parameter(nbpaep=2, nbparr=6, nbpard=4)
-    real(kind=8) :: prec, varpep(nbpaep), inst, valer(3), rundf
-    character(len=1) :: base
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: option = 'ENER_POT'
+    integer(kind=8) :: iret, np, nc, jad, nbStore, iStore, numeStore, jvPara
+    integer(kind=8) :: ire1, ire2, nt, nm, ng, nbgrma, ig, jgr, nbma, nume, im, nbret
+    integer(kind=8) :: iFactorKeyword, jma, icheml, ier, nbMaiT, jnmo, ibid
+    integer(kind=8), parameter :: nbpaep = 2
+    real(kind=8) :: varpep(nbpaep)
+    real(kind=8) :: prec, inst, valer(3), rundf
+    character(len=1), parameter :: jvBase = "V"
     character(len=2) :: codret
-    character(len=8) :: k8b, noma, resul, crit, nommai, typarr(nbparr), typard(nbpard), valk(2)
-    character(len=8) :: nomgd
-    character(len=16) :: typres, option, optio2, noparr(nbparr), nopard(nbpard)
-    character(len=19) :: chelem, knum, kins, ligrel, tabtyp(3), chvarc, chvref, ligrel2
-    character(len=19) :: field_node, field_elem
-    character(len=24) :: chtime, typcha, chgeom, chcara(18), chtemp, chharm, chdisp
-    character(len=24) :: compor, mlggma, nomgrm, valk2(2)
-    aster_logical :: exitim, l_temp
+    character(len=8) :: k8b, mesh, result, crit, nommai, valk(2)
+    character(len=8) :: physQuanName
+    character(len=16) :: resultType, optio2
+    character(len=19) :: epotElem, ligrel, ligrel2
+    character(len=19) :: field, epotElemUser
+    character(len=24) :: chtime, fieldType, chgeom, chtemp, chharm, chdisp
+    character(len=24) :: compor, nomgrm, valk2(2)
+    aster_logical :: l_temp
     complex(kind=8) :: c16b
-!
+    character(len=19), parameter :: chvarc = '&&PEECIN.VARC', chvref = '&&PEEPOT.VARC_REF'
+    character(len=19), parameter :: listStoreJv = '&&PEECIN.NUME_ORDRE'
+    integer(kind=8), pointer :: listStore(:) => null()
+    character(len=19), parameter :: listTimeJv = '&&PEECIN.INSTANT'
+    real(kind=8), pointer :: listTime(:) => null()
+    aster_logical :: lFieldUser, lResultUser, lHasTime
     mpi_int :: mpicow, mrang, mnbproc, mpicou
-    aster_logical :: dbg_ob, lmonit
     integer(kind=8) :: rang, nbproc, k, ntsum, nmsum, nmmax, ngsum, ngmax
     integer(kind=8) :: decalig, decalim, jmntmg, jmigk, jmigi, jmim, niv, ifm, nbgr
-    integer(kind=8) :: numpas, numloc, ietdeb, ietrat, ietfin, ietmax
+    integer(kind=8) :: numpas, numloc
     integer(kind=8) :: longt, icoef, mode, nel, idecgr, j, nbmasum, jnp, ind
-    real(kind=8) :: retfin, ztot
+    real(kind=8) :: ztot
     character(len=4) :: docu
     character(len=8) :: k8X, scal
     character(len=24) :: k24X
     character(len=24), pointer :: celk(:) => null()
     integer(kind=8), pointer :: celd(:) => null()
     real(kind=8), pointer :: celv(:) => null()
+    integer(kind=8), parameter :: nbParaResu = 6, nbParaField = 4
+    character(len=16) :: tablRParaName(nbParaResu)
+    character(len=8), parameter :: tablRParaType(nbParaResu) = &
+                                   (/'I  ', 'R  ', &
+                                     'K24', 'K8 ', 'R  ', 'R  '/)
+    character(len=16), parameter :: tablFParaName(nbParaField) = &
+                                    (/'LIEU      ', 'ENTITE    ', 'TOTALE    ', 'POUR_CENT '/)
+    character(len=8), parameter :: tablFParaType(nbParaField) = &
+                                   (/'K24', 'K8 ', 'R  ', 'R  '/)
+    character(len=16), parameter :: fieldTypePara(3) = &
+                                    (/'NOEU#DEPL_R', 'NOEU#TEMP_R', 'ELEM#ENER_R'/)
 !
-    data noparr/'NUME_ORDRE', 'INST', 'LIEU', 'ENTITE', 'TOTALE',&
-     &     'POUR_CENT'/
-    data typarr/'I', 'R', 'K24', 'K8', 'R', 'R'/
-    data nopard/'LIEU', 'ENTITE', 'TOTALE', 'POUR_CENT'/
-    data typard/'K8', 'K8', 'R', 'R'/
-    data tabtyp/'NOEU#DEPL_R', 'NOEU#TEMP_R', 'ELEM#ENER_R'/
-    data chvarc, chvref/'&&PEEPOT.VARC', '&&PEEPOT.VARC_REF'/
+! --------------------------------------------------------------------------------------------------
 !
-!     ------------------------------------------------------------------
     call jemarq()
-    c16b = (0.d0, 0.d0)
-!
     call infniv(ifm, niv)
-! Afin de tracer le temps calcul de chaque etape (lmonit) et pour debugger (dbg_ob)
-    lmonit = .false.
-    dbg_ob = .false.
-    if (lmonit) call system_clock(ietdeb, ietrat, ietmax)
+
+! - Initializations
+    c16b = (0.d0, 0.d0)
+    rundf = r8vide()
+    lHasTime = ASTER_FALSE
+    inst = 0.d0
     ntsum = 0
     nmsum = 0
     ngsum = 0
@@ -129,106 +145,108 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
     ngmax = 0
     k8X = 'XXXXXXXX'
     k24X = 'XXXXXXXXXXXXXXXXXXXXXXXX'
-!
-    base = 'V'
-    rundf = r8vide()
-    exitim = .false.
-    inst = 0.d0
     chtemp = ' '
     chdisp = ' '
-    typres = ' '
-    call getvid(' ', 'CHAM_GD', scal=field_node, nbret=nd)
-    if (nd .ne. 0) then
-        call chpve2(field_node, 3, tabtyp, ier)
-        call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
-        call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
+    resultType = ' '
+
+! - Get field from user
+    call getvid(' ', 'CHAM_GD', scal=field, nbret=nbret)
+    lFieldUser = nbret .ne. 0
+    if (lFieldUser) then
+        call chpve2(field, 3, fieldTypePara, ier)
+        call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
+        call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
     end if
-    call getvid(' ', 'RESULTAT', scal=resul, nbret=nr)
-    call getvr8(' ', 'INST', scal=inst, nbret=ni)
-    if (ni .ne. 0) exitim = .true.
-    if (nr .ne. 0) then
-        call gettco(resul, typres)
-        if (typres(1:9) .eq. 'MODE_MECA') then
-            noparr(2) = 'FREQ'
-        else if (typres(1:9) .eq. 'EVOL_THER' .or. typres(1:9) .eq. 'EVOL_ELAS' .or. &
-                 typres(1:9) .eq. 'MULT_ELAS' .or. typres(1:9) .eq. 'EVOL_NOLI' .or. &
-                 typres(1:10) .eq. 'DYNA_TRANS') then
-            noparr(2) = 'INST'
+
+! - Get parameters
+    call getvr8(' ', 'INST', scal=inst, nbret=nbRet)
+    lHasTime = nbRet .ne. 0
+    call getvid(' ', 'RESULTAT', scal=result, nbret=nbRet)
+    lResultUser = nbret .ne. 0
+
+! - Parameters in output table
+    tablRParaName(1) = 'NUME_ORDRE'
+    tablRParaName(3) = 'LIEU      '
+    tablRParaName(4) = 'ENTITE    '
+    tablRParaName(5) = 'TOTALE    '
+    tablRParaName(6) = 'POUR_CENT '
+    if (lResultUser) then
+        call gettco(result, resultType)
+        if (resultType(1:9) .eq. 'MODE_MECA') then
+            tablRParaName(2) = 'FREQ'
+        else if (resultType(1:9) .eq. 'EVOL_THER' .or. resultType(1:9) .eq. 'EVOL_ELAS' .or. &
+                 resultType(1:9) .eq. 'MULT_ELAS' .or. resultType(1:9) .eq. 'EVOL_NOLI' .or. &
+                 resultType(1:10) .eq. 'DYNA_TRANS') then
+            tablRParaName(2) = 'INST'
         else
             ASSERT(ASTER_FALSE)
         end if
     end if
-!
-    option = 'ENER_POT'
-    call mecham(option, modele, cara, nh, chgeom, &
-                chcara, chharm, iret)
+
+! - Prepare input fields
+    call mecham(option, modelZ, numeHarm, &
+                chgeom, chharm, iret)
     if (iret .ne. 0) goto 90
-    noma = chgeom(1:8)
-    mlggma = noma//'.GROUPEMA'
+    mesh = chgeom(1:8)
 !
-    call exlim3('ENER_POT', 'V', modele, ligrel)
+    call exlim3(option, 'V', modelZ, ligrel)
 !
-    knum = '&&PEEPOT.NUME_ORDRE'
-    kins = '&&PEEPOT.INSTANT'
-!
-    if (nd .ne. 0) then
-        nbordr = 1
-        call wkvect(knum, 'V V I', nbordr, jord)
-        zi(jord) = 1
-        call wkvect(kins, 'V V R', nbordr, jins)
-        zr(jins) = inst
-        call tbcrsd(resu, 'G')
-        call tbajpa(resu, nbpard, nopard, typard)
+    if (lFieldUser) then
+        nbStore = 1
+        call wkvect(listStoreJv, 'V V I', nbStore, vi=listStore)
+        liststore(1) = 1
+        call wkvect(listTimeJv, 'V V R', nbStore, vr=listTime)
+        listTime(1) = inst
+        call tbcrsd(tablOutZ, 'G')
+        call tbajpa(tablOutZ, nbParaField, tablFParaName, tablFParaType)
     else
+        ASSERT(lResultUser)
+
         call getvr8(' ', 'PRECISION', scal=prec, nbret=np)
         call getvtx(' ', 'CRITERE', scal=crit, nbret=nc)
-        call rsutnu(resul, ' ', 0, knum, nbordr, &
-                    prec, crit, iret)
+        call rsutnu(result, ' ', 0, listStoreJv, nbStore, prec, crit, iret)
         if (iret .ne. 0) goto 80
-        call jeveuo(knum, 'L', jord)
+        call jeveuo(listStoreJv, 'L', vi=listStore)
+
 !        --- ON RECUPERE LES INSTANTS ---
-        call wkvect(kins, 'V V R', nbordr, jins)
-        call jenonu(jexnom(resul//'           .NOVA', 'INST'), iret)
+        call wkvect(listTimeJv, 'V V R', nbStore, vr=listTime)
+        call jenonu(jexnom(result//'           .NOVA', 'INST'), iret)
         if (iret .ne. 0) then
-            exitim = .true.
-            do iord = 1, nbordr
-                numord = zi(jord+iord-1)
-                call rsadpa(resul, 'L', 1, 'INST', numord, &
-                            0, sjv=iainst)
-                zr(jins+iord-1) = zr(iainst)
+            lHasTime = ASTER_TRUE
+            do iStore = 1, nbStore
+                numeStore = listStore(iStore)
+                call rsadpa(result, 'L', 1, 'INST', numeStore, 0, sjv=jvPara)
+                listTime(iStore) = zr(jvPara)
             end do
         else
-            call jenonu(jexnom(resul//'           .NOVA', 'FREQ'), iret)
+            call jenonu(jexnom(result//'           .NOVA', 'FREQ'), iret)
             if (iret .ne. 0) then
-                do iord = 1, nbordr
-                    numord = zi(jord+iord-1)
-                    call rsadpa(resul, 'L', 1, 'FREQ', numord, &
-                                0, sjv=iainst)
-                    zr(jins+iord-1) = zr(iainst)
+                do iStore = 1, nbStore
+                    numeStore = listStore(iStore)
+                    call rsadpa(result, 'L', 1, 'FREQ', numeStore, 0, sjv=jvPara)
+                    listTime(iStore) = zr(jvPara)
                 end do
             end if
         end if
-        call tbcrsd(resu, 'G')
-        call tbajpa(resu, nbparr, noparr, typarr)
+        call tbcrsd(tablOutZ, 'G')
+        call tbajpa(tablOutZ, nbParaResu, tablRParaName, tablRParaType)
     end if
 !-----------------------------------------------------------------------------
 ! MUTUALISATION POUR APPELS GETVTX
 ! AFIN DE NE PAS LE REFAIRE POUR CHAQUE PAS DE TEMPS
 !-----------------------------------------------------------------------------
-    call wkvect('&&PEEPOT_jmntmg', 'V V I', 3*nbocc, jmntmg)
-    if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> creation objet &&PEEPOT_jmntmg'
-    do iocc = 1, nbocc
-        call getvtx(option(1:9), 'TOUT', iocc=iocc, nbval=0, nbret=nt)
-        call getvem(noma, 'MAILLE', option(1:9), 'MAILLE', iocc, &
-                    0, k8b, nm)
-        call getvem(noma, 'GROUP_MA', option(1:9), 'GROUP_MA', iocc, &
-                    0, k8b, ng)
-        zi(jmntmg+3*(iocc-1)) = nt
+    call wkvect('&&PEEPOT_jmntmg', 'V V I', 3*nbFactorKeyword, jmntmg)
+
+    do iFactorKeyword = 1, nbFactorKeyword
+        call getvtx(option(1:9), 'TOUT', iocc=iFactorKeyword, nbval=0, nbret=nt)
+        call getvem(mesh, 'MAILLE', option(1:9), 'MAILLE', iFactorKeyword, 0, k8b, nm)
+        call getvem(mesh, 'GROUP_MA', option(1:9), 'GROUP_MA', iFactorKeyword, 0, k8b, ng)
+        zi(jmntmg+3*(iFactorKeyword-1)) = nt
         ntsum = ntsum+abs(nt)
-        zi(jmntmg+3*(iocc-1)+1) = nm
+        zi(jmntmg+3*(iFactorKeyword-1)+1) = nm
         nmmax = max(nmmax, abs(nm))
         nmsum = nmsum+abs(nm)
-        zi(jmntmg+3*(iocc-1)+2) = ng
+        zi(jmntmg+3*(iFactorKeyword-1)+2) = ng
         ngmax = max(ngmax, abs(ng))
         ngsum = ngsum+abs(ng)
     end do
@@ -239,33 +257,31 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
     if (ngsum .gt. 0) then
         call wkvect('&&PEEPOT_jmigk', 'V V K24', ngsum, jmigk)
         call wkvect('&&PEEPOT_jmigi', 'V V I', ngsum, jmigi)
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> creation objets &&PEEPOT_jmigk/gi'
     end if
     if (nmsum .gt. 0) then
         call wkvect('&&PEEPOT_jmim', 'V V K8', nmsum, jmim)
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> creation objet &&PEEPOT_jmim'
     end if
     decalig = 0
     decalim = 0
     nbmasum = 0
-    do iocc = 1, nbocc
-        ng = zi(jmntmg+3*(iocc-1)+2)
+    do iFactorKeyword = 1, nbFactorKeyword
+        ng = zi(jmntmg+3*(iFactorKeyword-1)+2)
         if (ng .ne. 0) then
             nbgrma = -ng
             call wkvect('&&PEEPOT_GROUPM', 'V V K24', nbgrma, jgr)
-            call getvem(noma, 'GROUP_MA', option(1:9), 'GROUP_MA', iocc, &
+            call getvem(mesh, 'GROUP_MA', option(1:9), 'GROUP_MA', iFactorKeyword, &
                         nbgrma, zk24(jgr), ng)
             do ig = 1, nbgrma
                 nomgrm = zk24(jgr+ig-1)
                 zk24(jmigk-1+ig+decalig) = nomgrm
-                call jeexin(jexnom(mlggma, nomgrm), iret)
+                call jeexin(jexnom(mesh//'.GROUPEMA', nomgrm), iret)
                 if (iret .eq. 0) then
                     call utmess('A', 'UTILITAI3_46', sk=nomgrm)
                     zk24(jmigk-1+ig+decalig) = k24X
                     zi(jmigi-1+ig+decalig) = -999
                     goto 140
                 end if
-                call jelira(jexnom(mlggma, nomgrm), 'LONUTI', nbma)
+                call jelira(jexnom(mesh//'.GROUPEMA', nomgrm), 'LONUTI', nbma)
                 if (nbma .eq. 0) then
                     call utmess('A', 'UTILITAI3_47', sk=nomgrm)
                     zk24(jmigk-1+ig+decalig) = k24X
@@ -281,14 +297,14 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
             decalig = decalig+nbgrma
 ! fin if sur nm (groupe de mailles)
         end if
-        nm = zi(jmntmg+3*(iocc-1)+1)
+        nm = zi(jmntmg+3*(iFactorKeyword-1)+1)
         if (nm .ne. 0) then
             nbma = -nm
             call wkvect('&&PEEPOT_MAILLE', 'V V K8', nbma, jma)
-            call getvem(noma, 'MAILLE', option(1:9), 'MAILLE', iocc, &
+            call getvem(mesh, 'MAILLE', option(1:9), 'MAILLE', iFactorKeyword, &
                         nbma, zk8(jma), nm)
             nbmasum = nbmasum+nbma
-            call jelira(noma//'.TYPMAIL', 'LONMAX', nbMaiT)
+            call jelira(mesh//'.TYPMAIL', 'LONMAX', nbMaiT)
             do im = 1, nbma
                 nommai = zk8(jma+im-1)
                 nume = char8_to_int(zk8(jma+im-1))
@@ -303,9 +319,7 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
             end do
             call jedetr('&&PEEPOT_MAILLE')
             decalim = decalim+nbma
-! fin if sur nm (liste de mailles)
         end if
-! fin boucle sur les iocc
     end do
 !
 !-----------------------------------------------------------------------------
@@ -315,9 +329,7 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
 ! Recuperation des donnees MPI pour le //isme en espace de peenca2 (actif par defaut)
     call asmpi_comm('GET_WORLD', mpicow)
     call asmpi_comm('GET', mpicou)
-    if (mpicow .ne. mpicou) then
-        ASSERT(.False.)
-    end if
+    ASSERT(mpicow .eq. mpicou)
     call asmpi_info(mpicow, mrang, mnbproc)
     rang = to_aster_int(mrang)
     ASSERT(rang .ge. 0)
@@ -335,13 +347,6 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
     if (nbmasum .gt. 0) then
         call wkvect('&&PEEPOT_peenca', 'V V I', 2*nbmasum, jnp)
         call vecint(2*nbmasum, 0, zi(jnp))
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> creation objet &&PEEPOT_peenca', nbmasum
-    end if
-!
-    if (lmonit) then
-        call system_clock(ietfin)
-        retfin = real(ietfin-ietdeb)/real(ietrat)
-        write (ifm, *) '< ', rang, 'peepot> temps initialisation globale=', retfin
     end if
     numpas = 0
 !
@@ -349,65 +354,59 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
 ! BOUCLE PRINCIPALE: PAS DE TEMPS OU MODES OU...
 !-----------------------------------------------------------------------------
 !
-    do iord = 1, nbordr
-!
-        if (lmonit) call system_clock(ietdeb, ietrat, ietmax)
+    do iStore = 1, nbStore
         numpas = numpas+1
-        numloc = iord-(numpas-1)*nbproc
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> iord/numpas/numloc=', iord, numpas, &
-            numloc
+        numloc = iStore-(numpas-1)*nbproc
         call jemarq()
         call jerecu('V')
         icheml = 0
-        numord = zi(jord+iord-1)
-        inst = zr(jins+iord-1)
+        numeStore = listStore(iStore)
+        inst = listTime(iStore)
         valer(1) = inst
-        if (typres .eq. 'FOURIER_ELAS') then
-            call rsadpa(resul, 'L', 1, 'NUME_MODE', numord, &
-                        0, sjv=jnmo)
-            call meharm(modele, zi(jnmo), chharm)
+        if (resultType .eq. 'FOURIER_ELAS') then
+            call rsadpa(result, 'L', 1, 'NUME_MODE', numeStore, 0, sjv=jnmo)
+            call meharm(modelZ, zi(jnmo), chharm)
         end if
         chtime = ' '
-        if (exitim) call mechti(noma, inst, rundf, rundf, chtime)
+        if (lHasTime) then
+            call mechti(mesh, inst, rundf, rundf, chtime)
+        end if
 !
-        if (nr .ne. 0) then
-            call rsexch(' ', resul, 'EPOT_ELEM', numord, field_elem, &
-                        iret)
+        if (lResultUser) then
+            call rsexch(' ', result, 'EPOT_ELEM', numeStore, epotElemUser, iret)
             if (iret .gt. 0) then
-                call rsexch(' ', resul, 'DEPL', numord, field_node, &
-                            ire1)
+                call rsexch(' ', result, 'DEPL', numeStore, field, ire1)
                 if (ire1 .gt. 0) then
-                    call rsexch(' ', resul, 'TEMP', numord, field_node, &
-                                ire2)
+                    call rsexch(' ', result, 'TEMP', numeStore, field, ire2)
                     if (ire2 .gt. 0) goto 72
-                    call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
-                    call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
+                    call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
+                    call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
                 else
-                    call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
-                    call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
+                    call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
+                    call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
                 end if
             else
-                call dismoi('TYPE_SUPERVIS', field_elem, 'CHAMP', repk=typcha)
-                call dismoi('NOM_GD', field_elem, 'CHAMP', repk=nomgd)
+                call dismoi('TYPE_SUPERVIS', epotElemUser, 'CHAMP', repk=fieldType)
+                call dismoi('NOM_GD', epotElemUser, 'CHAMP', repk=physQuanName)
             end if
         end if
 !
-        if (typcha(1:7) .eq. 'CHAM_NO') then
-            call vrcins(modele, mate, cara, inst, chvarc, &
-                        codret)
-            call vrcref(modele(1:8), mate(1:8), cara(1:8), chvref(1:19))
-            if (nomgd(1:4) .eq. 'DEPL') then
+        if (fieldType(1:7) .eq. 'CHAM_NO') then
+            call vrcins(modelZ, materFieldZ, caraElemZ, inst, chvarc, codret)
+            call vrcref(modelZ(1:8), materFieldZ(1:8), caraElemZ(1:8), chvref(1:19))
+            if (physQuanName(1:4) .eq. 'DEPL') then
                 optio2 = 'EPOT_ELEM'
                 l_temp = ASTER_FALSE
-            else if (nomgd(1:4) .eq. 'TEMP') then
+            else if (physQuanName(1:4) .eq. 'TEMP') then
                 optio2 = 'ETHE_ELEM'
                 l_temp = ASTER_TRUE
             else
                 call utmess('F', 'UTILITAI3_73')
             end if
-        else if (typcha(1:9) .eq. 'CHAM_ELEM') then
-            if (nomgd(1:4) .eq. 'ENER') then
-                chelem = field_elem
+
+        else if (fieldType(1:9) .eq. 'CHAM_ELEM') then
+            if (physQuanName(1:4) .eq. 'ENER') then
+                epotElem = epotElemUser
                 goto 30
             else
                 call utmess('F', 'UTILITAI3_73')
@@ -416,26 +415,24 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
             call utmess('F', 'UTILITAI3_73')
         end if
         icheml = 1
-        chelem = '&&PEEPOT.CHAM_ELEM'
-        compor = mate(1:8)//'.COMPOR'
+        epotElem = '&&PEEPOT.CHAM_ELEM'
+        compor = materFieldZ(1:8)//'.COMPOR'
         ibid = 0
         if (l_temp) then
-            chtemp = field_node
+            chtemp = field
             chdisp = ' '
         else
-            chdisp = field_node
+            chdisp = field
             chtemp = ' '
         end if
-        if (lmonit) then
-            call system_clock(ietfin)
-            retfin = real(ietfin-ietdeb)/real(ietrat)
-            write (ifm, *) '< ', rang, 'peepot> temps initialisation iord=', iord, retfin
-            call system_clock(ietdeb, ietrat, ietmax)
-        end if
-        call compEnergyPotential(optio2, modele, ligrel, compor, l_temp, &
-                                 chdisp, chtemp, chharm, chgeom, mateco, &
-                                 chcara, chtime, chvarc, chvref, base, &
-                                 chelem, iret)
+
+        call compEnergyPotential(optio2, &
+                                 modelZ, materCodeZ, caraElemZ, compor, &
+                                 chdisp, chharm, chgeom, &
+                                 chtime, chvarc, chvref, &
+                                 l_temp, chtemp, &
+                                 ligrel, jvBase, epotElem, &
+                                 iret)
 30      continue
 !
 !-----------------------------------------------------------------------------
@@ -445,21 +442,21 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
 ! VERIFICATIONS AU PREMIER PAS DE TEMPS, CALCUL #GREL (NBGR), NOM DU LIGREL (LIGREL2),
 ! TYPE DE CHAMPS (SCAL), ENERGIE TOTALE (ZTOT)
 !-----------------------------------------------------------------------------
-        if (iord .eq. 1) then
+        if (iStore .eq. 1) then
 ! on fait ces verifications qu'au premier pas de temps, cela suffit ici
-            call celver(chelem, 'NBVARI_CST', 'STOP', ibid)
-            call celver(chelem, 'NBSPT_1', 'STOP', ibid)
-            call jelira(chelem//'.CELD', 'DOCU', cval=docu)
+            call celver(epotElem, 'NBVARI_CST', 'STOP', ibid)
+            call celver(epotElem, 'NBSPT_1', 'STOP', ibid)
+            call jelira(epotElem//'.CELD', 'DOCU', cval=docu)
             if (docu .ne. 'CHML') then
                 call utmess('F', 'CALCULEL3_52')
             end if
         end if
-        call jeveuo(chelem//'.CELK', 'L', vk24=celk)
-        call jeveuo(chelem//'.CELD', 'L', vi=celd)
-        call jeveuo(chelem//'.CELV', 'L', vr=celv)
+        call jeveuo(epotElem//'.CELK', 'L', vk24=celk)
+        call jeveuo(epotElem//'.CELD', 'L', vi=celd)
+        call jeveuo(epotElem//'.CELV', 'L', vr=celv)
         ligrel2 = celk(1) (1:19)
         nbgr = nbgrel(ligrel2)
-        if (iord .eq. 1) then
+        if (iStore .eq. 1) then
             scal = scalai(celd(1))
             if (scal(1:1) .ne. 'R') then
                 call utmess('F', 'CALCULEL3_74', sk=scal)
@@ -479,11 +476,7 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
             end do
 34          continue
         end do
-        if (lmonit) then
-            call system_clock(ietfin)
-            retfin = real(ietfin-ietdeb)/real(ietrat)
-            write (ifm, *) '< ', rang, 'peepot> temps compEnergyPotential iord=', iord, retfin
-        end if
+
 !
 ! CALCUL ENERGIE TOTALE DEJA DISPONIBLE
         varpep(1) = ztot
@@ -500,26 +493,25 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
 ! BOUCLE SECONDAIRE: LISTE DE GROUP_MA OU DE MAILLES
 !-----------------------------------------------------------------------------
 !
-        do iocc = 1, nbocc
-            if (lmonit) call system_clock(ietdeb, ietrat, ietmax)
+        do iFactorKeyword = 1, nbFactorKeyword
 ! Resultats getvtx deja lus une fois pour toute
-            nt = zi(jmntmg+3*(iocc-1))
-            nm = zi(jmntmg+3*(iocc-1)+1)
-            ng = zi(jmntmg+3*(iocc-1)+2)
+            nt = zi(jmntmg+3*(iFactorKeyword-1))
+            nm = zi(jmntmg+3*(iFactorKeyword-1)+1)
+            ng = zi(jmntmg+3*(iFactorKeyword-1)+2)
 !
 ! Calcul sur 'TOUT'
             if (nt .ne. 0) then
                 varpep(1) = ztot
                 varpep(2) = 100.d0
-                valk(1) = noma
+                valk(1) = mesh
                 valk(2) = 'TOUT'
-                if (nr .ne. 0) then
+                if (lResultUser) then
                     valer(2) = varpep(1)
                     valer(3) = varpep(2)
-                    call tbajli(resu, nbparr, noparr, [numord], valer, &
+                    call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                 [c16b], valk, 0)
                 else
-                    call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                    call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                 [c16b], valk, 0)
                 end if
             end if
@@ -533,18 +525,18 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
                     if (nomgrm(1:24) .ne. k24X) then
                         nbma = zi(jmigi-1+ig+decalig)
                         ASSERT(nbma .ne. -999)
-                        call jeveuo(jexnom(mlggma, nomgrm), 'L', jad)
-                        call peenca2(chelem, nbpaep, varpep, nbma, zi(jad), &
+                        call jeveuo(jexnom(mesh//'.GROUPEMA', nomgrm), 'L', jad)
+                        call peenca2(epotElem, nbpaep, varpep, nbma, zi(jad), &
                                      ligrel2, nbgr, ztot, ind, nbproc, &
                                      rang)
                         valk2(1) = nomgrm
-                        if (nr .ne. 0) then
+                        if (lResultUser) then
                             valer(2) = varpep(1)
                             valer(3) = varpep(2)
-                            call tbajli(resu, nbparr, noparr, [numord], valer, &
+                            call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                         [c16b], valk2, 0)
                         else
-                            call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                            call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                         [c16b], valk2, 0)
                         end if
                     end if
@@ -560,66 +552,46 @@ subroutine peepot(resu, modele, mate, mateco, cara, &
                     nommai = zk8(jmim-1+im+decalim)
                     if (nommai .ne. k8X) then
                         nume = char8_to_int(nommai)
-                        call peenca2(chelem, nbpaep, varpep, 1, [nume], &
+                        call peenca2(epotElem, nbpaep, varpep, 1, [nume], &
                                      ligrel2, nbgr, ztot, ind, nbproc, &
                                      rang)
                         valk(1) = nommai
-                        if (nr .ne. 0) then
+                        if (lResultUser) then
                             valer(2) = varpep(1)
                             valer(3) = varpep(2)
-                            call tbajli(resu, nbparr, noparr, [numord], valer, &
+                            call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                         [c16b], valk, 0)
                         else
-                            call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                            call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                         [c16b], valk, 0)
                         end if
                     end if
                 end do
                 decalim = decalim+nbma
             end if
-!
-            if (lmonit) then
-                call system_clock(ietfin)
-                retfin = real(ietfin-ietdeb)/real(ietrat)
-                write (ifm, *) '< ', rang, 'peepot> temps peenca/tbajli iord/iocc=', &
-                    iord, iocc, retfin
-            end if
-!
-!-----------------------------------------------------------------------------
-! FIN DE LA BOUCLE SECONDAIRE
-!-----------------------------------------------------------------------------
         end do
-!
         call jedetr('&&PEEPOT.PAR')
-        if (icheml .ne. 0) call jedetr(chelem)
+        if (icheml .ne. 0) call jedetr(epotElem)
 72      continue
         call jedema()
-!
-!-----------------------------------------------------------------------------
-! FIN DE LA BOUCLE PRINCIPALE
-!-----------------------------------------------------------------------------
     end do
 !
 ! Nettoyage des objets de mutualisations et des buffers de com mpi
     call jedetr('&&PEEPOT_jmntmg')
-    if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> destruction objet &&PEEPOT_jmntmg'
     if (ngsum .gt. 0) then
         call jedetr('&&PEEPOT_jmigk')
         call jedetr('&&PEEPOT_jmigi')
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> destruction objets &&PEEPOT_jmigk/gi'
     end if
     if (nmsum .gt. 0) then
         call jedetr('&&PEEPOT_jmim')
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> destruction objet &&PEEPOT_jmim'
     end if
     if (nbmasum .gt. 0) then
         call jedetr('&&PEEPOT_peenca')
-        if (dbg_ob) write (ifm, *) '< ', rang, 'peepot> creation objet &&PEEPOT_peenca'
     end if
 !
 80  continue
-    call jedetr(knum)
-    call jedetr(kins)
+    call jedetr(listStoreJv)
+    call jedetr(listTimeJv)
 !
 90  continue
     call jedema()

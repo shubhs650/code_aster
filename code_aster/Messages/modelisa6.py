@@ -186,6 +186,21 @@ cata_msg = {
  on ne trouve pas les angles nautiques pour le tuyau
 """
     ),
+    39: _(
+        """
+ %(k1)s n'est pas disponible pour le modèle COQUE_3D.
+"""
+    ),
+    40: _(
+        """
+ %(k1)s n'est pas disponible pour cette modélisation.
+"""
+    ),
+    41: _(
+        """
+ %(k1)s : il y a un mélange d'éléments quadratiques et non-quadratiques dans le radier.
+"""
+    ),
     58: _(
         """
  BETA et RHO_CP ne peuvent pas être définies avec des nappes (mot-clé THER_NL).

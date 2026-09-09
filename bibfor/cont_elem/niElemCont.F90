@@ -32,6 +32,7 @@ subroutine niElemCont(parameters, geom, nits, coor_qp_sl, hF, &
 #include "asterfort/assert.h"
 #include "asterfort/apnorm.h"
 #include "contact_module.h"
+#include "MeshTypes_type.h"
 !
     type(ContactParameters), intent(in) :: parameters
     type(ContactGeom), intent(in) :: geom
@@ -65,9 +66,11 @@ subroutine niElemCont(parameters, geom, nits, coor_qp_sl, hF, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: shape_func_sl(9), dshape_func_sl(2, 9), ddshape_func_sl(3, 9)
-    real(kind=8) :: shape_func_ma(9), dshape_func_ma(2, 9), ddshape_func_ma(3, 9)
-    real(kind=8) :: shape_func_vo(27), dshape_func_vo(3, 27)
+    real(kind=8) :: shape_func_sl(MT_NNOMAX2D), dshape_func_sl(2, MT_NNOMAX2D)
+    real(kind=8) ::  ddshape_func_sl(3, MT_NNOMAX2D)
+    real(kind=8) :: shape_func_ma(MT_NNOMAX2D), dshape_func_ma(2, MT_NNOMAX2D)
+    real(kind=8) ::  ddshape_func_ma(3, MT_NNOMAX2D)
+    real(kind=8) :: shape_func_vo(MT_NNOMAX3D), dshape_func_vo(3, MT_NNOMAX3D)
     real(kind=8) :: norm_slav(3), norm_mast(3), tau_slav(3, 2), tau_mast(3, 2)
     real(kind=8) :: H, coor_qp_ma(2), sn_gap, st_v(3), coor_qp_vo(3)
     real(kind=8) :: metricTens(2, 2), invMetricTens(2, 2)

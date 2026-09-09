@@ -54,7 +54,7 @@ def perm_mac3coeur_ops(self, **args):
     caraelem_perm = core_perm.definition_cara_coeur(model_perm, gfibre_perm)
 
     fluence_level = 0.0
-    timeline_perm = core_perm.definition_time(fluence_level, 1.0)
+    timeline_perm = core_perm.definition_time(fluence_level)
     fluence_perm = core_perm.definition_fluence(fluence_level, mesh_perm, 0.0)
     tempfield_perm = core_perm.definition_champ_temperature(mesh_perm)
     material_perm = core_perm.definition_materiau(

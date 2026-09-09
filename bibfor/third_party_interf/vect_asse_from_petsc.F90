@@ -64,7 +64,7 @@ subroutine vect_asse_from_petsc(vasse, nume_equa, vecpet, scaling, ilocal)
     integer(kind=8) :: numglo, nuno1, nucmp1, numloc, numpr2
     integer(kind=8) :: iret1, iret2, jjoine, nbnoee, idprn1, idprn2, nec
     integer(kind=8) :: jjoinr, jnujoi1, jnujoi2, nbnoer, nddll, neq
-    integer(kind=8) :: numnoe, nb_comm, gd, ieq, domj_i
+    integer(kind=8) :: numnoe, nb_comm, gd, ieq, domj_i, nbLigrTot, iLigrT
     aster_logical :: ldebug, l_parallel_mesh, l_local
     integer(kind=8), pointer :: v_nuls(:) => null()
     integer(kind=8), pointer :: v_deeg(:) => null()
@@ -75,6 +75,7 @@ subroutine vect_asse_from_petsc(vasse, nume_equa, vecpet, scaling, ilocal)
     integer(kind=4), pointer :: v_pgid(:) => null()
     real(kind=8), pointer :: vale(:) => null()
     integer(kind=8), pointer :: deeq(:) => null()
+    integer(kind=8), pointer :: v_lilt(:) => null()
 !
     mpi_int :: n4r, n4e, tag4, numpr4
     mpi_int :: mrank, msize, mpicou
@@ -160,6 +161,8 @@ subroutine vect_asse_from_petsc(vasse, nume_equa, vecpet, scaling, ilocal)
         call jeveuo(nume_equa//'.NULG', 'L', jnulg)
         call jeveuo(nume_equa//'.PDDL', 'L', jprddl)
         call jeveuo(nume_equa//'.NEQU', 'L', jnequ)
+        call jeveuo(nume_equa//'.LILT', 'L', vi=v_lilt)
+        call jelira(nume_equa//'.LILT', 'LONMAX', ival=nbLigrTot)
         nloc = zi(jnequ)
 
         call VecGetOwnershipRange(vecpet, low, high, ierr)
@@ -264,7 +267,12 @@ subroutine vect_asse_from_petsc(vasse, nume_equa, vecpet, scaling, ilocal)
             call dismoi('NUM_GD_SI', nume_equa, 'NUME_EQUA', repi=gd)
             nec = nbec(gd)
             call jelira(nume_equa//'.PRNO', 'NMAXOC', nlili, k8bid)
-            do ili = 2, nlili
+            do iLigrT = 2, nbLigrTot
+                if (v_lilt(iLigrT) .eq. -1) then
+                    cycle
+                else
+                    ili = v_lilt(iLigrT)
+                end if
                 call jenuno(jexnum(nume_equa//'.LILI', ili), nomlig)
                 call create_graph_comm(nomlig, "LIGREL", nb_comm, comm_name, tag_name)
                 if (nb_comm > 0) then

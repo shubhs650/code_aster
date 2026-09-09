@@ -38,7 +38,7 @@ subroutine te0004(option, nomte)
     integer(kind=8) :: iret, nbcmp, itabin(7), itabou(7)
     integer(kind=8) :: iinpg, ioutno
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
 !
 ! ----------------------------------------------------------------------
 !
@@ -179,6 +179,13 @@ subroutine te0004(option, nomte)
         call tecach('OOO', 'PHYGRPG', 'L', iret, nval=7, &
                     itab=itabin)
         call tecach('OOO', 'PHYGRNO', 'E', iret, nval=7, &
+                    itab=itabou)
+!
+    else if (option .eq. 'SAUT_ELNO') then
+        fami = 'RIGI'
+        call tecach('OOO', 'PDEPOPG', 'L', iret, nval=7, &
+                    itab=itabin)
+        call tecach('OOO', 'PDEPSNO', 'E', iret, nval=7, &
                     itab=itabou)
 !
     else if (option .eq. 'SIGM_ELNO') then

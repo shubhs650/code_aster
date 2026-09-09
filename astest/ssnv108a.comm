@@ -110,7 +110,12 @@ MAT = DEFI_MATERIAU(ELAS=_F(E=205000.0, NU=0.3, RHO=0.0, ALPHA=0.0), TRACTION=_F
 MATG = DEFI_MATERIAU(ELAS=_F(E=205000.0, NU=0.3, RHO=0.0, ALPHA=0.0))
 
 CHMAT = AFFE_MATERIAU(
-    MAILLAGE=MA, AFFE=(_F(GROUP_MA="CT_3D", MATER=MAT), _F(GROUP_MA="GOUP_3D", MATER=MATG))
+    MAILLAGE=MA,
+    AFFE=(
+        _F(TOUT="OUI", MATER=MAT),
+        _F(GROUP_MA="CT_3D", MATER=MAT),
+        _F(GROUP_MA="GOUP_3D", MATER=MATG),
+    ),
 )
 
 # ------------------------------------------------------------------

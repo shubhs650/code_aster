@@ -18,6 +18,7 @@
 # --------------------------------------------------------------------
 
 import os
+import sys
 import shutil
 from copy import copy
 from math import atan2, cos, degrees, radians, sin
@@ -170,22 +171,22 @@ def calc_ecrevisse_ops(self, **args):
     # IMPORTATION DE COMMANDES ASTER
 
     # RECUPERATION DES MOTS-CLES FACTEURS
-    dRESULTAT = RESULTAT[0].cree_dict_valeurs(RESULTAT[0].mc_liste)
+    dRESULTAT = RESULTAT[0]
     for i in list(dRESULTAT.keys()):
         if dRESULTAT[i] is None:
             del dRESULTAT[i]
 
-    dECOULEMENT = ECOULEMENT[0].cree_dict_valeurs(ECOULEMENT[0].mc_liste)
+    dECOULEMENT = ECOULEMENT[0]
     for i in list(dECOULEMENT.keys()):
         if dECOULEMENT[i] is None:
             del dECOULEMENT[i]
 
-    dMODELE_ECRE = MODELE_ECRE[0].cree_dict_valeurs(MODELE_ECRE[0].mc_liste)
+    dMODELE_ECRE = MODELE_ECRE[0]
     for i in list(dMODELE_ECRE.keys()):
         if dMODELE_ECRE[i] is None:
             dMODELE_ECRE[i] = None  # del dMODELE_ECRE[i]
 
-    dCONVERGENCE = CONVERGENCE[0].cree_dict_valeurs(CONVERGENCE[0].mc_liste)
+    dCONVERGENCE = CONVERGENCE[0]
     for i in list(dCONVERGENCE.keys()):
         if dCONVERGENCE[i] is None:
             del dCONVERGENCE[i]
@@ -219,7 +220,7 @@ def calc_ecrevisse_ops(self, **args):
     _lgno = [x[0] for x in mesh.LIST_GROUP_NO()]
 
     for k, fissure in enumerate(FISSURE):
-        dFISSURE = fissure.cree_dict_valeurs(fissure.mc_liste)
+        dFISSURE = fissure
         for i in list(dFISSURE.keys()):
             if dFISSURE[i] is None:
                 del dFISSURE[i]

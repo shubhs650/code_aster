@@ -18,6 +18,7 @@
 !
 subroutine te0393(option, nomte)
 !
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "jeveux.h"
@@ -28,7 +29,6 @@ subroutine te0393(option, nomte)
 #include "asterfort/jevech.h"
 #include "asterfort/marota.h"
 #include "asterfort/promat.h"
-#include "asterfort/terefe.h"
 !
     character(len=16) :: option, nomte
 ! ......................................................................
@@ -53,14 +53,18 @@ subroutine te0393(option, nomte)
     integer(kind=8) :: ifint
 !
     parameter(zero=0.0d0, un=1.0d0)
+    type(RESI_REFE):: refe
 ! ----------------------------------------------------------------------
 !
 !
     if (option .eq. 'REFE_FORC_NODA') then
         nno = 2
         nc = 6
-        call terefe('MOMENT_REFE', 'MECA_POUTRE', momref)
-        call terefe('EFFORT_REFE', 'MECA_POUTRE', forref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        momref = refe%GetRef('MOMENT')
+        call refe%Check()
+
         call jevech('PVECTUR', 'E', ivectu)
         do ino = 1, nno
             do i = 1, 3

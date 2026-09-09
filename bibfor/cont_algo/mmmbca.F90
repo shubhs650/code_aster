@@ -55,6 +55,7 @@ subroutine mmmbca(mesh, iter_newt, nume_inst, &
 #include "asterfort/mmstaf.h"
 #include "asterfort/mreacg.h"
 #include "Contact_type.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     character(len=8), intent(in) :: mesh
@@ -95,7 +96,7 @@ subroutine mmmbca(mesh, iter_newt, nume_inst, &
     real(kind=8) :: ksipr1_old, ksipr2_old, ksipc1_old, ksipc2_old, resi_geom
     real(kind=8) :: norm(3), tau1(3), tau2(3)
     real(kind=8) :: lagr_cont_node(9), lagr_fro1_node(9), lagr_fro2_node(9)
-    real(kind=8) :: elem_slav_coor(27)
+    real(kind=8) :: elem_slav_coor(3, MT_NNOMAX2D)
     real(kind=8) :: lagr_cont_poin, time_curr
     real(kind=8) :: gap, gap_user
     real(kind=8) :: pres_frot(3), gap_user_frot(3)

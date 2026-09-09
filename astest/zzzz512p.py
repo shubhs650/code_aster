@@ -49,19 +49,21 @@ test = CA.TestCase()
 A = 4.0
 
 u = {
-    "CONSTANTE": FORMULE(VALE="-1", NOM_PARA=("X", "Y")),
-    "LINEAIRE": FORMULE(VALE="(X-5)", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="(X-5)*(X+5)", NOM_PARA=("X", "Y")),
-    "CUBIQUE": FORMULE(VALE="(X-5)*(X+5)*(Y-5)", NOM_PARA=("X", "Y")),
-    "QUARTIQUE": FORMULE(VALE="(X-5)*(X+5)*(Y-5)*(Y+5)", NOM_PARA=("X", "Y")),
+    "CONSTANTE": FORMULE(VALE="(X-5)", NOM_PARA=("X", "Y")),
+    "LINEAIRE": FORMULE(VALE="(X-5)*(X+5)", NOM_PARA=("X", "Y")),
+    "QUADRATIQUE": FORMULE(VALE="(X-5)*(X+5)*(Y-5)", NOM_PARA=("X", "Y")),
+    "CUBIQUE": FORMULE(VALE="(X-5)*(X+5)*(Y-5)*(Y+5)", NOM_PARA=("X", "Y")),
+    "QUARTIQUE": FORMULE(VALE="(X-5)*(X+5)*(Y-5)*(Y+5)*(X-5)", NOM_PARA=("X", "Y")),
 }
 
 f = {
     "CONSTANTE": FORMULE(VALE="0", NOM_PARA=("X", "Y")),
-    "LINEAIRE": FORMULE(VALE="0", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="-2*A", NOM_PARA=("X", "Y"), A=A),
-    "CUBIQUE": FORMULE(VALE="-2*A*(Y-5)", NOM_PARA=("X", "Y"), A=A),
-    "QUARTIQUE": FORMULE(VALE="2*A*(-X*X-Y*Y+50)", NOM_PARA=("X", "Y"), A=A),
+    "LINEAIRE": FORMULE(VALE="-2*A", NOM_PARA=("X", "Y"), A=A),
+    "QUADRATIQUE": FORMULE(VALE="-2*A*(Y-5)", NOM_PARA=("X", "Y"), A=A),
+    "CUBIQUE": FORMULE(VALE="2*A*(-X*X-Y*Y+50)", NOM_PARA=("X", "Y"), A=A),
+    "QUARTIQUE": FORMULE(
+        VALE="2*A*(-X*X*X+5*X*X-3*X*Y*Y+100*X+5*Y*Y-250)", NOM_PARA=("X", "Y"), A=A
+    ),
 }
 
 mesh0 = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)

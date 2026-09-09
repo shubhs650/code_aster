@@ -1,0 +1,104 @@
+
+import sympy as sp
+import itertools
+
+# ----------------------------------------------------------------------
+# Variables
+# ----------------------------------------------------------------------
+r, z = sp.symbols('r z', real=True)
+
+# ----------------------------------------------------------------------
+# Paramètres matériaux
+# ----------------------------------------------------------------------
+lam, mu = sp.symbols('lambda mu', real=True)
+
+# exemple
+# order 1
+# P = 1.
+# Q = z
+# order 2
+# P = (1 + r + z)
+# Q = z*(z + 1)
+# order 3
+# P = (1 + r*r + z*z + r*z)
+# Q = z*(z*z - r*r + 1)
+# order 4
+P = (1 + r*r*r + z*z*z + r*z)
+Q = z*(z*z*z - r*r*r + 1)
+# order 5
+P = (1 + r*r*r*r + z*z*z*z + r*z)
+Q = z*(z*z*z*z - r*r*r*r + 1)
+
+# Champs admissibles
+ur = r * P
+uz = Q
+
+u = sp.Matrix([ur, uz])
+
+# ----------------------------------------------------------------------
+# Déformations axisymétriques
+# ----------------------------------------------------------------------
+
+dur_dr = sp.diff(ur, r)
+dur_dz = sp.diff(ur, z)
+
+duz_dr = sp.diff(uz, r)
+duz_dz = sp.diff(uz, z)
+
+eps_rr = dur_dr
+eps_zz = duz_dz
+eps_rz = (dur_dz + duz_dr)/2
+eps_tt = sp.simplify(ur / r)  # devient P
+
+trace_eps = eps_rr + eps_zz + eps_tt
+
+# ----------------------------------------------------------------------
+# Contraintes (Hooke isotrope)
+# ----------------------------------------------------------------------
+
+sigma_rr = 2*mu*eps_rr + lam*trace_eps
+sigma_zz = 2*mu*eps_zz + lam*trace_eps
+sigma_rz = 2*mu*eps_rz
+sigma_tt = 2*mu*eps_tt + lam*trace_eps
+
+# ----------------------------------------------------------------------
+# Divergence axisymétrique
+# ----------------------------------------------------------------------
+
+div_r = (1/r)*sp.diff(r*sigma_rr, r) + sp.diff(sigma_rz, z) - sigma_tt / r
+div_z = (1/r)*sp.diff(r*sigma_rz, r) + sp.diff(sigma_zz, z)
+
+# second membre
+f_r = sp.simplify(-div_r)
+f_z = sp.simplify(-div_z)
+
+# ----------------------------------------------------------------------
+# Simplification forte (clé)
+# ----------------------------------------------------------------------
+
+f_r_poly = sp.simplify(sp.expand(f_r))
+f_z_poly = sp.simplify(sp.expand(f_z))
+
+# ----------------------------------------------------------------------
+# Vérification : pas de 1/r
+# ----------------------------------------------------------------------
+
+print("\n=== Vérification absence de 1/r ===")
+print("f_r contient r au dénominateur ? ", f_r_poly.has(1/r))
+print("f_z contient r au dénominateur ? ", f_z_poly.has(1/r))
+
+# ----------------------------------------------------------------------
+# Affichage
+# ----------------------------------------------------------------------
+
+print("\n=== u_r ===")
+sp.pprint(ur)
+
+print("\n=== u_z ===")
+sp.pprint(uz)
+
+print("\n=== f_r ===")
+sp.pprint(f_r_poly)
+
+print("\n=== f_z ===")
+sp.pprint(f_z_poly)

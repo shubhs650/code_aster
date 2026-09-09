@@ -28,16 +28,17 @@ subroutine projMaAndCheck(proj_tole, dist_ratio, elem_dime, &
 #include "asterf_types.h"
 #include "asterfort/apinte_chck2.h"
 #include "asterfort/apinte_norm.h"
+#include "MeshTypes_type.h"
 #include "asterfort/apinte_prma_n.h"
 !
     real(kind=8), intent(in) :: proj_tole, dist_ratio
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code, elem_slav_code
-    real(kind=8), intent(out) :: proj_coor(elem_dime-1, 9)
+    real(kind=8), intent(out) :: proj_coor(2, 9)
     integer(kind=8), intent(out) :: iret, nb_node_proj
 !
 ! --------------------------------------------------------------------------------------------------

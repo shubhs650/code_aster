@@ -55,7 +55,7 @@ def calc_spectre_ipm_ops(
     #
     dplancher = []
     for j in EQUIPEMENT:
-        dplancher.append(j.cree_dict_valeurs(j.mc_liste))
+        dplancher.append(j)
     #
     for plancher in dplancher:
         liste_no = []

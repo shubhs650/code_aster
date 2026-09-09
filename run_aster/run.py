@@ -32,6 +32,7 @@ from glob import glob
 from pathlib import Path
 from subprocess import PIPE, run
 
+from .base_params import RUNASTER_PLATFORM, RUNASTER_ROOT
 from .command_files import (
     add_coding_line,
     add_import_commands,
@@ -43,17 +44,7 @@ from .config import CFG
 from .logger import WARNING, logger
 from .status import StateOptions, Status, get_status
 from .timer import Timer
-from .utils import (
-    RUNASTER_PLATFORM,
-    RUNASTER_ROOT,
-    PercTemplate,
-    cmd_abspath,
-    compress,
-    copy,
-    make_writable,
-    run_command,
-    uncompress,
-)
+from .utils import PercTemplate, cmd_abspath, compress, copy, make_writable, run_command, uncompress
 
 EXITCODE_FILE = "_exit_code_"
 TMPMESS = "fort.6"
@@ -64,12 +55,13 @@ FMT_DIAG = """
 """
 
 
-def create_temporary_dir(dir):
+def create_temporary_dir(dir=None):
     """Create a temporary directory.
 
     Returns:
         str: Path of the directory.
     """
+    dir = dir or os.environ.get("ASTER_WORKDIR", CFG.get("tmpdir"))
     if dir:
         os.makedirs(dir, exist_ok=True)
     return tempfile.mkdtemp(prefix="run_aster_", dir=dir)
@@ -154,19 +146,19 @@ class RunAster:
         self._last = export.get("step") + 1 == export.get("nbsteps")
         self._savdb = savedb or bool([i for i in export.resultfiles if i.filetype == "base"])
 
-    def execute(self, wrkdir):
+    def execute(self, workdir):
         """Execution in a working directory.
 
         Arguments:
-            wrkdir (str): Working directory.
+            workdir (str): Working directory.
 
         Returns:
             Status: Status object.
         """
         if self._parallel:
-            wrkdir = osp.join(wrkdir, f"proc.{self._procid}")
-        os.makedirs(wrkdir, exist_ok=True)
-        os.chdir(wrkdir)
+            workdir = osp.join(workdir, f"proc.{self._procid}")
+        os.makedirs(workdir, exist_ok=True)
+        os.chdir(workdir)
         status = self._execute()
         return status
 

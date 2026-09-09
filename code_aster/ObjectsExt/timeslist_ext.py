@@ -86,3 +86,11 @@ class ExtendedTimesList:
             stepper (TimeStepper): Underlying object.
         """
         self.stepper = TimeStepper.command_factory(keywords)
+
+    def setValues(self, values):
+        """
+        Args:
+            values (list[float]): list of values to set
+        """
+        self._setValues(values)
+        self.stepper.setTimes(values)

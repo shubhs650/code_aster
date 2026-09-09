@@ -26,11 +26,12 @@ subroutine mmctan(numema, alias, nno, ndim, coorma, &
 #include "asterfort/reereg.h"
 #include "asterfort/mmdonf.h"
 #include "asterfort/mmtang.h"
+#include "MeshTypes_type.h"
 #include "asterfort/utmess.h"
     integer(kind=8) :: numema
     character(len=8) :: alias
     integer(kind=8) :: ndim, nno, err_appa
-    real(kind=8) :: epsmax, coorno(3), coorma(27)
+    real(kind=8) :: epsmax, coorno(3), coorma(3, MT_NNOMAX2D)
     real(kind=8) :: tau1(3), tau2(3)
 !
 ! ----------------------------------------------------------------------
@@ -57,7 +58,7 @@ subroutine mmctan(numema, alias, nno, ndim, coorma, &
     integer(kind=8) :: ifm, niv
     integer(kind=8) :: niverr
     real(kind=8) :: ksi(3)
-    real(kind=8) :: dff(2, 9)
+    real(kind=8) :: dff(2, MT_NNOMAX2D)
 !
 ! ----------------------------------------------------------------------
 !
@@ -80,7 +81,7 @@ subroutine mmctan(numema, alias, nno, ndim, coorma, &
         end if
     end if
 !
-    call mmdonf(ndim, nno, alias, ksi(1), ksi(2), dff)
+    call mmdonf(alias, ksi(1), ksi(2), dff)
 !
     tau1 = 0.d0
     tau2 = 0.d0

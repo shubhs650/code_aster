@@ -18,9 +18,9 @@
 ! aslint: disable=W1504
 !
 subroutine thmSelectMeca(ds_thm, &
-                         p1, dp1, p2, dp2, satur, tbiot, nl, &
-                         option, j_mater, ndim, typmod, angl_naut, &
-                         carcri, instam, instap, dtemp, &
+                         nl, &
+                         option, ndim, typmod, carcri, &
+                         instam, instap, dtemp, &
                          addeme, addete, adcome, addep1, addep2, &
                          dimdef, dimcon, &
                          defgem, deps, &
@@ -28,15 +28,14 @@ subroutine thmSelectMeca(ds_thm, &
                          congep, vintp, &
                          dsde, retcom)
 !
-    use THM_type
-    use Behaviour_type
     use Behaviour_module
-!
+    use Behaviour_type
+    use MaterialPara_type
+    use THM_type
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/Behaviour_type.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/calcme.h"
 #include "asterfort/thmCheckPorosity.h"
@@ -44,17 +43,15 @@ subroutine thmSelectMeca(ds_thm, &
 #include "asterfort/thmMecaSpecial.h"
 #include "asterfort/utmess.h"
 !
-    type(THM_DS), intent(in) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
+    type(THM_DS), intent(inout) :: ds_thm
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: p1, dp1, p2, dp2, satur, tbiot(6), nl
+    real(kind=8), intent(in) :: nl
     character(len=8), intent(in) :: typmod(2)
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam, instap, dtemp
     integer(kind=8), intent(in) :: ndim, dimdef, dimcon
     integer(kind=8), intent(in) :: addeme, addete, adcome, addep1, addep2
     real(kind=8), intent(in) :: vintm(*)
-    real(kind=8), intent(in) :: angl_naut(3)
     real(kind=8), intent(in) :: defgem(dimdef), deps(6), congem(dimcon)
     real(kind=8), intent(inout) :: congep(dimcon)
     real(kind=8), intent(inout) :: vintp(*)
@@ -63,7 +60,7 @@ subroutine thmSelectMeca(ds_thm, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! THM
+! THMp1, dp1, p2, dp2, satur, tbiot(6),
 !
 ! Main select subroutine to integrate mechanical behaviour
 !
@@ -78,13 +75,8 @@ subroutine thmSelectMeca(ds_thm, &
 ! In  tbiot            : tensor of Biot
 ! In  nl               : Eulerian porosity
 ! In  option           : option to compute
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  typmod           : type of modelization (TYPMOD2)
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (3) Gamma - clockwise around X
 ! In  carcri           : parameters for comportment
 ! In  instam           : time at beginning of time step
 ! In  instap           : time at end of time step
@@ -108,15 +100,13 @@ subroutine thmSelectMeca(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
     aster_logical :: lMatr, LSigm
-    character(len=16) :: compor_meca(COMPOR_SIZE)
+    character(len=16) :: comporMeca(COMPOR_SIZE)
     integer(kind=8) :: i, j
     real(kind=8) :: dsdeme(6, 6), alpha0, ther_meca(6)
     integer(kind=8) :: ndt, ndi
     common/tdim/ndt, ndi
-    character(len=16) :: meca, defo, extern_addr
+    character(len=16) :: relaMeca, defoComp, extern_addr
     integer(kind=8) :: nb_vari_meca, nume_meca, nume_thmc
-    type(Behaviour_Integ) :: BEHinteg
-    integer(kind=8), parameter :: kpg = 1, ksp = 1
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -125,31 +115,28 @@ subroutine thmSelectMeca(ds_thm, &
     dsdeme = 0.d0
     ther_meca = 0.d0
     alpha0 = ds_thm%ds_material%ther%alpha
-    compor_meca = ' '
+    comporMeca = ' '
     retcom = 0
     lMatr = L_MATR(option)
     lSigm = L_SIGM(option)
-!
+
 ! - Get storage parameters for behaviours
-!
-    defo = ds_thm%ds_behaviour%defo
-    meca = ds_thm%ds_behaviour%rela_meca
+    defoComp = ds_thm%ds_behaviour%defo
+    relaMeca = ds_thm%ds_behaviour%rela_meca
     extern_addr = ds_thm%ds_behaviour%extern_addr
     nb_vari_meca = ds_thm%ds_behaviour%nb_vari_meca
     nume_meca = ds_thm%ds_behaviour%nume_meca
     nume_thmc = ds_thm%ds_behaviour%nume_thmc
-!
+
 ! - Check porosity
-!
-    call thmCheckPorosity(j_mater, meca, ds_thm)
-!
+    call thmCheckPorosity(relaMeca, ds_thm)
+
 ! - Select
-!
     if (nume_meca .eq. 0) then
 ! ----- Special behaviours
-        call thmMecaSpecial(ds_thm, option, lMatr, meca, &
-                            p1, dp1, p2, dp2, satur, tbiot, nl, &
-                            j_mater, ndim, typmod, carcri, &
+        call thmMecaSpecial(ds_thm, option, lMatr, relaMeca, &
+                            nl, &
+                            ndim, typmod, carcri, &
                             addeme, adcome, addep1, addep2, &
                             dimdef, dimcon, &
                             defgem, deps, &
@@ -160,30 +147,28 @@ subroutine thmSelectMeca(ds_thm, &
 
     elseif (nume_meca .eq. 1) then
 ! ----- Elasticity
-        ASSERT(meca .eq. 'ELAS')
-        call thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp, &
+        ASSERT(relaMeca .eq. 'ELAS')
+        call thmMecaElas(ds_thm, lMatr, lSigm, dtemp, &
                          adcome, dimcon, &
                          deps, congep, dsdeme, ther_meca)
 
     elseif (nume_meca .ge. 100) then
 ! ----- Forbidden behaviours
-        call utmess('F', 'THM1_1', sk=meca)
+        call utmess('F', 'THM1_1', sk=relaMeca)
 
     else
 ! ----- Standard behaviours
-        compor_meca(RELA_NAME) = meca
-        compor_meca(MGIS_ADDR) = extern_addr
-        write (compor_meca(NVAR), '(I16)') nb_vari_meca
-        compor_meca(DEFO) = defo
-        write (compor_meca(NUME), '(I16)') nume_meca
+        comporMeca(RELA_NAME) = relaMeca
+        comporMeca(MGIS_ADDR) = extern_addr
+        write (comporMeca(NVAR), '(I16)') nb_vari_meca
+        comporMeca(DEFO) = defoComp
+        write (comporMeca(NUME), '(I16)') nume_meca
+        call setFromCompor(comporMeca, ds_thm%ds_behaviour%BEHInteg)
 
-! ----- Set main parameters for behaviour (on point)
-        BEHinteg = ds_thm%ds_behaviour%BEHinteg
-        call setFromCompor(compor_meca, BEHinteg)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
-        call calcme(BEHinteg, &
-                    option, j_mater, ndim, typmod, angl_naut, &
-                    compor_meca, carcri, instam, instap, &
+        call calcme(ds_thm%ds_behaviour%BEHInteg, &
+                    ndim, option, typmod, &
+                    comporMeca, carcri, &
+                    instam, instap, &
                     addeme, adcome, dimdef, dimcon, &
                     defgem, deps, &
                     congem, vintm, &
@@ -200,9 +185,8 @@ subroutine thmSelectMeca(ds_thm, &
             end do
         end if
     end if
-!
+
 ! - Add mechanical matrix
-!
     if (lMatr) then
         do i = 1, ndt
             do j = 1, ndt
@@ -211,9 +195,8 @@ subroutine thmSelectMeca(ds_thm, &
             end do
         end do
     end if
-!
+
 ! - Add thermic (dilatation) matrix
-!
     if (lMatr) then
         if (ds_thm%ds_elem%l_dof_ther) then
             do i = 1, 6

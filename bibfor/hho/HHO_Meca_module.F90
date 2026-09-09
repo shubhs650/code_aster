@@ -26,8 +26,9 @@ module HHO_Meca_module
     use HHO_compor_module
     use HHO_Dirichlet_module
     use HHO_eval_module
-    use HHO_gradrec_module, only: hhoGradRecSymMat, hhoGradRecFullMatFromVec
-    use HHO_gradrec_module, only: hhoGradRecVec, hhoGradRecFullMat, hhoGradRecSymFullMat
+    use HHO_gradrec_module, only: hhoGradRecSymMat, hhoGradRecFullMatFromVec, &
+                                  hhoGradRecSymFullMatFromVec, hhoGradRecVec, &
+                                  hhoGradRecFullMat, hhoGradRecSymFullMat
     use HHO_init_module
     use HHO_LargeStrainMeca_module
     use HHO_matrix_module
@@ -37,8 +38,9 @@ module HHO_Meca_module
     use HHO_stabilization_module, only: hhoStabVec, hdgStabVec, hhoStabSymVec
     use HHO_type
     use HHO_utils_module
+    use MaterialPara_module
+    use MaterialPara_type
     use NonLin_Datastructure_type
-!
     implicit none
 !
     private
@@ -159,7 +161,7 @@ contains
         implicit none
 !
         type(HHO_Data), intent(in) :: hhoData
-        type(HHO_Cell), intent(inout) :: hhoCell
+        type(HHO_Cell), intent(in) :: hhoCell
         aster_logical, intent(in) :: l_largestrains
         type(HHO_matrix), intent(out) :: gradfull
         type(HHO_matrix), intent(out), optional :: stab
@@ -182,18 +184,18 @@ contains
 !
         call hhoTherNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, gbs)
 !
-        if (l_largestrains) then
-!
 ! -------- Reload gradient
-            call gradfullvec%initialize(gbs, total_dofs)
-            call gradfullvec%read('PCHHOGT', ASTER_FALSE)
-            call hhoGradRecFullMatFromVec(hhoCell, hhoData, gradfullvec, gradfull)
-            call gradfullvec%free()
-        else
 !
-! -------- Compute symetric gradient
-            call hhoCalcOpMeca(hhoCell, hhoData, l_largestrains, gradfull)
+        call gradfullvec%initialize(gbs, total_dofs)
+        call gradfullvec%read('PCHHOGT', ASTER_FALSE)
+!
+        if (l_largestrains) then
+            call hhoGradRecFullMatFromVec(hhoCell, hhoData, gradfullvec, gradfull)
+        else
+            call hhoGradRecSymFullMatFromVec(hhoCell, hhoData, gradfullvec, gradfull)
         end if
+!
+        call gradfullvec%free()
 !
 ! -------- Reload stabilization
         if (present(stab)) then
@@ -237,26 +239,23 @@ contains
 !
         aster_logical :: l_rigi_meca, l_vari
         integer(kind=8) :: cbs, fbs, total_dofs
-!
-! --- Verif compor
-!
+
+! ----- Verif compor
+        ASSERT(.not. hhoCS%c_plan)
         l_rigi_meca = (hhoCS%option == "RIGI_MECA")
         l_vari = L_VARI(hhoCS%option)
-!
-        ASSERT(.not. hhoCS%c_plan)
-!
-! --- number of dofs
-!
+
+! ----- Number of dofs
         call hhoMecaDofs(hhoCell, hhoData, cbs, fbs, total_dofs)
-!
-! -- initialization
-!
+
+! ----- Initialization
         call lhs%initialize(total_dofs, total_dofs, 0.0)
         rhs = 0.d0
         if (.not. l_vari) then
 !           not accessed but expected to be (lgpg, *)
             AS_ALLOCATE(vr=hhoCS%vari_curr, size=max(1, hhoCS%lgpg))
         end if
+
 !
         if (hhoCS%l_largestrain) then
 !
@@ -293,7 +292,8 @@ contains
 !
 ! --- add stabilization
 !
-        call hhoCalcStabCoeffMeca(hhoData, hhoCS%fami, hhoMecaState%time_curr, hhoQuadCellRigi)
+        call hhoCalcStabCoeffMeca(hhoData, hhoCS%BEHInteg%materPara%schemePara%fami, &
+                                  hhoMecaState%time_curr, hhoQuadCellRigi)
 !
         if (L_VECT(hhoCS%option)) then
             call hho_dsymv_U(hhoData%coeff_stab(), hhoMecaState%stab, hhoMecaState%depl_curr, &
@@ -362,6 +362,7 @@ contains
                 call gradrec_scal%free()
 !               call hhoGradRecSymMat(hhoCell, hhoData, gradrec_sym)
 !               call hhoStabSymVec(hhoCell, hhoData, gradrec_sym, stab)
+!               call gradrec_sym%free()
             else if (hhoData%cell_degree() == (hhoData%face_degree()+1)) then
                 call hdgStabVec(hhoCell, hhoData, stab)
             else
@@ -393,7 +394,7 @@ contains
 !   In imate        : materiau code
 ! --------------------------------------------------------------------------------------------------
 !
-        type(Behaviour_Integ) :: BEHinteg
+        type(Behaviour_Integ) :: BEHInteg
         character(len=16) :: elas_keyword
         integer(kind=8) :: elas_id, ipg
         real(kind=8) :: e
@@ -403,12 +404,10 @@ contains
 !
         call get_elas_id(imate, elas_id, elas_keyword)
 !
-        call behaviourInit(BEHinteg)
-!
         do ipg = 1, hhoQuad%nbQuadPoints
-            BEHinteg%behavESVA%behavESVAGeom%coorElga(ipg, 1:3) = hhoQuad%points(1:3, ipg)
+            BEHInteg%behavESVA%behavESVAGeom%coorElga(ipg, 1:3) = hhoQuad%points(1:3, ipg)
             call get_elas_para(fami, imate, '+', ipg, 1, elas_id, elas_keyword, &
-                               e_=e, time=time, BEHinteg=BEHinteg)
+                               e_=e, time=time, BEHInteg=BEHInteg)
             coeff = coeff+e
         end do
 !
@@ -425,7 +424,7 @@ contains
         implicit none
 !
         type(HHO_Data), intent(inout) :: hhoData
-        character(len=4) :: fami
+        character(len=8) :: fami
         real(kind=8), intent(in) :: time
         type(HHO_Quadrature), intent(in) :: hhoQuad
 !
@@ -491,13 +490,10 @@ contains
                 if (forc_noda) then
                     call readVector('PDEPLAR', mk_total_dofs, this%depl_prev)
                 else
-!
-! --- get displacement in T-
-!
+! ----------------- get displacement in T-
                     call readVector('PDEPLMR', mk_total_dofs, this%depl_prev)
-!
-! --- get increment displacement beetween T- and T+
-!
+
+! ----------------- get increment displacement beetween T- and T+
                     if (pilo) then
                         call readVector('PDDEPLR', mk_total_dofs, this%depl_incr)
                     else
@@ -541,18 +537,19 @@ contains
                     end if
                 end do
             end if
-!
-! --- compute displacement in T+
-!
+
+! --------- compute displacement in T+
             call dcopy_1(mk_total_dofs, this%depl_prev, this%depl_curr)
             if (.not. forc_noda) then
                 call daxpy_1(mk_total_dofs, 1.d0, this%depl_incr, this%depl_curr)
             end if
+
         else if (hhoComporState%option == "RIGI_MECA") then
             call tecach('ONO', 'PINSTR', 'L', iret, iad=iinstp)
             if (iinstp .ne. 0) then
                 this%time_curr = zr(iinstp)
             end if
+
         else if (hhoComporState%option == "REFE_FORC_NODA") then
             !! Nothing to load
         else
@@ -700,7 +697,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
         type(HHO_basis_cell) :: hhoBasisCell
-        integer(kind=8) :: cbs, fbs, total_dofs, gbs, gbs_sym
+        integer(kind=8) :: cbs, fbs, total_dofs, gbs, gbs_sym, gbs_axis
         integer(kind=8) :: ipg, ncomp, gbs_curr, gbs_cmp, cbs_cmp, faces_dofs
         real(kind=8) :: BSCEval(MSIZE_CELL_SCAL), rhs_axis(MSIZE_CELL_SCAL)
         real(kind=8) :: coorpg(3), weight
@@ -715,9 +712,9 @@ contains
 ! ----- init basis
 !
         call hhoMecaNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, &
-                           gbs, gbs_sym)
+                           gbs, gbs_sym, gbs_axis)
         faces_dofs = total_dofs-cbs
-        gbs_cmp = gbs/(hhoCell%ndim*hhoCell%ndim)
+        gbs_cmp = (gbs-gbs_axis)/(hhoCell%ndim*hhoCell%ndim)
         cbs_cmp = cbs/hhoCell%ndim
         call hhoBasisCell%initialize(hhoCell)
 !
@@ -751,12 +748,6 @@ contains
             if (hhoCS%l_largestrain) then
                 G_curr = hhoEvalMatCell(hhoCell%ndim, gbs, BSCEval, G_curr_coeff)
 !
-                if (hhoCS%axis) then
-                    call hhoAddAxisGrad(hhoCell%ndim, BSCEval, &
-                                        hhoMecaState%depl_curr(faces_dofs+1:), &
-                                        coorpg, cbs_cmp, G_curr)
-                end if
-!
 ! --------- Eval gradient of the deformation at T- and T+
 !
                 call hhoCalculF(G_curr, F_curr)
@@ -764,28 +755,18 @@ contains
                 call sigtopk1(hhoCell%ndim, Cauchy_curr, F_curr, PK1_curr)
 !
                 call hhoComputeRhsLarge(hhoCell, PK1_curr, weight, BSCEval, gbs, bT)
-                if (hhoCS%axis) then
-                    call hhoComputeRhsLargeAxis(hhoCell, Pk1_curr, weight, coorpg(1), &
-                                                BSCEval, cbs_cmp, rhs_axis)
-                end if
             else
 !
                 call hhoComputeRhsSmall(hhoCell, Cauchy_curr, weight, BSCEval, gbs_cmp, bT)
-                if (hhoCS%axis) then
-                    call hhoComputeRhsSmallAxis(hhoCell, Cauchy_curr, weight, coorpg(1), &
-                                                BSCEval, cbs_cmp, rhs_axis)
-                end if
             end if
         end do
 !
         call hho_dgemv_T(1.d0, hhoMecaState%grad, bT, 0.d0, rhs)
-        if (hhoCS%axis) then
-            call daxpy_1(cbs_cmp, 1.d0, rhs_axis, rhs(faces_dofs+1:))
-        end if
 !
 ! --- add stabilization
 !
-        call hhoCalcStabCoeffMeca(hhoData, hhoCS%fami, 0.d0, hhoQuadCellRigi)
+        call hhoCalcStabCoeffMeca(hhoData, &
+                                  hhoCS%BEHInteg%materPara%schemePara%fami, 0.d0, hhoQuadCellRigi)
 !
         call hho_dsymv_U(hhoData%coeff_stab(), hhoMecaState%stab, hhoMecaState%depl_curr, &
                          1.d0, rhs)

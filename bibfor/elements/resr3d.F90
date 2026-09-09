@@ -18,6 +18,7 @@
 
 subroutine resr3d(rota, coor, ff, rho, nno, &
                   npg, frx, fry, frz)
+#include "MeshTypes_type.h"
     implicit none
 !
 ! ......................................................................
@@ -41,8 +42,8 @@ subroutine resr3d(rota, coor, ff, rho, nno, &
 ! ......................................................................
 !
     real(kind=8) :: rota(*), coor(*), ff(*)
-    real(kind=8) :: fx(27), fy(27), fz(27)
-    real(kind=8) :: frx(27), fry(27), frz(27)
+    real(kind=8) :: fx(MT_NNOMAX3D), fy(MT_NNOMAX3D), fz(MT_NNOMAX3D)
+    real(kind=8) :: frx(MT_NNOMAX3D), fry(MT_NNOMAX3D), frz(MT_NNOMAX3D)
     real(kind=8) :: omo, omm, om1, om2, om3
     integer(kind=8) :: npg, nno, i, k, kp
 !

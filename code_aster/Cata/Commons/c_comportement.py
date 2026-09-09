@@ -285,7 +285,6 @@ def C_COMPORTEMENT(command):
                         "VMIS_ISOT_LINE",
                         "VMIS_ISOT_TRAC",
                         "VMIS_CINE_LINE",
-                        "PINTO_MENEGOTTO",
                         "ELAS",
                         "SANS",
                     ),

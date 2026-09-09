@@ -19,11 +19,11 @@
 subroutine te0039(option, nomte)
 !
     use te0047_type
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "asterf_types.h"
 #include "jeveux.h"
-#include "asterc/r8prem.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/dikpkt.h"
@@ -32,11 +32,8 @@ subroutine te0039(option, nomte)
 #include "asterfort/dis_elas_para_klfl.h"
 #include "asterfort/discret_sief.h"
 #include "asterfort/infdis.h"
-#include "asterfort/infted.h"
 #include "asterfort/jevech.h"
 #include "asterfort/matrot.h"
-#include "asterfort/rcvala.h"
-#include "asterfort/terefe.h"
 #include "asterfort/ut2vgl.h"
 #include "asterfort/ut2vlg.h"
 #include "asterfort/utmess.h"
@@ -92,6 +89,7 @@ subroutine te0039(option, nomte)
     aster_logical, parameter :: Predic = ASTER_FALSE
     aster_logical :: lMatrTangSyme, IsSymetrique
     blas_int :: b_incx, b_incy, b_n
+    type(RESI_REFE):: refe
 !
 ! --------------------------------------------------------------------------------------------------
     infodi = 1
@@ -119,10 +117,11 @@ subroutine te0039(option, nomte)
     call getDiscretInformations(for_discret)
 !
     if (option(1:14) .eq. 'REFE_FORC_NODA') then
+        call refe%Init(nomte)
         call jevech('PVECTUR', 'E', ivectu)
         if (lteatt('MODELI', 'DTR')) then
-            call terefe('EFFORT_REFE', 'MECA_DISCRET', forref)
-            call terefe('MOMENT_REFE', 'MECA_DISCRET', momref)
+            forref = refe%GetRef('EFFORT')
+            momref = refe%GetRef('MOMENT')
             do ii = 1, for_discret%nno
                 do jj = 1, 3
                     zr(ivectu+(ii-1)*for_discret%nc+jj-1) = forref
@@ -132,21 +131,21 @@ subroutine te0039(option, nomte)
                 end do
             end do
         else if (lteatt('MODELI', '2DT')) then
-            call terefe('EFFORT_REFE', 'MECA_DISCRET', forref)
+            forref = refe%GetRef('EFFORT')
             do ii = 1, for_discret%nno
                 zr(ivectu+(ii-1)*for_discret%nc) = forref
                 zr(ivectu+(ii-1)*for_discret%nc+1) = forref
             end do
         else if (lteatt('MODELI', '2TR')) then
-            call terefe('EFFORT_REFE', 'MECA_DISCRET', forref)
-            call terefe('MOMENT_REFE', 'MECA_DISCRET', momref)
+            forref = refe%GetRef('EFFORT')
+            momref = refe%GetRef('MOMENT')
             do ii = 1, for_discret%nno
                 zr(ivectu+(ii-1)*for_discret%nc) = forref
                 zr(ivectu+(ii-1)*for_discret%nc+1) = forref
                 zr(ivectu+(ii-1)*for_discret%nc+2) = momref
             end do
         else if (lteatt('MODELI', 'DIT')) then
-            call terefe('EFFORT_REFE', 'MECA_DISCRET', forref)
+            forref = refe%GetRef('EFFORT')
             do ii = 1, for_discret%nno
                 zr(ivectu+(ii-1)*for_discret%nc) = forref
                 zr(ivectu+(ii-1)*for_discret%nc+1) = forref
@@ -158,6 +157,7 @@ subroutine te0039(option, nomte)
             kmess(3) = 'TE0039'
             call utmess('F', 'DISCRETS_15', nk=2, valk=kmess)
         end if
+        call refe%Check()
     else if (option .eq. 'FONL_NOEU') then
         AS_ALLOCATE(vr=klv, size=for_discret%nbt)
         klv = 0.d0

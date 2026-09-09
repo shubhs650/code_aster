@@ -15,29 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmasym(fami, kpg, ksp, icodma, option,&
-                      xlong0, a, tmoins, tplus, dlong0,&
-                      effnom, vim, effnop, vip, klv,&
+    subroutine nmasym(materPara, option, &
+                      xlong0, a, dlong0, &
+                      effnom, vim, effnop, vip, klv, &
                       fono)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: icodma
+        use MaterialPara_type
+        integer(kind=8), parameter :: neq = 6, nbt = 21, nvar = 4
+        type(Material_Para), intent(in) :: materPara
         character(len=*) :: option
-        real(kind=8) :: xlong0
-        real(kind=8) :: a
-        real(kind=8) :: tmoins
-        real(kind=8) :: tplus
-        real(kind=8) :: dlong0
-        real(kind=8) :: effnom
-        real(kind=8) :: vim(4)
-        real(kind=8) :: effnop
-        real(kind=8) :: vip(4)
-        real(kind=8) :: klv(21)
-        real(kind=8) :: fono(6)
+        real(kind=8) :: xlong0, a, syc, syt, etc, ett, cr
+        real(kind=8) :: e, dlong0
+        real(kind=8) :: effnom, vim(nvar)
+        real(kind=8) :: effnop, vip(nvar), fono(neq), klv(nbt)
     end subroutine nmasym
 end interface

@@ -372,8 +372,8 @@ def do_ldd_check(self):
 def where_is_shlib(self, lib):
     tmp = []
 
-    def check_msg(self):
-        return tmp[0]
+    def get_path(self):
+        return tmp[0] if tmp else ""
 
     self.check(
         fragment="int main() { return 0; }\n",
@@ -383,7 +383,7 @@ def where_is_shlib(self, lib):
         msg="Checking shared library %r" % lib,
         define="LIBFROM",
         tmp=tmp,
-        okmsg=check_msg,
+        okmsg=get_path,
     )
 
-    return tmp[0]
+    return get_path(self)

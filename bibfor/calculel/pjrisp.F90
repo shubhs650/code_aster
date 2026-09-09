@@ -15,36 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine pjrisp(moa2, masp, corres, noca)
 !
+subroutine pjrisp(model2, masp, corres, caraElem)
 !
-! --------------------------------------------------------------------------------------------------
-!
-!           COMMANDE PROJ_CHAMP / METHODE='SOUS_POINT_RIGI'
-!
-!   créer un maillage dont les noeuds sont positionnés sur les sous-points de gauss
-!   d'un modele (moa2) pour la famille de points RIGI
-!
-! --------------------------------------------------------------------------------------------------
-!
-!   in :
-!       moa2    : modele "2".
-!       masp    : nom du maillage des points de Gauss. La SD correspondante est vide.
-!       corres  : nom de l'objet qui contient les données de correspondance des mailles.
-!       noca    : nom du CARA_ELEM.
-!
-!   out :
-!       masp    : SD contenant le maillage de POI1 correspondant aux points de Gauss
-!       corres  : création de l'objet corres.PJEF_SP
-!
-! --------------------------------------------------------------------------------------------------
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
-    character(len=8) :: masp, moa2, noca
-    character(len=16) :: corres
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/celces.h"
@@ -62,64 +38,93 @@ subroutine pjrisp(moa2, masp, corres, noca)
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/jexnum.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/wkvect.h"
+#include "jeveux.h"
+!
+    character(len=8) :: masp, model2, caraElem
+    character(len=16) :: corres
 !
 ! --------------------------------------------------------------------------------------------------
 !
+!           COMMANDE PROJ_CHAMP / METHODE='SOUS_POINT_RIGI'
+!
+!   créer un maillage dont les noeuds sont positionnés sur les sous-points de gauss
+!   d'un modele (model2) pour la famille de points RIGI
+!
+! --------------------------------------------------------------------------------------------------
+!
+!   in :
+!       model2    : modele "2".
+!       masp    : nom du maillage des points de Gauss. La SD correspondante est vide.
+!       corres  : nom de l'objet qui contient les données de correspondance des mailles.
+!       caraElem    : nom du CARA_ELEM.
+!
+!   out :
+!       masp    : SD contenant le maillage de POI1 correspondant aux points de Gauss
+!       corres  : création de l'objet corres.PJEF_SP
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: option = 'COOR_ELGA'
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
     integer(kind=8) :: ntgeo, ipo, ipg, nuno2
     integer(kind=8) :: ibid, nbnosp, nno2, ino2p
-    integer(kind=8) ::  j1, ipoi1
-    integer(kind=8) :: nbma, nbpt, nbsp, nbcmp
+    integer(kind=8) :: j1, ipoi1
+    integer(kind=8) :: nbCell, nbpt, nbsp, nbcmp
     integer(kind=8) :: ima, ipt, isp, icmp, iad, iadime
-    integer(kind=8) :: jtypma, jpo2
-    integer(kind=8) :: jcesd, jcesl, jcesv, iatypm
-    integer(kind=8) :: nchi, nbpgmx, nbspmx
-    character(len=8) ::  mail2, lpain(6)
-    character(len=19) :: chamg, ces, chgeom, ligrel
+    integer(kind=8) :: jpo2, jcesd, jcesl, jcesv, iatypm
+    integer(kind=8) :: nbpgmx, nbspmx
+    character(len=8) :: mesh2
+    character(len=19) :: chgeom, modelLigrel
+    character(len=19), parameter :: chamg = '&&PJRISP.PGCOOR', ces = '&&PJRISP.PGCORS'
     character(len=24) :: coodsc
-    character(len=24) :: lchin(6)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
+
+! - Initializations
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
+    call dismoi('NOM_LIGREL', model2, 'MODELE', repk=modelLigrel)
+
 !   récuperation du nom du maillage 2
-    call dismoi('NOM_MAILLA', moa2, 'MODELE', repk=mail2)
-    call jeveuo(mail2//'.TYPMAIL', 'L', jtypma)
-!
-!   Récuperation du champ de coordonnées du maillage 2
-    chgeom = mail2//'.COORDO'
-!
-    call dismoi('NOM_LIGREL', moa2, 'MODELE', repk=ligrel)
-!
-! --------------------------------------------------------------------------------------------------
-!   Calcul du champ de coordonnées des ELGA (chamg):
-    nchi = 6
+    call dismoi('NOM_MAILLA', model2, 'MODELE', repk=mesh2)
+    chgeom = mesh2//'.COORDO'
+
+! - Add input fields
     lchin(1) = chgeom(1:19)
     lpain(1) = 'PGEOMER'
-    lchin(2) = noca//'.CARORIEN'
-    lpain(2) = 'PCAORIE'
-    lchin(3) = noca//'.CAFIBR'
-    lpain(3) = 'PFIBRES'
-    lchin(4) = noca//'.CANBSP'
-    lpain(4) = 'PNBSP_I'
-    lchin(5) = noca//'.CARCOQUE'
-    lpain(5) = 'PCACOQU'
-    lchin(6) = noca//'.CARGEOPO'
-    lpain(6) = 'PCAGEPO'
-    chamg = '&&PJRISP.PGCOOR'
-    call cesvar(noca, ' ', ligrel, chamg)
-    call calcul('S', 'COOR_ELGA', ligrel, nchi, lchin, &
-                lpain, 1, chamg, 'PCOORPG', 'V', &
-                'OUI')
+    nbFieldIn = 1
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+    call cesvar(caraElem, ' ', modelLigrel, chamg)
+    call calcul('S', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, chamg, 'PCOORPG', &
+                'V', 'OUI')
+
 !   chamg : 4 composantes X,Y,Z,W
 !   Transformation en CHAM_ELEM_S
-    ces = '&&PJRISP.PGCORS'
     call celces(chamg, 'V', ces)
 !
     call jeveuo(ces//'.CESD', 'L', jcesd)
     call jeveuo(ces//'.CESL', 'L', jcesl)
     call jeveuo(ces//'.CESV', 'E', jcesv)
-    nbma = zi(jcesd-1+1)
+    nbCell = zi(jcesd-1+1)
 !
 ! --------------------------------------------------------------------------------------------------
 !   Calcul de nbnosp : nombre de noeuds (et de mailles) de masp
@@ -133,10 +138,10 @@ subroutine pjrisp(moa2, masp, corres, noca)
 !      * la troisieme valeur est le numero du sous-point
 !   Dimension : (NBMA*NBPGMX*NBSPMX)*3 = (NB DE MAILLES * NB DE PG MAX  * NB DE SP MAX) * 3
 !
-    call wkvect(corres//'.PJEF_SP', 'V V I', nbma*nbpgmx*nbspmx*3, jpo2)
+    call wkvect(corres//'.PJEF_SP', 'V V I', nbCell*nbpgmx*nbspmx*3, jpo2)
 !
     ipo = 1
-    do ima = 1, nbma
+    do ima = 1, nbCell
         nbpt = zi(jcesd-1+5+4*(ima-1)+1)
         nbsp = zi(jcesd-1+5+4*(ima-1)+2)
         if (nbsp .lt. 1) goto 100
@@ -187,7 +192,7 @@ subroutine pjrisp(moa2, masp, corres, noca)
     call wkvect(masp//'.COORDO    .VALE', 'V V R', 3*nbnosp, j1)
 !
     ino2p = 0
-    do ima = 1, nbma
+    do ima = 1, nbCell
         nbpt = zi(jcesd-1+5+4*(ima-1)+1)
         nbsp = zi(jcesd-1+5+4*(ima-1)+2)
         nbcmp = zi(jcesd-1+5+4*(ima-1)+3)

@@ -21,8 +21,6 @@ subroutine nmecrr(sddisc, paraNameZ, paraValeR_, paraValeI_)
     implicit none
 !
 #include "asterfort/assert.h"
-#include "asterfort/jedema.h"
-#include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
 #include "jeveux.h"
 !

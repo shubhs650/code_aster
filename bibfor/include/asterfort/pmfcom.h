@@ -15,25 +15,27 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine pmfcom(kpg, debsp, option, compor, crit, &
-                  nf,instam, instap, icdmat,nbvalc, &
-                  defam, defap, varim, varimp,contm, &
-                  defm, ddefp, epsm, modf,sigf, &
-                  varip, codret)
+    subroutine pmfcom(materPara, &
+                      option, carcri, &
+                      kpg, debsp, pmfCompor, &
+                      nf, instam, instap, nbvalc, &
+                      defam, defap, varim, varimp, contm, &
+                      defm, ddefp, epsm, modf, sigf, &
+                      varip, codret)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        character(len=16), intent(in) :: option
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         integer(kind=8) :: nbvalc
         integer(kind=8) :: nf
         integer(kind=8) :: kpg
         integer(kind=8) :: debsp
-        character(len=16) :: option
-        character(len=24) :: compor(*)
-        real(kind=8) :: crit(*)
+        character(len=24) :: pmfCompor(*)
         real(kind=8) :: instam
         real(kind=8) :: instap
-        integer(kind=8) :: icdmat
         real(kind=8) :: defam(*)
         real(kind=8) :: defap(*)
         real(kind=8) :: varim(nbvalc*nf)

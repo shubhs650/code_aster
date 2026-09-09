@@ -15,17 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine xajcin(model, option, mxchin, lchin, lpain,&
-                      nchin)
-        integer(kind=8), intent(in) :: mxchin
+    subroutine xajcin(model, option, nbFieldInMax, lchin, lpain, &
+                      nbField)
+        integer(kind=8), intent(in) :: nbFieldInMax
         character(len=*), intent(in) :: model
         character(len=*), intent(in) :: option
-        character(len=*), intent(inout) :: lpain(mxchin)
-        character(len=*), intent(inout) :: lchin(mxchin)
-        integer(kind=8), intent(inout) :: nchin
+        character(len=*), intent(inout) :: lpain(nbFieldInMax)
+        character(len=*), intent(inout) :: lchin(nbFieldInMax)
+        integer(kind=8), intent(inout) :: nbField
     end subroutine xajcin
 end interface

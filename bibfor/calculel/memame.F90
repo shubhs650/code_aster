@@ -16,11 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
-                  comporMultz, matrElemz, basez, listElemCalcz)
+subroutine memame(optionz, modelz, materFieldZ, materCodeZ, caraElemz, time, &
+                  comporMultz, matrElemz, jvBaseZ, listElemCalcz)
 !
     use HHO_precalc_module, only: hhoAddInputField
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -36,14 +36,15 @@ subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
 #include "asterfort/memare.h"
 #include "asterfort/reajre.h"
 #include "asterfort/redetr.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/vrcins.h"
 #include "asterfort/xajcin.h"
 !
     character(len=*), intent(in) :: optionz
-    character(len=*), intent(in) :: modelz, matez, matecoz, caraElemz
+    character(len=*), intent(in) :: modelz, materFieldZ, materCodeZ, caraElemz
     real(kind=8), intent(in) :: time
     character(len=*), intent(in) :: comporMultz, matrElemz
-    character(len=*), intent(in) :: basez, listElemCalcz
+    character(len=*), intent(in) :: jvBaseZ, listElemCalcz
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -53,32 +54,32 @@ subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
 !
 ! In  option           : name of option
 ! In  model            : name of the model
-! In  mate             : name of material characteristics (field)
-! In  mateco           : name of coded material
+! In  materField       : name of material characteristics (field)
+! In  materCode        : name of coded material
 ! In  caraElem         : name of elementary characteristics (field)
 ! In  time             : current time
 ! In  comporMult       : name of comportment definition for PMF (field)
-! In  base             : JEVEUX base to create matrElem
+! In  jvBase             : JEVEUX jvBase to create matrElem
 ! In  matrElem         : elementary matrix
 ! In  listElemCalc     : list of elements (LIGREL) where matrElem is computed
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nbFieldInMax = 33, nbFieldOutMax = 2
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
     character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
     character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
 !
     integer(kind=8) :: nbFieldIn, nbFieldOut
     character(len=2) :: codret
     integer(kind=8) :: iret
-    integer(kind=8), parameter :: modeFourier = 0
+    integer(kind=8), parameter :: numeHarm = 0
     character(len=16) :: option
     character(len=24), parameter :: chvarc = '&&MERIME.CHVARC'
     character(len=24) :: comporMult, listElemCalc
-    character(len=24) :: chgeom, chcara(18), chharm
-    character(len=1) :: base
+    character(len=24) :: chgeom, chharm
+    character(len=1) :: jvBase
     character(len=8) :: model, caraElem
-    character(len=24) :: mate, mateco
+    character(len=24) :: materField, materCode
     character(len=19) :: matrElem
     integer(kind=8) :: nbSubstruct
     aster_logical :: lxfem, hasFiniteElement
@@ -91,11 +92,11 @@ subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
     option = optionz
     model = modelz
     caraElem = caraElemz
-    mate = matez
-    mateco = matecoz
+    materField = materFieldZ
+    materCode = materCodeZ
     matrElem = matrElemz
     comporMult = comporMultz
-    base = basez
+    jvBase = jvBaseZ
     listElemCalc = listElemCalcz
     lpain = ' '
     lchin = ' '
@@ -108,59 +109,40 @@ subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
     call dismoi('NB_SS_ACTI', model, 'MODELE', repi=nbSubstruct)
 
 ! - Preparation of input fields
-    call mecham(option, model, caraElem, modeFourier, chgeom, &
-                chcara, chharm, iret)
+    call mecham(option, model, numeHarm, &
+                chgeom, chharm, iret)
     hasFiniteElement = iret .eq. 0
 
 ! - Field for external state variables
-    call vrcins(model, mate, caraElem, time, chvarc, codret)
+    call vrcins(model, materField, caraElem, time, chvarc, codret)
 
 ! - Prepare RESU_ELEM objects
     call jeexin(matrElem(1:19)//'.RELR', iret)
     if (iret .eq. 0) then
-        call memare(base, matrElem, model, option, to_aster_logical(nbSubstruct > 0))
+        call memare(jvBase, matrElem, model, option, to_aster_logical(nbSubstruct > 0))
     else
         call jedetr(matrElem(1:19)//'.RELR')
     end if
 
-! - Input fields
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom(1:19)
     lpain(2) = 'PMATERC'
-    lchin(2) = mateco(1:19)
-    lpain(3) = 'PCAORIE'
-    lchin(3) = chcara(1) (1:19)
-    lpain(4) = 'PCADISM'
-    lchin(4) = chcara(3) (1:19)
-    lpain(5) = 'PCAGNPO'
-    lchin(5) = chcara(6) (1:19)
-    lpain(6) = 'PCACOQU'
-    lchin(6) = chcara(7) (1:19)
-    lpain(7) = 'PCASECT'
-    lchin(7) = chcara(8) (1:19)
-    lpain(8) = 'PVARCPR'
-    lchin(8) = chvarc(1:19)
-    lpain(9) = 'PCAARPO'
-    lchin(9) = chcara(9) (1:19)
-    lpain(10) = 'PCACABL'
-    lchin(10) = chcara(10) (1:19)
-    lpain(11) = 'PCAGEPO'
-    lchin(11) = chcara(5) (1:19)
-    lpain(12) = 'PABSCUR'
-    lchin(12) = chgeom(1:8)//'.ABSC_CURV'
-    lpain(13) = 'PCAGNBA'
-    lchin(13) = chcara(11) (1:19)
-    lpain(14) = 'PCAPOUF'
-    lchin(14) = chcara(13) (1:19)
-    lpain(15) = 'PCOMPOR'
-    lchin(15) = comporMult(1:19)
-    lpain(16) = 'PNBSP_I'
-    lchin(16) = chcara(16) (1:19)
-    lpain(17) = 'PFIBRES'
-    lchin(17) = chcara(17) (1:19)
-    lpain(18) = 'PCINFDI'
-    lchin(18) = chcara(15) (1:19)
-    nbFieldIn = 18
+    lchin(2) = materCode(1:19)
+    lpain(3) = 'PABSCUR'
+    lchin(3) = chgeom(1:8)//'.ABSC_CURV'
+    lpain(4) = 'PVARCPR'
+    lchin(4) = chvarc(1:19)
+    lpain(5) = 'PCOMPOR'
+    lchin(5) = comporMult(1:19)
+    nbFieldIn = 5
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
 
 ! - Add input XFEM fields if required
     if (lxfem) then
@@ -187,12 +169,12 @@ subroutine memame(optionz, modelz, matez, matecoz, caraElemz, time, &
                     option, listElemCalc, &
                     nbFieldIn, lchin, lpain, &
                     nbFieldOut, lchout, lpaout, &
-                    base, 'OUI')
+                    jvBase, 'OUI')
 
 ! ----- Save RESU_ELEM
-        call reajre(matrElem, lchout(1), base)
+        call reajre(matrElem, lchout(1), jvBase)
         if (nbFieldOut .eq. 2) then
-            call reajre(matrElem, lchout(2), base)
+            call reajre(matrElem, lchout(2), jvBase)
         end if
 
     end if

@@ -47,6 +47,7 @@ subroutine aplcpgn(mesh, newgeo, &
 #include "asterfort/prjint_ray.h"
 #include "asterfort/testvois.h"
 #include "asterfort/utmess.h"
+#include "MeshTypes_type.h"
 #include "Contact_type.h"
 !
     character(len=8), intent(in) :: mesh
@@ -93,13 +94,13 @@ subroutine aplcpgn(mesh, newgeo, &
     integer(kind=8) :: elem_mast_nbnode, elem_mast_nume, elem_mast_dime, elem_mast_indx
     character(len=8) :: elem_mast_code, elem_slav_code
     character(len=8) :: elem_slav_type, elem_mast_type
-    real(kind=8) :: elem_mast_coor(27), elem_slav_coor(27)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D), elem_slav_coor(3, MT_NNOMAX2D)
     integer(kind=8) :: nb_pair, nb_poin_inte, i_dim, i_pt
     integer(kind=8) :: i_mast_neigh, i_slav_start, i_mast_start, i_find_mast
     integer(kind=8) :: i_slav_neigh
     real(kind=8) :: inte_weight
     real(kind=8) :: poin_inte_sl(SIZE_MAX_INTE_SL), poin_inte_sl2(2, MAX_NB_INTE)
-    real(kind=8) :: poin_inte_ma(SIZE_MAX_INTE_SL)
+    real(kind=8) :: poin_inte_ma(SIZE_MAX_INTE_SL), point_inte_tmp(SIZE_MAX_INTE_SL)
     character(len=8) :: elem_slav_name, elem_name
     integer(kind=8) :: nb_slav_start, nb_find_mast, nb_mast_start
     integer(kind=8) :: elem_start, elem_nume
@@ -223,7 +224,7 @@ subroutine aplcpgn(mesh, newgeo, &
                 elem_slav_name = int_to_char8(elem_slav_nume)
                 write (*, *) "Current slave element      : ", elem_slav_nume
                 write (6, *) " Coordinates (global frame): ", &
-                    elem_slav_coor(1:3*elem_slav_nbnode)
+                    elem_slav_coor(1:3, 1:elem_slav_nbnode)
             end if
 !
 ! ----- Number of neighbours
@@ -355,6 +356,16 @@ subroutine aplcpgn(mesh, newgeo, &
 ! --------- Add element paired
 !
                 if (inte_weight > pair_tole .and. iret == 0) then
+                    if (elem_slav_dime == 2) then
+                        ! In 2D, we have to reshape since function have fixed size now
+                        point_inte_tmp = poin_inte_sl
+                        poin_inte_sl = 0.d0
+                        poin_inte_sl(1:SIZE_MAX_INTE_SL/2) = point_inte_tmp(1:SIZE_MAX_INTE_SL:2)
+                        point_inte_tmp = poin_inte_ma
+                        poin_inte_ma = 0.d0
+                        poin_inte_ma(1:SIZE_MAX_INTE_SL/2) = point_inte_tmp(1:SIZE_MAX_INTE_SL:2)
+                    end if
+
                     nb_pair = nb_pair+1
                     if (debug) then
                         WRITE (6, *) "Add pair: ", nb_pair, &

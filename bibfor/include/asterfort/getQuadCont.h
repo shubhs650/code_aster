@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 #include "asterfort/mesh_pairing_type.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine getQuadCont(parameters, elem_dime, &
@@ -26,7 +27,7 @@ interface
                            l_axis_, nb_node_slav_, elem_slav_coor_, &
                            weight_qp_)
         use contact_type
-        type(ContactParameters), intent(in) :: parameters                  
+        type(ContactParameters), intent(in) :: parameters
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_slav_code, elem_mast_code
         integer(kind=8), intent(in) :: nbPoinInte
@@ -34,7 +35,7 @@ interface
         real(kind=8), intent(out) :: coor_qp(2, MAX_NB_QUAD)
         integer(kind=8), intent(out) :: nb_qp
         integer(kind=8), optional, intent(in) :: nb_node_slav_
-        real(kind=8), optional, intent(in) :: elem_slav_coor_(3, 9)
+        real(kind=8), optional, intent(in) :: elem_slav_coor_(3, MT_NNOMAX2D)
         aster_logical, optional, intent(in) :: l_axis_
         real(kind=8), optional, intent(out) :: weight_qp_(MAX_NB_QUAD)
     end subroutine getQuadCont

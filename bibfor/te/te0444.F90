@@ -18,18 +18,17 @@
 !
 subroutine te0444(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/dkqmas.h"
-#include "asterfort/dktmas.h"
 #include "asterfort/dkqrig.h"
+#include "asterfort/dktmas.h"
 #include "asterfort/dktrig.h"
 #include "asterfort/dxiner.h"
-#include "asterfort/dxqpgl.h"
 #include "asterfort/dxroep.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/pmavec.h"
@@ -38,116 +37,120 @@ subroutine te0444(option, nomte)
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
 #include "asterfort/vecma.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!   CALCUL DES OPTIONS DES ELEMENTS DE PLAQUE POUR LA MODELISATION DKTG
-!   ET LA MODELISATION Q4GG
+! Elementary computation
+!
+! Elements: DKTG/Q4GG
+!
+! Options: ECIN_ELEM
+!          EPOT_ELEM
+!          MASS_INER
+!          MASS_MECA*
+!          M_GAMMA
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!                            TRIANGLE  QUADRANGLE
-!        KIRCHOFF  (MINCE)      DKT       DKQ
-!
-!                  (EPAIS)      Q4G       T3G
-!
-!        OPTIONS     MASS_MECA       MASS_INER
-!                    EPOT_ELEM       ECIN_ELEM
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: multic
-    integer(kind=8) :: i, j, ivectu
-    integer(kind=8) :: nno, igeom, imatuu, jener, jfreq, iacce
-    integer(kind=8) :: nddl, nvec, ndim, n1, ni, n2
+    integer(kind=8) :: i, j
+    integer(kind=8) :: jvGeom, jvMatr, jvEner, jvOmega, jvAcce, jvVect, jvMassIner
+    integer(kind=8) :: nno, nddl, n1, ni, n2, nbTermSyme
     real(kind=8) :: rho, epais
     real(kind=8) :: pgl(3, 3), xyzl(3, 4)
-    real(kind=8) :: ener(3), matp(24, 24), matv(300)
+    real(kind=8) :: ener(3), matrFull(24, 24), matrMassGlob(300)
 !     ---> POUR DKT MATELEM = 3 * 6 DDL = 171 TERMES STOCKAGE SYME
 !     ---> POUR DKQ MATELEM = 4 * 6 DDL = 300 TERMES STOCKAGE SYME
-    real(kind=8) :: matloc(300)
+    real(kind=8) :: matrMass(300)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!
-! ---   RECUPERATION DES ADRESSES DANS ZR DES POIDS DES PG
-!       DES FONCTIONS DE FORME DES VALEURS DES DERIVEES DES FONCTIONS
-!       DE FORME ET DE LA MATRICE DE PASSAGE GAUSS -> NOEUDS
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno)
-!
-    call jevech('PGEOMER', 'L', igeom)
-!
-    if (nno .eq. 3) then
-        call dxtpgl(zr(igeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(igeom), pgl)
-    else
-        ASSERT(ASTER_FALSE)
-    end if
-!
-    call utpvgl(nno, 3, pgl, zr(igeom), xyzl)
-!
+    call elrefe_info(fami='RIGI', nno=nno)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of displacements
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
     if (option .eq. 'EPOT_ELEM') then
         if (nomte .eq. 'MEDKTG3') then
-            call dktrig(nomte, xyzl, option, pgl, matloc, ener, multic)
+            call dktrig(plateCara, plateOrie, &
+                        xyzl, option, pgl, &
+                        ener_=ener)
         else if (nomte .eq. 'MEDKQG4') then
-            call dkqrig(nomte, xyzl, option, pgl, matloc, ener)
+            call dkqrig(plateCara, plateOrie, &
+                        xyzl, option, pgl, &
+                        ener_=ener)
         else if (nomte .eq. 'MET3GG3') then
-            call t3grig(nomte, xyzl, option, pgl, matloc, ener)
+            call t3grig(plateCara, plateOrie, &
+                        xyzl, option, pgl, &
+                        ener_=ener)
         else if (nomte .eq. 'MEQ4GG4') then
-            call q4grig(nomte, xyzl, option, pgl, matloc, ener)
+            call q4grig(plateCara, plateOrie, &
+                        xyzl, option, pgl, &
+                        ener_=ener)
         end if
-!
-        call jevech('PENERDR', 'E', jener)
-!
+        call jevech('PENERDR', 'E', jvEner)
         do i = 1, 3
-            zr(jener-1+i) = ener(i)
+            zr(jvEner-1+i) = ener(i)
         end do
-!
+
     else if (option .eq. 'MASS_MECA' .or. option .eq. 'MASS_MECA_DIAG' &
              .or. option .eq. 'MASS_MECA_EXPLI' .or. option .eq. 'M_GAMMA' &
              .or. option .eq. 'ECIN_ELEM') then
-!
         if (nomte .eq. 'MEDKTG3' .or. nomte .eq. 'MET3GG3') then
-            call dktmas(xyzl, option, pgl, matloc, ener)
+            call dktmas(plateCara, &
+                        xyzl, option, pgl, &
+                        matrMass, ener)
         else if (nomte .eq. 'MEDKQG4' .or. nomte .eq. 'MEQ4GG4') then
-            call dkqmas(xyzl, option, pgl, matloc, ener)
+            call dkqmas(plateCara, plateOrie, &
+                        xyzl, option, pgl, &
+                        matrMass, ener)
         end if
-!
+
         if (option .eq. 'MASS_MECA') then
-            call jevech('PMATUUR', 'E', imatuu)
-            call utpslg(nno, 6, pgl, matloc, zr(imatuu))
+            call jevech('PMATUUR', 'E', jvMatr)
+            call utpslg(nno, 6, pgl, matrMass, zr(jvMatr))
         else if (option .eq. 'ECIN_ELEM') then
-            call jevech('PENERCR', 'E', jener)
-            call jevech('POMEGA2', 'L', jfreq)
-!
+            call jevech('PENERCR', 'E', jvEner)
+            call jevech('POMEGA2', 'L', jvOmega)
             do i = 1, 3
-                zr(jener-1+i) = zr(jfreq)*ener(i)
+                zr(jvEner-1+i) = zr(jvOmega)*ener(i)
             end do
-!
         else if (option .eq. 'M_GAMMA') then
-            call jevech('PACCELR', 'L', iacce)
-            call jevech('PVECTUR', 'E', ivectu)
-!
+            call jevech('PACCELR', 'L', jvAcce)
+            call jevech('PVECTUR', 'E', jvVect)
             nddl = 6*nno
-            nvec = nddl*(nddl+1)/2
-!
-            call utpslg(nno, 6, pgl, matloc, matv)
-            call vecma(matv, nvec, matp, nddl)
-            call pmavec('ZERO', nddl, matp, zr(iacce), zr(ivectu))
-!
+            nbTermSyme = nddl*(nddl+1)/2
+            call utpslg(nno, 6, pgl, matrMass, matrMassGlob)
+            call vecma(matrMassGlob, nbTermSyme, matrFull, nddl)
+            call pmavec('ZERO', nddl, matrFull, zr(jvAcce), zr(jvVect))
         else if (option .eq. 'MASS_MECA_DIAG' .or. option .eq. 'MASS_MECA_EXPLI') then
-            call jevech('PMATUUR', 'E', imatuu)
-!
+            call jevech('PMATUUR', 'E', jvMatr)
             nddl = 6*nno
-            ndim = nddl*(nddl+1)/2
-!
-            do i = 1, ndim
-                zr(imatuu-1+i) = matloc(i)
+            nbTermSyme = nddl*(nddl+1)/2
+            do i = 1, nbTermSyme
+                zr(jvMatr-1+i) = matrMass(i)
             end do
-!
             if (option .eq. 'MASS_MECA_EXPLI') then
 !     CORRECTION DES TERMES CORRESPONDANT AU DDL 6
 !     NON PREVU PAR LA THEORIE DKT. ON RAJOUTE
@@ -157,19 +160,21 @@ subroutine te0444(option, nomte)
                     n1 = 6*(j-1)+5
                     n2 = 6*(j-1)+4
                     ni = 6*j
-                    ndim = (ni+1)*ni/2
+                    nbTermSyme = (ni+1)*ni/2
                     n1 = (n1+1)*n1/2
                     n2 = (n2+1)*n2/2
-                    zr(imatuu-1+ndim) = (zr(imatuu-1+n1)+zr(imatuu-1+n2))*0.5d0
+                    zr(jvMatr-1+nbTermSyme) = (zr(jvMatr-1+n1)+zr(jvMatr-1+n2))*0.5d0
                 end do
             end if
         end if
     else if (option .eq. 'MASS_INER') then
-        call jevech('PMASSINE', 'E', imatuu)
-        call dxroep(rho, epais)
-        call dxiner(nno, zr(igeom), rho, epais, zr(imatuu), zr(imatuu+1), zr(imatuu+4))
+        call jevech('PMASSINE', 'E', jvMassIner)
+        call dxroep(plateCara, rho, epais)
+        call dxiner(plateCara, &
+                    zr(jvGeom), rho, epais, &
+                    zr(jvMassIner), zr(jvMassIner+1), zr(jvMassIner+4))
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end subroutine

@@ -15,21 +15,28 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmgpfi(fami, option, typmod, ndim, nno,&
-                      npg, geomInit,&
-                      compor, imate, mult_comp, lgpg, carcri,&
-                      angmas, instm, instp, dispPrev, dispIncr,&
-                      sigmPrev, vim, sigmCurr, vip, fint,&
+    subroutine nmgpfi(BEHInteg, &
+                      typmod, option, &
+                      nno, npg, ndim, geomInit, &
+                      compor, carcri, multComp, &
+                      instm, instp, &
+                      dispPrev, dispIncr, &
+                      lgpg, sigmPrev, vim, sigmCurr, &
+                      vip, fint, &
                       matr, codret)
-        integer(kind=8) :: ndim, nno, npg, imate, lgpg
-        character(len=8) :: typmod(*)
-        character(len=*) :: fami
-        character(len=16) :: option, compor(*)
-        character(len=16), intent(in) :: mult_comp
-        real(kind=8) :: geomInit(*), carcri(*), instm, instp
-        real(kind=8) :: angmas(3)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        integer(kind=8) :: ndim, nno, npg, lgpg
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: multComp
+        real(kind=8) :: geomInit(*), instm, instp
         real(kind=8) :: dispPrev(*), dispIncr(*), sigmPrev(2*ndim, npg)
         real(kind=8) :: vim(lgpg, npg), sigmCurr(2*ndim, npg), vip(lgpg, npg)
         real(kind=8) :: matr(*), fint(*)

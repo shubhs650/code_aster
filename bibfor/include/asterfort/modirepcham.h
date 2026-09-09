@@ -15,12 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine modirepcham(resuou, resuin )
-        character(len=19) :: resuou
-        character(len=19) :: resuin
+    subroutine modirepcham(fieldOut, fieldIn)
+        character(len=19), intent(in) :: fieldOut, fieldIn
     end subroutine modirepcham
 end interface

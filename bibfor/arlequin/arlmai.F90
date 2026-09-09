@@ -54,6 +54,7 @@ subroutine arlmai(mail, mailar, ndim, nom1, nom2, &
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexatr.h"
 #include "asterfort/wkvect.h"
+#include "MeshTypes_type.h"
 !
 !
 !     ARGUMENTS:
@@ -65,7 +66,7 @@ subroutine arlmai(mail, mailar, ndim, nom1, nom2, &
 !
 !
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX)
     integer(kind=8) :: nmain1, nmain2
     integer(kind=8) :: nnoin1, nnoin2, cxcumu
     character(len=24) :: k8bid

@@ -426,6 +426,10 @@ class MECA_POU_D_SQUE(Element):
                 (SP.PCAFI_R, LC.ECAFIEL),
                 (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
                 (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
             ),
         ),
         OP.TOU_INI_ELGA(
@@ -433,10 +437,11 @@ class MECA_POU_D_SQUE(Element):
             para_out=(
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
                 (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -444,10 +449,11 @@ class MECA_POU_D_SQUE(Element):
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),
                 (OP.TOU_INI_ELNO.PINST_R, LC.EEINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.EENEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.EENEUT_R),
                 (OP.TOU_INI_ELNO.PSIEF_R, EEFGENO),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
     )

@@ -19,11 +19,12 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine apcoma(mesh, newgeo, elem_nume, elem_nbnode, elem_coor)
         character(len=8), intent(in) :: mesh
         character(len=19), intent(in) :: newgeo
         integer(kind=8), intent(in) :: elem_nume
         integer(kind=8), intent(in) :: elem_nbnode
-        real(kind=8), intent(out) :: elem_coor(27)
+        real(kind=8), intent(out) :: elem_coor(3,MT_NNOMAX2D)
     end subroutine apcoma
 end interface

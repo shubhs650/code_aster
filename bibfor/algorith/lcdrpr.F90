@@ -15,8 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine lcdrpr(fami, typmod, option, imate, compor, sigm, &
+!
+subroutine lcdrpr(fami, typmod, option, imate, sigm, &
                   depsm, vim, &
                   vip, sig, dsidep, iret)
 !
@@ -34,7 +34,7 @@ subroutine lcdrpr(fami, typmod, option, imate, compor, sigm, &
     real(kind=8) :: depsm(6), vim(*), vip(*), sig(6), dsidep(6, 6)
     real(kind=8) :: sigm(6)
     character(len=8) :: typmod(*)
-    character(len=16) :: option, compor(*)
+    character(len=16) :: option
 ! ======================================================================
 ! --- LOI DE COMPORTEMENT DE TYPE DRUCKER PRAGER -----------------------
 ! --- ELASTICITE ISOTROPE ----------------------------------------------
@@ -90,7 +90,7 @@ subroutine lcdrpr(fami, typmod, option, imate, compor, sigm, &
 ! ======================================================================
 ! --- CAS PARABOLIQUE --------------------------------------------------
 ! ======================================================================
-        call lcdppa(mod, nvi, option, materf, compor, &
+        call lcdppa(mod, nvi, option, materf, &
                     sigm, deps, vim, vip, sig, &
                     dsidep, iret)
     end if

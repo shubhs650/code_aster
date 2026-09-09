@@ -18,55 +18,65 @@
 
 subroutine te0134(option, nomte)
 !
-!
-! --------------------------------------------------------------------------------------------------
-!
-!           CALCUL DU REPERE LOCAL DONNE PAR L'UTILISATEUR
-!
-!   En sortie :
-!       - les 3 champs de vecteurs correspondant au repère
-!       - la matrice de passage du repère global au repère local
-!
-!   Types d'élements concernés :
-!       DKT , DKTG , DST , Q4G , Q4GG , COQUE_3D , GRILLE
-!
-! --------------------------------------------------------------------------------------------------
-!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara
     implicit none
-    character(len=16) :: option, nomte
 !
-#include "asterf_types.h"
-#include "jeveux.h"
 #include "asterc/r8dgrd.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/coqrep.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utpvlg.h"
+#include "jeveux.h"
+!
+    character(len=16) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: jgeom, jrepl1, jrepl2, jrepl3, jmatpas, jcacoq
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
+! Elementary computation
+!
+! Elements: DKT, DKTG, DST, Q4G, Q4GG, COQUE_3D, GRILLE_*, MEMBRANE
+!
+! Options: REPE_LOCALE
+!
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: jvGeom, jrepl1, jrepl2, jrepl3, jmatpas
+    integer(kind=8) :: nnos
     integer(kind=8) :: ii, iret
-    real(kind=8) :: pgl(3, 3), t2iu(4), t2ui(4)
+    real(kind=8) :: pgl(3, 3), t2iu(4)
     real(kind=8) :: pulx(3), puly(3), pulz(3), ux(3), uy(3), uz(3)
-    real(kind=8) :: coor(12), alpha, beta, c, s
+    real(kind=8) :: coor(12), alpha, beta
     aster_logical :: vecteur, matrice
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
+    call elrefe_info(fami='RIGI', nnos=nnos)
     ASSERT((nnos .eq. 3) .or. (nnos .eq. 4))
-!
-    call jevech('PGEOMER', 'L', jgeom)
-    call jevech('PCACOQU', 'L', jcacoq)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+    do ii = 1, nnos*3
+        coor(ii) = zr(jvGeom-1+ii)
+    end do
+
     vecteur = .False.
     matrice = .False.
+
 !   Si on demande les vecteurs, c'est les 3
     call tecach('NNO', 'PREPLO1', 'E', iret, iad=jrepl1)
     if (iret .eq. 0) then
@@ -77,6 +87,7 @@ subroutine te0134(option, nomte)
         jrepl2 = 1
         jrepl3 = 1
     end if
+
 !   Si on demande la matrice de passage
     call tecach('NNO', 'PMATPASS', 'E', iret, iad=jmatpas)
     if (iret .eq. 0) then
@@ -84,27 +95,15 @@ subroutine te0134(option, nomte)
     else
         jmatpas = 1
     end if
-!
-! --------------------------------------------------------------------------------------------------
-    do ii = 1, nnos*3
-        coor(ii) = zr(jgeom-1+ii)
-    end do
-!
-! --------------------------------------------------------------------------------------------------
-!   CALCUL DE LA MATRICE DE PASSAGE GLOBAL -> LOCAL(INTRINSEQUE)
-    if (nnos .eq. 3) then
-        call dxtpgl(coor, pgl)
-    else if (nnos .eq. 4) then
-        call dxqpgl(coor, pgl)
-    end if
-    alpha = zr(jcacoq+1)*r8dgrd()
-    beta = zr(jcacoq+2)*r8dgrd()
-! --------------------------------------------------------------------------------------------------
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, c, s)
-!
-!   T2IU : LA MATRICE DE PASSAGE (2X2) : UTILISATEUR -> INTRINSEQUE
-!   PUL  : LA MATRICE DE PASSAGE (3X3) : UTILISATEUR -> INTRINSEQUE
-!
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, coor, pgl)
+
+! - Get generic transformation
+    alpha = plateOrie%alpha
+    beta = plateOrie%beta
+    call coqrep(pgl, alpha, beta, t2iu_=t2iu)
+
 !       ( T2IU(1) , T2IU(3) , 0 )
 !   PUL=( T2IU(2) , T2IU(4) , 0 )
 !       (   0     ,    0    , 1 )

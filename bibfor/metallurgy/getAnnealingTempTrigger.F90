@@ -54,7 +54,7 @@ subroutine getAnnealingTempTrigger(temp, T1, T2, &
         ASSERT(ASTER_FALSE)
     end if
 
-    l_anneal = ((temp .gt. T1) .and. lHardMini .and. (temp .lt. T2))
+    l_anneal = ((temp .gt. T1) .and. lHardMini)
 ! Je suis très proche de la borne fin de la restauration
 ! Pour éviter la division par zéro je décide
     l_end_anneal = ASTER_FALSE

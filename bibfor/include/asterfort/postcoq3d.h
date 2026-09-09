@@ -17,7 +17,11 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine postcoq3d(optionZ, nomteZ, nbLayer)
+    subroutine postcoq3d(plateCara, plateOrie, &
+                         optionZ, nomteZ, nbLayer)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(inout) :: plateOrie
         character(len=*), intent(in) :: optionZ, nomteZ
         integer(kind=8), intent(in) :: nbLayer
     end subroutine postcoq3d

@@ -24,7 +24,6 @@ subroutine tuload(option, nbNode, nbDof, nbFourier)
 !
     implicit none
 !
-#include "asterc/r8pi.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevecd.h"
@@ -47,7 +46,7 @@ subroutine tuload(option, nbNode, nbDof, nbFourier)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "MASS"
+    character(len=8), parameter :: fami = "MASS"
     integer(kind=8) :: jvf, jcoopg, jpoids
     integer(kind=8) :: jvGeom, jvTime, jvLoad
     integer(kind=8) :: jvVect
@@ -57,7 +56,7 @@ subroutine tuload(option, nbNode, nbDof, nbFourier)
     integer(kind=8) :: jvCurv
     aster_logical :: lAbsCurv
     real(kind=8) :: absCurv(PIPE_MAX_NODE)
-    integer(kind=8) :: jvMaterCode
+    integer(kind=8) :: jvMaterc
     real(kind=8) :: rho
     real(kind=8) :: xpg(PIPE_MAX_NPG)
     integer(kind=8) :: nbLayer, nbSect
@@ -133,8 +132,8 @@ subroutine tuload(option, nbNode, nbDof, nbFourier)
         typeScal = "R"
         lGravity = ASTER_TRUE
         call jevech('PPESANR', 'L', jvLoad)
-        call jevech('PMATERC', 'L', jvMaterCode)
-        call pipeGetDensity(jvMaterCode, rho)
+        call jevech('PMATERC', 'L', jvMaterc)
+        call pipeGetDensity(jvMaterc, rho)
         call pipeLoadLine(typeScal, lGravity, pipeElem, &
                           nbNode, nbFourier, &
                           nbSect, nbLayer, &

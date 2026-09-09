@@ -29,6 +29,7 @@ subroutine xsseno(nno, nbsig, nse, npg, jgano, &
 !
 !
 !
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 #include "asterfort/ppgan2.h"
     integer(kind=8) :: mxval
@@ -44,7 +45,7 @@ subroutine xsseno(nno, nbsig, nse, npg, jgano, &
     integer(kind=8) :: idecpg
     integer(kind=8) :: nse, ise, in, kpg, ic
 !
-    real(kind=8) :: vpg(15), vno(27)
+    real(kind=8) :: vpg(15), vno(MT_NNOMAX3D)
 !
     real(kind=8) :: siseno(mxval)
 !

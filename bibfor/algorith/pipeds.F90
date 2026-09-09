@@ -15,15 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine pipeds(ndim, typmod, tau, mate, vim, &
-                  epsm, epspc, epsdc, etamin, etamax, &
+subroutine pipeds(materPara, ndim, typmod, &
+                  tau, &
+                  vim, epsm, epspc, epsdc, etamin, etamax, &
                   a0, a1, a2, a3, etas)
 !
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "asterf_types.h"
+!
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/critet.h"
 #include "asterfort/diagp3.h"
 #include "asterfort/infniv.h"
@@ -31,25 +35,23 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
 #include "asterfort/utmess.h"
 #include "asterfort/zerod2.h"
 #include "blas/ddot.h"
-    character(len=8) :: typmod(*)
-    integer(kind=8) :: ndim, mate
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=8), intent(in) :: typmod(2)
+    integer(kind=8), intent(in) :: ndim
     real(kind=8) :: vim(2), epsm(6), epspc(6), epsdc(6)
     real(kind=8) :: etamax, tau, etamin
     real(kind=8) :: a0, a1, a2, a3, etas
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
 ! ROUTINE MECA_NON_LINE (PILOTAGE - PRED_ELAS)
 !
 ! LOI DE COMPORTEMENT ENDO_ISOT_BETON EN LOCAL GRAD_VARI
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-!
-! IN  NDIM   : DIMENSION DE L'ESPACE
-! IN  TYPMOD : TYPE DE MODELISATION
 ! IN  TAU    : 2ND MEMBRE DE L'EQUATION F(ETA)=TAU
-! IN  MATE   : MATERIAU CODE
 ! IN  VIM    : VARIABLES INTERNES EN T-
 ! IN  EPSM   : DEFORMATIONS EN T-
 ! IN  EPSPC  : CORRECTION DE DEFORMATIONS DUES AUX CHARGES FIXES
@@ -62,19 +64,21 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
 ! OUT A3     : IDEM A1 POUR LA SECONDE SOLUTION EVENTUELLE;R8VIDE SINON
 ! OUT ETAS   : SI PAS DE SOLUTION : LE MINIMUM ; R8VIDE SINON
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbres
-    parameter(nbres=3)
-    integer(kind=8) :: icodre(nbres)
-    character(len=16) :: nomres(nbres)
-    character(len=8) :: fami, poum
-    real(kind=8) :: valres(nbres)
-!
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
+    character(len=8), parameter :: poum = "+"
+    integer(kind=8), parameter :: nbProp = 3
+    integer(kind=8) :: propCode(nbProp)
+    character(len=16) :: propName(nbProp)
+    real(kind=8) :: propVale(nbProp)
     aster_logical :: cplan
-    integer(kind=8) :: ndimsi, k, iter, nitmax, ifm, niv, kpg, spt
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    integer(kind=8) :: ndimsi, k, iter, nitmax, ifm, niv
     real(kind=8) :: trepsd, coplan, sigeld(6)
-    real(kind=8) :: tr(6), vecp(3, 3), rac2
+    real(kind=8) :: tr(6), vecp(3, 3)
     real(kind=8) :: fpd, dm, d, eta, epm(3)
     real(kind=8) :: e, nu, lambda, deuxmu, gamma, seuil, trepsm
     real(kind=8) :: k0, k1, sicr
@@ -88,72 +92,75 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
     real(kind=8) :: xs, ys, zs
     real(kind=8) :: x1, y1, z1
     real(kind=8) :: x2, y2, z2
-    real(kind=8) :: kron(6)
     blas_int :: b_incx, b_incy, b_n
-    data kron/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/
+    real(kind=8), parameter :: kron(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
 !
-!----- GET INFO=1,2
+! --------------------------------------------------------------------------------------------------
+!
     call infniv(ifm, niv)
-!
-! ----------------------------------------------------------------------
-!
     nitmax = 100
     epstol = 1.d-6
     epsvp = 1.d-6/abs(etamax-etamin)
     epsto2 = 1.d-2
     etas = r8vide()
-!
-!
-! -- OPTION ET MODELISATION
     cplan = (typmod(1) .eq. 'C_PLAN  ')
     ndimsi = 2*ndim
-    rac2 = sqrt(2.d0)
-!
-! -- CAS DE L'ENDOMMAGEMENT SATURE, ON NE PILOTE PAS
+
+! - CAS DE L'ENDOMMAGEMENT SATURE, ON NE PILOTE PAS
     if ((nint(vim(2)) .eq. 2)) then
         if (niv .eq. 2) then
             call utmess('I', 'PILOTAGE_2')
         end if
         goto 666
     end if
-!
-! -- LECTURE DES CARACTERISTIQUES THERMOELASTIQUES
-    nomres(1) = 'E'
-    nomres(2) = 'NU'
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-    call rcvalb(fami, kpg, spt, poum, mate, &
-                ' ', 'ELAS', 0, ' ', [0.d0], &
-                2, nomres, valres, icodre, 1)
-    e = valres(1)
-    nu = valres(2)
+
+! - Copy material parameters with other scheme parameters
+    call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                       materParaFPG1)
+
+! - LECTURE DES CARACTERISTIQUES THERMOELASTIQUES
+    propName(1) = 'E'
+    propName(2) = 'NU'
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, ' ', 'ELAS', &
+                0, ' ', [0.d0], &
+                2, propName, propVale, &
+                propCode, 1)
+    e = propVale(1)
+    nu = propVale(2)
     lambda = e*nu/(1.d0+nu)/(1.d0-2.d0*nu)
     deuxmu = e/(1.d0+nu)
-!
-! -- LECTURE DES CARACTERISTIQUES D'ENDOMMAGEMENT
-    nomres(1) = 'D_SIGM_EPSI'
-    nomres(2) = 'SYT'
-    nomres(3) = 'SYC'
-    call rcvalb(fami, kpg, spt, poum, mate, &
-                ' ', 'BETON_ECRO_LINE', 0, ' ', [0.d0], &
-                nbres, nomres, valres, icodre, 0)
-    dsigm = valres(1)
-    syt = valres(2)
-    syc = valres(3)
+
+! - LECTURE DES CARACTERISTIQUES D'ENDOMMAGEMENT
+    propName(1) = 'D_SIGM_EPSI'
+    propName(2) = 'SYT'
+    propName(3) = 'SYC'
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, ' ', 'BETON_ECRO_LINE', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 0)
+    dsigm = propVale(1)
+    syt = propVale(2)
+    syc = propVale(3)
 !
     gamma = -e/dsigm
     k0 = (syt*syt)*(1.d0+gamma)/(2.d0*e)*(1.d0+nu-2.d0*nu*nu)/(1.d0+nu)
     if (nu .eq. 0) then
-        if (icodre(3) .eq. 0) then
+        if (propCode(3) .eq. 0) then
             call utmess('F', 'ALGORITH4_52')
         else
             seuil = k0
         end if
     else
         sicr = sqrt((1.d0+nu-2.d0*nu**2)/(2.d0*nu**2))*syt
-        if (icodre(3) .eq. 1) then
+        if (propCode(3) .eq. 1) then
             seuil = k0
         else
             if (syc .lt. sicr) then
@@ -171,9 +178,8 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
             end if
         end if
     end if
-!
-!    ETAT MECANIQUE EN T-
-!
+
+! - ETAT MECANIQUE EN T-
     dm = vim(1)
     d = dm+tau
     fpd = (1+gamma)/(1+gamma*d)**2
@@ -185,10 +191,8 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
         end if
         goto 666
     end if
-!
-!
-! -- CALCUL DES DEFORMATIONS EN PRESENCE DE CONTRAINTES PLANES
-!
+
+! - CALCUL DES DEFORMATIONS EN PRESENCE DE CONTRAINTES PLANES
     if (cplan) then
         coplan = -nu/(1.d0-nu)
         epspc(3) = coplan*(epspc(1)+epspc(2))
@@ -211,9 +215,8 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
             epsd(k) = 0.d0
         end do
     end if
-!
+
 ! Calcul du nombre de solutions sur un intervalle raisonnable
-!
 ! - ON COMMENCE DONC PAR REGARDER LES VP DE EPSD
     tr(1) = epsd(1)
     tr(2) = epsd(4)/rac2
@@ -221,23 +224,17 @@ subroutine pipeds(ndim, typmod, tau, mate, vim, &
     tr(4) = epsd(2)
     tr(5) = epsd(6)/rac2
     tr(6) = epsd(3)
-!
-!
-!
-! -- DIAGONALISATION AVEC TRI EN VAL RELATIVE CROISSANT
+
+! - DIAGONALISATION AVEC TRI EN VAL RELATIVE CROISSANT
     call diagp3(tr, vecp, epm)
-!
-!
+
 ! On prend la valeur absolue max des valeurs propres de EPSD
     epsmax = max(abs(epm(1)), abs(epm(3)))
-!
+
 ! Si les valeurs propres sont trop petites, on ne pilote pas ce point
     if (epsmax .lt. epsvp) goto 666
-!
-!
-!
+
 ! on "normalise" les deformations pilotees
-!
     trepsd = epsd(1)+epsd(2)+epsd(3)
     do k = 1, ndimsi
         sigeld(k) = lambda*trepsd*kron(k)+deuxmu*epsd(k)

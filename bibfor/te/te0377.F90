@@ -112,7 +112,7 @@ subroutine te0377(option, nomte)
     character(len=8) :: nompar(3)
     character(len=16) :: phenom
     character(len=24) :: valk(2)
-    type(Behaviour_Integ) :: BEHinteg
+    type(Behaviour_Integ) :: BEHInteg
 !
     aster_logical :: yapr, yaro
 !
@@ -139,7 +139,7 @@ subroutine te0377(option, nomte)
 !
 ! - Initialisation of behaviour datastructure
 !
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
 !
     call jevech('PERREUR', 'E', ierr)
 !
@@ -202,7 +202,7 @@ subroutine te0377(option, nomte)
     call jevech('PPRESS', 'L', iref2)
     call elrefe_info(fami='FPG1', jvf=ivf2)
     call behaviourCoorGauss(nno, 1, ndim, &
-                            ivf2, zr(igeom), BEHinteg%behavESVA%behavESVAGeom)
+                            ivf2, zr(igeom), BEHInteg%behavESVA%behavESVAGeom)
 !
 ! 1.7. --- MATERIAU SI BESOIN
 !
@@ -222,7 +222,7 @@ subroutine te0377(option, nomte)
             nompar(nbpar) = 'RHO'
         end if
 !
-        para_vale(:) = BEHinteg%behavESVA%behavESVAGeom%coorElga(1, :)
+        para_vale(:) = BEHInteg%behavESVA%behavESVAGeom%coorElga(1, :)
         call rcvalb('FPG1', 1, 1, '+', zi(imate), &
                     ' ', phenom, nb_para, para_name, para_vale, &
                     nbpar, nompar, valres, icodre, 1)

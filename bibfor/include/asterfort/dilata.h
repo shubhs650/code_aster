@@ -16,13 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine dilata(ds_thm, angl_naut, phi, tbiot, alphfi)
+interface
+    subroutine dilata(ds_thm, phi, tbiot, alphfi)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(in) :: phi
         real(kind=8), intent(in) :: tbiot(6)
         real(kind=8), intent(out) :: alphfi
     end subroutine dilata
-end interface 
+end interface

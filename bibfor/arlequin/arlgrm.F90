@@ -49,6 +49,7 @@ subroutine arlgrm(mail, nomgrp, dime, ima, connex, loncum, &
 #include "asterfort/arlcnn.h"
 #include "asterfort/jedema.h"
 #include "asterfort/int_to_char8.h"
+#include "MeshTypes_type.h"
 
 !     ARGUMENTS:
 !     ----------
@@ -59,7 +60,7 @@ subroutine arlgrm(mail, nomgrp, dime, ima, connex, loncum, &
     integer(kind=8) :: nummai
     character(len=8) :: nommai
     integer(kind=8) :: nbno, itypm
-    integer(kind=8) :: cxno(27)
+    integer(kind=8) :: cxno(MT_NNOMAX)
 !-----------------------------------------------------------------------
     integer(kind=8) :: jgrp, jtyp, aima
 !-----------------------------------------------------------------------

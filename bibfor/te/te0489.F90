@@ -94,7 +94,7 @@ subroutine te0489(option, nomte)
     real(kind=8) :: valres(3)
     real(kind=8) :: trace, sqrt
     real(kind=8) :: sigeqn
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: para_type
     character(len=16) :: nomres(3)
     character(len=16) :: compor

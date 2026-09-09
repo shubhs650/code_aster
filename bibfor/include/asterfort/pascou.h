@@ -15,14 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine pascou(mate, mateco, carele, sddyna, sddisc)
-        character(len=24) :: mate, mateco
-        character(len=24) :: carele
-        character(len=19) :: sddyna
-        character(len=19) :: sddisc
+    subroutine pascou(materField, materCode, caraElem, sddyna, sddisc)
+        character(len=24), intent(in) :: materField, materCode, caraElem
+        character(len=19), intent(in) :: sddyna, sddisc
     end subroutine pascou
 end interface

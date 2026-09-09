@@ -15,12 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxroep(rho, epais)
-        real(kind=8) :: rho
-        real(kind=8) :: epais
+    subroutine dxroep(plateCara, rho, epais)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        real(kind=8), intent(out) :: rho, epais
     end subroutine dxroep
 end interface

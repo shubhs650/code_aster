@@ -15,18 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vectan(nb1, nb2, xi, xr, vecta,&
-                      vectn, vectpt)
-        integer(kind=8) :: nb1
-        integer(kind=8) :: nb2
-        real(kind=8) :: xi(3, *)
-        real(kind=8) :: xr(*)
-        real(kind=8) :: vecta(9, 2, 3)
-        real(kind=8) :: vectn(9, 3)
-        real(kind=8) :: vectpt(9, 2, 3)
+    subroutine vectan(nb1, nb2, &
+                      nodeCoor, desr, &
+                      vectNorm, vectTang)
+        integer(kind=8), intent(in) :: nb1, nb2
+        real(kind=8), intent(in) :: nodeCoor(3, *)
+        real(kind=8), intent(inout) :: desr(*)
+        real(kind=8), intent(out) :: vectNorm(9, 3), vectTang(9, 2, 3)
     end subroutine vectan
 end interface

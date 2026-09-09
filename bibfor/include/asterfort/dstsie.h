@@ -15,18 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dstsie(option, fami, xyzl, pgl, depl,&
-                      nbcou, cdl)
+    subroutine dstsie(plateCara, plateOrie, &
+                      option, fami, xyzl, depl, &
+                      cdl)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(plateCara_Para), intent(in) :: plateCara
         character(len=16) :: option
         character(len=4) :: fami
         real(kind=8) :: xyzl(3, *)
-        real(kind=8) :: pgl(3, *)
         real(kind=8) :: depl(*)
-        integer(kind=8) :: nbcou
         real(kind=8) :: cdl(*)
     end subroutine dstsie
 end interface

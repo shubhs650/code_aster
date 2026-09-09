@@ -85,7 +85,6 @@ subroutine apmain(action, kptsc, rsolu, vcine, istop, &
 #include "asterfort/mrconl.h"
 #include "asterfort/mtdscr.h"
 #include "asterfort/utmess.h"
-#include "asterfort/vector_update_ghost_values.h"
 #include "jeveux.h"
 #include "asterfort/isParallelMatrix.h"
 !

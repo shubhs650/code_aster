@@ -53,8 +53,8 @@ module THM_type
 
 ! - Behaviour
     type THM_Behaviour
-! ----- Datastructure for integrator of mzchanical laws
-        type(Behaviour_Integ) :: BEHinteg
+! ----- Datastructure for integrator of mechanical laws
+        type(Behaviour_Integ) :: BEHInteg
 ! ----- Name of deformation algorithm
         character(len=16) :: defo = ' '
 ! ----- Name of behaviour law for coupling
@@ -123,7 +123,7 @@ module THM_type
 
 ! - Biot parameters
     type THM_Biot
-        integer(kind=8)      :: type = BIOT_TYPE_ISOT
+        integer(kind=8) :: type = BIOT_TYPE_ISOT
         real(kind=8) :: coef = 0.d0
         real(kind=8) :: l = 0.d0
         real(kind=8) :: n = 0.d0

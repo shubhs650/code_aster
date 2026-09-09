@@ -21,7 +21,6 @@ subroutine rapo3d(numeDofZ, iocc, listRelaZ, loadZ)
 !
     implicit none
 !
-#include "asterc/getfac.h"
 #include "asterc/indik8.h"
 #include "asterc/r8pi.h"
 #include "asterc/r8prem.h"
@@ -189,7 +188,7 @@ subroutine rapo3d(numeDofZ, iocc, listRelaZ, loadZ)
     end if
 
 ! - Get components
-    nomte = 'D_DEPL_R_'
+    nomte = 'DDEPL_R_'
 !
     call jeveuo(jexnom('&CATA.GD.NOMCMP', physQuanName), 'L', vk8=cataCmpName)
     call jelira(jexnom('&CATA.GD.NOMCMP', physQuanName), 'LONMAX', cataCmpNameSize)

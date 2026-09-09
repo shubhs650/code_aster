@@ -15,14 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine calsta(proj, gamma, dh, def, nno,&
-                      kpg, sig, tmp, kk, kkd,&
+    subroutine calsta(gamma, dh, def, nno, &
+                      kpg, sig, tmp, kk, kkd, &
                       matuu, dsidep, jac)
-        integer(kind=8) :: proj
         real(kind=8) :: gamma(4)
         real(kind=8) :: dh(8)
         real(kind=8) :: def(4, 4, 2)

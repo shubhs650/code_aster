@@ -81,7 +81,7 @@ subroutine addGrpMa(mesh, group_ma, listCells, nbCells, l_added_grpma)
 !
     if (l_exi_in_grp) then
         l_added = ASTER_FALSE
-        call utmess('F', 'SOUSTRUC_88', sk=group_ma)
+        call utmess('A', 'SOUSTRUC_88', sk=group_ma)
     elseif (nbCells <= 0) then
         l_added = ASTER_FALSE
         call utmess('A', 'SOUSTRUC_36', sk=group_ma)

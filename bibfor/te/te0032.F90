@@ -15,16 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine te0032(option, nomte)
+
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/dxqfor.h"
-#include "asterfort/dxqpgl.h"
 #include "asterfort/dxroep.h"
 #include "asterfort/dxtfor.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/fointe.h"
 #include "asterfort/jevech.h"
@@ -32,50 +34,65 @@ subroutine te0032(option, nomte)
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
 #include "asterfort/utpvlg.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
-!     IN  OPTION : NOM DE L'OPTION A CALCULER
-!     IN  NOMTE  : NOM DU TYPE_ELEMENT
-!     -----------------------------------------------------------------
-!     CALCUL DE PRESSION SUR LES ELEMENTS DKT, DST, DKQ, DSQ ET Q4G
-!         OPTIONS TRAITEES   ==>   CHAR_MECA_FRCO3D
-!                                  CHAR_MECA_FFCO3D
-!                                  CHAR_MECA_PRES_R
-!                                  CHAR_MECA_PRES_F
-!                                  CHAR_MECA_PESA_R
-!     -----------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: i, j, ier, iplan, jgeom, jcoqu, jvecg, jpres, itemps
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: DKT/DKTG/DST/Q4G/Q4GG
+!
+! Options: CHAR_MECA_FRCO3D
+!          CHAR_MECA_FFCO3D
+!          CHAR_MECA_PRES_R
+!          CHAR_MECA_PRES_F
+!          CHAR_MECA_PESA_R
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: undemi = 0.5d0
+    integer(kind=8), parameter :: nbPara = 4
+    character(len=8), parameter :: paraName(nbPara) = (/"X   ", "Y   ", "Z   ", "INST"/)
+    real(kind=8) :: paraVale(nbPara)
+    integer(kind=8) :: nno
+    integer(kind=8) :: i, j, ier, iplan, jvGeom, jvecg, jpres, itemps
     integer(kind=8) :: iadzi, iazk24, lpesa
     real(kind=8) :: pgl(3, 3), xyzl(3, 4), pglo(3), ploc(3)
     real(kind=8) :: vecl(24), for(6, 4), for2(6, 4), rho, epais
-    real(kind=8) :: undemi
-    real(kind=8) :: valpar(4), dist, excent, pr
+    real(kind=8) ::  dist, excent, pr
     aster_logical :: global, locapr
-    character(len=8) :: nompar(4), moplan, nomail
-    character(len=24) :: valk
-! DEB ------------------------------------------------------------------
+    character(len=8) :: moplan
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    undemi = 0.5d0
+    call elrefe_info(fami='RIGI', nno=nno)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
     iplan = 0
-!
-    call jevech('PGEOMER', 'L', jgeom)
-    call jevech('PCACOQU', 'L', jcoqu)
-    call jevech('PVECTUR', 'E', jvecg)
-!
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-! --- CAS DES CHARGEMENTS DE FORME REEL
     if (option .eq. 'CHAR_MECA_PRES_R') then
-!         ------------------------------
         global = .false.
         call jevech('PPRESSR', 'L', jpres)
         do j = 1, nno
@@ -89,9 +106,8 @@ subroutine te0032(option, nomte)
 !----------------------------------------------------------------------
             for(3, j) = -zr(jpres+j-1)
         end do
-!
+
     else if (option .eq. 'CHAR_MECA_FRCO3D') then
-!              ------------------------------
         call jevech('PFRCO3D', 'L', jpres)
         global = abs(zr(jpres+6)) .lt. 1.d-3
         locapr = abs(zr(jpres+6)-3.d0) .lt. 1.d-3
@@ -116,43 +132,28 @@ subroutine te0032(option, nomte)
             end do
         end if
         iplan = nint(zr(jpres+7))
-!
-! --- CAS DES CHARGEMENTS DE FORME FONCTION
-!
+
     else if (option .eq. 'CHAR_MECA_PRES_F') then
-!              ------------------------------
         call jevech('PPRESSF', 'L', jpres)
         if (zk8(jpres) .eq. '&FOZERO') goto 999
         call jevech('PINSTR', 'L', itemps)
-        valpar(4) = zr(itemps)
-        nompar(4) = 'INST'
-        nompar(1) = 'X'
-        nompar(2) = 'Y'
-        nompar(3) = 'Z'
+        paraVale(4) = zr(itemps)
         do j = 0, nno-1
-            valpar(1) = zr(jgeom+3*j)
-            valpar(2) = zr(jgeom+3*j+1)
-            valpar(3) = zr(jgeom+3*j+2)
-            call fointe('FM', zk8(jpres), 4, nompar, valpar, &
-                        pr, ier)
+            paraVale(1) = zr(jvGeom+3*j)
+            paraVale(2) = zr(jvGeom+3*j+1)
+            paraVale(3) = zr(jvGeom+3*j+2)
+            call fointe('FM', zk8(jpres), nbPara, paraName, paraVale, pr, ier)
             if (pr .ne. 0.d0) then
                 call tecael(iadzi, iazk24)
-                nomail = zk24(iazk24-1+3) (1:8)
-                valk = nomail
-                call utmess('F', 'ELEMENTS4_92', sk=valk)
+                call utmess('F', 'ELEMENTS4_92', si=zi(iadzi-1+1))
             end if
         end do
         goto 999
-!
+
     else if (option .eq. 'CHAR_MECA_FFCO3D') then
-!              ------------------------------
         call jevech('PFFCO3D', 'L', jpres)
         call jevech('PINSTR', 'L', itemps)
-        valpar(4) = zr(itemps)
-        nompar(4) = 'INST'
-        nompar(1) = 'X'
-        nompar(2) = 'Y'
-        nompar(3) = 'Z'
+        paraVale(4) = zr(itemps)
         global = zk8(jpres+6) .eq. 'GLOBAL'
         locapr = zk8(jpres+6) .eq. 'LOCAL_PR'
         moplan = zk8(jpres+7)
@@ -169,23 +170,23 @@ subroutine te0032(option, nomte)
 ! --       LECTURE DES INTERPOLATIONS DE FX, FY, FZ, MX, MY, MZ
 !
             do j = 0, nno-1
-                valpar(1) = zr(jgeom+3*j)
-                valpar(2) = zr(jgeom+3*j+1)
-                valpar(3) = zr(jgeom+3*j+2)
+                paraVale(1) = zr(jvGeom+3*j)
+                paraVale(2) = zr(jvGeom+3*j+1)
+                paraVale(3) = zr(jvGeom+3*j+2)
 !------------------------------------------------------
 !  PAS DE CHANGEMENT DE SIGNE POUR LES FORCES REPARTIES
 !------------------------------------------------------
-                call fointe('FM', zk8(jpres), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres), nbPara, paraName, paraVale, &
                             for2(1, j+1), ier)
-                call fointe('FM', zk8(jpres+1), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+1), nbPara, paraName, paraVale, &
                             for2(2, j+1), ier)
-                call fointe('FM', zk8(jpres+2), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+2), nbPara, paraName, paraVale, &
                             for2(3, j+1), ier)
-                call fointe('FM', zk8(jpres+3), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+3), nbPara, paraName, paraVale, &
                             for2(4, j+1), ier)
-                call fointe('FM', zk8(jpres+4), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+4), nbPara, paraName, paraVale, &
                             for2(5, j+1), ier)
-                call fointe('FM', zk8(jpres+5), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+5), nbPara, paraName, paraVale, &
                             for2(6, j+1), ier)
             end do
 !
@@ -201,11 +202,10 @@ subroutine te0032(option, nomte)
 ! --        LECTURE DES INTERPOLATIONS DE LA PRESSION PRES
 !
             do j = 0, nno-1
-                valpar(1) = zr(jgeom+3*j)
-                valpar(2) = zr(jgeom+3*j+1)
-                valpar(3) = zr(jgeom+3*j+2)
-                call fointe('FM', zk8(jpres+2), 4, nompar, valpar, &
-                            pr, ier)
+                paraVale(1) = zr(jvGeom+3*j)
+                paraVale(2) = zr(jvGeom+3*j+1)
+                paraVale(3) = zr(jvGeom+3*j+2)
+                call fointe('FM', zk8(jpres+2), nbPara, paraName, paraVale, pr, ier)
 !-----------------------------------------------------
 !       LE SIGNE MOINS DE FOR(3,J+1) CORRESPOND A LA CONVENTION :
 !          UNE PRESSION POSITIVE PROVOQUE UN GONFLEMENT
@@ -223,31 +223,29 @@ subroutine te0032(option, nomte)
 ! --        LECTURE DES INTERPOLATIONS DE F1, F2, F3, MF1, MF2
 !
             do j = 0, nno-1
-                valpar(1) = zr(jgeom+3*j)
-                valpar(2) = zr(jgeom+3*j+1)
-                valpar(3) = zr(jgeom+3*j+2)
+                paraVale(1) = zr(jvGeom+3*j)
+                paraVale(2) = zr(jvGeom+3*j+1)
+                paraVale(3) = zr(jvGeom+3*j+2)
 !------------------------------------------------------
 !  PAS DE CHANGEMENT DE SIGNE POUR LES FORCES REPARTIES
 !------------------------------------------------------
-                call fointe('FM', zk8(jpres), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres), nbPara, paraName, paraVale, &
                             for(1, j+1), ier)
-                call fointe('FM', zk8(jpres+1), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+1), nbPara, paraName, paraVale, &
                             for(2, j+1), ier)
-                call fointe('FM', zk8(jpres+2), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+2), nbPara, paraName, paraVale, &
                             for(3, j+1), ier)
-                call fointe('FM', zk8(jpres+3), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+3), nbPara, paraName, paraVale, &
                             for(4, j+1), ier)
-                call fointe('FM', zk8(jpres+4), 4, nompar, valpar, &
+                call fointe('FM', zk8(jpres+4), nbPara, paraName, paraVale, &
                             for(5, j+1), ier)
                 for(6, j+1) = 0.d0
             end do
         end if
-!
+
     else if (option .eq. 'CHAR_MECA_PESA_R') then
-!              ------------------------------
         global = .true.
-!
-        call dxroep(rho, epais)
+        call dxroep(plateCara, rho, epais)
         call jevech('PPESANR', 'L', lpesa)
         do i = 1, 3
             pglo(i) = zr(lpesa)*zr(lpesa+i)*rho*epais
@@ -262,8 +260,8 @@ subroutine te0032(option, nomte)
     end if
 !
     if (iplan .ne. 0) then
-        epais = zr(jcoqu)
-        excent = zr(jcoqu+4)
+        epais = plateCara%thick
+        excent = plateCara%offset
         if (iplan .eq. 1) then
             dist = excent+undemi*epais
         else if (iplan .eq. -1) then
@@ -279,11 +277,12 @@ subroutine te0032(option, nomte)
     end if
 !
     if (nno .eq. 3) then
-        call dxtfor(global, xyzl, pgl, for, vecl)
+        call dxtfor(plateOrie, global, xyzl, for, vecl)
     else if (nno .eq. 4) then
-        call dxqfor(global, xyzl, pgl, for, vecl)
+        call dxqfor(plateOrie, global, xyzl, for, vecl)
     end if
 !
+    call jevech('PVECTUR', 'E', jvecg)
     call utpvlg(nno, 6, pgl, vecl, zr(jvecg))
 !
 999 continue

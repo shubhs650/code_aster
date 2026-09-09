@@ -32,7 +32,7 @@ subroutine te0523(option, nomte)
 #include "asterfort/assert.h"
 #include "asterfort/coupling_type.h"
 #include "asterfort/writeVector.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 !
     character(len=16), intent(in) :: option, nomte
 !

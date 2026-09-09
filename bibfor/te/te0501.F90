@@ -48,7 +48,7 @@ subroutine te0501(option, nomte)
 !
     integer(kind=8) :: kp, imate, ifon(6)
     real(kind=8) :: tpg, alpha, dalpha
-    real(kind=8) :: rigi(MAX_BS, MAX_BS)
+    real(kind=8) :: rigi(MAX_BS_CG, MAX_BS_CG)
     real(kind=8) ::  valQPK(3, 3, MAX_QP)
     real(kind=8), pointer :: tempi(:) => null()
     aster_logical :: aniso

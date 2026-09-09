@@ -19,6 +19,8 @@
 
 #       CAS_TEST SSNV128: 2D, ELEMENTS Q8, METHODE CONTINUE
 
+import numpy as np
+
 DEBUT(CODE="OUI", IGNORE_ALARM=("MODELE1_63"), DEBUG=_F(SDVERI="OUI"))
 
 # <MODELE1_63> : DANS UN MODELE, IL EXISTE DES ELEMENTS DE TYPE "BORD" QUI N'ONT PAS DE VOISIN AVEC RIGIDITE
@@ -128,6 +130,11 @@ L_INST = DEFI_LIST_INST(
         EVENEMENT="ERREUR", ACTION="DECOUPE", SUBD_METHODE="MANUEL", SUBD_PAS=5, SUBD_NIVEAU=5
     ),
 )
+
+# Test for issue 35770
+L_INST.setValues(np.linspace(0, 1.0, num=2))
+print(L_INST.getValues())
+
 
 # -----------------------------------------------------------
 

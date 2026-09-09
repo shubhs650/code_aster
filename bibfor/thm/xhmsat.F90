@@ -24,7 +24,7 @@ subroutine xhmsat(ds_thm, option, &
                   addep1, adcp11, congem, congep, vintm, &
                   vintp, dsde, epsv, depsv, &
                   dp1, phi, rho11, &
-                  satur, retcom, tbiot, angl_naut, &
+                  satur, retcom, tbiot, &
                   yaenrh, adenhy, nfh)
 !
     use THM_type
@@ -50,7 +50,6 @@ subroutine xhmsat(ds_thm, option, &
     real(kind=8) :: vintm(nbvari), vintp(nbvari)
     real(kind=8) :: epsv, depsv, dp1, dt
     real(kind=8) :: phi, rho11
-    real(kind=8) :: angl_naut(3)
     character(len=16) :: option
     integer(kind=8) :: dimenr
     real(kind=8) :: dsde(dimcon, dimenr)
@@ -129,11 +128,10 @@ subroutine xhmsat(ds_thm, option, &
     rho11m = vintm(advihy+vihrho)+rho110
     phi = vintm(advico+vicphi)+phi0
     phim = vintm(advico+vicphi)+phi0
-!
+
 ! - Prepare initial parameters for coupling law
-!
     call inithm(ds_thm, &
-                angl_naut, tbiot, phi0, &
+                tbiot, phi0, &
                 epsv, depsv, &
                 epsvm, cs, mdal, dalal, &
                 alpha0, alphfi, cbiot, unsks)
@@ -181,7 +179,7 @@ subroutine xhmsat(ds_thm, option, &
 ! --- ACTUALISATION DE CS ET ALPHFI -----------------------------------
 ! =====================================================================
     if (ds_thm%ds_elem%l_dof_meca) then
-        call dilata(ds_thm, angl_naut, phi, tbiot, alphfi)
+        call dilata(ds_thm, phi, tbiot, alphfi)
         call unsmfi(ds_thm, phi, tbiot, cs)
     end if
 ! **********************************************************************

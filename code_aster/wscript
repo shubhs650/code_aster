@@ -95,7 +95,7 @@ def build(self):
 
     self(
         features="subst py",
-        name="pytmpl",
+        name="aster_pkginfo_py",
         source="aster_pkginfo.pytmpl",
         target="aster_pkginfo.py",
         install_path=osp.join(install_base, "code_aster", "Utilities"),
@@ -104,7 +104,7 @@ def build(self):
 
     self(
         features="subst py",
-        name="pytmpl",
+        name="aster_version_py",
         source="aster_version.pytmpl",
         target="aster_version.py",
         install_path=osp.join(install_base, "code_aster", "Cata"),
@@ -174,16 +174,14 @@ def get_revision_info_hg(self, depth):
     from_rev = "({0})~{1}".format(rev, depth)
     ancestors = "({0})::({1})".format(from_rev, rev)
     loc = _exec_cmd(["hg", "status", "-namrdu"]).split()
-    logs = _exec_cmd(
-        [
-            "hg",
-            "log",
-            "-r",
-            ancestors,
-            "--template",
-            "{rev}:{node}:{tags}:{branch}:{date|shortdate}:{files}\n",
-        ]
-    ).splitlines()
+    logs = _exec_cmd([
+        "hg",
+        "log",
+        "-r",
+        ancestors,
+        "--template",
+        "{rev}:{node}:{tags}:{branch}:{date|shortdate}:{files}\n",
+    ]).splitlines()
     if not logs:
         raise ValueError("empty revs range: {0}\n".format(ancestors) + ERROR_MSG)
     last = logs[-1].split(":")
@@ -275,7 +273,7 @@ def get_revision_info(self):
         return DEFAULT_PKGINFO
     # check repository type
     getinfo = get_revision_info_git if osp.isdir(".git") else get_revision_info_hg
-    # search on last `depth` revisions - must be lesser than GIT_DEPTH in CI
+    # search on last `depth` revisions
     depth = 99
     found = False
     while not found and depth < 20000:

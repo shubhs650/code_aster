@@ -29,6 +29,7 @@ subroutine xdelt0(elrefp, ndime, tabls, ptxx, ksi, delta, arete)
 #include "asterfort/elrfdf.h"
 #include "asterfort/elrfvf.h"
 #include "asterfort/xnormv.h"
+#include "MeshTypes_type.h"
     character(len=8) :: elrefp
     integer(kind=8) :: ndime
     real(kind=8) :: tabls(*), ksi, delta, ptxx(*)
@@ -48,7 +49,7 @@ subroutine xdelt0(elrefp, ndime, tabls, ptxx, ksi, delta, arete)
 !
 !
     integer(kind=8) :: nbfct
-    parameter(nbfct=27)
+    parameter(nbfct=MT_NNOMAX)
     real(kind=8) :: ff(nbfct), dff(3, nbfct), v(ndime), pt(ndime), ptm(ndime)
     integer(kind=8) :: i, nno, k
     real(kind=8) :: fctg, dfctg, x(1), dfft(3, 3), norme, rbid

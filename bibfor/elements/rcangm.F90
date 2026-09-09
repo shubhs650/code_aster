@@ -16,48 +16,51 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine rcangm(ndim, coor, angl_naut)
+subroutine rcangm(ndim, coor, anglnaut)
+!
+    use coorSyst_module, only: hasOrieField
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterfort/angvx.h"
 #include "asterfort/angvxy.h"
-#include "asterfort/tecach.h"
 #include "asterfort/utrcyl.h"
-    integer(kind=8) :: ndim
-    real(kind=8) :: angl_naut(3), coor(3)
-! ......................................................................
-!    - ORIENTATION DU MASSIF
+#include "jeveux.h"
+
+    integer(kind=8), intent(in) :: ndim
+    real(kind=8), intent(in) :: coor(3)
+    real(kind=8), intent(out) :: anglnaut(3)
 !
-!   IN      NDIM    I      : DIMENSION DU PROBLEME
-!   IN      COOR    R        COORDONNEE DU POINT
-!                            (CAS CYLINDRIQUE)
-!   OUT     ANGL_NAUT R    : ANGLE NAUTIQUE
-! ......................................................................
-    integer(kind=8) :: icamas, iret, i
+! --------------------------------------------------------------------------------------------------
+!
+! ORIENTATION DU MASSIF
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: jvCamass, i
     real(kind=8) :: p(3, 3), xg(3), yg(3), orig(3), dire(3)
     real(kind=8) :: alpha, beta, xu, yu, xnorm
-!     ------------------------------------------------------------------
 !
-    call tecach('NNO', 'PCAMASS', 'L', iret, iad=icamas)
-    angl_naut(:) = 0.d0
+! --------------------------------------------------------------------------------------------------
 !
-    if (iret .eq. 0) then
-        if (zr(icamas) .gt. 0.d0) then
-            angl_naut(1) = zr(icamas+1)*r8dgrd()
+    anglnaut = 0.d0
+!
+    if (hasOrieField(jvCamass)) then
+        if (zr(jvCamass) .gt. 0.d0) then
+            anglnaut(1) = zr(jvCamass+1)*r8dgrd()
             if (ndim .eq. 3) then
-                angl_naut(2) = zr(icamas+2)*r8dgrd()
-                angl_naut(3) = zr(icamas+3)*r8dgrd()
+                anglnaut(2) = zr(jvCamass+2)*r8dgrd()
+                anglnaut(3) = zr(jvCamass+3)*r8dgrd()
             end if
-!
-        else if (abs(zr(icamas)+1.d0) .lt. 1.d-3) then
+
+        else if (abs(zr(jvCamass)+1.d0) .lt. 1.d-3) then
 !
 ! ON TRANSFORME LA DONNEE DU REPERE CYLINDRIQUE EN ANGLE NAUTIQUE
 !
-            orig(1:ndim) = zr(icamas+3+1:icamas+3+ndim)
+            orig(1:ndim) = zr(jvCamass+3+1:jvCamass+3+ndim)
             if (ndim .eq. 3) then
-                alpha = zr(icamas+1)*r8dgrd()
-                beta = zr(icamas+2)*r8dgrd()
+                alpha = zr(jvCamass+1)*r8dgrd()
+                beta = zr(jvCamass+2)*r8dgrd()
                 dire(1) = cos(alpha)*cos(beta)
                 dire(2) = sin(alpha)*cos(beta)
                 dire(3) = -sin(beta)
@@ -66,7 +69,7 @@ subroutine rcangm(ndim, coor, angl_naut)
                     xg(i) = p(1, i)
                     yg(i) = p(2, i)
                 end do
-                call angvxy(xg, yg, angl_naut)
+                call angvxy(xg, yg, anglnaut)
             else
                 xu = coor(1)-orig(1)
                 yu = coor(2)-orig(2)
@@ -81,7 +84,7 @@ subroutine rcangm(ndim, coor, angl_naut)
                 xg(2) = yu
                 xg(3) = 0.d0
                 call angvx(xg, alpha, beta)
-                angl_naut(1) = alpha
+                anglnaut(1) = alpha
             end if
         end if
     end if

@@ -184,27 +184,28 @@ std::vector< med_int > asterToMedRenumbering( const med_int &medType,
 };
 
 bool AsterToMedWriter::printMesh( const Mesh &toPrint, const std::filesystem::path &filename,
-                                  bool local, const std::string &meshName ) {
+                                  bool local, const std::string &meshName,
+                                  const std::string &mode ) {
     VectorLong nodeList =
         irange( (ASTERINTEGER)0, (ASTERINTEGER)( toPrint.getNumberOfNodes() - 1 ) );
     VectorLong cellList =
         irange( (ASTERINTEGER)0, (ASTERINTEGER)( toPrint.getNumberOfCells() - 1 ) );
-    return _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName );
+    return _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName, mode );
 };
 #ifdef ASTER_HAVE_MPI
 bool AsterToMedWriter::printMesh( const ConnectionMesh &toPrint,
                                   const std::filesystem::path &filename, bool local,
-                                  const std::string &meshName ) {
+                                  const std::string &meshName, const std::string &mode ) {
     VectorLong nodeList =
         irange( (ASTERINTEGER)0, (ASTERINTEGER)( toPrint.getNumberOfNodes() - 1 ) );
     VectorLong cellList =
         irange( (ASTERINTEGER)0, (ASTERINTEGER)( toPrint.getNumberOfCells() - 1 ) );
-    return _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName );
+    return _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName, mode );
 };
 
 bool AsterToMedWriter::printMesh( const ParallelMesh &toPrint,
                                   const std::filesystem::path &filename, bool local,
-                                  const std::string &meshName ) {
+                                  const std::string &meshName, const std::string &mode ) {
     VectorLong nodeList, cellList;
     if ( local ) {
         nodeList = irange( (ASTERINTEGER)0, (ASTERINTEGER)( toPrint.getNumberOfNodes() - 1 ) );
@@ -215,7 +216,7 @@ bool AsterToMedWriter::printMesh( const ParallelMesh &toPrint,
         nodeList = toPrint.getInnerNodes();
         cellList = toPrint.getInnerCells();
     }
-    auto cret = _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName );
+    auto cret = _printMeshFromList( toPrint, filename, nodeList, cellList, local, meshName, mode );
     const auto &nodeGN = toPrint.getLocalToGlobalNodeIds();
     const auto rank = getMPIRank();
     const auto nbProcs = getMPISize();
@@ -279,13 +280,15 @@ bool AsterToMedWriter::printMesh( const ParallelMesh &toPrint,
 bool AsterToMedWriter::_printMeshFromList( const BaseMesh &toPrint,
                                            const std::filesystem::path &filename,
                                            const VectorLong &nodeList, const VectorLong &cellList,
-                                           bool local, const std::string &meshName ) {
+                                           bool local, const std::string &meshName,
+                                           const std::string &mode ) {
     // Open med file
     auto fr = MedFileReader();
+    const MedFileAccessType accessType = ( mode == "w" ) ? MedCreate : MedReadWrite;
     if ( !local ) {
-        fr.openParallel( filename, MedReadWrite );
+        fr.openParallel( filename, accessType );
     } else {
-        fr.open( filename, MedReadWrite );
+        fr.open( filename, accessType );
     }
     const auto name = ( meshName != "" ) ? meshName : toPrint.getName();
     if ( fr.getMesh( name ) != nullptr ) {
@@ -439,6 +442,7 @@ bool AsterToMedWriter::_printMeshFromList( const BaseMesh &toPrint,
     }
     return true;
 };
+
 #ifdef ASTER_HAVE_MPI
 std::set< std::set< std::string > > gatherFamilies( std::set< std::set< std::string > > in ) {
     VectorString grpVec, allGrpVec;
@@ -464,6 +468,7 @@ std::set< std::set< std::string > > gatherFamilies( std::set< std::set< std::str
     return out;
 };
 #endif
+
 void AsterToMedWriter::_createGroups( const BaseMesh &toPrint, MedMeshPtr mesh,
                                       std::vector< med_int > &allEntityFamily,
                                       const VectorLong &indexes, entityType entType, bool local ) {
@@ -607,17 +612,17 @@ void AsterToMedWriter::_createMedGlobalNumbering( VectorLong &globNum, const Vec
 };
 
 bool AsterToMedWriter::printResult( const ResultPtr &resu, const std::filesystem::path &filename,
-                                    bool local ) {
+                                    bool local, const std::string &mode ) {
     // first, print mesh if needed
     const auto meshInResu = resu->getMesh();
     if ( meshInResu->isParallel() ) {
 #ifdef ASTER_HAVE_MPI
         const auto pMesh0 = std::dynamic_pointer_cast< ParallelMesh >( meshInResu );
-        printMesh( pMesh0, filename, local );
+        printMesh( pMesh0, filename, local, mode );
 #endif
     } else {
         const auto mesh0 = std::dynamic_pointer_cast< Mesh >( meshInResu );
-        printMesh( mesh0, filename, local );
+        printMesh( mesh0, filename, local, mode );
     }
 
     // open med file
@@ -664,7 +669,7 @@ bool AsterToMedWriter::printResult( const ResultPtr &resu, const std::filesystem
                 first = false;
             }
             medField->addSequence( index, index, resu->getTime( index ), MED_NO_DT, MED_NO_IT );
-            auto valuesDescPair = sFON->getValuesWithDescription( cmpsVector, (VectorString) {} );
+            auto valuesDescPair = sFON->getValuesWithDescription( cmpsVector, ( VectorString ) {} );
             if ( !local ) {
                 auto values = vectorFilter< ASTERDOUBLE >( nodeList, valuesDescPair.first,
                                                            cmpsVector.size() );

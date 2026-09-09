@@ -15,19 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dhrc_lc(epsm, deps, vim, pgl, option,&
-                      sig, vip, a0, c0,&
-                      aa_t, ga_t, ab, gb, ac,&
-                      gc, aa_c, ga_c, cstseu, crit,&
-                      codret, dsidep, debug)
+    subroutine dhrc_lc(plateOrie, &
+                       epsm, deps, vim, option, &
+                       sig, vip, a0, c0, &
+                       aa_t, ga_t, ab, gb, ac, &
+                       gc, aa_c, ga_c, cstseu, crit, &
+                       codret, dsidep, debug)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
         real(kind=8), intent(in) :: epsm(6)
         real(kind=8), intent(in) :: deps(6)
         real(kind=8), intent(in) :: vim(*)
-        real(kind=8), intent(in) :: pgl(3, 3)
         character(len=16), intent(in) :: option
         real(kind=8), intent(out) :: sig(8)
         real(kind=8), intent(out) :: vip(*)

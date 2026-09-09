@@ -48,7 +48,6 @@ subroutine op0018()
 #include "asterfort/infniv.h"
 #include "asterfort/initel.h"
 #include "asterfort/int_to_char8.h"
-#include "asterfort/isParallelMesh.h"
 #include "asterfort/jecrec.h"
 #include "asterfort/jecroc.h"
 #include "asterfort/jedema.h"

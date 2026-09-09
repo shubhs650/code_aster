@@ -17,19 +17,19 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine varcCalcPrep(modelz, cara_elemz, matecoz, &
-                        nume_harm, time_comp, &
+subroutine varcCalcPrep(modelZ, caraElemZ, materCodeZ, &
+                        poum, &
                         l_temp, l_meta, &
-                        varc_refez, varc_prevz, varc_currz, &
-                        comporz, mult_compz, chsithz, &
+                        varcRefeZ, varcPrevZ, varcCurrZ, &
+                        comporZ, multCompZ, chsithz, &
                         sigmz, variz, &
-                        mxchin, mxchout, &
-                        nbin, nbout, &
+                        nbFieldInMax, nbFieldOutMax, &
+                        nbFieldIn, nbFieldOut, &
                         lpain, lchin, &
                         lpaout, lchout)
 !
     use HHO_precalc_module, only: hhoAddInputField
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -38,23 +38,22 @@ subroutine varcCalcPrep(modelz, cara_elemz, matecoz, &
 #include "asterfort/detrsd.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/exixfe.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/meharm.h"
 #include "asterfort/nmvcex.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/xajcin.h"
 !
-    character(len=*), intent(in) :: modelz, cara_elemz, matecoz
+    character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
     aster_logical, intent(in) :: l_temp, l_meta
-    integer(kind=8), intent(in) :: nume_harm
-    character(len=1), intent(in) :: time_comp
-    character(len=*), intent(in) :: varc_refez, varc_prevz, varc_currz
-    character(len=*), intent(in) :: comporz, mult_compz, chsithz
+    character(len=1), intent(in) :: poum
+    character(len=*), intent(in) :: varcRefeZ, varcPrevZ, varcCurrZ
+    character(len=*), intent(in) :: comporZ, multCompZ, chsithz
     character(len=*), intent(in) :: sigmz, variz
-    integer(kind=8), intent(in) :: mxchin, mxchout
-    integer(kind=8), intent(out) :: nbin, nbout
-    character(len=8), intent(out)  :: lpaout(mxchout), lpain(mxchin)
-    character(len=19), intent(out)  :: lchout(mxchout), lchin(mxchin)
+    integer(kind=8), intent(in) :: nbFieldInMax, nbFieldOutMax
+    integer(kind=8), intent(out) :: nbFieldIn, nbFieldOut
+    character(len=8), intent(out) :: lpaout(nbFieldOutMax), lpain(nbFieldInMax)
+    character(len=19), intent(out) :: lchout(nbFieldOutMax), lchin(nbFieldInMax)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -65,25 +64,23 @@ subroutine varcCalcPrep(modelz, cara_elemz, matecoz, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  model            : name of model
-! In  cara_elem        : name of elementary characteristics (field)
-! In  matecoz          : name of coded material
-! In  nume_harm        : Fourier harmonic number
-! In  time_comp        :  '-' or '+' for command variables evaluation
+! In  caraElem         : name of elementary characteristics (field)
+! In  materCode        : name of coded material
+! In  poum             :  '-' or '+' for command variables evaluation
 ! In  l_temp           : for temperature
 ! In  l_meta           : for metallurgy
-! In  varc_refe        : name of reference command variables vector
-! In  varc_prev        : command variables at previous step
-! In  varc_curr        : command variables at current step
+! In  varcRefe         : name of reference command variables vector
+! In  varcPrev         : command variables at previous step
+! In  varcCurr         : command variables at current step
 ! In  compor           : name of comportment definition (field)
 ! In  mult_comp        : multi-comportment (DEFI_COMPOR for PMF)
 ! In  chsith           : commande variable for temperature in XFEM
 ! In  sigm             : stress
 ! In  vari             : internal variables
-! In  mxchin           : maximum number of input fields
-! In  mxchout          : maximum number of output fields
-! Out nbin             : effective number of input fields
-! Out nbout            : effective number of output fields
-! In  base             : JEVEUX base to create objects
+! In  nbFieldInMax     : maximum number of input fields
+! In  nbFieldOutMax    : maximum number of output fields
+! Out nbFieldIn        : effective number of input fields
+! Out nbFieldOut       : effective number of output fields
 ! In  vect_elem        : name of elementary vectors
 ! Out lpain            : list of input parameters
 ! Out lchin            : list of input fields
@@ -92,162 +89,131 @@ subroutine varcCalcPrep(modelz, cara_elemz, matecoz, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: numeHarm = 0
     integer(kind=8) :: iret
-    aster_logical :: l_xfem
+    aster_logical :: lXFEM
     character(len=8) :: model
-    character(len=24) :: cara_elem, mateco
-    character(len=19) :: ligrmo
-    character(len=24) :: chgeom, chcara(18), chharm
-    character(len=24) :: vrcref, vrcmoi, vrcplu, time_curr, time_prev
+    character(len=24) :: caraElem, materCode
+    character(len=19) :: modelLigrel
+    character(len=24) :: chgeom, chharm
+    character(len=24) :: varcAllRefe, varcAllPrev, varcAllCurr, timeCurr, timePrev
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    model = modelz
-    cara_elem = cara_elemz
-    mateco = matecoz
-    nbin = 0
-    nbout = 0
-    lpaout(:) = ' '
-    lpain(:) = ' '
-    lchout(:) = ' '
-    lchin(:) = ' '
-!
+    model = modelZ
+    caraElem = caraElemZ
+    materCode = materCodeZ
+
 ! - Initializations
-!
+    nbFieldIn = 0
+    nbFieldOut = 0
+    lpaout = ' '
+    lpain = ' '
+    lchout = ' '
+    lchin = ' '
     call exixfe(model, iret)
-    l_xfem = iret .ne. 0
-    call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
-    chharm = '&&NMVCPR.CHHARM'
-!
+    lXFEM = iret .ne. 0
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+
 ! - Get fields for external state variables
-!
-    call nmvcex('TOUT', varc_refez, vrcref)
-    if (time_comp .eq. '-') then
-        call nmvcex('TOUT', varc_prevz, vrcmoi)
-    elseif (time_comp .eq. '+') then
-        call nmvcex('TOUT', varc_prevz, vrcmoi)
-        call nmvcex('TOUT', varc_currz, vrcplu)
+    call nmvcex('TOUT', varcRefeZ, varcAllRefe)
+    if (poum .eq. '-') then
+        call nmvcex('TOUT', varcPrevZ, varcAllPrev)
+    elseif (poum .eq. '+') then
+        call nmvcex('TOUT', varcPrevZ, varcAllPrev)
+        call nmvcex('TOUT', varcCurrZ, varcAllCurr)
     else
         ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - Get fields for time
-!
-    if (time_comp .eq. '-') then
-        call nmvcex('INST', varc_prevz, time_prev)
-    elseif (time_comp .eq. '+') then
-        call nmvcex('INST', varc_currz, time_curr)
+    if (poum .eq. '-') then
+        call nmvcex('INST', varcPrevZ, timePrev)
+    elseif (poum .eq. '+') then
+        call nmvcex('INST', varcCurrZ, timeCurr)
     else
         ASSERT(ASTER_FALSE)
     end if
-!
-! - Geometry field
-!
+
+! - Get geometry field
     call megeom(model, chgeom)
-!
-! - Elementary characteristics
-!
-    call mecara(cara_elem, chcara)
-!
-! - Fourier
-!
-    call meharm(model, nume_harm, chharm)
-!
-! - Input fields
-!
+
+! - Create field for Fourier
+    call meharm(model, numeHarm, chharm)
+
+! - Add input fields
     lpain(1) = 'PVARCRR'
-    lchin(1) = vrcref(1:19)
+    lchin(1) = varcAllRefe(1:19)
     lpain(2) = 'PGEOMER'
     lchin(2) = chgeom(1:19)
     lpain(3) = 'PMATERC'
-    lchin(3) = mateco(1:19)
-    lpain(4) = 'PCACOQU'
-    lchin(4) = chcara(7) (1:19)
-    lpain(5) = 'PCAGNPO'
-    lchin(5) = chcara(6) (1:19)
-    lpain(6) = 'PCADISM'
-    lchin(6) = chcara(3) (1:19)
-    lpain(7) = 'PCAORIE'
-    lchin(7) = chcara(1) (1:19)
-    lpain(8) = 'PCAGNBA'
-    lchin(8) = chcara(11) (1:19)
-    lpain(9) = 'PCAARPO'
-    lchin(9) = chcara(9) (1:19)
-    lpain(10) = 'PCAMASS'
-    lchin(10) = chcara(12) (1:19)
-    lpain(11) = 'PCAGEPO'
-    lchin(11) = chcara(5) (1:19)
-    lpain(12) = 'PCONTMR'
-    lchin(12) = sigmz(1:19)
-    lpain(13) = 'PVARIPR'
-    lchin(13) = variz(1:19)
-    lpain(14) = 'PNBSP_I'
-    lchin(14) = chcara(1) (1:8)//'.CANBSP'
-    lpain(15) = 'PFIBRES'
-    lchin(15) = chcara(1) (1:8)//'.CAFIBR'
-    lpain(16) = 'PHARMON'
-    lchin(16) = chharm(1:19)
-    lpain(17) = 'PCINFDI'
-    lchin(17) = chcara(15) (1:19)
-    lpain(18) = 'PCADISK'
-    lchin(18) = chcara(2) (1:19)
-    nbin = 18
-!
-! - Behaviour => only for metallurgy (non-linear)
-!
-    nbin = nbin+1
-    lpain(nbin) = 'PCOMPOR'
+    lchin(3) = materCode(1:19)
+    lpain(4) = 'PCONTMR'
+    lchin(4) = sigmz(1:19)
+    lpain(5) = 'PVARIPR'
+    lchin(5) = variz(1:19)
+    lpain(6) = 'PHARMON'
+    lchin(6) = chharm(1:19)
+    nbFieldIn = 6
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Add behaviour field => only for metallurgy (non-linear)
+    nbFieldIn = nbFieldIn+1
+    lpain(nbFieldIn) = 'PCOMPOR'
     if (l_meta) then
-        lchin(nbin) = comporz(1:19)
+        lchin(nbFieldIn) = comporZ(1:19)
     else
-        lchin(nbin) = mult_compz(1:19)
+        lchin(nbFieldIn) = multCompZ(1:19)
     end if
-!
+
 ! - Computation of elementary vectors - Previous
-!
-    if (time_comp .eq. '-') then
-        nbin = nbin+1
-        lpain(nbin) = 'PINSTR'
-        lchin(nbin) = time_prev(1:19)
-        nbin = nbin+1
-        lpain(nbin) = 'PVARCPR'
-        lchin(nbin) = vrcmoi(1:19)
-    elseif (time_comp .eq. '+') then
-        nbin = nbin+1
-        lpain(nbin) = 'PINSTR'
-        lchin(nbin) = time_curr(1:19)
-        nbin = nbin+1
-        lpain(nbin) = 'PVARCPR'
-        lchin(nbin) = vrcplu(1:19)
-        nbin = nbin+1
-        lpain(nbin) = 'PVARCMR'
-        lchin(nbin) = vrcmoi(1:19)
+    if (poum .eq. '-') then
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PINSTR'
+        lchin(nbFieldIn) = timePrev(1:19)
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PVARCPR'
+        lchin(nbFieldIn) = varcAllPrev(1:19)
+
+    elseif (poum .eq. '+') then
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PINSTR'
+        lchin(nbFieldIn) = timeCurr(1:19)
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PVARCPR'
+        lchin(nbFieldIn) = varcAllCurr(1:19)
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PVARCMR'
+        lchin(nbFieldIn) = varcAllPrev(1:19)
+
     else
         ASSERT(ASTER_FALSE)
     end if
-!
-! - XFEM input fields
-!
-    if (l_xfem .and. l_temp) then
-        call xajcin(model, 'CHAR_MECA_TEMP_R', mxchin, lchin, lpain, nbin)
+
+! - Add XFEM input fields
+    if (lXFEM .and. l_temp) then
+        call xajcin(model, 'CHAR_MECA_TEMP_R', nbFieldInMax, lchin, lpain, nbFieldIn)
     end if
-!
-! - HHO fields
-!
-    call hhoAddInputField(model, mxchin, lchin, lpain, nbin)
-!
-! - Output fields
-!
+
+! - Add HHO fields
+    call hhoAddInputField(model, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add output fields
     lpaout(1) = 'PVECTUR'
-    nbout = 1
-!
-! - XFEM output field
-!
-    if (l_xfem .and. l_temp) then
+    nbFieldOut = 1
+
+! - Add XFEM output field
+    if (lXFEM .and. l_temp) then
         call detrsd('CHAM_ELEM', chsithz)
-        call alchml(ligrmo, 'SIEF_ELGA', 'PCONTRR', 'V', chsithz, iret, ' ')
-        nbout = nbout+1
-        lpaout(nbout) = 'PCONTRT'
+        call alchml(modelLigrel, 'SIEF_ELGA', 'PCONTRR', 'V', chsithz, iret, ' ')
+        nbFieldOut = nbFieldOut+1
+        lpaout(nbFieldOut) = 'PCONTRT'
     end if
 !
 end subroutine

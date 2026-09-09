@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine telamb(ds_thm, angl_naut, ndim, tlambt)
+subroutine telamb(ds_thm, anglNaut, ndim, tlambt)
 !
     use THM_type
 !
@@ -27,7 +27,7 @@ subroutine telamb(ds_thm, angl_naut, ndim, tlambt)
 #include "asterfort/THM_type.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3)
+    real(kind=8), intent(in) :: anglNaut(3)
     integer(kind=8), intent(in) :: ndim
     real(kind=8), intent(out) :: tlambt(ndim, ndim)
 !
@@ -40,7 +40,7 @@ subroutine telamb(ds_thm, angl_naut, ndim, tlambt)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
+! In  anglNaut        : nautical angles
 !                        (1) Alpha - clockwise around Z0
 !                        (2) Beta  - counterclockwise around Y1
 !                        (1) Gamma - clockwise around X
@@ -53,11 +53,11 @@ subroutine telamb(ds_thm, angl_naut, ndim, tlambt)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    work(:, :) = 0.d0
-    passag(:, :) = 0.d0
-    lambti(:, :) = 0.d0
-    tk2(:, :) = 0.d0
-    tlambt(:, :) = 0.d0
+    work = 0.d0
+    passag = 0.d0
+    lambti = 0.d0
+    tk2 = 0.d0
+    tlambt = 0.d0
 !
     if (ds_thm%ds_material%ther%cond_type .eq. THER_COND_ISOT) then
         tlambt(1, 1) = ds_thm%ds_material%ther%lambda
@@ -70,14 +70,14 @@ subroutine telamb(ds_thm, angl_naut, ndim, tlambt)
         lambti(2, 2) = ds_thm%ds_material%ther%lambda_tl
         lambti(3, 3) = ds_thm%ds_material%ther%lambda_tn
         if (ndim .eq. 3) then
-            call matrot(angl_naut, passag)
+            call matrot(anglNaut, passag)
             call utbtab('ZERO', 3, 3, lambti, passag, work, tk2)
             tlambt = tk2
         end if
     else if (ds_thm%ds_material%ther%cond_type .eq. THER_COND_ORTH) then
         lambti(1, 1) = ds_thm%ds_material%ther%lambda_tl
         lambti(2, 2) = ds_thm%ds_material%ther%lambda_tt
-        call matrot(angl_naut, passag)
+        call matrot(anglNaut, passag)
         call utbtab('ZERO', 3, 3, lambti, passag, work, tk2)
         tlambt(1, 1) = tk2(1, 1)
         tlambt(2, 2) = tk2(2, 2)

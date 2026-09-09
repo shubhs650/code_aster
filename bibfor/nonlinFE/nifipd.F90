@@ -17,36 +17,37 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
+subroutine nifipd(BEHInteg, &
+                  ndim, nnod, nnog, nnop, npg, &
                   iw, vffd, vffg, vffp, idffd, &
                   vu, vg, vp, geomi, typmod, &
-                  option, mate, compor, lgpg, carcri, &
-                  instm, instp, ddlm, ddld, angmas, &
-                  sigm, vim, sigp, vip, lMatr, &
-                  lVect, vect, matr, codret)
+                  option, compor, lgpg, carcri, &
+                  instm, instp, ddlm, ddld, &
+                  sigm, vim, sigp, vip, &
+                  lMatr, lVect, vect, matr, &
+                  codret)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/nmcomp.h"
+#include "MeshTypes_type.h"
 #include "asterfort/nmepsi.h"
 #include "blas/ddot.h"
-#include "asterfort/Behaviour_type.h"
 !
-
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     integer(kind=8) :: ndim, nnod, nnog, nnop, npg, iw, idffd, lgpg
-    integer(kind=8) :: mate
     integer(kind=8) :: vu(3, 27), vg(27), vp(27)
     integer(kind=8) :: codret
     real(kind=8) :: vffd(nnod, npg), vffg(nnog, npg), vffp(nnop, npg)
     real(kind=8) :: instm, instp
-    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*), angmas(*)
+    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*)
     real(kind=8) :: sigm(2*ndim+1, npg), sigp(2*ndim+1, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
     real(kind=8) :: vect(*), matr(*)
@@ -79,7 +80,6 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
 ! IN  GEOMI   : COORDONEES DES NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  MATE    : MATERIAU CODE
 ! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
@@ -88,7 +88,6 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
 ! IN  INSTP   : INSTANT DE CALCUL
 ! IN  DDLM    : DEGRES DE LIBERTE A L'INSTANT PRECEDENT
 ! IN  DDLD    : INCREMENT DES DEGRES DE LIBERTE
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  SIGM    : CONTRAINTES A L'INSTANT PRECEDENT
 ! IN  VIM     : VARIABLES INTERNES A L'INSTANT PRECEDENT
 ! OUT SIGP    : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
@@ -99,17 +98,17 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = 'RIGI'
     aster_logical, parameter :: grand = ASTER_FALSE
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
     aster_logical :: axi
     integer(kind=8) :: kpg, nddl
     integer(kind=8) :: ia, na, ra, sa, ib, nb, rb, sb, ja, jb
     integer(kind=8) :: os, kk
     integer(kind=8) :: vuiana, vgra, vpsa
     integer(kind=8) :: cod(27)
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    real(kind=8) :: deplm(3*27), depld(3*27)
+    real(kind=8) :: deplm(3*MT_NNOMAX3D), depld(3*MT_NNOMAX3D)
     real(kind=8) :: r, w, dff1(nnod, ndim)
     real(kind=8) :: presm(27), presd(27)
     real(kind=8) :: gonfm(27), gonfd(27)
@@ -121,7 +120,6 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
     real(kind=8) :: ddev(6, 6), devd(6, 6), dddev(6, 6)
     real(kind=8) :: iddid, devdi(6), iddev(6)
     real(kind=8) :: t1, t2
-    type(Behaviour_Integ) :: BEHinteg
     blas_int :: b_incx, b_incy, b_n
     real(kind=8), parameter :: kr(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
     real(kind=8), parameter :: idev(6, 6) = reshape((/2.d0, -1.d0, -1.d0, 0.d0, 0.d0, 0.d0, &
@@ -148,16 +146,6 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
         matr(1:nddl*(nddl+1)/2) = 0.d0
     end if
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
-
 ! - Extract for fields
     do na = 1, nnod
         do ia = 1, ndim
@@ -176,17 +164,19 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
 
 ! - Loop on Gauss points
     do kpg = 1, npg
-! ----- Kinematic
+! ----- Kinematic - Previous strains
         epsm = 0.d0
-        deps = 0.d0
         call dfdmip(ndim, nnod, axi, geomi, kpg, &
                     iw, vffd(1, kpg), idffd, r, w, &
                     dff1)
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dff1, deplm, fm, epsm)
+
+! ----- Kinematic - Increment of strains
+        deps = 0.d0
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dff1, depld, fm, deps)
-!
+
 ! ----- Gonflement
         b_n = to_blas_int(nnog)
         b_incx = to_blas_int(1)
@@ -206,11 +196,11 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)
         pd = ddot(b_n, vffp(1, kpg), b_incx, presd, b_incy)
-!
+
 ! - CALCUL DES ELEMENTS GEOMETRIQUES
         divum = epsm(1)+epsm(2)+epsm(3)
         ddivu = deps(1)+deps(2)+deps(3)
-!
+
 ! - CALCUL DE LA MATRICE B EPS_ij=B_ijkl U_kl
 ! - DEF (XX,YY,ZZ,2/RAC(2)XY,2/RAC(2)XZ,2/RAC(2)YZ)
         if (ndim .eq. 2) then
@@ -264,22 +254,25 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
         end do
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         sigma = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    6, epsm, deps, 6, sigmam, &
-                    vim(1, kpg), option, angmas, &
-                    sigma, vip(1, kpg), 36, dsidep, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    6, epsm, deps, &
+                    6, sigmam, &
+                    vim(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    36, dsidep, cod(kpg))
         if (cod(kpg) .eq. 1) then
             codret = 1
             ASSERT(lVect)
             goto 999
         end if
-!
+
 ! - CALCUL DE LA FORCE INTERIEURE ET DES CONTRAINTES DE CAUCHY
         if (lVect) then
 ! - CONTRAINTES A L'EQUILIBRE
@@ -459,8 +452,8 @@ subroutine nifipd(ndim, nnod, nnog, nnop, npg, &
             end do
         end if
     end do
-!
-! - SYNTHESE DES CODES RETOURS
+
+! - Return code summary
     call codere(cod, npg, codret)
 !
 999 continue

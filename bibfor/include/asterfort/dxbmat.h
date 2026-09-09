@@ -15,18 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxbmat(nomte, cara, xyzl, pgl, igau,&
+    subroutine dxbmat(plateCara, plateOrie, &
+                      nomte, cara, xyzl, igau, &
                       jacgau, bmat)
-        character(len=16) :: nomte
-        real(kind=8) :: cara(*)
-        real(kind=8) :: xyzl(3, *)
-        real(kind=8) :: pgl(3, *)
-        integer(kind=8) :: igau
-        real(kind=8) :: jacgau
-        real(kind=8) :: bmat(8, *)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: cara(*), xyzl(3, *)
+        integer(kind=8), intent(in) :: igau
+        real(kind=8), intent(out) :: jacgau, bmat(8, *)
     end subroutine dxbmat
 end interface

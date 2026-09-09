@@ -16,11 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo, &
+subroutine thmGetPermeabilityTensor(ds_thm, &
+                                    ndim, phi, endo, &
                                     tperm)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -31,8 +33,6 @@ subroutine thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo,
 !
     type(THM_DS), intent(in) :: ds_thm
     integer(kind=8), intent(in) :: ndim
-    real(kind=8), intent(in) :: angl_naut(3)
-    integer(kind=8), intent(in) :: j_mater
     real(kind=8), intent(in) :: phi, endo
     real(kind=8), intent(out) :: tperm(ndim, ndim)
 !
@@ -46,68 +46,65 @@ subroutine thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo,
 !
 ! In  ds_thm           : datastructure for THM
 ! In  ndim             : dimension of space (2 or 3)
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (3) Gamma - clockwise around X
-! In  j_mater          : coded material address
 ! In  phi              : porosity
 ! In  endo             : damage
 ! Out tperm            : permeability tensor
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_para = 4
+    integer(kind=8), parameter :: nbProp = 4
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'PERM_IN ', 'PERMIN_L', &
+                                                         'PERMIN_N', 'PERMIN_T'/)
     integer(kind=8) :: aniso
-    integer(kind=8) :: icodre(nb_para)
-    real(kind=8) :: para_vale(nb_para)
-    character(len=16), parameter :: para_name(nb_para) = (/'PERM_IN ', 'PERMIN_L', &
-                                                           'PERMIN_N', 'PERMIN_T'/)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     tperm(1:ndim, 1:ndim) = 0.d0
     aniso = 0
-    para_vale(:) = 0.d0
-!
+    propVale = 0.d0
+
 ! - Read parameters (intrinsic permeability)
-!
-    para_vale(1) = 1.d0
+    propVale(1) = 1.d0
     if ((ds_thm%ds_behaviour%rela_hydr .eq. 'HYDR_UTIL') .or. &
         (ds_thm%ds_behaviour%rela_hydr .eq. 'HYDR_VGM') .or. &
         (ds_thm%ds_behaviour%rela_hydr .eq. 'HYDR_VGC') .or. &
         (ds_thm%ds_behaviour%rela_hydr .eq. 'HYDR_TABBAL')) then
-
-!~         write (6,*) 'gerpermea',ds_thm%ds_behaviour%rela_hydr
-
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     1, 'PORO', [phi], &
-                    1, para_name, para_vale, &
-                    icodre, 0, nan='NON')
-        if (icodre(1) .eq. 1) then
+                    1, propName, propVale, &
+                    propCode, 0, nan='NON')
+
+        if (propCode(1) .eq. 1) then
 ! --------- Anisotropic
-            call rcvala(j_mater, ' ', 'THM_DIFFU', &
+            call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                        ' ', 'THM_DIFFU', &
                         1, 'PORO', [phi], &
-                        1, para_name(3), para_vale(3), &
-                        icodre, 0, nan='NON')
-            if (icodre(1) .eq. 0) then
+                        1, propName(3), propVale(3), &
+                        propCode, 0, nan='NON')
+            if (propCode(1) .eq. 0) then
                 aniso = 1
-                call rcvala(j_mater, ' ', 'THM_DIFFU', &
+                call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                            ' ', 'THM_DIFFU', &
                             1, 'PORO', [phi], &
-                            1, para_name(2), para_vale(2), &
-                            icodre, 0, nan='NON')
+                            1, propName(2), propVale(2), &
+                            propCode, 0, nan='NON')
             else
                 aniso = 2
-                call rcvala(j_mater, ' ', 'THM_DIFFU', &
+                call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                            ' ', 'THM_DIFFU', &
                             1, 'PORO', [phi], &
-                            1, para_name(2), para_vale(2), &
-                            icodre, 0, nan='NON')
-                call rcvala(j_mater, ' ', 'THM_DIFFU', &
+                            1, propName(2), propVale(2), &
+                            propCode, 0, nan='NON')
+                call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                            ' ', 'THM_DIFFU', &
                             1, 'PORO', [phi], &
-                            1, para_name(4), para_vale(4), &
-                            icodre, 0, nan='NON')
+                            1, propName(4), propVale(4), &
+                            propCode, 0, nan='NON')
             end if
-        else if (icodre(1) .eq. 0) then
+        else if (propCode(1) .eq. 0) then
 ! --------- Isotropic
             aniso = 0
         end if
@@ -115,31 +112,31 @@ subroutine thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo,
         if ((ds_thm%ds_behaviour%rela_meca .eq. 'MAZARS') .or. &
             (ds_thm%ds_behaviour%rela_meca .eq. 'ENDO_ISOT_BETON')) then
             aniso = 0
-            call rcvala(j_mater, ' ', 'THM_DIFFU', &
+            call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                        ' ', 'THM_DIFFU', &
                         1, 'ENDO', [endo], &
-                        1, ['PERM_END'], para_vale(1), &
-                        icodre, 1)
-            call rcvala(j_mater, ' ', 'THM_DIFFU', &
+                        1, ['PERM_END'], propVale(1), &
+                        propCode, 1)
+            call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                        ' ', 'THM_DIFFU', &
                         1, 'ENDO', [endo], &
-                        1, ['PERM_END'], para_vale(2), &
-                        icodre, 1)
-            call rcvala(j_mater, ' ', 'THM_DIFFU', &
+                        1, ['PERM_END'], propVale(2), &
+                        propCode, 1)
+            call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                        ' ', 'THM_DIFFU', &
                         1, 'ENDO', [endo], &
-                        1, ['PERM_END'], para_vale(3), &
-                        icodre, 1)
+                        1, ['PERM_END'], propVale(3), &
+                        propCode, 1)
         else
             call utmess('F', 'THM1_43', nk=2, &
                         valk=[ds_thm%ds_behaviour%rela_hydr, ds_thm%ds_behaviour%rela_meca])
         end if
     else
-
-!~         write (6,*) 'gerpermea2',ds_thm%ds_behaviour%rela_hydr
-
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - Compute permeability tensor
-!
-    call tpermh(ndim, angl_naut, aniso, para_vale, tperm)
+    call tpermh(ndim, ds_thm%ds_behaviour%BEHInteg%materPara%lcsPara%lcsAngle, aniso, propVale, &
+                tperm)
 !
 end subroutine

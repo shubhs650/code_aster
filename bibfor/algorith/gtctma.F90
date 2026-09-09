@@ -24,10 +24,11 @@ subroutine gtctma(elem_coor, elem_nbnode, elem_code, elem_dime, &
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/reerel.h"
+#include "MeshTypes_type.h"
 !
 !
 
-    real(kind=8), intent(in) :: elem_coor(3, 9)
+    real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_nbnode
     character(len=8), intent(in) :: elem_code
     integer(kind=8), intent(in) :: elem_dime
@@ -49,13 +50,10 @@ subroutine gtctma(elem_coor, elem_nbnode, elem_code, elem_dime, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: rfcoor(3), elem_cort(27)
-    integer(kind=8)      :: i_dime, i_node
-
+    real(kind=8) :: rfcoor(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-
 !
 ! - Initialisation
 !
@@ -77,19 +75,9 @@ subroutine gtctma(elem_coor, elem_nbnode, elem_code, elem_dime, &
         ASSERT(.false.)
     end select
 !
-! - Transform the format of slave element coordinates
-!
-    do i_node = 1, elem_nbnode
-        do i_dime = 1, elem_dime
-            elem_cort(elem_dime*(i_node-1)+i_dime) = elem_coor(i_dime, i_node)
-        end do
-    end do
-!
-!
 ! - Compute center
 !
-    call reerel(elem_code, elem_nbnode, elem_dime, elem_cort, rfcoor, &
-                ctcoor)
+    call reerel(elem_code, elem_nbnode, 3, elem_coor, rfcoor, ctcoor)
 !
 ! - Print check
 !

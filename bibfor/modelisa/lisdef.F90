@@ -134,7 +134,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
 ! ----------------------------------------------------------------------
 !
     integer(kind=8) :: nbtyth
-    parameter(nbtyth=29)
+    parameter(nbtyth=28)
     character(len=6) :: nomob(nbtyth)
     character(len=24) :: motcl(nbtyth)
     character(len=24) :: genre(nbtyth)
@@ -164,7 +164,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     '.FORNO', '.EPSIN', '.SIINT',&
      &     '.PRESS', '.FLUX', '.VFACE',&
      &     '__EVOC', '.PESAN',&
-     &     '.ROTAT', '.SIGIN', '.FELEC',&
+     &     '.ROTAT', '.SIGIN',&
      &     '.FL1', '.ONDE', '.ONDPL',&
      &     '.VEASS', '.F1D2D', '.F3D3D',&
      &     '.F2D2D', '.F1D3D', '.F2D3D',&
@@ -178,7 +178,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'FORCE_NODALE', 'EPSI_INIT', 'SIGM_INTERNE',&
      &     'PRES_REP', 'FLUX_THM_REP', 'VITE_FACE',&
      &     'EVOL_CHAR', 'PESANTEUR',&
-     &     'ROTATION', 'RELA_CINE_BP', 'FORCE_ELEC',&
+     &     'ROTATION', 'RELA_CINE_BP',&
      &     ' ', 'ONDE_FLUI', 'ONDE_PLANE',&
      &     'VECT_ASSE_CHAR', 'FORCE_CONTOUR', 'FORCE_INTERNE#3D',&
      &     'FORCE_INTERNE#2D', 'FORCE_ARETE', 'FORCE_FACE',&
@@ -192,12 +192,12 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     03, 04, 05,&
      &     06, 07, 08,&
      &     09, 10,&
-     &     11, 12, 13,&
-     &     14, 15, 16,&
-     &     17, 18, 19,&
-     &     20, 21, 22,&
-     &     23, 24, 25,&
-     &     26, 27, 28, 29/
+     &     11, 12,&
+     &     13, 14, 15,&
+     &     16, 17, 18,&
+     &     19, 20, 21,&
+     &     22, 23, 24,&
+     &     25, 25, 27, 28/
 !
 ! --- GENRE DE LA CHARGE
 !
@@ -206,7 +206,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'NEUM_MECA', 'NEUM_MECA', 'SIGM_INTERNE',&
      &     'NEUM_MECA', 'NEUM_MECA', 'VITE_FACE',&
      &     'EVOL_CHAR', 'NEUM_MECA',&
-     &     'NEUM_MECA', 'SIGM_CABLE', 'FORCE_ELEC',&
+     &     'NEUM_MECA', 'SIGM_CABLE',&
      &     ' ', 'ONDE_FLUI', 'ONDE_PLANE',&
      &     'VECT_ASSE_CHAR', 'NEUM_MECA', 'NEUM_MECA',&
      &     'NEUM_MECA', 'NEUM_MECA', 'NEUM_MECA',&
@@ -221,7 +221,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     03, 03, 05,&
      &     03, 03, 06,&
      &     07, 03,&
-     &     03, 08, 13,&
+     &     03, 08,&
      &     09, 10, 11,&
      &     12, 03, 03,&
      &     03, 03, 03,&
@@ -233,7 +233,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'LIGRCH', 'LIGRMO', 'LIGRMO',&
      &     'LIGRMO', 'LIGRMO', 'LIGRMO',&
      &     'LIGRMO', 'LIGRMO',&
-     &     'LIGRMO', 'LIGRMO', 'LIGRMO',&
+     &     'LIGRMO', 'LIGRMO',&
      &     ' ', 'LIGRMO', 'LIGRMO',&
      &     'LIGRMO', 'LIGRMO', 'LIGRMO',&
      &     'LIGRMO', 'LIGRMO', 'LIGRMO',&
@@ -248,7 +248,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'CHAR_MECA_FORC_R', 'CHAR_MECA_EPSI_R', ' ',&
      &     'CHAR_MECA_PRES_R', 'CHAR_MECA_FLUX_R', ' ',&
      &     ' ', 'CHAR_MECA_PESA_R',&
-     &     'CHAR_MECA_ROTA_R', ' ', 'CHAR_MECA_FRELEC',&
+     &     'CHAR_MECA_ROTA_R', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', 'CHAR_MECA_FR1D2D', 'CHAR_MECA_FR3D3D',&
      &     'CHAR_MECA_FR2D2D', 'CHAR_MECA_FR1D3D', 'CHAR_MECA_FR2D3D',&
@@ -262,7 +262,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ',&
-     &     ' ', ' ', ' ',&
+     &     ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
@@ -276,7 +276,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'CHAR_MECA_FORC_F', 'CHAR_MECA_EPSI_F', ' ',&
      &     'CHAR_MECA_PRES_F', 'CHAR_MECA_FLUX_F', ' ',&
      &     ' ', ' ',&
-     &     ' ', ' ', ' ',&
+     &     ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', 'CHAR_MECA_FF1D2D', 'CHAR_MECA_FF3D3D',&
      &     'CHAR_MECA_FF2D2D', 'CHAR_MECA_FF1D3D', 'CHAR_MECA_FF2D3D',&
@@ -290,7 +290,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'PFORNOR', 'PEPSINR', ' ',&
      &     'PPRESSR', 'PFLUXR', ' ',&
      &     ' ', 'PESANR',&
-     &     'PROTATR', ' ', 'PFRELEC',&
+     &     'PROTATR', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', 'PFR1D2D', 'PFR3D3D',&
      &     'PFR2D2D', 'PFR1D3D', 'PFR2D3D',&
@@ -304,7 +304,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ',&
-     &     ' ', ' ', ' ',&
+     &     ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', ' ', ' ',&
@@ -318,7 +318,7 @@ subroutine lisdef(oper, optkz, opti, valkz, vali)
      &     'PFORNOF', 'PEPSINF', ' ',&
      &     'PPRESSF', 'PFLUXF', ' ',&
      &     ' ', 'PPESANR',&
-     &     'PROTATR', ' ', 'PFRELEC',&
+     &     'PROTATR', ' ',&
      &     ' ', ' ', ' ',&
      &     ' ', 'PFF1D2D', 'PFF3D3D',&
      &     'PFF2D2D', 'PFF1D3D', 'PFF2D3D',&

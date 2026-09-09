@@ -15,31 +15,22 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine pmf_vmis(for_pmf, nf,    nbvalc, &
-                        compor,  crit,  defam, defap, varim, &
-                        varimp,  contm, defm,  ddefp, modf,  &
-                        sigf,    varip, codret)
+    subroutine pmf_vmis(for_pmf, nf, nbvalc, &
+                        pmfCompor, materPara, &
+                        varim, contm, &
+                        ddefp, modf, &
+                        sigf, varip, codret)
         use pmfcom_type
+        use MaterialPara_type
         type(pmfcom_user), intent(in) :: for_pmf
-        !
-        integer(kind=8) :: nf
-        integer(kind=8) :: nbvalc
-        character(len=24) :: compor(*)
-        real(kind=8) :: crit(*)
-        real(kind=8) :: defam(*)
-        real(kind=8) :: defap(*)
-        real(kind=8) :: varim(nbvalc*nf)
-        real(kind=8) :: varimp(nbvalc*nf)
-        real(kind=8) :: contm(nf)
-        real(kind=8) :: defm(nf)
-        real(kind=8) :: ddefp(nf)
-        real(kind=8) :: modf(nf)
-        real(kind=8) :: sigf(nf)
-        real(kind=8) :: varip(nbvalc*nf)
+        integer(kind=8) :: nf, nbvalc
+        character(len=24) :: pmfCompor(*)
+        type(Material_Para), intent(inout) :: materPara
+        real(kind=8) :: varim(nbvalc*nf), contm(nf), ddefp(nf), modf(nf)
+        real(kind=8) :: sigf(nf), varip(nbvalc*nf)
         integer(kind=8) :: codret
     end subroutine pmf_vmis
 end interface

@@ -42,6 +42,10 @@ subroutine laParam(parameters)
 !
     call jevech('PCONFR', 'L', jcont)
 !
+! - Reso Geom
+!
+    parameters%reso_geom = RESO_GEOM_NEWT
+!
 ! - Contact
 !
     parameters%algo_cont = nint(zr(jcont+23))

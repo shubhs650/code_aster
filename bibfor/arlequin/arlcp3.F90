@@ -34,12 +34,13 @@ subroutine arlcp3(nbma1, nbma2, numno1, numno2, m3dea, &
 #include "asterfort/afrela.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
+#include "MeshTypes_type.h"
 !
 !     ARGUMENTS:
 !     ----------
 !
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX)
     integer(kind=8) :: nbma1, nbma2
     integer(kind=8) :: len1, len2
     real(kind=8) :: m3dea(12, 3*nbnomx, nbma1), m1dea(12, 12, nbma2)
@@ -82,8 +83,9 @@ subroutine arlcp3(nbma1, nbma2, numno1, numno2, m3dea, &
                             if (numno2(n, k) == numn2t(j)) then
                                 do p = 1, 6
                                     do q = 1, 6
-                                       m1dass(6*(i-1)+p, 6*(j-1)+q) = m1dass(6*(i-1)+p, 6*(j-1)+q) &
-                                                                     +m1dea(6*(m-1)+p, 6*(n-1)+q, k)
+                                        m1dass(6*(i-1)+p, 6*(j-1)+q) = &
+                                            m1dass(6*(i-1)+p, 6*(j-1)+q) &
+                                            +m1dea(6*(m-1)+p, 6*(n-1)+q, k)
                                     end do
                                 end do
                             end if
@@ -105,8 +107,9 @@ subroutine arlcp3(nbma1, nbma2, numno1, numno2, m3dea, &
                             if (numno1(2+n, k) == numn1t(j)) then
                                 do p = 1, 6
                                     do q = 1, 3
-                                       m3dass(6*(i-1)+p, 3*(j-1)+q) = m3dass(6*(i-1)+p, 3*(j-1)+q) &
-                                                                     +m3dea(6*(m-1)+p, 3*(n-1)+q, k)
+                                        m3dass(6*(i-1)+p, 3*(j-1)+q) = &
+                                            m3dass(6*(i-1)+p, 3*(j-1)+q) &
+                                            +m3dea(6*(m-1)+p, 3*(n-1)+q, k)
                                     end do
                                 end do
                             end if

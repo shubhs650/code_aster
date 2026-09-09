@@ -19,23 +19,22 @@
 !
 interface
     subroutine calcme(BEHInteg, &
-                      option, j_mater, ndim, typmod, angl_naut, &
-                      compor, carcri, instam, instap, &
+                      ndim, option, typmod, &
+                      compor, carcri, &
+                      instam, instap, &
                       addeme, adcome, dimdef, dimcon, &
                       defgem, deps, &
                       congem, vintm, &
                       congep, vintp, &
                       dsdeme, retcom)
         use Behaviour_type
-        type(Behaviour_Integ), intent(in) :: BEHinteg
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
         character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
-        integer(kind=8), intent(in) :: j_mater
         character(len=8), intent(in) :: typmod(2)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: instam, instap
         integer(kind=8), intent(in) :: ndim, dimdef, dimcon, addeme, adcome
         real(kind=8), intent(in) :: vintm(*)
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(in) :: defgem(dimdef), deps(6), congem(dimcon)
         real(kind=8), intent(inout) :: congep(dimcon)
         real(kind=8), intent(inout) :: vintp(*)

@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W0413,W1306
 !
-subroutine lcejmr(BEHinteg, fami, kpg, ksp, ndim, &
+subroutine lcejmr(BEHInteg, fami, kpg, ksp, ndim, &
                   mate, option, epsm, deps, &
                   sigma, dsidep, vim, vip, typmod, &
                   instam, instap)
@@ -35,7 +35,7 @@ subroutine lcejmr(BEHinteg, fami, kpg, ksp, ndim, &
 #include "asterfort/utmess.h"
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: mate, ndim, kpg, ksp
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigma(6), dsidep(6, 6)
@@ -178,10 +178,10 @@ subroutine lcejmr(BEHinteg, fami, kpg, ksp, ndim, &
 ! DEFINITION DES PARAMETRES POUR LA RECUPERATION DES FONCTIONS
     coorot = 0.d0
     do i = 1, ndim
-        coorot(i) = BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, i)
+        coorot(i) = BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, i)
     end do
     do i = 1, ndim*ndim
-        coorot(ndim+i) = BEHinteg%behavESVA%behavESVAOther%rotpg(i)
+        coorot(ndim+i) = BEHInteg%behavESVA%behavESVAOther%rotpg(i)
     end do
 !
     nompar(1) = 'INST'

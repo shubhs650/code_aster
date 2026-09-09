@@ -15,17 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine q4grig(nomte, xyzl, option, pgl, rig,&
-                      ener)
-        character(len=16) :: nomte
-        real(kind=8) :: xyzl(3, *)
-        character(len=16) :: option
-        real(kind=8) :: pgl(*)
-        real(kind=8) :: rig(*)
-        real(kind=8) :: ener(*)
+    subroutine q4grig(plateCara, plateOrie, &
+                      xyzl, option, pgl, &
+                      matrRigi_, ener_)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8), intent(in) :: xyzl(3, *), pgl(*)
+        character(len=16), intent(in) :: option
+        real(kind=8), optional, intent(out) :: matrRigi_(300), ener_(3)
     end subroutine q4grig
 end interface

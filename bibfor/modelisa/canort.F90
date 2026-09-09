@@ -41,6 +41,7 @@ subroutine canort(noma, nbma, listma, ndim, nbno, &
 #include "asterfort/provec.h"
 #include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
+#include "MeshTypes_type.h"
 #include "asterfort/int_to_char8.h"
 !
 !
@@ -79,7 +80,7 @@ subroutine canort(noma, nbma, listma, ndim, nbno, &
     integer(kind=8) :: idobj2, ij, ino
     integer(kind=8) :: n, nocc, nno, nnos, nnn
     integer(kind=8) :: iinver, imail, numail, ityp, jdes, nn, numno, lino(9)
-    real(kind=8) :: coor(3, 9), a, b, c, pvec(3), norme
+    real(kind=8) :: coor(3, MT_NNOMAX2D), a, b, c, pvec(3), norme
     character(len=8) :: kangl, knumai
     character(len=8) :: nomtyp, nomnoe
     character(len=24) :: nomobj, nomob2, coninv

@@ -1,0 +1,164 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# mise en place d'un cas test pour mettre en place une source de pression sur une modélisation U-P
+
+DEBUT(CODE="OUI")
+
+# ORIENTER LES MAILLES !!!
+
+# -- MAILLAGES DES DEUX BOUTS DE TUYAU
+MAILLA1 = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+MAILLA1 = MODI_MAILLAGE(
+    reuse=MAILLA1,
+    MAILLAGE=MAILLA1,
+    ORIE_NORM_COQUE=_F(GROUP_MA=("IFS_2D",), GROUP_NO=("nNormDZ",), VECT_NORM=(0.0, 0.0, 1.0)),
+)
+MAILLA1 = DEFI_GROUP(reuse=MAILLA1, MAILLAGE=MAILLA1, CREA_GROUP_NO=_F(TOUT_GROUP_MA="OUI"))
+
+# -- CONSTRUCTION DES MODELES
+MODELE1 = AFFE_MODELE(
+    AFFE=(
+        _F(GROUP_MA=("s1Tuyau", "s2Tuyau", "Tuyau"), MODELISATION="3D", PHENOMENE="MECANIQUE"),
+        _F(
+            FORMULATION="U_P",
+            GROUP_MA=("s1Eau", "s2Eau", "Eau"),
+            MODELISATION="3D_FLUIDE",
+            PHENOMENE="MECANIQUE",
+        ),
+        _F(
+            FORMULATION="U_P", GROUP_MA=("IFS_2D",), MODELISATION="FLUI_STRU", PHENOMENE="MECANIQUE"
+        ),
+    ),
+    MAILLAGE=MAILLA1,
+)
+
+
+# -- DEFINITION DU MATERIAU
+scaling = 1.0e10  # terme de mise à l'échelle
+acier = DEFI_MATERIAU(ELAS=_F(E=190.0e9 / scaling, NU=0.3, RHO=7800.0 / scaling))
+
+eau = DEFI_MATERIAU(FLUIDE=_F(CELE_R=970.0, RHO=732.0 / scaling))
+
+# -- AFFECTATION DES MATERIAUX
+CHAMAT1 = AFFE_MATERIAU(
+    AFFE=(_F(GROUP_MA=("Tuyau"), MATER=(acier,)), _F(GROUP_MA=("IFS_2D", "Eau"), MATER=(eau,))),
+    MODELE=MODELE1,
+)
+
+
+# -- DEFINITION DES CONDITIONS AUX LIMITES
+CHARGE_1 = AFFE_CHAR_MECA(
+    FACE_IMPO=(_F(DX=0.0, DY=0.0, DZ=0.0, GROUP_MA=("s1Tuyau", "s2Tuyau")),), MODELE=MODELE1
+)
+
+# Paramètres de l'analyse harmonique
+n_freq = 90
+f0 = 10
+f1 = 100
+
+# -----------------------------------------------------------------------------------
+#
+#  RESOLUTION
+#
+# -----------------------------------------------------------------------------------
+
+MPC = AFFE_CHAR_MECA(
+    MODELE=MODELE1,
+    LIAISON_UNIF=(_F(GROUP_NO="s1Eau", DDL="PRES"), _F(GROUP_NO="s2Eau", DDL="PRES")),
+    LIAISON_DDL=_F(
+        GROUP_NO=("s1Eau_node", "s2Eau_node"),
+        DDL=("PRES", "PRES"),
+        COEF_MULT=(1.0, -1.0),
+        COEF_IMPO=1.0,
+    ),
+)
+
+# -- ASSEMBLAGE DES MATRICES
+
+ASSEMBLAGE(
+    MODELE=MODELE1,
+    NUME_DDL=CO("NUME"),
+    CHARGE=(CHARGE_1, MPC),
+    CHAM_MATER=CHAMAT1,
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGIDITE"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASSE"), OPTION="MASS_MECA"),
+    ),
+    VECT_ASSE=_F(VECTEUR=CO("FASS"), OPTION="CHAR_MECA", CHARGE=(MPC, CHARGE_1)),
+)
+
+# calcule uniquement des valeurs testées
+# LIFREQ = DEFI_LIST_REEL(DEBUT=f0, INTERVALLE=_F(JUSQU_A=f1, NOMBRE=n_freq))
+LIFREQ = DEFI_LIST_REEL(VALE=(10.0, 28.0, 29.0, 68.0, 70.0, 100.0))
+
+
+DYNHASS = DYNA_VIBRA(
+    MODELE=MODELE1,
+    TYPE_CALCUL="HARM",
+    BASE_CALCUL="PHYS",
+    MATR_MASS=MASSE,
+    MATR_RIGI=RIGIDITE,
+    LIST_FREQ=LIFREQ,
+    EXCIT=(_F(VECT_ASSE=FASS, COEF_MULT=1.0),),
+)
+
+l_cmp = ["PRES", "DX"]
+rep = []
+
+for cmp in l_cmp:
+    REP = RECU_FONCTION(RESULTAT=DYNHASS, GROUP_NO="node_accel", NOM_CHAM="ACCE", NOM_CMP=cmp)
+    ABS = CALC_FONCTION(EXTRACTION=_F(FONCTION=REP, PARTIE="MODULE"))
+    rep.append(ABS)
+
+for idx, cmp in enumerate(l_cmp):
+    IMPR_FONCTION(
+        FORMAT="XMGRACE",
+        COURBE=_F(FONCTION=rep[idx], MARQUEUR=0, LEGENDE=f"Acc {cmp} "),
+        ECHELLE_Y="LOG",
+        LEGENDE_X="Freq (Hz)",
+        LEGENDE_Y=r"Amplitude (m.s\S-2\N )",
+        # LEGENDE_Y=r"Amplitude ",
+        UNITE=28,
+    )
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(VALE_CALC=417.87028, CRITERE="RELATIF", VALE_PARA=10.0, FONCTION=rep[0]),
+        _F(VALE_CALC=9568.055, CRITERE="RELATIF", VALE_PARA=28.0, FONCTION=rep[0]),
+        _F(VALE_CALC=1370.4434, CRITERE="RELATIF", VALE_PARA=29.0, FONCTION=rep[0]),
+        _F(VALE_CALC=13413.085, CRITERE="RELATIF", VALE_PARA=68.0, FONCTION=rep[0]),
+        _F(VALE_CALC=91364.607, CRITERE="RELATIF", VALE_PARA=70.0, FONCTION=rep[0]),
+        _F(VALE_CALC=150570.41, CRITERE="RELATIF", VALE_PARA=100.0, FONCTION=rep[0]),
+    )
+)
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(VALE_CALC=18589.322, CRITERE="RELATIF", VALE_PARA=10.0, FONCTION=rep[1]),
+        _F(VALE_CALC=4058265.4, CRITERE="RELATIF", VALE_PARA=28.0, FONCTION=rep[1]),
+        _F(VALE_CALC=3118121.7, CRITERE="RELATIF", VALE_PARA=29.0, FONCTION=rep[1]),
+        _F(VALE_CALC=2832890.0, CRITERE="RELATIF", VALE_PARA=68.0, FONCTION=rep[1]),
+        _F(VALE_CALC=10996385.0, CRITERE="RELATIF", VALE_PARA=70.0, FONCTION=rep[1]),
+        _F(VALE_CALC=864262.14, CRITERE="RELATIF", VALE_PARA=100.0, FONCTION=rep[1]),
+    )
+)
+
+
+FIN()

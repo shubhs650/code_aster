@@ -16,10 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine nmetc0(model, cara_elem, compor, ds_inout)
+subroutine nmetc0(model, caraElem, compor, ds_inout)
 !
+    use coorSyst_module, only: setOrieFields
     use NonLin_Datastructure_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -29,7 +29,7 @@ subroutine nmetc0(model, cara_elem, compor, ds_inout)
 !
 !
     character(len=24), intent(in) :: model
-    character(len=24), intent(in) :: cara_elem
+    character(len=24), intent(in) :: caraElem
     character(len=19), intent(in) :: compor
     type(NL_DS_InOut), intent(in) :: ds_inout
 !
@@ -42,18 +42,21 @@ subroutine nmetc0(model, cara_elem, compor, ds_inout)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  model            : name of model
-! In  cara_elem        : name of datastructure for elementary parameters (CARTE)
+! In  caraElem        : name of datastructure for elementary parameters (CARTE)
 ! In  compor           : name of <CARTE> COMPOR
 ! In  ds_inout         : datastructure for input/output management
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
     character(len=24) :: field_type, init_name
     character(len=24) :: sief_init, vari_init, strx_init
     integer(kind=8) :: i_field, nb_field, iret
-    character(len=8) :: lpain(1), lpaout(2)
-    character(len=24) :: lchin(1), lchout(2)
-    character(len=19) :: ligrmo
+    character(len=19) :: modelLigrel
     aster_logical :: l_sief, l_vari, l_strx, l_acti
 !
 ! --------------------------------------------------------------------------------------------------
@@ -62,9 +65,9 @@ subroutine nmetc0(model, cara_elem, compor, ds_inout)
 !
 ! - Create initial fields or not ?
 !
-    l_sief = .false._1
-    l_vari = .false._1
-    l_strx = .false._1
+    l_sief = ASTER_FALSE
+    l_vari = ASTER_FALSE
+    l_strx = ASTER_FALSE
     do i_field = 1, nb_field
         field_type = ds_inout%field(i_field)%type
         init_name = ds_inout%field(i_field)%init_name
@@ -86,19 +89,21 @@ subroutine nmetc0(model, cara_elem, compor, ds_inout)
 ! - Initial fields: compute stress and internal variables
 !
     if (l_vari .or. l_sief) then
-        call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
-        call alchml(ligrmo, 'TOU_INI_ELGA', 'PSIEF_R', 'V', sief_init, iret, compor)
-        call alchml(ligrmo, 'TOU_INI_ELGA', 'PVARI_R', 'V', vari_init, iret, compor)
+        call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+        call alchml(modelLigrel, 'TOU_INI_ELGA', 'PSIEF_R', 'V', sief_init, iret, compor)
+        call alchml(modelLigrel, 'TOU_INI_ELGA', 'PVARI_R', 'V', vari_init, iret, compor)
     end if
-!
+
 ! - Initial fields: special multifibers field
-!
     if (l_strx) then
-        lpain(1) = 'PCAORIE'
-        lchin(1) = cara_elem(1:8)//'.CARORIEN'
+        nbFieldIn = 0
+! ----- Add fields for orientation
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElem)
+
         lpaout(1) = 'PSTRX_R'
-        lchout(1) = strx_init
-        call calcul('S', 'INI_STRX', ligrmo, 1, lchin, &
+        lchout(1) = strx_init(1:19)
+        call calcul('S', 'INI_STRX', modelLigrel, 1, lchin, &
                     lpain, 1, lchout, lpaout, 'V', &
                     'OUI')
     end if

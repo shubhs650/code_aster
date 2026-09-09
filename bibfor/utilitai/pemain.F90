@@ -15,15 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine pemain(resu, modele, mate, mateco, cara, nh, &
-                  nbocc, deform)
+!
+subroutine pemain(tablOutZ, &
+                  modelZ, materFieldZ, materCodeZ, caraElemZ, numeHarm, &
+                  nbFactorKeyword, deformZ)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
+#include "asterfort/char8_to_int.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/exlim3.h"
 #include "asterfort/getvem.h"
@@ -39,191 +43,202 @@ subroutine pemain(resu, modele, mate, mateco, cara, nh, &
 #include "asterfort/jexnom.h"
 #include "asterfort/mecham.h"
 #include "asterfort/pemica.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/tbajli.h"
 #include "asterfort/tbajpa.h"
 #include "asterfort/tbcrsd.h"
-#include "asterfort/utmess.h"
 #include "asterfort/umalma.h"
+#include "asterfort/utmess.h"
 #include "asterfort/vtgpld.h"
 #include "asterfort/wkvect.h"
-#include "asterfort/char8_to_int.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: nh, nbocc
-    character(len=*) :: resu, modele, mate, mateco, cara, deform
-!     OPERATEUR   POST_ELEM
-!     TRAITEMENT DU MOT CLE-FACTEUR "MASS_INER"
-!     ------------------------------------------------------------------
+    character(len=*), intent(in) :: tablOutZ
+    character(len=*), intent(in) :: modelZ, materFieldZ, materCodeZ, caraElemZ
+    integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
+    character(len=*), intent(in) :: deformZ
 !
-    integer(kind=8) :: mxvale, nbparr, ibid, iret, iocc, nt, ng, nr, nm, nbgrma, jgr, ig, nbma, jad
-    integer(kind=8) :: nbmail, jma, im, nume, nb, ifm, niv, mxval1, nbpar1, mxval2, nbpar2, iorig
+! --------------------------------------------------------------------------------------------------
+!
+! POST_ELEM
+!
+! TRAITEMENT DU MOT CLE-FACTEUR "MASS_INER"
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: option = "MASS_INER"
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
+    integer(kind=8) :: ibid, iret, iFactorKeyword, nt, ng, nr, nm, nbgrma, jgr, ig, nbma, jad
+    integer(kind=8) :: nbmail, jma, im, nume, ifm, niv, iorig
     integer(kind=8) :: icage, nbtot, nbMaiT, nre
-    parameter(mxval1=16, nbpar1=18)
-    parameter(mxval2=25, nbpar2=27)
+    integer(kind=8), parameter :: nbValeR1 = 16, nbValeR2 = 25
+    integer(kind=8) :: nbValeR
     real(kind=8) :: zero, orig(3), r8b
-    character(len=8) :: k8b, noma, lpain(16), lpaout(5), typarr(nbpar2), valk(2)
-    character(len=16) :: noparr(nbpar2)
-    character(len=19) :: chelem, chdef
-    character(len=24) :: lchin(16), lchout(1), mlggma, valk2(2)
-    character(len=24) :: chgeom, chgeo2, chcara(18), chharm, ligrel
+    character(len=8) :: k8b, mesh, valk(2)
+    character(len=19), parameter :: chelem = '&&PEMAIN.MASS_INER'
+    character(len=24), parameter :: chgeo2 = '&&PEMAIN.CH_GEOMER'
+    character(len=19) :: chdef
+    character(len=24) :: valk2(2)
+    character(len=24) :: chgeom, chharm, ligrel
     complex(kind=8) :: c16b
     real(kind=8), pointer :: trav1(:) => null()
     integer(kind=8), pointer :: v_allma(:) => null()
 !
-    data noparr/'LIEU', 'ENTITE', 'MASSE', 'CDG_X', 'CDG_Y', 'CDG_Z', &
-        'IX_G', 'IY_G', 'IZ_G', 'IXY_G', 'IXZ_G', 'IYZ_G', 'IX_PRIN_G', &
-        'IY_PRIN_G', 'IZ_PRIN_G', 'ALPHA', 'BETA', 'GAMMA', 'X_P', 'Y_P', &
-        'Z_P', 'IX_P', 'IY_P', 'IZ_P', 'IXY_P', 'IXZ_P', 'IYZ_P'/
-    data typarr/'K24', 'K8', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', &
-        'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'/
-!     ------------------------------------------------------------------
+    integer(kind=8), parameter :: nbParaResu1 = 18, nbParaResu2 = 27
+    integer(kind=8) :: nbParaResu
+    integer(kind=8), parameter :: nbParaResuMax = 27
+    character(len=16), parameter :: tablParaName(nbParaResuMax) = &
+                                    (/'LIEU     ', 'ENTITE   ', 'MASSE    ', 'CDG_X    ', &
+                                      'CDG_Y    ', 'CDG_Z    ', 'IX_G     ', 'IY_G     ', &
+                                      'IZ_G     ', 'IXY_G    ', 'IXZ_G    ', 'IYZ_G    ', &
+                                      'IX_PRIN_G', 'IY_PRIN_G', 'IZ_PRIN_G', 'ALPHA    ', &
+                                      'BETA     ', 'GAMMA    ', 'X_P      ', 'Y_P      ', &
+                                      'Z_P      ', 'IX_P     ', 'IY_P     ', 'IZ_P     ', &
+                                      'IXY_P    ', 'IXZ_P    ', 'IYZ_P    '/)
+    character(len=8), parameter :: tablParaType(nbParaResuMax) = &
+                                   (/'K24', 'K8 ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  ', 'R  ', &
+                                     'R  ', 'R  ', 'R  '/)
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
+    call infniv(ifm, niv)
+
+! - Initializations
     ibid = 0
     c16b = (0.d0, 0.d0)
-!
-! --- RECUPERATION DU NIVEAU D'IMPRESSION
-    call infniv(ifm, niv)
-!
     icage = 0
     zero = 0.0d0
     r8b = 0.0d0
-    chdef = deform
-    call mecham('MASS_INER', modele, cara, nh, chgeom, &
-                chcara, chharm, iret)
+    chdef = deformZ
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
+
+! - Check and prepare input fields
+    call mecham(option, modelZ, numeHarm, &
+                chgeom, chharm, iret)
+
     if (iret .ne. 0) goto 60
-    noma = chgeom(1:8)
-    mlggma = noma//'.GROUPEMA'
+    mesh = chgeom(1:8)
 !
-    call exlim3('MASS_INER', 'V', modele, ligrel)
-!
-!     --- CALCUL DE L'OPTION ---
-    chelem = '&&PEMAIN.MASS_INER'
+    call exlim3(option, 'V', modelZ, ligrel)
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     if (chdef .ne. ' ') then
-        chgeo2 = '&&PEMAIN.CH_GEOMER'
-        call vtgpld('CUMU', 1.d0, chgeom, chdef, 'V', &
-                    chgeo2)
-        lchin(1) = chgeo2
+        call vtgpld('CUMU', 1.d0, chgeom, chdef, 'V', chgeo2)
+        lchin(1) = chgeo2(1:19)
     else
-        lchin(1) = chgeom
+        lchin(1) = chgeom(1:19)
     end if
     lpain(2) = 'PMATERC'
-    lchin(2) = mateco
-    lpain(3) = 'PCAORIE'
-    lchin(3) = chcara(1)
-    lpain(4) = 'PCADISM'
-    lchin(4) = chcara(3)
-    lpain(5) = 'PCAGNPO'
-    lchin(5) = chcara(6)
-    lpain(6) = 'PCACOQU'
-    lchin(6) = chcara(7)
-    lpain(7) = 'PCASECT'
-    lchin(7) = chcara(8)
-    lpain(8) = 'PCAARPO'
-    lchin(8) = chcara(9)
-    lpain(9) = 'PCAGNBA'
-    lchin(9) = chcara(11)
-    lpain(10) = 'PCAGEPO'
-    lchin(10) = chcara(5)
-    lpain(11) = 'PNBSP_I'
-    lchin(11) = chcara(16)
-    lpain(12) = 'PFIBRES'
-    lchin(12) = chcara(17)
-    lpain(13) = 'PCOMPOR'
-    lchin(13) = mate(1:8)//'.COMPOR'
-    lpain(14) = 'PCAPOUF'
-    lchin(14) = chcara(13)
-    lpain(15) = 'PCINFDI'
-    lchin(15) = chcara(15)
-    lpain(16) = 'PCACABL'
-    lchin(16) = chcara(10)
-    nb = 16
-!
+    lchin(2) = materCodeZ
+    lpain(3) = 'PCOMPOR'
+    lchin(3) = materFieldZ(1:8)//'.COMPOR'
+    nbFieldIn = 3
+
+! - Add fields for structural elements
+    call setStructFields(caraElemZ, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElemZ)
+
+! - Set output field
     lpaout(1) = 'PMASSINE'
     lchout(1) = chelem
 !
-    call calcul('S', 'MASS_INER', ligrel, nb, lchin, &
-                lpain, 1, lchout, lpaout, 'V', &
-                'OUI')
-!
-    mxvale = mxval1
-    nbparr = nbpar1
-    do iocc = 1, nbocc
-        call getvr8('MASS_INER', 'ORIG_INER', iocc=iocc, nbval=0, nbret=nr)
+    call calcul('S', option, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
+
+! - Prepare list of parameters in table
+    nbValeR = nbValeR1
+    nbParaResu = nbParaResu1
+    do iFactorKeyword = 1, nbFactorKeyword
+        call getvr8(option, 'ORIG_INER', iocc=iFactorKeyword, nbval=0, nbret=nr)
         if (nr .ne. 0) then
-            mxvale = mxval2
-            nbparr = nbpar2
-            goto 20
+            nbValeR = nbValeR2
+            nbParaResu = nbParaResu2
+            exit
         end if
     end do
-20  continue
+
+! - Create output table
+    call tbcrsd(tablOutZ, 'G')
+    call tbajpa(tablOutZ, nbParaResu, tablParaName, tablParaType)
 !
-!     --- CREATION DE LA TABLE ---
-    call tbcrsd(resu, 'G')
-    call tbajpa(resu, nbparr, noparr, typarr)
-!
-    AS_ALLOCATE(vr=trav1, size=mxvale)
-    do iocc = 1, nbocc
+    AS_ALLOCATE(vr=trav1, size=nbValeR)
+    do iFactorKeyword = 1, nbFactorKeyword
         iorig = 0
-        orig(1) = zero
-        orig(2) = zero
-        orig(3) = zero
-        call getvtx('MASS_INER', 'TOUT', iocc=iocc, nbval=0, nbret=nt)
-        call getvem(noma, 'GROUP_MA', 'MASS_INER', 'GROUP_MA', iocc, &
+        orig = zero
+        call getvtx(option, 'TOUT', iocc=iFactorKeyword, nbval=0, nbret=nt)
+        call getvem(mesh, 'GROUP_MA', option, 'GROUP_MA', iFactorKeyword, &
                     0, k8b, ng)
-        call getvem(noma, 'MAILLE', 'MASS_INER', 'MAILLE', iocc, &
+        call getvem(mesh, 'MAILLE', option, 'MAILLE', iFactorKeyword, &
                     0, k8b, nm)
 
-        call getvr8('MASS_INER', 'ORIG_INER', iocc=iocc, nbval=0, nbret=nr)
+        call getvr8(option, 'ORIG_INER', iocc=iFactorKeyword, nbval=0, nbret=nr)
         if (nr .ne. 0) then
             iorig = 1
             nre = -nr
-            call getvr8('MASS_INER', 'ORIG_INER', iocc=iocc, nbval=nre, vect=orig, &
+            call getvr8(option, 'ORIG_INER', iocc=iFactorKeyword, nbval=nre, vect=orig, &
                         nbret=nr)
         end if
         if (nt .ne. 0) then
-            call pemica(chelem, mxvale, trav1, 0, [ibid], &
+            call pemica(chelem, nbValeR, trav1, 0, [ibid], &
                         orig, iorig, icage)
-            valk(1) = noma
+            valk(1) = mesh
             valk(2) = 'TOUT'
-            call tbajli(resu, nbparr, noparr, [ibid], trav1, &
+            call tbajli(tablOutZ, nbParaResu, tablParaName, [ibid], trav1, &
                         [c16b], valk, 0)
         end if
         if (ng .ne. 0) then
             nbgrma = -ng
             call wkvect('&&PEMAIN_GROUPM', 'V V K24', nbgrma, jgr)
-            call getvem(noma, 'GROUP_MA', 'MASS_INER', 'GROUP_MA', iocc, &
+            call getvem(mesh, 'GROUP_MA', option, 'GROUP_MA', iFactorKeyword, &
                         nbgrma, zk24(jgr), ng)
             valk2(2) = 'GROUP_MA'
             do ig = 1, nbgrma
-                call jeexin(jexnom(mlggma, zk24(jgr+ig-1)), iret)
+                call jeexin(jexnom(mesh//'.GROUPEMA', zk24(jgr+ig-1)), iret)
                 if (iret .eq. 0) then
                     call utmess('A', 'UTILITAI3_46', sk=zk24(jgr+ig-1))
-                    goto 30
+                    cycle
                 end if
-                call jelira(jexnom(mlggma, zk24(jgr+ig-1)), 'LONUTI', nbma)
+                call jelira(jexnom(mesh//'.GROUPEMA', zk24(jgr+ig-1)), 'LONUTI', nbma)
                 if (nbma .eq. 0) then
                     call utmess('A', 'UTILITAI3_47', sk=zk24(jgr+ig-1))
-                    goto 30
+                    cycle
                 end if
-                call jeveuo(jexnom(noma//'.GROUPEMA', zk24(jgr+ig-1)), 'L', jad)
-                call pemica(chelem, mxvale, trav1, nbma, zi(jad), &
+                call jeveuo(jexnom(mesh//'.GROUPEMA', zk24(jgr+ig-1)), 'L', jad)
+                call pemica(chelem, nbValeR, trav1, nbma, zi(jad), &
                             orig, iorig, icage)
                 valk2(1) = zk24(jgr+ig-1)
-                call tbajli(resu, nbparr, noparr, [ibid], trav1, &
+                call tbajli(tablOutZ, nbParaResu, tablParaName, [ibid], trav1, &
                             [c16b], valk2, 0)
-30              continue
             end do
 !
 !
 ! --- UNION
             if (nbgrma > 1) then
-                call umalma(noma, zk24(jgr), nbgrma, v_allma, nbtot)
+                call umalma(mesh, zk24(jgr), nbgrma, v_allma, nbtot)
                 ASSERT(nbtot > 0)
                 !
-                call pemica(chelem, mxvale, trav1, nbtot, v_allma, orig, iorig, icage)
+                call pemica(chelem, nbValeR, trav1, nbtot, v_allma, orig, iorig, icage)
                 valk2(1) = "UNION_GROUP_MA"
-                call tbajli(resu, nbparr, noparr, [ibid], trav1, [c16b], valk2, 0)
+                call tbajli(tablOutZ, nbParaResu, tablParaName, [ibid], trav1, [c16b], valk2, 0)
                 !
                 AS_DEALLOCATE(vi=v_allma)
             end if
@@ -232,30 +247,29 @@ subroutine pemain(resu, modele, mate, mateco, cara, nh, &
         if (nm .ne. 0) then
             nbmail = -nm
             call wkvect('&&PEMAIN_MAILLE', 'V V K8', nbmail, jma)
-            call getvem(noma, 'MAILLE', 'MASS_INER', 'MAILLE', iocc, &
+            call getvem(mesh, 'MAILLE', option, 'MAILLE', iFactorKeyword, &
                         nbmail, zk8(jma), nm)
             valk(2) = 'MAILLE'
-            call jelira(noma//'.TYPMAIL', 'LONMAX', nbMaiT)
+            call jelira(mesh//'.TYPMAIL', 'LONMAX', nbMaiT)
             do im = 1, nbmail
                 nume = char8_to_int(zk8(jma+im-1))
                 if ((nume .gt. nbMaiT) .or. (nume .le. 0)) then
                     call utmess('A', 'UTILITAI3_49', sk=zk8(jma+im-1))
-                    goto 40
+                    cycle
                 end if
-                call pemica(chelem, mxvale, trav1, 1, [nume], &
+                call pemica(chelem, nbValeR, trav1, 1, [nume], &
                             orig, iorig, icage)
                 valk(1) = zk8(jma+im-1)
-                call tbajli(resu, nbparr, noparr, [ibid], trav1, &
+                call tbajli(tablOutZ, nbParaResu, tablParaName, [ibid], trav1, &
                             [c16b], valk, 0)
-40              continue
             end do
             call jedetr('&&PEMAIN_MAILLE')
         end if
     end do
-!
-! --- MENAGE
-    call detrsd('CHAM_ELEM', '&&PEMAIN.MASS_INER')
-    call detrsd('CHAMP_GD', '&&PEMAIN.CH_GEOMER')
+
+! - MENAGE
+    call detrsd('CHAM_ELEM', chelem)
+    call detrsd('CHAMP_GD', chgeo2)
     AS_DEALLOCATE(vr=trav1)
 !
 60  continue

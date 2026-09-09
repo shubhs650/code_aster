@@ -501,7 +501,7 @@ class Mac3CoeurCalcul:
         """Return the loadings due to the pression of
         the vessel head"""
 
-        dicv = self.mcf[0].cree_dict_valeurs(self.mcf[0].mc_liste)
+        dicv = self.mcf[0]
         typ = dicv.get("TYPE_MAINTIEN") or "DEPL_PSC"
         force = None
         compression_init = self.fluence_cycle != 0
@@ -669,7 +669,7 @@ class Mac3CoeurCalcul:
                 NOM_CHAM="DEPL", EVAL_CHAM="MAXI_ABS", GROUP_NO="CR_BAS", NOM_CMP=("DX",)
             ),
             "NEWTON": _F(MATRICE="TANGENTE", REAC_ITER=1),
-            "CONVERGENCE": _F(ITER_GLOB_MAXI=10, RESI_GLOB_MAXI=1.0e-2, RESI_GLOB_RELA=1.0e-6),
+            "CONVERGENCE": _F(ITER_GLOB_MAXI=20, RESI_GLOB_MAXI=1.0e-2, RESI_GLOB_RELA=1.0e-6),
             "SOLVEUR": _F(METHODE="MUMPS", PRETRAITEMENTS="AUTO", NPREC=nprec),
             "ARCHIVAGE": _F(LIST_INST=self.times_arch, PRECISION=1.0e-08),
             "AFFICHAGE": _F(INFO_RESIDU="OUI"),
@@ -690,7 +690,7 @@ class Mac3CoeurCalcul:
         assert type_calc in ("LAME", "DEFORMATION")
         assert type_load in ("LOAD", "UNLOAD")
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><PREDICTION><%s>: Start activating %s contacts for prediction."
             % (type_calc, type_load)
         )
@@ -744,12 +744,12 @@ class Mac3CoeurCalcul:
                                 )
                             }
                         )
-                    logger.debug(
+                    logger.info(
                         "<MAC3_CALCUL><PREDICTION><%s>: Start computing intermediate result nr %d"
                         % (type_calc, i + 1)
                     )
                     last_resu = STAT_NON_LINE(**last_kws)
-                    logger.debug(
+                    logger.info(
                         "<MAC3_CALCUL><PREDICTION><%s>: Finish computing intermediate result nr %d"
                         % (type_calc, i + 1)
                     )
@@ -759,7 +759,7 @@ class Mac3CoeurCalcul:
                 break
 
             except ConvergenceError:
-                logger.debug(
+                logger.info(
                     "<MAC3_CALCUL><PREDICTION><%s>: Failed computing intermediate result"
                     % (type_calc)
                 )
@@ -788,7 +788,7 @@ class Mac3CoeurCalcul:
                 % (type_calc)
             )
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><PREDICTION><%s>: Finish activating %s contacts for prediction."
             % (type_calc, type_load)
         )
@@ -922,11 +922,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
 
         # T0 - T8
         if self.char_init:
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start Computation with an initial load."
             )
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing boundary conditions T0-T5."
             )
             loads_chin_t0_t5 = (
@@ -939,11 +939,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.rigid_load
                 + self.thyc_load[0]
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing boundary conditions T0-T5."
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T0-T5.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T0-T5.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     CHAM_MATER=self.cham_mater_free,
@@ -958,9 +958,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ETAT_INIT=_F(SIGM=self.null_sigma_field),
                 )
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T0-T5.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T0-T5.")
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing boundary conditions T5-T8."
             )
             loads_chin_t5_t8 = (
@@ -973,11 +973,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.rigid_load
                 + self.thyc_load[0]
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing boundary conditions T5-T8."
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T5-T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T5-T8.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     reuse=__RESULT,
@@ -994,9 +994,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ETAT_INIT=_F(EVOL_NOLI=__RESULT),
                 )
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T5-T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T5-T8.")
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing boundary conditions T8-Tf."
             )
             loads_chin_t8_t9 = (
@@ -1008,11 +1008,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.periodic_cond
                 + self.rigid_load
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing boundary conditions T8-Tf."
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T8-Tf.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Start computing evolution T8-Tf.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     reuse=__RESULT,
@@ -1026,17 +1026,17 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     COMPORTEMENT=self.char_ini_comp,
                 )
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T8-Tf.")
-            logger.debug(
+            logger.info("<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish computing evolution T8-Tf.")
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><CHAR_INIT>: Finish Computation with an initial load."
             )
 
         elif self._dilat_only:
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Start Computation with dilatation only."
             )
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Start computing boundary conditions."
             )
             loads_donly1 = (
@@ -1048,11 +1048,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.periodic_cond
                 + self.rigid_load
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Finish computing boundary conditions."
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Start computing evolution T0-T4.")
+            logger.info("<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Start computing evolution T0-T4.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     CHAM_MATER=self.cham_mater_free,
@@ -1066,18 +1066,16 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ETAT_INIT=_F(SIGM=self.null_sigma_field),
                 )
             )
-            logger.debug(
-                "<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Finish computing evolution T0-T4."
-            )
+            logger.info("<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Finish computing evolution T0-T4.")
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION><DILAT_ONLY>: Finish Computation with dilatation only."
             )
 
         else:
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start Computation.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start Computation.")
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T0-T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T0-T8.")
             loads_def_t0_t8 = (
                 self.archimede_load
                 + self.gravity_load
@@ -1089,11 +1087,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.thyc_load[0]
                 + self.thyc_load[1]
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T0-T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T0-T8.")
 
             __RESULT = None
             if not self.etat_init:
-                logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing initial state T0.")
+                logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing initial state T0.")
                 __RESULT = STAT_NON_LINE(
                     **self.snl(
                         CHAM_MATER=self.cham_mater_free,
@@ -1107,12 +1105,12 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     )
                 )
                 self.etat_init = _F(EVOL_NOLI=__RESULT)
-                logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing initial state T0.")
+                logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing initial state T0.")
 
             c_prediction = self.evaluate_contacts_prediction(
                 self.etat_init, loads_def_t0_t8, "DEFORMATION", "LOAD"
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION>: Start activation of contacts T0-T0b using prediction."
             )
 
@@ -1137,11 +1135,11 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ETAT_INIT=self.etat_init,
                 )
             )
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION>: Finish activation of contacts T0-T0b using prediction."
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing evolution T0b - T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing evolution T0b - T8.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     reuse=__RESULT,
@@ -1157,9 +1155,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ETAT_INIT=_F(EVOL_NOLI=__RESULT),
                 )
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing evolution T0b - T8.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing evolution T0b - T8.")
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T8-T8b.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T8-T8b.")
             loads_def_t8_t8b = (
                 self.archimede_load
                 + self.gravity_load
@@ -1169,9 +1167,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.periodic_cond
                 + self.rigid_load
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T8-T8b.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T8-T8b.")
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing evolution T8-T8b.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing evolution T8-T8b.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     reuse=__RESULT,
@@ -1187,9 +1185,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                     ),
                 )
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing evolution T8-T8b.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing evolution T8-T8b.")
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T8b-T9.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start computing boundary conditions T8b-T9.")
             loads_def_t8b_t9 = (
                 self.archimede_load
                 + self.gravity_load
@@ -1198,9 +1196,9 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 + self.periodic_cond
                 + self.rigid_load
             )
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T8b-T9.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish computing boundary conditions T8b-T9.")
 
-            logger.debug(
+            logger.info(
                 "<MAC3_CALCUL><DEFORMATION>: Start computing evolution T8b-T9 (vessel opening)."
             )
 
@@ -1208,7 +1206,7 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 _F(EVOL_NOLI=__RESULT), loads_def_t8b_t9, "DEFORMATION", "UNLOAD"
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Start vessel opening using prediction.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Start vessel opening using prediction.")
             __RESULT = STAT_NON_LINE(
                 **self.snl(
                     reuse=__RESULT,
@@ -1231,7 +1229,7 @@ class Mac3CoeurDeformation(Mac3CoeurCalcul):
                 )
             )
 
-            logger.debug("<MAC3_CALCUL><DEFORMATION>: Finish vessel opening using prediction.")
+            logger.info("<MAC3_CALCUL><DEFORMATION>: Finish vessel opening using prediction.")
             logger.debug(
                 "%s (%s), %s",
                 self.cham_mater_free,
@@ -1280,7 +1278,7 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
         )
         del self.mesh
         self.mesh = _mesh
-        logger.debug("<MAC3_CALCUL><LAME>: Mesh deformed inplace.")
+        logger.info("<MAC3_CALCUL><LAME>: Mesh deformed inplace.")
 
     def asseChamp(self, depl1, depl2):
         cmps = "DX DY DZ".split()
@@ -1336,7 +1334,7 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
                 ),
             ),
         )
-        logger.debug("<MAC3_CALCUL><LAME>: Output result created.")
+        logger.info("<MAC3_CALCUL><LAME>: Output result created.")
 
         if self.res_def_keyw:
             self.macro.register_result(self.res_def, self.res_def_keyw)
@@ -1357,7 +1355,7 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
         """Run the main part of the calculation"""
 
         # calcul de deformation d'apres DAMAC / T0 - T1
-        logger.debug("<MAC3_CALCUL><LAME>: Start computing boundary conditions.")
+        logger.info("<MAC3_CALCUL><LAME>: Start computing boundary conditions.")
         loads_lame_base = (
             self.archimede_load
             + self.gravity_load
@@ -1370,9 +1368,9 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
 
         loads_lame_damac = loads_lame_base + self.damac_load
         loads_lame_thyc = loads_lame_base + self.thyc_load[0] + self.thyc_load[1]
-        logger.debug("<MAC3_CALCUL><LAME>: Finish computing boundary conditions.")
+        logger.info("<MAC3_CALCUL><LAME>: Finish computing boundary conditions.")
 
-        logger.debug("<MAC3_CALCUL><LAME>: Start computing DAMAC load.")
+        logger.info("<MAC3_CALCUL><LAME>: Start computing DAMAC load.")
         snl_damac = STAT_NON_LINE(
             **self.snl_lame(
                 INCREMENT=_F(
@@ -1385,18 +1383,18 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
                 ETAT_INIT=_F(SIGM=self.null_sigma_field),
             )
         )
-        logger.debug("<MAC3_CALCUL><LAME>: Finish computing DAMAC load.")
+        logger.info("<MAC3_CALCUL><LAME>: Finish computing DAMAC load.")
 
         # Update core to force the re-computation of the BC
         self.update_coeur(snl_damac)
-        logger.debug("<MAC3_CALCUL><LAME>: Re-init core.")
+        logger.info("<MAC3_CALCUL><LAME>: Re-init core.")
 
         # On fait l'irradiation historique sur assemblages droits
         # WARNING: element characteristics and the most of the loadings must be
         # computed on the initial (not deformed) mesh
         # please keep the call to deform_mesh after the computation of keywords
 
-        logger.debug("<MAC3_CALCUL><LAME>: Start computing state at T0 (undeformed mesh).")
+        logger.info("<MAC3_CALCUL><LAME>: Start computing state at T0 (undeformed mesh).")
         snl_lame_unloaded = STAT_NON_LINE(
             **self.snl_lame(
                 INCREMENT=_F(
@@ -1406,7 +1404,7 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
                 ETAT_INIT=_F(SIGM=self.null_sigma_field),
             )
         )
-        logger.debug("<MAC3_CALCUL><LAME>: Finish computing state at T0 (undeformed mesh).")
+        logger.info("<MAC3_CALCUL><LAME>: Finish computing state at T0 (undeformed mesh).")
 
         # On deforme le maillage
         depl_t1 = snl_damac.getField(
@@ -1414,13 +1412,13 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
         )
 
         self.deform_mesh_inplace(depl_t1)
-        logger.debug("<MAC3_CALCUL><LAME>: Mesh is deformed.")
+        logger.info("<MAC3_CALCUL><LAME>: Mesh is deformed.")
 
         c_prediction = self.evaluate_contacts_prediction(
             _F(EVOL_NOLI=snl_lame_unloaded), loads_lame_thyc, "LAME", "LOAD"
         )
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><LAME>: Start activation of contacts T0-T0b using prediction (deformed mesh)."
         )
         snl_lame = STAT_NON_LINE(
@@ -1445,11 +1443,11 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
             )
         )
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><LAME>: Finish activation of contacts T0-T0b using prediction (deformed mesh)."
         )
 
-        logger.debug("<MAC3_CALCUL><LAME>: Start computing evolution T0b - T4 (deformed mesh)")
+        logger.info("<MAC3_CALCUL><LAME>: Start computing evolution T0b - T4 (deformed mesh)")
         snl_lame = STAT_NON_LINE(
             **self.snl_lame(
                 reuse=snl_lame,
@@ -1465,13 +1463,13 @@ class Mac3CoeurLame(Mac3CoeurCalcul):
                 ETAT_INIT=_F(EVOL_NOLI=snl_lame),
             )
         )
-        logger.debug("<MAC3_CALCUL><LAME>: Finish computing evolution T0b - T4 (deformed mesh)")
+        logger.info("<MAC3_CALCUL><LAME>: Finish computing evolution T0b - T4 (deformed mesh)")
 
         if self.calc_res_def:
             tinit = kwargs.get("tinit")
             tfin = kwargs.get("tfin")
             self.output_resdef(snl_lame, depl_t1, tinit, tfin)
-        logger.debug("<MAC3_CALCUL><LAME>: Computation done. Mesh is back undeformed.")
+        logger.info("<MAC3_CALCUL><LAME>: Computation done. Mesh is back undeformed.")
         return snl_lame
 
 
@@ -1506,24 +1504,24 @@ class Mac3CoeurEtatInitial(Mac3CoeurLame):
         tinit = self.coeur.temps_simu["T0"]
         tfin = self.coeur.temps_simu["T5"]
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><ETAT_INIT>: Start Initial LAME computation (T0 = %f, T5 = %f)"
             % (tinit, tfin)
         )
         resu_lame = super()._run(tinit=tinit, tfin=tfin)
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><ETAT_INIT>: End Initial LAME computation (T0 = %f, T5 = %f)"
             % (tinit, tfin)
         )
 
-        logger.debug("<MAC3_CALCUL><ETAT_INIT>: Setup deformation computation with initial state.")
+        logger.info("<MAC3_CALCUL><ETAT_INIT>: Setup deformation computation with initial state.")
         self.defo = Mac3CoeurDeformation(self.macro, self.args_defo, self.res_def)
 
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><ETAT_INIT>: Start the deformation computation with initial state."
         )
         resu_def = self.defo.run()
-        logger.debug(
+        logger.info(
             "<MAC3_CALCUL><ETAT_INIT>: Finish the deformation computation with initial state."
         )
 

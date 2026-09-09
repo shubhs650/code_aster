@@ -15,13 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0145(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
-! aslint: disable=W1504,W0104
+                  carcri, instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
+
 !
 ! ----------------------------------------------------------------------
 !
@@ -32,28 +33,29 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
     use beton_rag_module
     use tenseur_meca_module
     implicit none
-#include "jeveux.h"
-#include "asterf_types.h"
+!
 #include "asterc/r8t0.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/get_varc.h"
 #include "asterfort/rcexistvarc.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
-    integer(kind=8), intent(in) :: imate, ndim, kpg, ksp, icomp, nvi
-    real(kind=8), intent(in) :: crit(*), angmas(*)
+    integer(kind=8), intent(in) :: imate, ndim, kpg, ksp, nvi
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam, instap
-    real(kind=8), intent(in) :: epsm(6), deps(6), sigm(6), vim(*)
-    character(len=16), intent(in) :: compor(*), option
+    real(kind=8), intent(in) :: epsm(6), deps(6), sigm(6), vim(nvi)
+    character(len=16), intent(in) ::  option
     character(len=8), intent(in) :: typmod(*)
     character(len=*), intent(in) :: fami
-!
     integer(kind=8), intent(out) :: codret
     real(kind=8), intent(out) :: sigp(6)
-    real(kind=8), intent(out) :: vip(*)
+    real(kind=8), intent(out) :: vip(nvi)
     real(kind=8), intent(out) :: dsidep(6, 6)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -64,7 +66,7 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
     real(kind=8)        ::  depsldc(6), epsmldc(6), sigmldc(6)
 
     integer(kind=8), parameter   :: nbval = 12
-    integer(kind=8)             :: icodre(nbval)
+    integer(kind=8)             :: icodre(nbval), erre_compat_hypotheses
     character(len=16)   :: nomres(nbval)
     real(kind=8)        :: valres(nbval)
 !
@@ -96,9 +98,9 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
     param_bet_rag%instam = instam
     param_bet_rag%dtemps = instap-instam
     ! Nombre d'itérations maxi (ITER_INTE_MAXI)
-    param_bet_rag%nbdecp = int(crit(1))
+    param_bet_rag%nbdecp = int(carcri(1))
     ! Tolérance de convergence (RESI_INTE)
-    param_bet_rag%errmax = crit(3)
+    param_bet_rag%errmax = carcri(3)
     !
     param_bet_rag%rigi = rigi
     param_bet_rag%resi = resi
@@ -177,25 +179,6 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
                 6, nomres, valres, icodre, 1)
     !
     param_bet_rag%loi_integre = nint(valres(1))
-    ! protection développeur
-    ASSERT((param_bet_rag%loi_integre >= 1) .and. (param_bet_rag%loi_integre <= 3))
-    !
-    ! Si on a fait de la RAG on doit continuer à faire de la RAG
-    if (param_bet_rag%loi_integre <= 2) then
-        ! ASSERT( nint(vim(BR_VARI_LOI_INTEGRE))<=2 )
-        if (nint(vim(BR_VARI_LOI_INTEGRE)) > 2) then
-            call utmess('F', 'COMPOR3_51')
-        end if
-    end if
-    !
-    ! Si on fait de la RAG il faut les champs Temper et Sech
-    if (param_bet_rag%loi_integre == 3) then
-        ! ASSERT( param_bet_rag%issechag .and. param_bet_rag%istemper )
-        if (.not. (param_bet_rag%issechag .and. param_bet_rag%istemper)) then
-            call utmess('F', 'COMPOR3_52')
-        end if
-    end if
-    !
     mater_bet_rag%mc = valres(2)
     mater_bet_rag%siguc = valres(3)
     mater_bet_rag%mt = valres(4)
@@ -207,41 +190,56 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
         valk(1) = 'ENDO_MC ENDO_MT ENDO_DRUPRA'
         call utmess('F', 'COMPOR3_54', nk=1, valk=valk)
     end if
-    !
-    if (param_bet_rag%loi_integre == 2 .or. &
-        param_bet_rag%loi_integre == 3) then
-        nomres(1) = 'FLUA_SPH_KR'
-        nomres(2) = 'FLUA_SPH_KI'
+
+    ! si on fait au moins du fluage
+    if (param_bet_rag%loi_integre .ge. BR_LOI_FLUA_LIN) then
+        nomres(1) = 'FLUA_KAPPAI'
+        nomres(2) = 'FLUA_SPH_KR'
         nomres(3) = 'FLUA_SPH_NR'
         nomres(4) = 'FLUA_SPH_NI'
         nomres(5) = 'FLUA_DEV_KR'
-        nomres(6) = 'FLUA_DEV_KI'
-        nomres(7) = 'FLUA_DEV_NR'
-        nomres(8) = 'FLUA_DEV_NI'
+        nomres(6) = 'FLUA_DEV_NR'
+        nomres(7) = 'FLUA_DEV_NI'
         call rcvalb(fami, kpg, ksp, '+', imate, ' ', 'BETON_RAG', 0, ' ', [0.0D0], &
-                    8, nomres, valres, icodre, 1)
+                    7, nomres, valres, icodre, 0)
+        ! On vérifie que l'utilisateur a précisé une valeur de kappa_i
+        if (icodre(1) .eq. 0) then
+            mater_bet_rag%kappa_fluage = valres(1)
+            param_bet_rag%loi_integre = param_bet_rag%loi_integre+1
+        else
+            mater_bet_rag%kappa_fluage = 1.
+        end if
         ! Fluage sphérique
-        mater_bet_rag%fluage_sph%k1 = valres(1)
-        mater_bet_rag%fluage_sph%k2 = valres(2)
-        mater_bet_rag%fluage_sph%n1 = valres(3)
-        mater_bet_rag%fluage_sph%n2 = valres(4)
+        mater_bet_rag%fluage_sph%kr = valres(2)
+        mater_bet_rag%fluage_sph%nr = valres(3)
+        mater_bet_rag%fluage_sph%ni = valres(4)
         ! Fluage déviatorique
-        mater_bet_rag%fluage_dev%k1 = valres(5)
-        mater_bet_rag%fluage_dev%k2 = valres(6)
-        mater_bet_rag%fluage_dev%n1 = valres(7)
-        mater_bet_rag%fluage_dev%n2 = valres(8)
-        ! vérification des données
-        isnogood = (valres(1) <= 0.0) .or. (valres(2) <= 0.0) &
-                   .or. (valres(5) <= 0.0) .or. (valres(6) <= 0.0)
-        isnogood = isnogood .or. (valres(3)*valres(4) <= 0.0) &
-                   .or. (valres(7)*valres(8) <= 0.0)
+        mater_bet_rag%fluage_dev%kr = valres(5)
+        mater_bet_rag%fluage_dev%nr = valres(6)
+        mater_bet_rag%fluage_dev%ni = valres(7)
+        ! vérification des données : soit ils sont tous positifs (cas normal)
+        !                            soit tous négatifs (cas spécifique de test)
+        isnogood = XOR((mater_bet_rag%kappa_fluage <= 0.0) .or. (valres(2) <= 0.0) &
+                       .or. (valres(3) <= 0.0) .or. (valres(4) <= 0.0) &
+                       .or. (valres(5) <= 0.0) .or. (valres(6) <= 0.0) &
+                       .or. (valres(7) <= 0.0) &
+                       , &
+                       (valres(2) < 0.0) &
+                       .and. (valres(3) < 0.0) .and. (valres(4) < 0.0) &
+                       .and. (valres(5) < 0.0) .and. (valres(6) < 0.0) &
+                       .and. (valres(7) < 0.0))
+        ! isnogood = (mater_bet_rag%kappa_fluage <= 0.0) .or. (valres(2) <= 0.0) &
+        !             .or. (valres(3) <= 0.0) .or. (valres(4) <= 0.0) &
+        !             .or. (valres(5) <= 0.0) .or. (valres(6) <= 0.0) &
+        !             .or. (valres(7) <= 0.0)
         if (isnogood) then
             valk(1) = 'FLUA_SPH_* FLUA_DEV_*'
             call utmess('F', 'COMPOR3_54', nk=1, valk=valk)
         end if
     end if
-    !
-    if (param_bet_rag%loi_integre == 3) then
+
+    ! Si l'utilisateur a demandé à faire de la RAG, on récupère les paramètres
+    if (param_bet_rag%loi_integre .ge. BR_LOI_RAG_FLIN) then
         nomres(1) = 'GEL_ALPHA0'
         nomres(2) = 'GEL_TREF'
         nomres(3) = 'GEL_EAR'
@@ -312,7 +310,34 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
             valk(1) = 'PW_A PW_B'
             call utmess('F', 'COMPOR3_54', nk=1, valk=valk)
         end if
+
     end if
+
+    ! protection développeur : loi_integre doit se trouver dans les valeurs acceptées
+    isnogood = (param_bet_rag%loi_integre >= BR_LOI_MECA) .and. &
+               (param_bet_rag%loi_integre <= BR_LOI_RAG_FNL)
+    ASSERT(isnogood)
+
+    ! erreur = 0 : tout va bien, pas d'erreur
+    ! erreur = 1 : si on a commencé à faire de la RAG on doit continuer à faire de la RAG
+    ! erreur = 5 : si on a commencé un calcul avec du fluage linéaire/non-linéaire, alors
+    !                   il faut continuer avec la même hypothèse
+    erre_compat_hypotheses = BR_Compat_Hypotheses_Calcul(vim, param_bet_rag%loi_integre)
+    if (erre_compat_hypotheses .eq. 1) then
+        call utmess('F', 'COMPOR3_51')
+    else if (erre_compat_hypotheses .eq. 5) then
+        call utmess('F', 'COMPOR3_55')
+    end if
+    !
+    ! Si on fait de la RAG il faut les champs Temper et Sech
+    if ((param_bet_rag%loi_integre == BR_LOI_RAG_FLIN) .or. &
+        (param_bet_rag%loi_integre == BR_LOI_RAG_FNL)) then
+        ! ASSERT( param_bet_rag%issechag .and. param_bet_rag%istemper )
+        if (.not. (param_bet_rag%issechag .and. param_bet_rag%istemper)) then
+            call utmess('F', 'COMPOR3_52')
+        end if
+    end if
+    !
     !
     if (resi) then
         depsldc = VecteurAsterVecteur(deps)
@@ -340,16 +365,16 @@ subroutine lc0145(fami, kpg, ksp, ndim, imate, &
         ! Le calcul de la matrice tangente par perturbation
         param_bet_rag%perturbation = ASTER_TRUE
         ! Le calcul ne se fait que sur la mécanique
-        param_bet_rag%loi_integre = 1
+        param_bet_rag%loi_integre = BR_LOI_MECA
         sigmldc = VecteurAsterVecteur(sigp)
         ! Perturbation des déformations
-        perturb = 1.0D-07
+        perturb = 1.0D-06
         !
         NormSigm = 10.0**(nint(log10(abs(mater_bet_rag%siguc))-3))
         ! Déformations Mécanique
         epsmeca = epsmldc+depsldc
         do ii = 1, 6
-            vperturb = 0.0d0
+            vperturb(:) = 0.0d0
             ! La perturbation est dans la direction de l'incrément de déformation
             vperturb(ii) = sign(perturb, depsldc(ii))
             call ldc_beton_rag(epsmeca, vperturb, sigmldc, vip, &

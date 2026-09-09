@@ -68,6 +68,20 @@ MAT_PARFAITE = DEFI_MATERIAU(
     CZM_FROT_MIX=_F(ADHE="PARFAITE", COHESION=COHE, COEF_FROT=FROT, PENA_LAGR_ABSO=R),
 )
 
+# To test the viscous regularisation
+MAT_VISC = DEFI_MATERIAU(
+    ELAS=_F(E=E, NU=NU),
+    CZM_FROT_MIX=_F(
+        ADHE="PARFAITE",
+        COHESION=COHE,
+        COEF_FROT=FROT,
+        PENA_LAGR_ABSO=R,
+        RIGI_REGU_VISC=KN / 1e3,
+        TAU_REGU_VISC=1e-3,
+    ),
+)
+
+
 ### >>>>>>>>>>>>>>>>>>>>
 ### Material affectation
 ### <<<<<<<<<<<<<<<<<<<<
@@ -75,6 +89,8 @@ MAT_PARFAITE = DEFI_MATERIAU(
 CM_ELAS = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=MAT_ELAS))
 
 CM_PARFAITE = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=MAT_PARFAITE))
+
+CM_VISC = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=MAT_VISC))
 
 ### >>>>>>>>>>>>>>>>>>>
 ### Boundary conditions
@@ -208,7 +224,7 @@ U_3 = STAT_NON_LINE(
     CARA_ELEM=ORIEN_FI,
     EXCIT=(_F(CHARGE=LIAISON), _F(CHARGE=TRAC_2, FONC_MULT=FCT_2)),
     COMPORTEMENT=(
-        _F(RELATION="CZM_FROT_MIX", GROUP_MA="CUBEDEG"),
+        _F(RELATION="CZM_FROT_MIX", GROUP_MA="CUBEDEG", RESI_INTE=1e-8),
         _F(RELATION="ELAS", GROUP_MA="CUBE"),
     ),
     INCREMENT=_F(LIST_INST=L_INST),
@@ -239,6 +255,53 @@ TEST_RESU(
         RESULTAT=U_3,
         NOM_CHAM="VARI_ELGA",
         NOM_CMP="V6",
+        VALE_REFE=1,
+        VALE_CALC=1,
+        GROUP_MA="CUBEDEG",
+    )
+)
+
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+### Solution for mode I with ADHE = "PARFAITE" and viscous regularisation
+### <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+U_4 = STAT_NON_LINE(
+    MODELE=MO,
+    CHAM_MATER=CM_VISC,
+    CARA_ELEM=ORIEN_FI,
+    EXCIT=(_F(CHARGE=LIAISON), _F(CHARGE=TRAC_1, FONC_MULT=FCT_1)),
+    COMPORTEMENT=(
+        _F(RELATION="CZM_FROT_MIX", GROUP_MA="CUBEDEG"),
+        _F(RELATION="ELAS", GROUP_MA="CUBE"),
+    ),
+    INCREMENT=_F(LIST_INST=L_INST),
+    SOLVEUR=_F(METHODE="MUMPS"),
+    CONVERGENCE=_F(
+        RESI_REFE_RELA=1e-6, SIGM_REFE=COHE / FROT, DEPL_REFE=COHE / FROT / KN, ITER_GLOB_MAXI=10
+    ),
+    NEWTON=_F(MATRICE="TANGENTE"),
+)
+
+TEST_RESU(
+    RESU=_F(
+        INST=1,
+        POINT=1,
+        RESULTAT=U_4,
+        NOM_CHAM="SIEF_ELGA",
+        NOM_CMP="SIGN",
+        VALE_CALC=2955103.3789281384,
+        GROUP_MA="CUBEDEG",
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        INST=1,
+        REFERENCE="ANALYTIQUE",
+        POINT=1,
+        RESULTAT=U_4,
+        NOM_CHAM="VARI_ELGA",
+        NOM_CMP="V7",
         VALE_REFE=1,
         VALE_CALC=1,
         GROUP_MA="CUBEDEG",

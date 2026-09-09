@@ -15,36 +15,36 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine ef0415(nomte)
-!     CALCUL DE EFGE_ELNO
-!     ------------------------------------------------------------------
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/cosiro.h"
+#include "asterfort/efcoq3d.h"
 #include "asterfort/jevech.h"
 #include "asterfort/jevete.h"
 #include "asterfort/utmess.h"
-#include "asterfort/efcoq3d.h"
-
+#include "jeveux.h"
 !
     character(len=16) :: nomte
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) ::  ichg
-    integer(kind=8) ::  jcara, jeffg, jgeom
-    integer(kind=8) :: lzi, lzr, nbcou
-    integer(kind=8) :: npge, npgt
-    integer(kind=8) :: nso
-
-!-----------------------------------------------------------------------
-    parameter(npge=3)
-    parameter(npgt=10)
-    integer(kind=8) ::  jmat, jnbspi
-    integer(kind=8) :: nb1, nb2, npgsr, npgsn
-
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: npge = 3
+    integer(kind=8) :: jvSiefElga, jvEfgeElno, jvGeom
+    integer(kind=8) :: lzi, lzr
+    integer(kind=8) :: jvGano
+    integer(kind=8) :: nb1, nb2, npgsr, npgsn, nso
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+!
+! --------------------------------------------------------------------------------------------------
 !
 
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
     nb1 = zi(lzi-1+1)
     nb2 = zi(lzi-1+2)
@@ -56,28 +56,32 @@ subroutine ef0415(nomte)
     else if (nomte .eq. 'MEC3TR7H') then
         nso = 3
     end if
-!
-    call jevech('PGEOMER', 'L', jgeom)
-    call jevech('PCACOQU', 'L', jcara)
-!
-!
-    call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', &
-                ichg, 'S')
-!
-    call jevech('PNBSP_I', 'L', jnbspi)
-    nbcou = zi(jnbspi-1+1)
-!
-    if (nbcou .le. 0) then
-        call utmess('F', 'ELEMENTS_12')
-    end if
 
-    call jevete('&INEL.'//nomte//'.B', ' ', jmat)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
 
-    call jevech('PEFFORR', 'E', jeffg)
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
 
-    call efcoq3d(nomte, nb1, nb2, zr(jcara), zr(jgeom), zr(lzr), &
-                 zr(ichg), zr(jmat), zr(jeffg), &
-                 nbcou, npgsn, npgsr, npge, nso, npgt)
+! - Compute global<=>local transformation (intrinsec, for COQUE_3D)
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
 
+! - Get stress
+    call cosiro(plateCara, plateOrie, &
+                'PCONTRR', 'L', 'UI', 'G', &
+                jvSiefElga)
+
+! - Get GANO matrix
+    call jevete('&INEL.'//nomte//'.B', ' ', jvGano)
+
+! - Compute EFGE_ELNO
+    call jevech('PEFFORR', 'E', jvEfgeElno)
+    call efcoq3d(plateCara, plateOrie, &
+                 nomte, nb1, nb2, &
+                 npgsn, npgsr, npge, nso, &
+                 zr(jvGeom), zr(lzr), &
+                 zr(jvSiefElga), zr(jvGano), &
+                 zr(jvEfgeElno))
 !
 end subroutine

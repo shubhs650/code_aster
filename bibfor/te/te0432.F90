@@ -17,74 +17,96 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0432(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystGrid
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/cargri.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
+#include "asterfort/lteatt.h"
 #include "asterfort/nmgrib.h"
 #include "asterfort/pmavec.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
 #include "asterfort/vecma.h"
-#include "asterfort/lteatt.h"
 #include "blas/ddot.h"
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES OPTIONS NON-LINEAIRES MECANIQUES
-!                          POUR LES GRILLES MEMBRANES EXCENTREES OU NON
-!                          EN DYNAMIQUE
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
+#include "jeveux.h"
 !
-    integer(kind=8) :: codres(2)
-    character(len=4) :: fami
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: GRILLE_MEMBRANE / GRILLE_EXCENTRE
+!
+! Elements: MASS_MECA* and M_GAMMA
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: propCode(2)
+    character(len=8), parameter :: fami = 'MASS'
     character(len=3) :: stopz
     integer(kind=8) :: nno, npg, i, imatuu, ndim, nnos, jgano
-    integer(kind=8) :: ipoids, ivf, idfde, igeom, imate
+    integer(kind=8) :: ipoids, ivf, idfde, jvGeom, jvMaterc
     integer(kind=8) :: iret, iretd, iretv
     integer(kind=8) :: kpg, n, j, kkd, m, k
     integer(kind=8) :: kk, nddl
     integer(kind=8) :: iacce, ivect, l, nvec, ivite, ifreq, iecin, idepl
-    real(kind=8) :: dff(2, 8), p(3, 6), tref
+    real(kind=8) :: dff(2, 8), p(3, 6), tempRefe
     real(kind=8) :: dir11(3), vff(8), b(6, 8), jac, rho(1)
-    real(kind=8) :: densit, vecn(3)
+    real(kind=8) :: densit
     real(kind=8) :: distn, pgl(3, 3), masdep(48)
     real(kind=8) :: aexc(3, 3, 8, 8), a(6, 6, 8, 8), coef, matv(1176)
     real(kind=8) :: matp(48, 48)
     real(kind=8) :: diag(3, 8), wgt, alfam(3), somme(3), masvit(48), ecin
     aster_logical :: lexc, ldiag
     blas_int :: b_incx, b_incy, b_n
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
     lexc = (lteatt('MODELI', 'GRC'))
     ldiag = (option(1:10) .eq. 'MASS_MECA_')
-!
-!
+
 ! - FONCTIONS DE FORMES ET POINTS DE GAUSS
-    fami = 'MASS'
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-    call rcvarc(' ', 'TEMP', 'REF', fami, 1, &
-                1, tref, iret)
-    call r8inir(8*8*6*6, 0.d0, a, 1)
-    call r8inir(8*8*3*3, 0.d0, aexc, 1)
-!
-! - PARAMETRES EN ENTREE
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
-!
+
+! - Get reference temperature
+    call rcvarc(' ', 'TEMP', 'REF', fami, 1, 1, tempRefe, iret)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    if (lexc) then
+        call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+        nddl = 6
+    else
+        nddl = 3
+    end if
+    call compCoorSystGrid(pgl, plateCara, plateOrie)
+
+! - Get input fields
+    call jevech('PMATERC', 'L', jvMaterc)
+
     if (option .eq. 'MASS_MECA') then
-!
+
     else if (option .eq. 'M_GAMMA') then
         call jevech('PACCELR', 'L', iacce)
     else if (option .eq. 'ECIN_ELEM') then
@@ -99,9 +121,8 @@ subroutine te0432(option, nomte)
             end if
         end if
     end if
-!
-! PARAMETRES EN SORTIE
-!
+
+! - Get output fields
     if (option(1:9) .eq. 'MASS_MECA') then
         call jevech('PMATUUR', 'E', imatuu)
     else if (option .eq. 'M_GAMMA') then
@@ -109,66 +130,31 @@ subroutine te0432(option, nomte)
     else if (option .eq. 'ECIN_ELEM') then
         call jevech('PENERCR', 'E', iecin)
     end if
-!
-!
-!
-!
-! - LECTURE DES CARACTERISTIQUES DE GRILLE ET
-!   CALCUL DE LA DIRECTION D'ARMATURE
-!
-    call cargri(lexc, densit, distn, dir11)
-!
-!
-! --- SI EXCENTREE : RECUPERATION DE LA NORMALE ET DE L'EXCENTREMENT
-!
-    if (lexc) then
-!
-        if (nomte .eq. 'MEGCTR3') then
-            call dxtpgl(zr(igeom), pgl)
-        else if (nomte .eq. 'MEGCQU4') then
-            call dxqpgl(zr(igeom), pgl)
-        end if
-!
-        do i = 1, 3
-            vecn(i) = distn*pgl(3, i)
-        end do
-!
-        nddl = 6
-!
-    else
-!
-        nddl = 3
-!
-    end if
-!
-! - CALCUL POUR CHAQUE POINT DE GAUSS : ON CALCULE D'ABORD LA
-!      CONTRAINTE ET/OU LA RIGIDITE SI NECESSAIRE PUIS
-!      ON JOUE AVEC B
-!
+
+! - LECTURE DES CARACTERISTIQUES DE GRILLE ET CALCUL DE LA DIRECTION D'ARMATURE
+    call cargri(plateCara, plateOrie, &
+                densit, distn, dir11)
+
     wgt = 0.d0
+    a = 0.D0
+    aexc = 0.d0
     do kpg = 1, npg
-!
-! - MISE SOUS FORME DE TABLEAU DES VALEURS DES FONCTIONS DE FORME
-!   ET DES DERIVEES DE FONCTION DE FORME
-!
         do n = 1, nno
             vff(n) = zr(ivf+(kpg-1)*nno+n-1)
             dff(1, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2)
             dff(2, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2+1)
         end do
-!
-! - MASS_MECA
-!
-        call rcvalb(fami, kpg, 1, '+', zi(imate), &
+
+! ----- MASS_MECA
+        call rcvalb(fami, kpg, 1, '+', zi(jvMaterc), &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
-                    1, 'RHO', rho, codres, 1)
-!
-!
-! - CALCUL DE LA MATRICE "B" : DEPL NODAL -> EPS11 ET DU JACOBIEN
-!
-        call nmgrib(nno, zr(igeom), dff, dir11, lexc, &
-                    vecn, b, jac, p)
+                    1, 'RHO', rho, propCode, 1)
+
+! ----- CALCUL DE LA MATRICE "B" : DEPL NODAL --> EPS11 ET DU JACOBIEN
+        call nmgrib(nno, zr(jvGeom), dff, dir11, lexc, &
+                    plateOrie%gridNorm, b, jac, p)
         wgt = wgt+rho(1)*zr(ipoids+kpg-1)*jac*densit
+
 !
         do n = 1, nno
             do i = 1, n
@@ -189,7 +175,8 @@ subroutine te0432(option, nomte)
                     end do
                 end do
             end do
-            call r8inir(8*8*6*6, 0.d0, a, 1)
+
+            a = 0.d0
             do i = 1, 6
                 do j = 1, 6
                     do n = 1, nno
@@ -202,30 +189,21 @@ subroutine te0432(option, nomte)
                 end do
             end do
         end if
-!
     end do
-!
-! - RANGEMENT DES RESULTATS
-! -------------------------
+
     if (ldiag) then
-!
 !-- CALCUL DE LA TRACE EN TRANSLATION SUIVANT X
-!
-        call r8inir(3*8, 0.d0, diag, 1)
-        call r8inir(3, 0.d0, somme, 1)
+        diag = 0.d0
+        somme = 0.d0
         do i = 1, 3
             do j = 1, nno
                 somme(i) = somme(i)+a(i, i, j, j)
             end do
             alfam(i) = wgt/somme(i)
         end do
-!
-!-- CALCUL DU FACTEUR DE DIAGONALISATION
-!
-!        ALFA = WGT/TRACE
-!
+
 ! PASSAGE DU STOCKAGE RECTANGULAIRE (A) AU STOCKAGE TRIANGULAIRE (ZR)
-!
+
         do j = 1, nno
             do i = 1, 3
                 diag(i, j) = a(i, i, j, j)*alfam(i)
@@ -255,7 +233,6 @@ subroutine te0432(option, nomte)
         end if
     end if
 !
-!
     if (option(1:9) .eq. 'MASS_MECA') then
         do k = 1, nddl
             do l = 1, nddl
@@ -268,7 +245,6 @@ subroutine te0432(option, nomte)
                 end do
             end do
         end do
-!
     else if (option .eq. 'M_GAMMA' .or. option .eq. 'ECIN_ELEM') then
         nvec = nddl*nno*(nddl*nno+1)/2
         do k = 1, nvec
@@ -304,7 +280,6 @@ subroutine te0432(option, nomte)
             end if
             zr(iecin) = ecin
         end if
-!
     end if
 !
 end subroutine

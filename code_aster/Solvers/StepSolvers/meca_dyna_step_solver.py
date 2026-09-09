@@ -58,7 +58,7 @@ class MecaDynaStepSolver(BaseStepSolver):
     def initialize(self):
         """Initialization."""
         super().initialize()
-        self.state.primal_step = self.state.createPrimal(self.problem, 0.0)
+        self.state.deltaU = self.state.createPrimal(self.problem, 0.0)
         self.setInitialState(self.state)
 
     def setInitialState(self, initial_state):

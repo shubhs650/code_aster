@@ -15,23 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine vechmp(nomo, mate, mateco, carele, varplu, lxfem,&
-                      partps, nbin_maxi, lpain, lchin, lastin)
-        integer(kind=8) :: nbin_maxi
-        character(len=8) :: nomo
-        character(len=24) :: mate, mateco
-        character(len=24) :: carele
-        character(len=19) :: varplu
-        aster_logical :: lxfem
-        real(kind=8) :: partps(3)
-        character(len=8) :: lpain(nbin_maxi)
-        character(len=19) :: lchin(nbin_maxi)
-        integer(kind=8) :: lastin
+    subroutine vechmp(model, materField, materCode, caraElem, &
+                      varplu, lXFEM, partps, &
+                      nbFieldInMax, lpain, lchin, nbFieldIn)
+        character(len=8), intent(in) :: model
+        character(len=24), intent(in) :: materField, caraElem, materCode
+        character(len=19), intent(in) :: varplu
+        aster_logical, intent(in) :: lXFEM
+        real(kind=8), intent(in) :: partps(3)
+        integer(kind=8), intent(in) :: nbFieldInMax
+        character(len=8), intent(inout) :: lpain(nbFieldInMax)
+        character(len=19), intent(inout) :: lchin(nbFieldInMax)
+        integer(kind=8), intent(inout) :: nbFieldIn
     end subroutine vechmp
 end interface

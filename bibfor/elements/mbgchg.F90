@@ -15,33 +15,47 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine mbgchg(option, fami, nddl, nno, ncomp, kpg, imate, jvSief, &
-                  ipoids, ipesa, igeom, ivectu, vff, dff, h, alpha, beta, preten)
 !
+subroutine mbgchg(plateOrie, &
+                  option, fami, &
+                  nddl, nno, ncomp, kpg, &
+                  jvMaterc, jvSief, &
+                  ipoids, jvPesa, jvGeom, jvVect, &
+                  vff, dff, &
+                  h, preten)
+!
+    use plate_type
     implicit none
-#include "jeveux.h"
+!
+#include "asterfort/assert.h"
 #include "asterfort/jevech.h"
 #include "asterfort/mbpk2c.h"
 #include "asterfort/mbvfie.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/subaco.h"
-#include "asterfort/sumetr.h"
 #include "asterfort/subacv.h"
+#include "asterfort/sumetr.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option
-    character(len=4) :: fami
-    integer(kind=8) :: nddl, nno, ncomp
-    integer(kind=8) :: kpg
-    integer(kind=8) :: ipoids, igeom, jvSief, imate, ipesa
-    integer(kind=8) :: ivectu
-    real(kind=8) :: vff(nno), dff(2, nno), h, preten, alpha, beta
-! ----------------------------------------------------------------------
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=16), intent(in) :: option
+    character(len=8), intent(in) :: fami
+    integer(kind=8), intent(in) :: nddl, nno, ncomp
+    integer(kind=8), intent(in) :: kpg
+    integer(kind=8), intent(in) :: ipoids, jvGeom, jvMaterc, jvPesa
+    integer(kind=8), intent(in) :: jvVect, jvSief
+    real(kind=8), intent(in) :: dff(2, nno), vff(nno)
+    real(kind=8), intent(in) :: h, preten
+!
+! --------------------------------------------------------------------------------------------------
+!
 !    - FONCTION REALISEE:  CALCUL DES OPTIONS DE DE CHARGEMENT :
 !                                  - FORC_NODA
 !                                  - CHAR_MECA_PESA_R
 !                          POUR LES MEMBRANES EN GRANDES DEFORMATIONS
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  OPTION       OPTION DE CALCUL
 ! IN  FAMI         NOM DE LA FAMILLE DE POINTS DE GAUSS :
 !                  'RIGI','MASS',..
@@ -54,49 +68,50 @@ subroutine mbgchg(option, fami, nddl, nno, ncomp, kpg, imate, jvSief, &
 ! IN  IVECTU       ADRESSE DANS ZR DU TABLEAU PVECTUR
 ! IN  DFF          DERIVEE DES F. DE FORME
 ! IN  H            EPAISSEUR DE LA MEMBRANE
-! IN ALPHA, BETA   ANGLES DEF. LA BASE DE L'ÉCRITURE DES CONTRAINTES
 ! IN  PRETEN       PRECONTRAINTES
 !
 ! OUT ***          ***
-! ----------------------------------------------------------------------
 !
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbProp = 1
+    character(len=8), parameter :: propName(nbProp) = (/'RHO'/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
     integer(kind=8) :: i, n, c
     integer(kind=8) :: jvDisp
-    integer(kind=8) :: codres(2)
     real(kind=8) :: posdef(3*nno)
     real(kind=8) :: covaini(3, 3), metrini(2, 2), jacini, cnvaini(3, 2), aini(2, 2)
     real(kind=8) :: covadef(3, 3), metrdef(2, 2), jacdef, cnvadef(3, 2), adef(2, 2)
     real(kind=8) :: sigpk2(2, 2)
     real(kind=8) :: vecfie(3*nno), sighca(3), sigout(3)
-    real(kind=8) :: rho(1)
+    real(kind=8) :: rho, alpha, beta
 !
-! - FORC_NODA
+! --------------------------------------------------------------------------------------------------
+!
+    ASSERT(plateOrie%lUpdate)
+    alpha = plateOrie%alpha
+    beta = plateOrie%beta
+
     if (option .eq. 'FORC_NODA') then
         call jevech('PDEPLAR', 'L', jvDisp)
-
-!
 ! ---   CALCUL DES COORDONNEES COVARIANTES ET CONTRAVARIANTES DE LA SURFACE INITIALE
-!
-        call subaco(nno, dff, zr(igeom), covaini)
+        call subaco(nno, dff, zr(jvGeom), covaini)
         call sumetr(covaini, metrini, jacini)
         call subacv(covaini, metrini, jacini, cnvaini, aini)
 
 ! ---   CALCUL DES COORDONNEES COVARIANTES ET CONTRAVARIANTES DE LA SURFACE DEFORMEE
-!
         do n = 1, 3*nno
-            posdef(n) = zr(igeom+n-1)+zr(jvDisp+n-1)
+            posdef(n) = zr(jvGeom+n-1)+zr(jvDisp+n-1)
         end do
-
         call subaco(nno, dff, posdef, covadef)
         call sumetr(covadef, metrdef, jacdef)
         call subacv(covadef, metrdef, jacdef, cnvadef, adef)
 
 ! ---   ON EXTRAIT LES CONTRAINTES DE CAUCHY INTEGREES QUE L'ON TRANSFORME EN PKII (NON INTEGREES)
-!
         do c = 1, ncomp
             sighca(c) = zr(jvSief+(kpg-1)*ncomp+c-1)
         end do
-
         call mbpk2c(1, alpha, beta, h, covaini, jacini, jacdef, sighca, sigout)
 
         sigpk2(1, 1) = sigout(1)
@@ -114,24 +129,23 @@ subroutine mbgchg(option, fami, nddl, nno, ncomp, kpg, imate, jvSief, &
         call mbvfie(nno, kpg, dff, sigpk2, ipoids, h, covadef, vecfie)
 
 ! ---   RANGEMENT DES RESULTATS
-!
         do n = 1, 3*nno
-            zr(ivectu+n-1) = zr(ivectu+n-1)+vecfie(n)*jacini
+            zr(jvVect+n-1) = zr(jvVect+n-1)+vecfie(n)*jacini
         end do
 
-! - CHAR_MECA_PESA_R
     else if (option .eq. 'CHAR_MECA_PESA_R') then
-
-        call subaco(nno, dff, zr(igeom), covaini)
+        call subaco(nno, dff, zr(jvGeom), covaini)
         call sumetr(covaini, metrini, jacini)
 
-        call rcvalb(fami, kpg, 1, '+', zi(imate), &
+        call rcvalb(fami, kpg, 1, '+', zi(jvMaterc), &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
-                    1, 'RHO', rho, codres, 1)
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        rho = propVale(1)
         do n = 1, nno
             do i = 1, nddl
-                zr(ivectu+(n-1)*nddl+i-1) = zr(ivectu+(n-1)*nddl+i-1)+ &
-                                            rho(1)*zr(ipesa)*zr(ipesa+i)* &
+                zr(jvVect+(n-1)*nddl+i-1) = zr(jvVect+(n-1)*nddl+i-1)+ &
+                                            rho*zr(jvPesa)*zr(jvPesa+i)* &
                                             vff(n)*zr(ipoids+kpg-1)*h*jacini
             end do
         end do

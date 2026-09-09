@@ -17,21 +17,24 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine nufilg(ndim, nnod, nnop, npg, iw, &
-                  vffd, vffp, idffd, vu, vp, &
-                  geomi, typmod, option, mate, compor, &
-                  lgpg, carcri, instm, instp, ddlm, &
-                  ddld, angmas, sigm, vim, sigp, &
-                  vip, vect, matr, matsym, codret, &
+subroutine nufilg(BEHInteg, &
+                  ndim, nnod, nnop, npg, &
+                  iw, vffd, vffp, idffd, &
+                  vu, vp, &
+                  geomi, typmod, option, compor, &
+                  lgpg, carcri, instm, instp, &
+                  ddlm, ddld, &
+                  sigm, vim, sigp, vip, &
+                  vect, matr, matsym, codret, &
                   lVect, lMatr)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/dsde2d.h"
@@ -44,22 +47,23 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
 #include "blas/dcopy.h"
 #include "blas/ddot.h"
 #include "blas/dscal.h"
-#include "asterfort/Behaviour_type.h"
+#include "MeshTypes_type.h"
 !
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     aster_logical :: matsym
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8) :: ndim, nnod, nnop, npg, iw, idffd, lgpg
-    integer(kind=8) :: mate
-    integer(kind=8) :: vu(3, 27), vp(27)
+    integer(kind=8) :: vu(3, MT_NNOMAX), vp(MT_NNOMAX)
     integer(kind=8) :: codret
     real(kind=8) :: vffd(nnod, npg), vffp(nnop, npg)
     real(kind=8) :: instm, instp
-    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*), angmas(*)
+    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*)
     real(kind=8) :: sigm(2*ndim+1, npg), sigp(2*ndim+1, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
     real(kind=8) :: vect(*), matr(*)
-    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-    character(len=8), intent(in)  :: typmod(2)
-    character(len=16), intent(in)  :: compor(COMPOR_SIZE), option
+    character(len=16), intent(in) :: option
     aster_logical, intent(in) :: lVect, lMatr
 !
 ! --------------------------------------------------------------------------------------------------
@@ -84,7 +88,6 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
 ! IN  GEOMI   : COORDONEES DES NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  MATE    : MATERIAU CODE
 ! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
@@ -93,7 +96,6 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
 ! IN  INSTP   : INSTANT DE CALCUL
 ! IN  DDLM    : DEGRES DE LIBERTE A L'INSTANT PRECEDENT
 ! IN  DDLD    : INCREMENT DES DEGRES DE LIBERTE
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  SIGM    : CONTRAINTES A L'INSTANT PRECEDENT
 ! IN  VIM     : VARIABLES INTERNES A L'INSTANT PRECEDENT
 ! OUT SIGP    : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
@@ -104,9 +106,9 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = "RIGI"
-    aster_logical, parameter :: mini = ASTER_FALSE, grand = ASTER_TRUE
+    aster_logical, parameter :: mini = ASTER_FALSE, grand = ASTER_TRUE, lPlaneStress = ASTER_FALSE
     aster_logical :: axi
     aster_logical :: lCorr, lSigm, lVari
     integer(kind=8) :: kpg, nddl, ndu
@@ -114,10 +116,10 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
     integer(kind=8) :: lij(3, 3), os, kk
     integer(kind=8) :: viaja, vibjb, vuiana, vpsa, iret
     integer(kind=8) :: cod(npg)
-    real(kind=8) :: geomm(3*27), geomp(3*27), deplm(3*27), deplp(3*27)
+    real(kind=8) :: geomm(3*MT_NNOMAX), geomp(3*MT_NNOMAX), deplm(3*MT_NNOMAX), deplp(3*MT_NNOMAX)
     real(kind=8) :: r, w, wp, dffd(nnod, 4)
-    real(kind=8) :: presm(27), presd(27)
-    character(len=16) :: rela_comp
+    real(kind=8) :: presm(MT_NNOMAX), presd(MT_NNOMAX)
+    character(len=16) :: relaComp
     real(kind=8) :: pm, pd, pp
     real(kind=8) :: fPrev(3, 3), jm, ftm(3, 3), corm, epslPrev(6)
     real(kind=8) :: fCurr(3, 3), jp, ftp(3, 3), corp, epslIncr(6)
@@ -132,7 +134,6 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
     real(kind=8) :: sigtr
     real(kind=8) :: alpha, trepst
     real(kind=8) :: dsbdep(2*ndim, 2*ndim)
-    type(Behaviour_Integ) :: BEHinteg
     real(kind=8), parameter :: kr(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
     real(kind=8), parameter :: id(3, 3) = reshape((/1.d0, 0.d0, 0.d0, &
                                                     0.d0, 1.d0, 0.d0, &
@@ -171,16 +172,6 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
             matr(1:nddl*nddl) = 0.d0
         end if
     end if
-!
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
 
 ! - Extract for fields
     do na = 1, nnod
@@ -197,7 +188,7 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
     end do
 
 ! - Properties of behaviour
-    rela_comp = compor(RELA_NAME)
+    relaComp = compor(RELA_NAME)
 
 ! - Loop on Gauss points
     do kpg = 1, npg
@@ -207,7 +198,7 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
                     dffd)
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dffd, deplm, fPrev)
-!
+
 ! ----- Kinematic - Current strains
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dffd, deplp, fCurr)
@@ -216,19 +207,19 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
                     dffd)
         call nmmalu(nnod, axi, r, vffd(1, kpg), dffd, &
                     lij)
-!
+
 ! ----- Gradient
-        jm = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))-fPrev(2, 1)*(fPrev(1, &
-             &2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+fPrev(3, 1)*(fPrev(1, 2)*fPrev(2, 3)-fPrev(&
-             &1, 3)*fPrev(2, 2))
-        jp = fCurr(1, 1)*(fCurr(2, 2)*fCurr(3, 3)-fCurr(2, 3)*fCurr(3, 2))-fCurr(2, 1)*(fCurr(1, &
-             &2)*fCurr(3, 3)-fCurr(1, 3)*fCurr(3, 2))+fCurr(3, 1)*(fCurr(1, 2)*fCurr(2, 3)-fCurr(&
-             &1, 3)*fCurr(2, 2))
+        jm = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))- &
+             fPrev(2, 1)*(fPrev(1, 2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+ &
+             fPrev(3, 1)*(fPrev(1, 2)*fPrev(2, 3)-fPrev(1, 3)*fPrev(2, 2))
+        jp = fCurr(1, 1)*(fCurr(2, 2)*fCurr(3, 3)-fCurr(2, 3)*fCurr(3, 2))- &
+             fCurr(2, 1)*(fCurr(1, 2)*fCurr(3, 3)-fCurr(1, 3)*fCurr(3, 2))+ &
+             fCurr(3, 1)*(fCurr(1, 2)*fCurr(2, 3)-fCurr(1, 3)*fCurr(2, 2))
         if (jp .le. 0.d0) then
             cod(kpg) = 1
             goto 999
         end if
-!
+
 ! ----- Pressure
         b_n = to_blas_int(nnop)
         b_incx = to_blas_int(1)
@@ -239,7 +230,7 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
         b_incy = to_blas_int(1)
         pd = ddot(b_n, vffp(1, kpg), b_incx, presd, b_incy)
         pp = pm+pd
-!
+
 ! ----- CALCUL DES DEFORMATIONS ENRICHIES
         corm = (1.d0/jm)**(1.d0/3.d0)
         b_n = to_blas_int(9)
@@ -257,7 +248,7 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
         b_n = to_blas_int(9)
         b_incx = to_blas_int(1)
         call dscal(b_n, corp, ftp, b_incx)
-!
+
 ! ----- Pre-treatment of kinematic quantities
         call prelog(ndim, lgpg, vim(1, kpg), gn, lamb, &
                     logl, ftm, ftp, epslPrev, epslIncr, &
@@ -267,39 +258,47 @@ subroutine nufilg(ndim, nnod, nnop, npg, iw, &
         end if
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
-! ----- Integrator
+! ----- Compute behaviour
         cod(kpg) = 0
         dtde = 0.d0
         tlogCurr = 0.d0
         taup = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    6, epslPrev, epslIncr, 6, tlogPrev, &
-                    vim(1, kpg), option, angmas, &
-                    tlogCurr, vip(1, kpg), 36, dtde, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    6, epslPrev, epslIncr, &
+                    6, tlogPrev, &
+                    vim(1, kpg), &
+                    tlogCurr, vip(1, kpg), &
+                    36, dtde, &
+                    cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
-!
+
 ! ----- Post-treatment of sthenic quantities
-        call poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
-                    tlogCurr, ftm, lgpg, vip(1, kpg), ndim, &
-                    ftp, kpg, dtde, sigm(1, kpg), .false._1, &
-                    'RIGI', mate, instp, angmas, gn, &
+        call poslog(BEHInteg, &
+                    lCorr, lMatr, lSigm, lVari, &
+                    tlogPrev, tlogCurr, ftm, &
+                    lgpg, vip(1, kpg), ndim, &
+                    ftp, dtde, sigm(1, kpg), lPlaneStress, &
+                    instp, gn, &
                     lamb, logl, sigp(1, kpg), dsidep, pk2Prev, &
                     pk2Curr, iret)
         if (iret .eq. 1) then
             cod(kpg) = 1
             goto 999
         end if
-!
+
 ! ----- Compute "bubble" matrix
-        call tanbul(ndim, kpg, mate, rela_comp, &
-                    lVect, mini, alpha, dsbdep, trepst)
-!
+        call tanbul(BEHInteg%materPara, relaComp, &
+                    ndim, mini, &
+                    alpha, dsbdep, &
+                    lVect, trepst)
+
 ! ----- Cauchy stresses
         if (lSigm) then
             b_n = to_blas_int(2*ndim)

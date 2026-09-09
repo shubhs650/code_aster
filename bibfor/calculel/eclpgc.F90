@@ -48,6 +48,7 @@ subroutine eclpgc(ch1, ch2, ligrel, mesh2, numeEqua, &
 #include "asterfort/nbgrel.h"
 #include "asterfort/typele.h"
 #include "asterfort/utmess.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     character(len=19), intent(in) :: ch1, ch2, ligrel
@@ -301,7 +302,7 @@ subroutine eclpgc(ch1, ch2, ligrel, mesh2, numeEqua, &
                 ima = ima+1
 !
                 nbno = nbnoma(ima)
-                if (nbno .gt. 27) then
+                if (nbno .gt. MT_NNOMAX) then
                     call utmess('F', 'CALCULEL2_43')
                 end if
                 do ino = 1, nbno

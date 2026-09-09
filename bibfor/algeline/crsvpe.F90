@@ -141,8 +141,13 @@ subroutine crsvpe(motfac, solveu, kellag)
     case ('HPDDM')
         call getvtx(motfac, 'TYPE_RESOL', iocc=1, scal=typ, nbret=iret)
         ASSERT(iret .eq. 1)
-        call getvis(motfac, 'NB_MODE', iocc=1, scal=nbvp, nbret=iret)
-        ASSERT(iret .eq. 1)
+        call getvis(motfac, 'NB_MODE', iocc=1, nbval=0, nbret=iret)
+        if (-iret > 0) then
+            call getvis(motfac, 'NB_MODE', iocc=1, scal=nbvp, nbret=iret)
+            ASSERT(iret .eq. 1)
+        else
+            nbvp = -1
+        end if
         call getvr8(motfac, 'SEUIL', iocc=1, nbval=0, nbret=iret)
         if (-iret > 0) then
             call getvr8(motfac, 'SEUIL', iocc=1, scal=seuil, nbval=1, nbret=iret)

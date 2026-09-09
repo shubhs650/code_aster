@@ -15,16 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxefgv(nomte, option, xyzl, pgl, depl,&
-                      effgt)
+    subroutine dxefgv(plateCara, plateOrie, &
+                      nomte, optionZ, xyzl, pgl, depl, effgt)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         character(len=16) :: nomte
-        character(len=*) :: option
-        real(kind=8) :: xyzl(3, 1)
-        real(kind=8) :: pgl(3, 3)
+        character(len=*) :: optionZ
+        real(kind=8) :: xyzl(3, 1), pgl(3, 3)
         real(kind=8) :: depl(*)
         real(kind=8) :: effgt(*)
     end subroutine dxefgv

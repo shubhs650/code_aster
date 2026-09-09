@@ -27,7 +27,7 @@ module nmcine_line_gc_module
 contains
 
     subroutine nmcine_line_gc(fami, kpg, ksp, ndim, typmod, &
-                              imate, compor, crit, epsm, deps, &
+                              imate, relaComp, crit, epsm, deps, &
                               sigm, vim, option, sigp, vip, &
                               dsidep, iret)
         !
@@ -45,10 +45,6 @@ contains
         !   ndim        dimension de l espace (3d=3,2d=2,1d=1)
         !   typmod      type de modélisation
         !   imate       adresse du matériau code
-        !   compor      comportement de l'élément
-        !                   compor(1) = relation de comportement
-        !                   compor(2) = nb de variables internes
-        !                   compor(3) = type de déformation
         !   crit        critères  locaux
         !                   crit(1) = nombre d'itérations maxi a convergence
         !                               iter_inte_maxi == itecrel
@@ -109,7 +105,7 @@ contains
         !
         character(len=*)  :: fami
         character(len=8)  :: typmod(*)
-        character(len=16) :: compor(*), option
+        character(len=16) :: relaComp, option
         !
         ! ------------------------------------------------------------------------------------------
         !   Nom des index des variables internes pour VMIS_CINE_GC et VMIS_CINE_LINE
@@ -146,8 +142,8 @@ contains
         ! ------------------------------------------------------------------------------------------
         !
         !   Est ce que l'on est bon
-        cinegc = compor(1) (1:12) .eq. 'VMIS_CINE_GC'
-        cineli = compor(1) (1:14) .eq. 'VMIS_CINE_LINE'
+        cinegc = relaComp(1:12) .eq. 'VMIS_CINE_GC'
+        cineli = relaComp(1:14) .eq. 'VMIS_CINE_LINE'
         !
         ! index des variables internes
         if (cinegc) then
@@ -165,10 +161,7 @@ contains
             ixxm = 1; iyym = 2; izzm = 3; ixym = 4; ixzm = 5; iyzm = 6
             ivari = 7
         else
-            call utmess('F', 'ALGORITH4_50', sk=compor(1))
-            icels = 0; icelu = 0; iepsq = 0; iplas = 0; idiss = 0; iwthe = 0
-            ixxm = 0; iyym = 0; izzm = 0; ixym = 0; ixzm = 0; iyzm = 0
-            ivari = 0
+            ASSERT(ASTER_FALSE)
         end if
         ASSERT(typmod(1) .eq. 'C_PLAN')
         ASSERT(2*ndim .eq. 4)

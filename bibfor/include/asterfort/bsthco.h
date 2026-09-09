@@ -15,15 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine bsthco(nomte, bsigth, indith)
-        character(len=16) :: nomte
-        real(kind=8) :: bsigth(51)
-        aster_logical :: indith
+    subroutine bsthco(plateCara, plateOrie, &
+                      nomte, bsigth)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(out) :: bsigth(51)
     end subroutine bsthco
 end interface

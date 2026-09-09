@@ -37,6 +37,16 @@ from .logger import logger
 DEPRECATED = "__DEPRECATED__"
 
 
+def subst_vars(value: str) -> str:
+    """Return the string after substituting environment vars."""
+    if "$" in value:
+        try:
+            value = Template(value).substitute(os.environ)
+        except (KeyError, ValueError):
+            pass
+    return value
+
+
 class AbstractParameter:
     """An abstract parameter that must be subclassed to hold a typed value."""
 
@@ -120,13 +130,7 @@ class ParameterStr(AbstractParameter):
             value = " ".join([str(i) for i in value])
         if not value:
             return value
-        value = str(value)
-        if "$" in value:
-            try:
-                value = Template(value).substitute(os.environ)
-            except (KeyError, ValueError):
-                pass
-        return value
+        return subst_vars(str(value))
 
 
 class VarMixin:

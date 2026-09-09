@@ -33,20 +33,22 @@ def w_(x, y, t, nu, **kwargs):
 
 
 def drx_(x, y, **kwargs):
-    return y**3 * (y - 1) ** 3 * x**2 * (x - 1) ** 2 * (2 * x - 1)
+    return x**3 * (x - 1) ** 3 * y**2 * (y - 1) ** 2 * (2 * y - 1)
 
 
 def dry_(x, y, **kwargs):
-    return x**3 * (x - 1) ** 3 * y**2 * (y - 1) ** 2 * (2 * y - 1)
+    return -(y**3 * (y - 1) ** 3 * x**2 * (x - 1) ** 2 * (2 * x - 1))
 
 
 # Global parameters
 FINE_REFINEMENT = 6
 YOUNG = 10920.0
 POISSON = 0.3
-TOLERANCE = 1e-2  # Greater than sslp306a
+TOLERANCE = 1e-2
 
-for thickness in [0.1, 0.001]:
+variable_list = ["DZ", "DRX", "DRY"]
+
+for thickness, tolerance in zip([0.1, 0.001], [TOLERANCE, TOLERANCE]):
 
     CTE = YOUNG * thickness**3 / (12.0 * (1.0 - POISSON**2))
 
@@ -108,25 +110,30 @@ for thickness in [0.1, 0.001]:
     # ANALYTICAL COMPUTATION
 
     analytical_values = []
-    for i, (func, name) in enumerate(zip([w_, drx_, dry_], ["DZ", "DRX", "DRY"])):
+    for i, (func, variable) in enumerate(zip([w_, drx_, dry_], variable_list)):
         coords = mesh.getCoordinatesAsSimpleFieldOnNodes()
         field = func(coords.X, coords.Y, t=thickness, nu=POISSON)
-        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [name], prol_zero=True)
-        temp.setComponentValues(name, field)
+        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [variable], prol_zero=True)
+        temp.setComponentValues(variable, field)
         value = temp.toFieldOnNodes()
         analytical_values.append(value)
 
-    for i in range(len(analytical_values)):
-        difference = analytical_values[i] - numerical_values[i]
-        error = difference.norm("NORM_2")
-        if not (error <= TOLERANCE):
-            test.assertTrue(False, msg=f"{error:.3e} >> {TOLERANCE}")
+    for i, (variable, ana_val, num_val) in enumerate(
+        zip(variable_list, analytical_values, numerical_values)
+    ):
+        diff = ana_val - num_val
+        error = diff.norm("NORM_2") / ana_val.norm("NORM_2")
+        if not (error <= tolerance):
+            test.assertTrue(
+                False,
+                msg=f"{error:.3e} >> {tolerance} for {variable}. The thickness of the fine mesh is {thickness}.",
+            )
         else:
-            test.assertTrue(True)
+            test.assertTrue(True, msg=f"{error:.3e} << {tolerance} for {variable}.")
 
     # Compare deflection
     deflection_num = np.max(numerical_values[0].getValues())
     deflection_ana = w_(0.5, 0.5, thickness, POISSON)
-    test.assertAlmostEqual(deflection_ana, deflection_num, delta=0.01 * deflection_num)
+    test.assertAlmostEqual(deflection_ana, deflection_num, delta=tolerance * deflection_num)
 
 FIN()

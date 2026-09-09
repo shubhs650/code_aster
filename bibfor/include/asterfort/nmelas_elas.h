@@ -24,7 +24,7 @@ interface
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*), intent(in)      :: fami
-        character(len=8), intent(in)      :: typmod(*)
+        character(len=8), intent(in)      :: typmod(2)
         character(len=16), intent(in)     :: option
         integer(kind=8), intent(in)       :: jvMaterCode, kpg, ksp
         real(kind=8), intent(in)          :: eps(:)

@@ -221,7 +221,7 @@ def pseisc(
 
         tol = 0.01
         if nEC8.r > R * (1.0 + tol):
-            UTMESS("F", "CHARGES7_19", valr=[self.r, R, tol])
+            UTMESS("F", "CHARGES7_19", valr=[nEC8.r, R, tol])
 
         nEC8.defiReservoir(R, H, rho, N)
         nEC8.defiSeisme(Arh, Afhn, Afv, Arv, Ac1)

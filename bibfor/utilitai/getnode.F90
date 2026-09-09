@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
-                   nb_node, model, suffix, elem_excl)
+                   nb_node, modelZ_, suffixZ_, elem_excl)
 !
     implicit none
 !
@@ -38,8 +38,7 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
     character(len=1), intent(in) :: stop_void
     integer(kind=8), intent(out) :: nb_node
     character(len=24), intent(in) :: list_node
-    character(len=8), intent(in), optional :: model
-    character(len=*), intent(in), optional :: suffix
+    character(len=*), intent(in), optional :: modelZ_, suffixZ_
     aster_logical, intent(in), optional :: elem_excl
 !
 ! --------------------------------------------------------------------------------------------------
@@ -86,7 +85,7 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
     integer(kind=8), pointer :: p_list_excl(:) => null()
     integer(kind=8), pointer :: p_list_node(:) => null()
     character(len=24) :: keyword
-    character(len=8) :: model_name, suffix_name
+    character(len=8) :: model, suffix
     integer(kind=8) :: nb_mocl
     integer(kind=8) :: nb_lect, nb_excl, nb_elim
     integer(kind=8) :: nume_lect, nume_excl
@@ -103,14 +102,14 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
     nb_node = 0
     nb_lect = 0
     nb_excl = 0
-    model_name = ' '
-    suffix_name = ' '
+    model = ' '
+    suffix = ' '
     l_read_elem = .true.
-    if (present(model)) then
-        model_name = model
+    if (present(modelZ_)) then
+        model = modelZ_
     end if
-    if (present(suffix)) then
-        suffix_name = suffix
+    if (present(suffixZ_)) then
+        suffix = suffixZ_
     end if
     if (present(elem_excl)) then
         l_read_elem = .not. elem_excl
@@ -119,11 +118,11 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
 ! - Read nodes
     nb_mocl = 0
     if (l_read_elem) then
-        keyword = 'GROUP_MA'//suffix_name
+        keyword = 'GROUP_MA'//suffix
         nb_mocl = nb_mocl+1
         moclm(nb_mocl) = keyword
         typmcl(nb_mocl) = 'GROUP_MA'
-        keyword = 'MAILLE'//suffix_name
+        keyword = 'MAILLE'//suffix
         nb_mocl = nb_mocl+1
         moclm(nb_mocl) = keyword
         typmcl(nb_mocl) = 'MAILLE'
@@ -131,16 +130,16 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
     nb_mocl = nb_mocl+1
     moclm(nb_mocl) = 'TOUT'
     typmcl(nb_mocl) = 'TOUT'
-    keyword = 'GROUP_NO'//suffix_name
+    keyword = 'GROUP_NO'//suffix
     nb_mocl = nb_mocl+1
     moclm(nb_mocl) = keyword
     typmcl(nb_mocl) = 'GROUP_NO'
-    keyword = 'NOEUD'//suffix_name
+    keyword = 'NOEUD'//suffix
     nb_mocl = nb_mocl+1
     moclm(nb_mocl) = keyword
     typmcl(nb_mocl) = 'NOEUD'
     if (nb_mocl .ne. 0) then
-        call reliem(model_name, mesh, 'NU_NOEUD', keywordfact, iocc, &
+        call reliem(model, mesh, 'NU_NOEUD', keywordfact, iocc, &
                     nb_mocl, moclm, typmcl, list_lect, nb_lect)
     end if
 !
@@ -148,20 +147,20 @@ subroutine getnode(mesh, keywordfact, iocc, stop_void, list_node, &
 !
     nb_mocl = 0
     if (l_read_elem) then
-        keyword = 'SANS_GROUP_MA'//suffix_name
+        keyword = 'SANS_GROUP_MA'//suffix
         nb_mocl = nb_mocl+1
         moclm(nb_mocl) = keyword
         typmcl(nb_mocl) = 'GROUP_MA'
-        keyword = 'SANS_MAILLE'//suffix_name
+        keyword = 'SANS_MAILLE'//suffix
         nb_mocl = nb_mocl+1
         moclm(nb_mocl) = keyword
         typmcl(nb_mocl) = 'MAILLE'
     end if
-    keyword = 'SANS_GROUP_NO'//suffix_name
+    keyword = 'SANS_GROUP_NO'//suffix
     nb_mocl = nb_mocl+1
     moclm(nb_mocl) = keyword
     typmcl(nb_mocl) = 'GROUP_NO'
-    keyword = 'SANS_NOEUD'//suffix_name
+    keyword = 'SANS_NOEUD'//suffix
     nb_mocl = nb_mocl+1
     moclm(nb_mocl) = keyword
     typmcl(nb_mocl) = 'NOEUD'

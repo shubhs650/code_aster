@@ -17,7 +17,9 @@
 ! --------------------------------------------------------------------
 !
 subroutine peenca(champ, long, vr, nbmail, nummai)
+!
     implicit none
+!
 #include "jeveux.h"
 #include "asterc/r8prem.h"
 #include "asterfort/celver.h"

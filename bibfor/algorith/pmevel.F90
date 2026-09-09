@@ -22,7 +22,6 @@ subroutine pmevel(sddisc, tablType, tablIncr, &
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 #include "asterfort/eneven.h"
 #include "asterfort/getFailEvent.h"
 #include "asterfort/pmevdg.h"

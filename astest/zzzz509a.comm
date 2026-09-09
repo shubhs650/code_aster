@@ -95,8 +95,9 @@ load = AFFE_CHAR_MECA(MODELE=mo, FORCE_FACE=_F(GROUP_MA="xsup", FX=4.6))
 temp_list = [
     CREA_CHAMP(
         OPERATION="AFFE",
-        TYPE_CHAM="NOEU_TEMP_R",
+        TYPE_CHAM="ELEM_TEMP_R",
         MODELE=mo,
+        PROL_ZERO="OUI",
         AFFE=(_F(GROUP_MA=("cube", "barre", "grille"), NOM_CMP="TEMP", VALE=temp),),
     )
     for temp in (10, 110)

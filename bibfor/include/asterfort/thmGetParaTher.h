@@ -16,12 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaTher(j_mater, kpi, temp, ds_thm)
+interface
+    subroutine thmGetParaTher(temp, ds_thm)
         use THM_type
-        type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        integer(kind=8), intent(in) :: kpi
         real(kind=8), intent(in) :: temp
+        type(THM_DS), intent(inout) :: ds_thm
     end subroutine thmGetParaTher
-end interface 
+end interface

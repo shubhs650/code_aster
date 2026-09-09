@@ -1,0 +1,315 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# CYLINDRE CREUX EN INCOMPRESSIBLE (NU=0.4999)
+# SOUS PRESSION INTERNE (60 MPA) - GRANDES DEFORMATIONS
+#
+# MODELISATION : ELEMENTS MECANIQUE AXIS_HHO (TRIA6 QUAD8)
+# MAILLAGE     : ALIBABA > ASTER
+# ----------------------------------------------------------------------
+# GROUPES DE NOEUDS ET MAILLES: A B C D E F  NOEUMIA NOEUMIB  FACESUP   FACEINF
+#             BORDAB=GRNM11     FACEEF=GRMA12     FACEAE=GRMA13
+# ----------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+M0 = LIRE_MAILLAGE(FORMAT="MED")
+
+M = CREA_MAILLAGE(MAILLAGE=M0, MODI_HHO=_F(TOUT="OUI"))
+
+
+PRES = FORMULE(VALE="60.", NOM_PARA=["X", "Y"])
+PRES_0 = 0.0
+
+
+MO = AFFE_MODELE(MAILLAGE=M, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="AXIS_HHO"))
+
+MA = DEFI_MATERIAU(
+    ELAS=_F(E=200000.0, NU=0.4999, ALPHA=0.0), ECRO_LINE=_F(D_SIGM_EPSI=0.0, SY=1.0e10)
+)
+
+CM = AFFE_MATERIAU(MAILLAGE=M, AFFE=_F(TOUT="OUI", MATER=MA))
+
+CLIM = AFFE_CHAR_CINE(
+    MODELE=MO,
+    MECA_IMPO=(
+        _F(GROUP_MA="GRMA11", DY=0.0),
+        _F(GROUP_MA="GRMA12", DY=0.0),
+        _F(GROUP_MA="GRMA13", DX=6e-05),
+    ),
+)
+
+CH = AFFE_CHAR_MECA(MODELE=MO, PRES_REP=_F(GROUP_MA="GRMA14", PRES=PRES_0))
+
+L_INST1 = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=1.0, NOMBRE=1))
+
+RAMPE = DEFI_FONCTION(NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0), PROL_DROITE="CONSTANT")
+
+EVOL = STAT_NON_LINE(
+    INFO=1,
+    MODELE=MO,
+    CHAM_MATER=CM,
+    EXCIT=(_F(CHARGE=CLIM, FONC_MULT=RAMPE), _F(CHARGE=CH, FONC_MULT=RAMPE)),
+    COMPORTEMENT=_F(RELATION="VMIS_ISOT_LINE", DEFORMATION="GDEF_LOG"),
+    INCREMENT=_F(LIST_INST=L_INST1),
+    NEWTON=_F(REAC_ITER=1),
+    CONVERGENCE=_F(SIGM_REFE=60.0, EPSI_REFE=3.0e-4, RESI_REFE_RELA=1.0e-3),
+    SOLVEUR=_F(METHODE="MUMPS"),
+)
+
+EVOL = CALC_CHAMP(reuse=EVOL, RESULTAT=EVOL, CRITERES=("SIEQ_ELNO"), CONTRAINTE=("SIGM_ELNO"))
+
+
+EVOL = CALC_CHAMP(reuse=EVOL, RESULTAT=EVOL, CONTRAINTE="SIGM_NOEU", CRITERES="SIEQ_NOEU")
+
+
+# ---------------------------------------------------------------
+# POSTTRAITEMENT ETUDE 1
+# ---------------------------------------------------------------
+
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="HHO_DEPL",
+            NOM_CMP="DX",
+            VALE_CALC=5.9992038857894845e-05,
+            VALE_REFE=6.0e-05,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="HHO_DEPL",
+            NOM_CMP="DY",
+            VALE_CALC=-4.050914978826e-25,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="HHO_DEPL",
+            NOM_CMP="DX",
+            VALE_CALC=3.000799629731674e-05,
+            VALE_REFE=3.0e-05,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-4,
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="HHO_DEPL",
+            NOM_CMP="DY",
+            VALE_CALC=-1.1360526418136e-24,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+        ),
+    )
+)
+
+# -----------------------------------------------------------------
+
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIXX",
+            VALE_CALC=-59.858944101095595,
+            VALE_REFE=-59.9955,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIYY",
+            VALE_CALC=20.02134580476737,
+            VALE_REFE=19.932600000000001,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIZZ",
+            VALE_CALC=99.90964585101284,
+            VALE_REFE=99.9566,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-4,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIXY",
+            VALE_CALC=-1.8326005394983e-13,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIXX",
+            VALE_CALC=0.018160446191639784,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+            PRECISION=3.0e-2,
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIYY",
+            VALE_CALC=20.0007760467301,
+            VALE_REFE=20.0,
+            CRITERE="RELATIF",
+            PRECISION=4.0e-5,
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIZZ",
+            VALE_CALC=39.99249412880998,
+            VALE_REFE=40.006,
+            CRITERE="RELATIF",
+            PRECISION=4.0e-4,
+        ),
+        _F(
+            GROUP_NO="F",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIXY",
+            VALE_CALC=-0.0004805093566010596,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+            PRECISION=5.0e-3,
+        ),
+    )
+)
+
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="VMIS",
+            VALE_CALC=138.36365768331044,
+            VALE_REFE=138.5226,
+            CRITERE="RELATIF",
+            PRECISION=2.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="TRESCA",
+            VALE_CALC=159.76858995210844,
+            VALE_REFE=159.9521,
+            CRITERE="RELATIF",
+            PRECISION=2.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="PRIN_1",
+            VALE_CALC=-59.858944101095595,
+            VALE_REFE=-59.9955,
+            CRITERE="RELATIF",
+            PRECISION=3.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="PRIN_2",
+            VALE_CALC=20.02134580476737,
+            VALE_REFE=19.9326,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-3,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="PRIN_3",
+            VALE_CALC=99.90964585101284,
+            VALE_REFE=99.9566,
+            CRITERE="RELATIF",
+            PRECISION=5.0e-4,
+        ),
+        _F(
+            GROUP_NO="A",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOL,
+            NOM_CHAM="SIEQ_NOEU",
+            NOM_CMP="VMIS_SG",
+            VALE_CALC=138.36365768331044,
+            VALE_REFE=138.5226,
+            CRITERE="RELATIF",
+            PRECISION=2.0e-3,
+        ),
+    )
+)
+
+FIN()

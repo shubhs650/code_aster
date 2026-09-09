@@ -42,10 +42,13 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
 #include "asterfort/affdis.h"
 #include "asterfort/assert.h"
 #include "asterfort/dismoi.h"
+#include "asterfort/elraga.h"
+#include "asterfort/elrfdf.h"
+#include "asterfort/elrfvf.h"
 #include "asterfort/getvem.h"
 #include "asterfort/getvr8.h"
+#include "asterfort/getvtx.h"
 #include "asterfort/in_liste_entier.h"
-#include "asterfort/isParallelMesh.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jelira.h"
 #include "asterfort/jemarq.h"
@@ -56,7 +59,6 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
 #include "asterfort/nocart.h"
 #include "asterfort/provec.h"
 #include "asterfort/utmess.h"
-#include "asterfort/int_to_char8.h"
 #include "blas/ddot.h"
 !&<
 ! --------------------------------------------------------------------------------------------------
@@ -73,19 +75,25 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
     data kma/'K', 'M', 'A'/
     character(len=8)  :: nomu, noma
     character(len=19) :: cart(3), cartdi
-
+!
+    aster_logical :: is_uniform, is_quadratic, is_line_or_biquad
+    integer(kind=8) :: jdme, npg, posi2, posit(9), ndim2, ipg
+    real(kind=8) :: xg(2, 9), wg(9), dff(3, 9), ff(9), ksi(2)
+    real(kind=8) :: tan_1(3), tan_2(3), jac
+    character(len=8) :: typelem, schema
+    character(len=16) :: ktyelm
+!
     integer(kind=8) :: n_groups, nbparno, ntopo
     integer(kind=8) :: j_typ, j_grma, j_no, j_grno
-    integer(kind=8) :: nb_cells, nb_nodes, i_cell, num_cell, nb_no, i_no, i_noe, posi, i_val
+    integer(kind=8) :: nb_cells, nb_nodes, i_cell, num_cell, nb_no, i_no, i_noe, i_val
     real(kind=8) :: vale(nbval)
-    real(kind=8) :: x(9), y(9), z(9), a(3), b(3), c(3), surf, surtot
+    real(kind=8) :: x(9), y(9), z(9), a(3), b(3), c(3), surf, surtot, surf_cell
     real(kind=8) :: i_x, i_y, x_g, y_g, x_p, y_p, rigi(6), mass(4)
-    character(len=8) :: typm
+    character(len=8) :: typm, method
     character(len=24) :: grma, gr_seg(nbval), gr_centre(nbval)
     character(len=24) :: magrno, magrma, manoma, matyma
     real(kind=8), pointer :: coeno(:) => null()
     integer(kind=8), pointer :: parno(:) => null()
-    real(kind=8), pointer :: surmai(:) => null()
     real(kind=8), pointer :: coord(:) => null()
     integer(kind=8), pointer :: parcell(:) => null()
     blas_int :: b_1, b_3
@@ -97,6 +105,7 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
     nomu = infdonn%nomu
     noma = infdonn%maillage
     ndim = infdonn%dimmod
+    jdme = infdonn%jmodmail
 !   Si c'est un maillage partionné ==> PLOUF
     if (infdonn%IsParaMesh) then
         call utmess('F', 'AFFECARAELEM_99', sk='RIGI_GRILLE')
@@ -133,6 +142,19 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
 !   Boucle sur les occurrences de rigi_grille
     do ioc = 1, nbocc
 !
+!       Methode UNIFORME : répartition surfacique uniforme
+!               DIAG     : répartition par intégration via les fonctions de forme
+        call getvtx('RIGI_GRILLE', 'METHODE', iocc=ioc, nbval=1, vect=method)
+        if (method(1:8) .eq. 'UNIFORME') then
+            is_uniform = ASTER_TRUE
+        else if (method(1:4) .eq. 'DIAG') then
+            is_uniform = ASTER_FALSE
+        else
+            ASSERT(ASTER_FALSE)
+        end if
+        is_quadratic = ASTER_FALSE
+        is_line_or_biquad = ASTER_FALSE
+
         call getvem(noma, 'GROUP_MA', 'RIGI_GRILLE', 'GROUP_MA', ioc, 1, grma, n_groups)
         call getvem(noma, 'GROUP_MA', 'RIGI_GRILLE', 'GROUP_MA_SEG2', ioc, nbval, gr_seg, n_groups)
         call getvem(noma, 'GROUP_NO', 'RIGI_GRILLE', 'GROUP_NO_CENTRE', ioc, nbval, gr_centre, &
@@ -155,7 +177,19 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
             if (ntopo .ne. 2) then
                 call utmess('F', 'AFFECARAELEM_26', sk=grma, ni=2, vali=[ioc, num_cell])
             end if
+            call jenuno(jexnum('&CATA.TE.NOMTE', zi(jdme-1+num_cell)), ktyelm)
+            if ((ktyelm .eq. "MEC3TR7H") .or. (ktyelm .eq. "MEC3QU9H")) then
+                call utmess('F', 'MODELISA6_39', sk='RIGI_GRILLE')
+            end if
+            if (nb_no .eq. 6 .or. nb_no .eq. 8) then
+                is_quadratic = .true.
+            else
+                is_line_or_biquad = .true.
+            end if
         end do
+        if (is_quadratic .and. is_line_or_biquad) then
+            call utmess('F', 'MODELISA6_41', sk='RIGI_GRILLE')
+        end if
 !
         b_1 = to_blas_int(1)
         b_3 = to_blas_int(3)
@@ -164,8 +198,6 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
         AS_ALLOCATE(vr=coeno, size=nb_nodes)
 !       Participation des noeuds de l interface
         AS_ALLOCATE(vi=parno, size=nb_nodes)
-!       Surfaces élémentaires de la maille
-        AS_ALLOCATE(vr=surmai, size=nb_cells)
 
         nbparno = 0
         surtot = 0.d0
@@ -176,56 +208,116 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
             do i_no = 1, nb_no
                 i_noe = zi(j_no-1+i_no)
 !               On enregistre le numéro du noeud dans parno, s'il n'y est pas déjà
-                if (.not. in_liste_entier(i_noe, parno(1:nbparno))) then
+                if (in_liste_entier(i_noe, parno(1:nbparno), posi2)) then
+                    posit(i_no) = posi2
+                else
                     nbparno = nbparno+1
+                    ASSERT(nbparno .le. nb_nodes)
                     parno(nbparno) = i_noe
+                    posit(i_no) = nbparno
                 end if
                 x(i_no) = coord(3*(i_noe-1)+1)
                 y(i_no) = coord(3*(i_noe-1)+2)
                 z(i_no) = coord(3*(i_noe-1)+3)
             end do
 !
-            a(1) = x(3)-x(1)
-            a(2) = y(3)-y(1)
-            a(3) = z(3)-z(1)
-            if (nb_no .eq. 3 .or. nb_no .eq. 6 .or. nb_no .eq. 7) then
-                b(1) = x(2)-x(1)
-                b(2) = y(2)-y(1)
-                b(3) = z(2)-z(1)
-            else if (nb_no .eq. 4 .or. nb_no .eq. 8 .or. nb_no .eq. 9) then
-                b(1) = x(4)-x(2)
-                b(2) = y(4)-y(2)
-                b(3) = z(4)-z(2)
+            if (nb_no .eq. 3) then
+                typelem = 'TR3'
+            else if (nb_no .eq. 4) then
+                typelem = 'QU4'
+            else if (nb_no .eq. 6) then
+                typelem = 'TR6'
+            else if (nb_no .eq. 8) then
+                typelem = 'QU8'
+            else if (nb_no .eq. 9) then
+                call jenuno(jexnum('&CATA.TE.NOMTE', zi(jdme-1+num_cell)), ktyelm)
+                if (ktyelm .ne. "MECA_FACE9") then
+                    call utmess('F', 'MODELISA6_40', sk='RIGI_GRILLE')
+                end if
+                typelem = 'QU9'
             else
                 ASSERT(.false.)
             end if
-            call provec(a, b, c)
-            surf = ddot(b_3, c, b_1, c, b_1)
-            surmai(i_cell) = sqrt(surf)*0.5d0
-
-            surtot = surtot+surmai(i_cell)
-!           Surface de la maille affectée à chacun des noeuds
-            surmai(i_cell) = surmai(i_cell)/nb_no
-        end do
-        nbno = nbparno
-!
-!       Calcul des pondérations élémentaires
-
-        do i_cell = 1, nb_cells
-            num_cell = zi(j_grma-1+i_cell)
-            call jelira(jexnum(manoma, num_cell), 'LONMAX', nb_no)
-            call jeveuo(jexnum(manoma, num_cell), 'L', j_no)
-            do i_no = 1, nb_no
-                i_noe = zi(j_no-1+i_no)
-!               Le noeud doit être dans parno
-                if (in_liste_entier(i_noe, parno(1:nbparno), posi)) then
-                    coeno(posi) = coeno(posi)+surmai(i_cell)/surtot
+            if (is_uniform) then
+                a(1) = x(3)-x(1)
+                a(2) = y(3)-y(1)
+                a(3) = z(3)-z(1)
+                if (nb_no .eq. 3 .or. nb_no .eq. 6) then
+                    b(1) = x(2)-x(1)
+                    b(2) = y(2)-y(1)
+                    b(3) = z(2)-z(1)
+                else if (nb_no .eq. 4 .or. nb_no .eq. 8 .or. nb_no .eq. 9) then
+                    b(1) = x(4)-x(2)
+                    b(2) = y(4)-y(2)
+                    b(3) = z(4)-z(2)
                 else
                     ASSERT(.false.)
                 end if
+                call provec(a, b, c)
+                surf_cell = ddot(b_3, c, b_1, c, b_1)
+                schema = 'NOEU'
+            else
+                if (nb_no .eq. 3) then
+                    schema = 'FPG3'
+                else if (nb_no .eq. 4) then
+                    schema = 'FPG4'
+                else if (nb_no .eq. 6) then
+                    schema = 'FPG6'
+                else if (nb_no .eq. 8 .or. nb_no .eq. 9) then
+                    schema = 'FPG9'
+                else
+                    ASSERT(.false.)
+                end if
+            end if
+
+            call elraga(typelem, schema, ndim2, npg, xg, wg)
+
+            do ipg = 1, npg
+
+                ksi = xg(:, ipg)
+                if (is_uniform) then
+                    surf = surf_cell / nb_no
+                else
+                    call elrfdf(typelem, ksi, dff)
+                    ! calcul des tangentes au point de Gauss
+                    tan_1 = 0.d0
+                    tan_2 = 0.d0
+                    do i_no = 1, nb_no
+                        tan_1(1) = tan_1(1)+dff(1, i_no)*x(i_no)
+                        tan_1(2) = tan_1(2)+dff(1, i_no)*y(i_no)
+                        tan_1(3) = tan_1(3)+dff(1, i_no)*z(i_no)
+                        tan_2(1) = tan_2(1)+dff(2, i_no)*x(i_no)
+                        tan_2(2) = tan_2(2)+dff(2, i_no)*y(i_no)
+                        tan_2(3) = tan_2(3)+dff(2, i_no)*z(i_no)
+                    end do
+
+                    ! calcul du jacobien
+                    jac = sqrt(abs(ddot(b_3, tan_1, b_1, tan_1, b_1)* &
+                                ddot(b_3, tan_2, b_1, tan_2, b_1) &
+                                -ddot(b_3, tan_1, b_1, tan_2, b_1)**2))
+
+                    surf = wg(ipg)*jac
+                end if
+
+                call elrfvf(typelem, ksi, ff)
+                ! ajout des contributions aux noeuds
+                do i_no = 1, nb_no
+                    if ((nb_no .eq. 3) .or. (nb_no .eq. 4)  .or. (nb_no .eq. 9)) then
+                        coeno(posit(i_no)) = coeno(posit(i_no))+ff(i_no)*surf
+                        surtot = surtot+ff(i_no)*surf
+                    else
+                        ! pour TR6 et QU8
+                        ! on prend la fonction de forme au carré pour éviter des contributions
+                        ! négative ou nuls
+                        coeno(posit(i_no)) = coeno(posit(i_no))+ff(i_no)*ff(i_no)*surf
+                        surtot = surtot+ff(i_no)*ff(i_no)*surf
+                    end if
+                end do
             end do
         end do
-
+        nbno = nbparno
+        coeno = coeno/surtot
+!
 !       Numeros de mailles seg2 associé à parno
         AS_ALLOCATE(vi=parcell, size=nbno)
 
@@ -317,7 +409,6 @@ subroutine acearg(nbocc, infdonn, infcarte, zjdlm)
 
         AS_DEALLOCATE(vr=coeno)
         AS_DEALLOCATE(vi=parno)
-        AS_DEALLOCATE(vr=surmai)
         AS_DEALLOCATE(vi=parcell)
 
     end do

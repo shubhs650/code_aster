@@ -55,7 +55,7 @@ subroutine te0354(option, nomte)
 !
     integer(kind=8) :: kp, iret, itemps, isour
     real(kind=8) :: valQP(MAX_QP), tg, sour, theta, coefop, dsdt
-    real(kind=8) :: resi(MAX_BS), mass(MAX_BS, MAX_BS)
+    real(kind=8) :: resi(MAX_BS_CG), mass(MAX_BS_CG, MAX_BS_CG)
     real(kind=8), pointer :: tempi(:) => null()
     aster_logical :: l_resi
 !

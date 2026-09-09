@@ -18,10 +18,10 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
+    subroutine comp_meca_read(lInitialState, prepMapCompor, model)
         use BehaviourPrepare_type
-        aster_logical, intent(in) :: l_etat_init
+        aster_logical, intent(in) :: lInitialState
         type(BehaviourPrep_MapCompor), intent(inout) :: prepMapCompor
-        character(len=8), intent(in), optional :: model
+        character(len=8), intent(in) :: model
     end subroutine comp_meca_read
 end interface

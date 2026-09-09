@@ -18,11 +18,16 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine vdxefgeElno(nomte, nodeCoor, &
-                           nbLayer, efgeElno)
+    subroutine vdxefgeElno(plateCara, plateOrie, &
+                           nomte, nodeCoor, &
+                           nbLayer, efgeElno, &
+                           matevn)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(inout) :: plateOrie
         character(len=16), intent(in) :: nomte
         real(kind=8), intent(in) :: nodeCoor(3, 9)
         integer(kind=8), intent(in) :: nbLayer
-        real(kind=8), intent(out) :: efgeElno(8, 9)
+        real(kind=8), intent(out) :: efgeElno(8, 9), matevn(2, 2, 10)
     end subroutine vdxefgeElno
 end interface

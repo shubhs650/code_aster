@@ -62,13 +62,14 @@ subroutine xrigth(ndim, elrefp, nnop, imate, itemps, &
 #include "asterfort/reeref.h"
 #include "asterfort/xcalc_code.h"
 #include "asterfort/xcalc_heav.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xcalf2.h"
 #include "asterfort/xcalfe.h"
 !-----------------------------------------------------------------------
 !
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, nnop, imate, itemps, igeom, nfh, nfe, jpintt
-    integer(kind=8) :: lonch(10), cnset(4*32), heavt(36), heavn(27, 5)
+    integer(kind=8) :: lonch(10), cnset(4*32), heavt(36), heavn(MT_NNOMAX3D, 5)
     real(kind=8) :: lsn(nnop), lst(nnop), basloc(*), mattt(*)
 !
 !-----------------------------------------------------------------------

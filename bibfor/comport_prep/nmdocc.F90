@@ -19,23 +19,22 @@
 subroutine nmdocc(model, chmate, lInitialState, compor, base, l_verbose)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/comp_init.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/comp_info.h"
-#include "asterfort/comp_meca_info.h"
+#include "asterfort/comp_init.h"
 #include "asterfort/comp_meca_chck.h"
 #include "asterfort/comp_meca_cvar.h"
 #include "asterfort/comp_meca_elas.h"
 #include "asterfort/comp_meca_full.h"
+#include "asterfort/comp_meca_info.h"
 #include "asterfort/comp_meca_read.h"
 #include "asterfort/comp_meca_save.h"
 #include "asterfort/dismoi.h"
-#include "asterfort/utmess.h"
 #include "asterfort/infniv.h"
-#include "asterfort/Behaviour_type.h"
+#include "asterfort/utmess.h"
 !
     character(len=8), intent(in) :: model, chmate
     aster_logical, intent(in) :: lInitialState

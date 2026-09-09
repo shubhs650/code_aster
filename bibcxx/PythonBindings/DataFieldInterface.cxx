@@ -29,7 +29,7 @@
 
 void exportDataFieldToPython( py::module_ &mod ) {
 
-    py::class_< DataField, DataFieldPtr, DataStructure >( mod, "DataField" )
+    py::class_< DataField, DataFieldPtr, DSWithCppPickling >( mod, "DataField" )
         .def( py::init( &initFactoryPtr< DataField > ) )
         .def( py::init( &initFactoryPtr< DataField > ) )
         .def( py::init( &initFactoryPtr< DataField, std::string > ) )

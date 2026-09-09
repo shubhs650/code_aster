@@ -19,12 +19,13 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmtole(alias, nno, ndim, coorma, toleou,&
                       ksi1, ksi2, tau1, tau2, iproj)
         character(len=8) :: alias
         integer(kind=8) :: nno
         integer(kind=8) :: ndim
-        real(kind=8) :: coorma(27)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
         real(kind=8) :: toleou
         real(kind=8) :: ksi1
         real(kind=8) :: ksi2

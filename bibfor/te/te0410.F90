@@ -18,6 +18,8 @@
 !
 subroutine te0410(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
 !
 #include "asterfort/jevech.h"
@@ -41,12 +43,24 @@ subroutine te0410(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: jvNbsp, nbLayer
+    integer(kind=8)  :: jvGeom
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PNBSP_I', 'L', jvNbsp)
-    nbLayer = zi(jvNbsp)
-    call postcoq3d(option, nomte, nbLayer)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
+
+! - Compute DEGE_ELGA, DEGE_ELNO, EPSI_ELGA, SIEF_ELGA
+    call postcoq3d(plateCara, plateOrie, &
+                   option, nomte, plateCara%nbLayer)
 !
 end subroutine

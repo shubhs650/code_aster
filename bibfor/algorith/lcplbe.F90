@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1501
 !
-subroutine lcplbe(BEHinteg, &
+subroutine lcplbe(BEHInteg, &
                   toler, itmax, nmat, materf, nvi, &
                   vind, sigf, vinf, nseuil, &
                   irteti)
@@ -68,7 +68,7 @@ subroutine lcplbe(BEHinteg, &
 !       OUT VINF   :  VARIABLES INTERNES A T+DT
 !           IRTETI = 1:  CONTROLE DU REDECOUPAGE DU PAS DE TEMPS
 !       ----------------------------------------------------------------
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: nmat, nseuil
 !
     integer(kind=8) :: itmax, nprojs, nessai, osci
@@ -126,7 +126,7 @@ subroutine lcplbe(BEHinteg, &
 !
     pc = vind(1)
     pt = vind(2)
-    call betfpp(BEHinteg, &
+    call betfpp(BEHInteg, &
                 materf, nmat, pc, pt, &
                 3, fc0, ft0, dfcdlc, dftdlt, &
                 kuc, kut, ke)
@@ -165,7 +165,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)
             pt = vind(2)
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -227,7 +227,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)+dpc
             pt = vind(2)+dpt
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -339,7 +339,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)
             pt = vind(2)
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -395,7 +395,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)+dpc
             pt = vind(2)+dpt
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -504,7 +504,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)
             pt = vind(2)
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -567,7 +567,7 @@ subroutine lcplbe(BEHinteg, &
 !
             pc = vind(1)+dpc
             pt = vind(2)+dpt
-            call betfpp(BEHinteg, &
+            call betfpp(BEHInteg, &
                         materf, nmat, pc, pt, &
                         nessai, fc, ft, dfcdlc, dftdlt, &
                         kuc, kut, ke)
@@ -671,7 +671,7 @@ subroutine lcplbe(BEHinteg, &
         ftrac1 = zero
         pc = vind(1)
         pt = vind(2)
-        call betfpp(BEHinteg, &
+        call betfpp(BEHInteg, &
                     materf, nmat, pc, pt, &
                     nseuil, fc, ft, dfcdlc, dftdlt, &
                     kuc, kut, ke)
@@ -781,7 +781,7 @@ subroutine lcplbe(BEHinteg, &
 !
         pc = vind(1)+dpc
         pt = vind(2)+dpt
-        call betfpp(BEHinteg, &
+        call betfpp(BEHInteg, &
                     materf, nmat, pc, pt, &
                     nseuil, fc, ft, dfcdlc, dftdlt, &
                     kuc, kut, ke)

@@ -1348,7 +1348,7 @@ AFFE_CARA_ELEM = OPER(
         ),
         GROUP_MA=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
         TOUT=SIMP(statut="f", typ="TXM", validators=NoRepeat(), into=("OUI",)),
-        CHAM_ORIE=SIMP(statut="f", typ=(cham_no_sdaster, carte_sdaster)),
+        CHAM_ORIE=SIMP(statut="f", typ=(cham_no_sdaster, carte_sdaster, cham_elem)),
         ANGL_REP=SIMP(statut="f", typ="R", min=1, max=3, fr=tr("Un angle en 2D, 3 angles en 3D.")),
         ANGL_EULER=SIMP(
             statut="f", typ="R", min=1, max=3, fr=tr("Un angle en 2D, 3 angles en 3D.")
@@ -1499,6 +1499,7 @@ AFFE_CARA_ELEM = OPER(
         FONC_GROUP=SIMP(statut="f", typ=(fonction_sdaster, nappe_sdaster, formule), max="**"),
         COEF_GROUP=SIMP(statut="f", typ="R", max="**"),
         REPERE=SIMP(statut="f", typ="TXM", into=("LOCAL", "GLOBAL"), defaut="GLOBAL"),
+        METHODE=SIMP(statut="f", typ="TXM", into=("DIAG", "UNIFORME"), defaut="DIAG"),
         # Pour que tout reste aligné
         CARA=SIMP(
             statut="o",
@@ -1552,6 +1553,7 @@ AFFE_CARA_ELEM = OPER(
         ),
         GROUP_NO_CENTRE=SIMP(statut="o", typ=grno, min=5, max=5),
         OPTION=SIMP(statut="f", typ="TXM", into=("RIGI",), defaut="RIGI"),
+        METHODE=SIMP(statut="f", typ="TXM", into=("DIAG", "UNIFORME"), defaut="DIAG"),
         VALE=SIMP(
             statut="o",
             typ="R",

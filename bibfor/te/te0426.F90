@@ -17,141 +17,116 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0426(option, nomte)
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8vide.h"
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/sigimc.h"
 #include "asterfort/tecach.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-!.......................................................................
+    character(len=16), intent(in) :: option, nomte
 !
-!     BUT: CALCUL DES VECTEURS ELEMENTAIRES EN MECANIQUE
-!          ELEMENTS ISOPARAMETRIQUES 3D
+! --------------------------------------------------------------------------------------------------
 !
-!          OPTION : 'CHAR_MECA_EPSA_R  '
+! Elementary computation
 !
-!     ENTREES  ---> OPTION : OPTION DE CALCUL
-!              ---> NOMTE  : NOM DU TYPE ELEMENT
-!.......................................................................
+! Elements: 3D
 !
-    character(len=4) :: fami
+! Options: CHAR_MECA_EPSA
 !
-    real(kind=8) :: sigi(162), epsi(162), bsigmEner(81), angl_naut(3)
-    real(kind=8) :: instan, nharm
+! --------------------------------------------------------------------------------------------------
 !
-! ---- CARACTERISTIQUES DU TYPE D'ELEMENT :
-! ---- GEOMETRIE ET INTEGRATION
-!      ------------------------
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, idfde, igau, igeom, imate, ipoids, iret
-    integer(kind=8) :: itemps, ivectu, ivf, jgano, nbsig, ndim, nno
-    integer(kind=8) :: nnos, npg1
-    real(kind=8) :: zero
-!-----------------------------------------------------------------------
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg1, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8), parameter :: nharm = 0.d0, zero = 0.d0
+    real(kind=8) :: sigi(162), epsi(162), bsigmEner(81)
+    real(kind=8) :: time
+    integer(kind=8) :: i, idfde, kpg, jvGeom, jvMaterc, ipoids, iret
+    integer(kind=8) :: jvInstr, ivectu, ivf
+    integer(kind=8) :: npg, nbsig, ndim, nno
+    type(Material_Para) :: materPara
 !
-! ---- NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
-!      -----------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
+
+! - Initializations
     nbsig = nbsigm()
+    epsi = zero
+    sigi = zero
+    bsigmEner = zero
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Get current time
+    time = r8vide()
+    call tecach('NNO', 'PINSTR', 'L', iret, iad=jvInstr)
+    if (jvInstr .ne. 0) then
+        time = zr(jvInstr)
+    end if
+
+    do kpg = 1, npg
+! ----- Get external state variables for EPSA
+        call rcvarc(' ', 'EPSAXX', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+1), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+1) = 0.d0
 !
-! --- INITIALISATIONS :
-!     -----------------
-    zero = 0.0d0
-    instan = r8vide()
-    nharm = zero
+        call rcvarc(' ', 'EPSAYY', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+2), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+2) = 0.d0
 !
-    do i = 1, nbsig*npg1
-        epsi(i) = zero
-        sigi(i) = zero
+        call rcvarc(' ', 'EPSAZZ', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+3), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+3) = 0.d0
+!
+        call rcvarc(' ', 'EPSAXY', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+4), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+4) = 0.d0
+        epsi(nbsig*(kpg-1)+4) = 2.0*epsi(nbsig*(kpg-1)+4)
+!
+        call rcvarc(' ', 'EPSAXZ', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+5), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+5) = 0.d0
+        epsi(nbsig*(kpg-1)+5) = 2.0*epsi(nbsig*(kpg-1)+5)
+!
+        call rcvarc(' ', 'EPSAYZ', '+', 'RIGI', kpg, &
+                    1, epsi(nbsig*(kpg-1)+6), iret)
+        if (iret .eq. 1) epsi(nbsig*(kpg-1)+6) = 0.d0
+        epsi(nbsig*(kpg-1)+6) = 2.0*epsi(nbsig*(kpg-1)+6)
     end do
-!
-    do i = 1, ndim*nno
-        bsigmEner(i) = zero
-    end do
-!
-! ---- RECUPERATION DES COORDONNEES DES CONNECTIVITES
-!      ----------------------------------------------
-    call jevech('PGEOMER', 'L', igeom)
-!
-! ---- RECUPERATION DU MATERIAU
-!      ------------------------
-    call jevech('PMATERC', 'L', imate)
-!
-! ---- RECUPERATION  DES DONNEEES RELATIVES AU REPERE D'ORTHOTROPIE
-!      ------------------------------------------------------------
-    call getElemOrientation(ndim, nno, igeom, angl_naut)
-!
-! ---- RECUPERATION DE L'INSTANT
-!      -------------------------
-    call tecach('ONO', 'PINSTR', 'L', iret, iad=itemps)
-    if (itemps .ne. 0) instan = zr(itemps)
-!
-!
-! ---- CONSTRUCTION DU VECTEUR DES DEFORMATIONS ANELASTIQUES DEFINIES
-! ---- AUX POINTS D'INTEGRATION A PARTIR DES DONNEES UTILISATEUR
-! ---- + MISE AU FORMAT DES TERMES EXTRA-DIAGONAUX (COHERENT AVEC DMATMC)
-!      --------------------------------------------------------------
-!
-    do igau = 1, npg1
-        call rcvarc(' ', 'EPSAXX', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+1), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+1) = 0.d0
-!
-        call rcvarc(' ', 'EPSAYY', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+2), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+2) = 0.d0
-!
-        call rcvarc(' ', 'EPSAZZ', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+3), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+3) = 0.d0
-!
-        call rcvarc(' ', 'EPSAXY', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+4), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+4) = 0.d0
-        epsi(nbsig*(igau-1)+4) = 2.0*epsi(nbsig*(igau-1)+4)
-!
-        call rcvarc(' ', 'EPSAXZ', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+5), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+5) = 0.d0
-        epsi(nbsig*(igau-1)+5) = 2.0*epsi(nbsig*(igau-1)+5)
-!
-        call rcvarc(' ', 'EPSAYZ', '+', 'RIGI', igau, &
-                    1, epsi(nbsig*(igau-1)+6), iret)
-        if (iret .eq. 1) epsi(nbsig*(igau-1)+6) = 0.d0
-        epsi(nbsig*(igau-1)+6) = 2.0*epsi(nbsig*(igau-1)+6)
-    end do
-!
-! ---- CALCUL DU VECTEUR DES CONTRAINTES ANELASTIQUES AUX POINTS
-! ---- D'INTEGRATION
-!      -------------
-    call sigimc(fami, nno, ndim, nbsig, npg1, &
-                instan, zi(imate), angl_naut, &
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Compute initial stresses
+    call sigimc(materPara, &
+                nbsig, npg, time, &
                 epsi, sigi)
-!
-! ---- CALCUL DU VECTEUR DES FORCES DUES AUX CONTRAINTES ANELASTIQUES
-! ---- (I.E. BT*SIG_ANELASTIQUES)
-!      ----------------------
-    call bsigmc(nno, ndim, nbsig, npg1, ipoids, &
-                ivf, idfde, zr(igeom), nharm, sigi, &
+
+! - Compute CHAR_MECA_EPSA
+    call bsigmc(nno, ndim, nbsig, npg, ipoids, &
+                ivf, idfde, zr(jvGeom), nharm, sigi, &
                 bsigmEner)
-!
-! ---- RECUPERATION ET AFFECTATION DU VECTEUR EN SORTIE AVEC LE
-! ---- VECTEUR DES FORCES DUES AUX CONTRAINTES ANELASTIQUES
-!      -------------------------------------------------
+
+! - Set output
     call jevech('PVECTUR', 'E', ivectu)
-!
     do i = 1, ndim*nno
         zr(ivectu+i-1) = bsigmEner(i)
     end do
 !
-! FIN ------------------------------------------------------------------
 end subroutine

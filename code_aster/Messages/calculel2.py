@@ -188,6 +188,12 @@ Conseil :
   MACR_ECLA_PG(... NOM_CHAM=('SIEF_ELGA', 'VARI_ELGA'),
 """
     ),
+    25: _(
+        """
+POST_CHAM/EXTR_COQUE : au moins une des mailles sélectionnées n'est pas un élément de coque à sous-points.
+Utilisez GROUP_MA pour restreindre les mailles à traiter.
+"""
+    ),
     26: _(
         """
 On ne trouve pas le champ de nom %(k1)s pour le numéro d'ordre %(i1)d dans
@@ -197,6 +203,12 @@ le concept résultat fourni.
     27: _(
         """
 On ne peut pas transférer le champ sur le nouveau support car on n'a pas le modèle.
+"""
+    ),
+    28: _(
+        """
+POST_CHAM/%(k1)s : au moins une des mailles sélectionnées n'est pas un élément sur lequel l'extraction demandée peut être effectuée.
+Utilisez GROUP_MA pour restreindre les mailles à traiter.
 """
     ),
     31: _(
@@ -411,9 +423,8 @@ Conseil :
     ),
     81: _(
         """
-Erreur utilisateur :
-  Calcul de la déformation thermique d'un élément de grille.
-  On ne trouve pas de température sur le maille %(k1)s.
+Calcul de la déformation thermique d'un élément de grille.
+On ne trouve pas de température pour la maille %(i1)d.
 """
     ),
     82: _(

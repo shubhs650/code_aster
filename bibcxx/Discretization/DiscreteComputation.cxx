@@ -121,6 +121,7 @@ CalculPtr DiscreteComputation::createCalculForNonLinear( const std::string optio
     calcul->addInputField( "PGEOMER", currModel->getMesh()->getCoordinates() );
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
     calcul->addXFEMField( currModel );
     calcul->addBehaviourField( currBehaviour );

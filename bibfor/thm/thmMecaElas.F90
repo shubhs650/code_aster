@@ -16,12 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp, &
+subroutine thmMecaElas(ds_thm, lMatr, lSigm, dtemp, &
                        adcome, dimcon, &
                        deps, congep, dsdeme, ther_meca)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -31,7 +30,6 @@ subroutine thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp, &
     aster_logical, intent(in) :: lMatr, lSigm
     real(kind=8), intent(in) :: dtemp
     integer(kind=8), intent(in) :: dimcon, adcome
-    real(kind=8), intent(in) :: angl_naut(3)
     real(kind=8), intent(in) :: deps(6)
     real(kind=8), intent(inout) :: congep(dimcon)
     real(kind=8), intent(inout) :: dsdeme(6, 6)
@@ -47,10 +45,6 @@ subroutine thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp, &
 !
 ! In  ds_thm           : datastructure for THM
 ! In  typmod           : type of modelization (TYPMOD2)
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (3) Gamma - clockwise around X
 ! In  dtemp            : increment of temperature
 ! In  adcome           : adress of mechanic stress in generalized stresses vector
 ! In  dimcon           : dimension of generalized stresses vector
@@ -71,25 +65,22 @@ subroutine thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp, &
     ther_dila = 0.d0
     depstr = 0.d0
     ther_meca = 0.d0
-!
-! - Prepare strains
 
+! - Prepare strains
     depstr = deps
     do i = 4, 6
         depstr(i) = deps(i)*rac2
     end do
-!
-! - Prepare stresses
 
+! - Prepare stresses
     if (lSigm) then
         do i = 4, 6
             congep(adcome+i-1) = congep(adcome+i-1)/rac2
         end do
     end if
-!
+
 ! - Compute thermic quantities
-!
-    call thmTherElas(ds_thm, angl_naut, ther_meca, ther_dila)
+    call thmTherElas(ds_thm, ther_meca, ther_dila)
 !
 ! - Compute matrix
 !

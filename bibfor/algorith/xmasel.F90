@@ -27,8 +27,9 @@ subroutine xmasel(nnop, nfh, nfe, ddlc, igeom, &
 #include "asterfort/iselli.h"
 #include "asterfort/xmase2.h"
 #include "asterfort/xmase3.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: nnop, imate, igeom, jpmilt, jstno, ddlm, nnops
-    integer(kind=8) :: nfh, nfe, ddlc, cnset(4*32), heavt(36), lonch(10), heavn(27, 5)
+    integer(kind=8) :: nfh, nfe, ddlc, cnset(4*32), heavt(36), lonch(10), heavn(MT_NNOMAX, 5)
     real(kind=8) :: pintt(3*11), lsn(nnop)
     real(kind=8) :: lst(nnop), matuu(*), basloc(*)
 !

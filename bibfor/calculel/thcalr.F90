@@ -15,27 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
-                  resuc1, nbordr, modele, mate, cara, &
-                  nb_load)
-    implicit none
 !
-! ------------------------------------------------------------------
-! IN  NEWCAL : TRUE POUR UN NOUVEAU CONCEPT RESULTAT, FALSE SINON
-! IN  TYSD   : TYPE DU CONCEPT ATTACHE A RESUCO
-! IN  KNUM   : NOM D'OBJET DES NUMERO D'ORDRE
-! IN  KCHA   : NOM JEVEUX OU SONT STOCKEES LES CHARGES
-! IN  PHENO  : PHENOMENE (MECA,THER,ACOU)
-! IN  RESUCO : NOM DE CONCEPT RESULTAT
-! IN  RESUC1 : NOM DE CONCEPT DE LA COMMANDE CALC_ERREUR
-! IN  CONCEP : TYPE DU CONCEPT ATTACHE A RESUC1
-! IN  NBORDR : NOMBRE DE NUMERO D'ORDRE
-! IN  MODELE : NOM DU MODELE
-! IN  MATE   : NOM DU CHAMP MATERIAU
-! IN  CARA   : NOM DU CHAMP DES CARACTERISTIQUES ELEMENTAIRES
-! IN  NCHAR  : NOMBRE DE CHARGES
-! ----------------------------------------------------------------------
+subroutine thcalr(newcal, tysd, jvListStore, loadNameJv, resultIn, &
+                  resultOut, nbStore, model, materField, caraElem, &
+                  nbLoad)
+!
+    use result_module, only: rsCopyPara
+    implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/calcop.h"
@@ -53,7 +39,6 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 #include "asterfort/jerecu.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
-#include "asterfort/mecara.h"
 #include "asterfort/mecham.h"
 #include "asterfort/medom1.h"
 #include "asterfort/modopt.h"
@@ -71,101 +56,112 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 #include "asterfort/wkvect.h"
 #include "jeveux.h"
 !
-    integer(kind=8) :: nbordr, nb_load
-    integer(kind=8) :: vali
-    character(len=8) :: resuco, resuc1, modele, cara
+    integer(kind=8) :: nbStore, nbLoad
+    character(len=8) :: resultIn, resultOut, model, caraElem
     character(len=16) :: tysd
-    character(len=19) :: knum, lload_name
-    character(len=24) :: mate
+    character(len=19) :: jvListStore, loadNameJv
+    character(len=24) :: materField
     aster_logical :: newcal
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: iaux, jordr, iordr, jcha, iret1, iret, bufin1, iad
-    integer(kind=8) :: ifm, niv, linst, niveau, n2
-    integer(kind=8) :: nuord, nh, nbac, nbpa, jpa, nbpara
-    integer(kind=8) :: iadin, iadou, iopt, nbopt
-    integer(kind=8) :: jopt, j
+! IN  NEWCAL : TRUE POUR UN NOUVEAU CONCEPT RESULTAT, FALSE SINON
+! IN  TYSD   : TYPE DU CONCEPT ATTACHE A RESUCO
+! IN  KNUM   : NOM D'OBJET DES NUMERO D'ORDRE
+! IN  KCHA   : NOM JEVEUX OU SONT STOCKEES LES CHARGES
+! IN  RESUCO : NOM DE CONCEPT RESULTAT
+! IN  RESUC1 : NOM DE CONCEPT DE LA COMMANDE CALC_ERREUR
+! IN  CONCEP : TYPE DU CONCEPT ATTACHE A RESUC1
+! IN  NBORDR : NOMBRE DE NUMEROS D'ORDRE
+! IN  MODELE : NOM DU MODELE
+! IN  MATE   : NOM DU CHAMP MATERIAU
+! IN  CARA   : NOM DU CHAMP DES CARACTERISTIQUES ELEMENTAIRES
+! IN  NCHAR  : NOMBRE DE CHARGES
+!
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: zero = 0.d0
+    integer(kind=8), parameter :: numeHarm = 0
+    integer(kind=8) :: vali
+    integer(kind=8) :: iStore, numeStore, jcha, iret1, iret, bufin1, iad, numeStore0
+    integer(kind=8) :: ifm, niv, linst, niveau, nbRet
+    integer(kind=8) :: iOption, nbOption
     real(kind=8) :: valthe, insold, inst
-    character(len=4) :: type
-    character(len=6) :: nompro
-    parameter(nompro='THCALR')
-    character(len=8) :: ma, k8b
+    character(len=8) :: mesh
     character(len=8) :: psourc
     character(len=16) :: option
     character(len=19) :: cartef, nomgdf, carteh, nomgdh, cartet, nomgdt, cartes
-    character(len=19) :: nomgds, leres1
-    character(len=24) :: chcara(18), chelem, chtemm, chtemp
+    character(len=19) :: nomgds, jvResultOut
+    character(len=24) :: chelem, chtemm, chtemp
     character(len=24) :: chflum, chsour, chflup, cherre, cherrn
-    character(len=24) :: chgeom, chharm, nompar, mateco
-    character(len=24) :: lesopt
-    character(len=24) :: ligrel, ligrmo
+    character(len=24) :: chgeom, chharm, materCode
+    character(len=24), parameter :: listOptionJv = '&&THCALR.LES_OPTION'
+    character(len=24) :: ligrel, modelLigrel
     aster_logical :: evol
-    real(kind=8), parameter :: zero = 0.d0
+    integer(kind=8), pointer :: listStore(:) => null()
+    character(len=16), pointer :: listOption(:) => null()
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
     call jerecu('V')
-!
-    nh = 0
+    call infmaj()
+    call infniv(ifm, niv)
+
+! - Initializations
     chgeom = " "
     chtemp = " "
     chharm = " "
     chelem = " "
-    lesopt = '&&'//nompro//'.LES_OPTION     '
-!
-    call infmaj()
-    call infniv(ifm, niv)
-!
-    call getvtx(' ', 'OPTION', nbval=0, nbret=n2)
-    nbopt = -n2
-    call wkvect(lesopt, 'V V K16', nbopt, jopt)
-    call getvtx(' ', 'OPTION', nbval=nbopt, vect=zk16(jopt), nbret=n2)
-    call modopt(resuco, modele, lesopt, nbopt)
-    call jeveuo(lesopt, 'L', jopt)
-!
-    call jeveuo(lload_name//'.LCHA', 'L', jcha)
+    jvResultOut = resultOut
 
-    call jeveuo(knum, 'L', jordr)
-!
+! - Create list of options to compute
+    call getvtx(' ', 'OPTION', nbval=0, nbret=nbRet)
+    nbOption = -nbRet
+    call wkvect(listOptionJv, 'V V K16', nbOption, vk16=listOption)
+    call getvtx(' ', 'OPTION', nbval=nbOption, vect=listOption, nbret=nbRet)
+    call modopt(resultIn, model, listOptionJv, nbOption)
+    call jeveuo(listOptionJv, 'L', vk16=listOption)
+
+! - Access to loads
+    call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
+
+! - Access to storage
+    call jeveuo(jvListStore, 'L', vi=listStore)
+    numeStore0 = listStore(1)
+
+! - Create new datastructure
     if (newcal) then
-        call rscrsd('G', resuc1, tysd, nbordr)
+        call rscrsd('G', resultOut, tysd, nbStore)
         call titre()
     end if
-!
-    call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-!
-    call jenonu(jexnom(resuco//'           .NOVA', 'INST'), iret)
-!
-    call exlima(' ', 0, 'V', modele, ligrel)
-!
-!
-    leres1 = resuc1
-!
-!
+
+! - Copy parameters
     if (newcal) then
-        call rscrsd('G', leres1, tysd, nbordr)
-        call titre()
+        call rsCopyPara(resultIn, jvResultOut, nbStore, listStore)
     end if
 !
-    do iopt = 1, nbopt
-        option = zk16(jopt+iopt-1)
-!
-        call jeveuo(knum, 'L', jordr)
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    call exlima(' ', 0, 'V', model, ligrel)
+
+! - Process options
+    do iOption = 1, nbOption
+        option = listOption(iOption)
+        if (option .eq. ' ') goto 120
 
         if (callCalcul(option)) then
-            call calcop(option, lesopt, resuco, resuc1, knum, &
-                        nbordr, tysd, iret)
+            call calcop(option, listOptionJv, resultIn, resultOut, jvListStore, &
+                        nbStore, tysd, iret)
             if (iret .eq. 0) goto 120
         end if
+
+! ----- Get parameters
+        call medom1(model, materField, materCode, caraElem, loadNameJv, nbLoad, &
+                    resultIn, numeStore0)
+        call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
 !
-        nuord = zi(jordr)
-        call medom1(modele, mate, mateco, cara, lload_name, nb_load, resuco, nuord)
-        call jeveuo(lload_name//'.LCHA', 'L', jcha)
-!
-        call mecham(option, modele, cara, nh, chgeom, &
-                    chcara, chharm, iret)
+        call mecham(option, model, numeHarm, &
+                    chgeom, chharm, iret)
         if (iret .ne. 0) goto 190
 !
 !    ------------------------------------------------------------------
@@ -190,68 +186,60 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
             chflup = ' '
 !
 ! PREPARATION DES CALCULS D'INDICATEUR (CONNECTIVITE INVERSE, CHARGE)
-            call jeveuo(lload_name//'.LCHA', 'L', jcha)
-            call resth2(modele, ligrmo, zk8(jcha), nb_load, ma, &
+            call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
+            call resth2(model, modelLigrel, zk8(jcha), nbLoad, mesh, &
                         cartef, nomgdf, carteh, nomgdh, cartet, &
                         nomgdt, cartes, nomgds, chgeom, chsour, &
                         psourc)
 !
             if (niv .ge. 1) then
                 write (ifm, *)
-                write (ifm, *)&
-     &       '*********************************************'
+                write (ifm, *) '*********************************************'
                 write (ifm, *) '  CALCUL DE CARTES D''ERREURS EN RESIDU'
                 write (ifm, *) '       POUR LE PROBLEME THERMIQUE'
                 write (ifm, *)
                 write (ifm, *) '  OPTION DE CALCUL   ERTH_ELEM'
-                write (ifm, *) '  MODELE                ', modele
-                write (ifm, *) '  SD EVOL_THER DONNEE   ', resuco
-                write (ifm, *) '             RESULTAT   ', resuc1
+                write (ifm, *) '  MODELE                ', model
+                write (ifm, *) '  SD EVOL_THER DONNEE   ', resultIn
+                write (ifm, *) '             RESULTAT   ', resultOut
                 write (ifm, *)
-                write (ifm, *)&
-     &        '* CONTRAIREMENT AUX CALCULS THERMIQUES, POUR *'
-                write (ifm, *)&
-     &        '* UN TYPE DE CHARGEMENT DONNE, ON NE RETIENT *'
-                write (ifm, *)&
-     &        '* QUE LA DERNIERE OCCURENCE DE AFFE_CHAR_THER*'
+                write (ifm, *) '* CONTRAIREMENT AUX CALCULS THERMIQUES, POUR *'
+                write (ifm, *) '* UN TYPE DE CHARGEMENT DONNE, ON NE RETIENT *'
+                write (ifm, *) '* QUE LA DERNIERE OCCURENCE DE AFFE_CHAR_THER*'
                 write (ifm, *) '  LISTE DES CHARGEMENTS :'
-                do bufin1 = 1, nb_load
+                do bufin1 = 1, nbLoad
                     write (ifm, *) '                        ', zk8(jcha+bufin1-1)
                 end do
                 write (ifm, *) '  CL DE FLUX RETENUE      ', nomgdf
                 write (ifm, *) '  CL D''ECHANGE RETENUE    ', nomgdh
                 write (ifm, *) '  SOURCE RETENUE          ', nomgds
-                write (ifm, *) '  MATERIAU PRIS EN COMPTE ', mate(1:8)
-                write (ifm, *) '  NOMBRE DE NUMERO D''ORDRE ', nbordr
+                write (ifm, *) '  MATERIAU PRIS EN COMPTE ', materField(1:8)
+                write (ifm, *) '  NOMBRE DE NUMERO D''ORDRE ', nbStore
             end if
 !
 ! BOUCLE SUR LES PAS DE TEMPS
-            do iaux = 1, nbordr
+            do iStore = 1, nbStore
                 call jemarq()
                 call jerecu('V')
-                iordr = zi(jordr+iaux-1)
-                call medom1(modele, mate, mateco, cara, lload_name, nb_load, &
-                            resuco, iordr)
-                call mecara(cara, chcara)
+                numeStore = listStore(iStore)
+                call medom1(model, materField, materCode, caraElem, loadNameJv, nbLoad, &
+                            resultIn, numeStore)
 ! RECUPERATION DU PARM_THETA CORRESPONDANT A IORDR
-                call jenonu(jexnom(resuco//'           .NOVA', 'PARM_THETA'), iad)
+                call jenonu(jexnom(resultIn//'           .NOVA', 'PARM_THETA'), iad)
                 if (iad .eq. 0) then
                     valthe = 0.57d0
-                    call utmess('A', 'CALCULEL4_98', sk=resuco)
+                    call utmess('A', 'CALCULEL4_98', sk=resultIn)
                 else
-                    call rsadpa(resuco, 'L', 1, 'PARM_THETA', iordr, &
-                                0, sjv=iad, styp=k8b)
+                    call rsadpa(resultIn, 'L', 1, 'PARM_THETA', numeStore, 0, sjv=iad)
                     valthe = zr(iad)
                     if ((valthe .gt. 1.d0) .or. (valthe .lt. 0.d0)) then
-                        call utmess('F', 'INDICATEUR_5', sk=resuco)
+                        call utmess('F', 'INDICATEUR_5', sk=resultIn)
                     end if
                 end if
                 if (niv .ge. 1) then
-                    write (ifm, *) '   PARAM-THETA/IORDR ', valthe, iordr
-                    if (iaux .eq. nbordr) then
-                        write (ifm, *) &
-                            '*************************************'// &
-                            '*********'
+                    write (ifm, *) '   PARAM-THETA/IORDR ', valthe, numeStore
+                    if (iStore .eq. nbStore) then
+                        write (ifm, *) '**********************************************'
                         write (ifm, *)
                     end if
                 end if
@@ -259,7 +247,7 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 ! CALCUL DU CRITERE D'EVOLUTION LEVOL (TRUE=TRANSITOIRE)
 ! CAS PARTICULIER DE L'INSTANT INITIAL D'UN CALCUL TRANSITOIRE
 ! ON ESTIME SON ERREUR COMME EN STATIONNAIRE
-                if (iaux .eq. 1) then
+                if (iStore .eq. 1) then
                     evol = .false.
                 else
                     evol = .true.
@@ -269,28 +257,27 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 ! ET RESUCO('TEMP',I) POUR I=IORDR. POUR IORDR-1 ILS SONT STOCKES
 ! DANS CHFLUM/CHTEMM DEPUIS LA DERNIERE ITERATION.
 ! RESUCO = NOM USER DE LA SD DESIGNEE PAR LE MOT-CLE RESULTAT
-                call rsexc2(1, 1, resuco, 'TEMP', iordr, &
+                call rsexc2(1, 1, resultIn, 'TEMP', numeStore, &
                             chtemp, option, iret)
                 if (iret .gt. 0) then
-                    vali = iordr
+                    vali = numeStore
                     call utmess('F', 'CALCULEL6_46', si=vali)
                 end if
-                call rsexc2(1, 1, resuco, 'FLUX_ELNO', iordr, &
+                call rsexc2(1, 1, resultIn, 'FLUX_ELNO', numeStore, &
                             chflup, option, iret)
                 if (iret .gt. 0) then
-                    vali = iordr
+                    vali = numeStore
                     call utmess('F', 'CALCULEL6_47', si=vali)
                 end if
 !
 ! RECUPERATION DE L'INSTANT CORRESPONDANT A IORDR
-                call rsadpa(resuco, 'L', 1, 'INST', iordr, &
-                            0, sjv=linst, styp=k8b)
+                call rsadpa(resultIn, 'L', 1, 'INST', numeStore, 0, sjv=linst)
                 inst = zr(linst)
 !
 ! IMPRESSIONS NIVEAU 2 POUR DIAGNOSTIC...
                 if (niv .eq. 2) then
-                    write (ifm, *) nompro, ' **********'
-                    write (ifm, *) 'EVOL/I/IORDR', evol, iaux, iordr
+                    write (ifm, *) 'THCALR **********'
+                    write (ifm, *) 'EVOL/I/IORDR', evol, iStore, numeStore
                     write (ifm, *) 'INST/INSOLD', inst, insold
                     write (ifm, *) 'CHTEMM/CHTEMP', chtemm, ' / ', chtemp
                     write (ifm, *) 'CHFLUM/CHFLUP', chflum, ' / ', chflup
@@ -298,21 +285,21 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 !
 ! RECUPERATION DU NOM DU CHAMP_GD = RESUC1('ERTH_ELEM',IORDR)
 ! RESUC1 = NOM USER DE LA SD CORRESPONDANT AU RESULTAT DE CALC_ERREUR
-                call rsexc1(leres1, option, iordr, chelem)
+                call rsexc1(jvResultOut, option, numeStore, chelem)
 ! PREPARATION DES DONNEES/LANCEMENT DU CALCUL DES INDICATEURS
-                call resthe(ligrmo, evol, chtemm, chtemp, chflum, &
-                            chflup, mateco, valthe, insold, inst, &
-                            chelem, niveau, ifm, niv, ma, &
+                call resthe(modelLigrel, evol, chtemm, chtemp, chflum, &
+                            chflup, materCode, valthe, insold, inst, &
+                            chelem, niveau, ifm, niv, mesh, &
                             cartef, nomgdf, carteh, nomgdh, cartet, &
                             nomgdt, cartes, nomgds, chgeom, chsour, &
-                            psourc, iaux)
+                            psourc, iStore)
 ! CALCUL DE L'ESTIMATEUR GLOBAL
-                call erglth(chelem, inst, niveau, iordr, resuco)
+                call erglth(chelem, inst, niveau, numeStore, resultIn)
 ! NOTATION DE LA SD RESULTAT LERES1
-                call rsnoch(leres1, option, iordr)
+                call rsnoch(jvResultOut, option, numeStore)
 !
 ! INIT. POUR LE NUMERO D'ORDRE SUIVANT
-                if (nbordr .ne. 1 .and. iaux .ne. nbordr) then
+                if (nbStore .ne. 1 .and. iStore .ne. nbStore) then
                     chtemm = chtemp
                     chflum = chflup
                     insold = inst
@@ -333,66 +320,29 @@ subroutine thcalr(newcal, tysd, knum, lload_name, resuco, &
 !
         else if (option .eq. 'ERTH_ELNO') then
 !
-            do iaux = 1, nbordr
+            do iStore = 1, nbStore
                 call jemarq()
                 call jerecu('V')
-                iordr = zi(jordr+iaux-1)
+                numeStore = listStore(iStore)
 ! RECUPERATION DU NOM DU CHAMP_GD = RESUCO('ERTH_ELEM',IORDR)
-                call rsexc2(1, 1, resuco, 'ERTH_ELEM', iordr, &
+                call rsexc2(1, 1, resultIn, 'ERTH_ELEM', numeStore, &
                             cherre, option, iret1)
                 if (iret1 .gt. 0) goto 40
 ! RECUPERATION DU NOM DU CHAMP_GD = RESUC1('ERTH_ELNO',IORDR)
 ! RESUC1 = NOM USER DE LA SD CORRESPONDANT AU RESULTAT DE CALC_ERREUR
-                call rsexc1(leres1, option, iordr, cherrn)
-                call reslgn(ligrmo, option, cherre, cherrn)
+                call rsexc1(jvResultOut, option, numeStore, cherrn)
+                call reslgn(modelLigrel, option, cherre, cherrn)
 ! NOTATION DE LA SD RESULTAT LERES1
-                call rsnoch(leres1, option, iordr)
+                call rsnoch(jvResultOut, option, numeStore)
 40              continue
                 call jedema()
             end do
-!
-!    ------------------------------------------------------------------
         else
             call utmess('A', 'CALCULEL3_22', sk=option)
         end if
 !
 120     continue
     end do
-!       ====== FIN DE LA BOUCLE SUR LES OPTIONS A CALCULER =======
-!
-    if (newcal) then
-        nompar = '&&'//nompro//'.NOMS_PARA '
-        call rsnopa(resuco, 2, nompar, nbac, nbpa)
-        nbpara = nbac+nbpa
-        call jeveuo(nompar, 'L', jpa)
-        do iaux = 1, nbordr
-            iordr = zi(jordr+iaux-1)
-            do j = 1, nbpara
-                call rsadpa(resuco, 'L', 1, zk16(jpa+j-1), iordr, &
-                            1, sjv=iadin, styp=type)
-                call rsadpa(leres1, 'E', 1, zk16(jpa+j-1), iordr, &
-                            1, sjv=iadou, styp=type)
-                if (type(1:1) .eq. 'I') then
-                    zi(iadou) = zi(iadin)
-                else if (type(1:1) .eq. 'R') then
-                    zr(iadou) = zr(iadin)
-                else if (type(1:1) .eq. 'C') then
-                    zc(iadou) = zc(iadin)
-                else if (type(1:3) .eq. 'K80') then
-                    zk80(iadou) = zk80(iadin)
-                else if (type(1:3) .eq. 'K32') then
-                    zk32(iadou) = zk32(iadin)
-                else if (type(1:3) .eq. 'K24') then
-                    zk24(iadou) = zk24(iadin)
-                else if (type(1:3) .eq. 'K16') then
-                    zk16(iadou) = zk16(iadin)
-                else if (type(1:2) .eq. 'K8') then
-                    zk8(iadou) = zk8(iadin)
-                end if
-            end do
-        end do
-    end if
-!
 !
 190 continue
 !

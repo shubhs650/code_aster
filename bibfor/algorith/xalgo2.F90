@@ -32,11 +32,12 @@ subroutine xalgo2(ndim, elrefp, it, nnose, cnset, &
 #include "asterfort/xmilar.h"
 #include "asterfort/xmilfa.h"
 #include "asterfort/xstudo.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xxmmvd.h"
     character(len=8) :: typma, elrefp
     integer(kind=8) :: ndim, ndime, it, nnose, cnset(*), exit(2)
     integer(kind=8) :: ninter, pmmax, npts, nptm, nmilie, mfis, ar(12, 3)
-    real(kind=8) :: lonref, ainter(*), pmilie(*), lsnelp(27)
+    real(kind=8) :: lonref, ainter(*), pmilie(*), lsnelp(MT_NNOMAX)
     real(kind=8) :: pinref(*), pintt(*), pmitt(*), geom(81)
     aster_logical :: jonc
 !            BUT :  TROUVER LES PTS MILIEUX DANS L ELEMENT COUPE EN 2D

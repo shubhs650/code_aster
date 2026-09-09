@@ -18,22 +18,24 @@
 !
 subroutine lc0166(fami, kpg, ksp, ndim, imate, &
                   compor, carcri, instam, instap, epsm, &
-                  deps, sigm, vim, option, &
+                  deps, sigm, nvi, vim, option, &
                   sigp, vip, typmod, &
                   dsidep, codret)
 !
     implicit none
 !
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cfluendo3d.h"
 !
     character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: imate, ndim, kpg, ksp
-    real(kind=8), intent(in)  :: instam, instap
-    real(kind=8), intent(in)  :: epsm(6), deps(6)
-    real(kind=8), intent(in)  :: sigm(6), vim(*)
-    real(kind=8), intent(out) :: vip(*), sigp(6), dsidep(6, 6)
-    character(len=16), intent(in) :: compor(*), option
-    real(kind=8), intent(in) :: carcri(*)
+    integer(kind=8), intent(in) :: imate, ndim, kpg, ksp, nvi
+    real(kind=8), intent(in) :: instam, instap
+    real(kind=8), intent(in) :: epsm(6), deps(6)
+    real(kind=8), intent(in) :: sigm(6), vim(nvi)
+    real(kind=8), intent(out) :: vip(nvi), sigp(6), dsidep(6, 6)
+    character(len=16), intent(in) :: option
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     character(len=8), intent(in) :: typmod(*)
     integer(kind=8), intent(out) :: codret
 !

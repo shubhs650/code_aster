@@ -15,18 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine pemain(resu,modele,mate, mateco,cara,nh,&
-                      nbocc,deform)
-        character(len=*) :: resu
-        character(len=*) :: modele
-        character(len=*) :: mate, mateco
-        character(len=*) :: cara
-        integer(kind=8) :: nh
-        integer(kind=8) :: nbocc
-        character(len=*) :: deform
+    subroutine pemain(tablOutZ, &
+                      modelZ, materFieldZ, materCodeZ, caraElemZ, numeHarm, &
+                      nbFactorKeyword, deformZ)
+        character(len=*), intent(in) :: tablOutZ
+        character(len=*), intent(in) :: modelZ, materFieldZ, materCodeZ, caraElemZ
+        integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
+        character(len=*), intent(in) :: deformZ
     end subroutine pemain
 end interface

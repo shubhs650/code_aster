@@ -18,12 +18,17 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
-                      resi, mini, &
-                      alpha, dsbdep, traceEpsiTher)
-        integer(kind=8), intent(in) :: ndim, kpg, jvMaterCode
+    subroutine tanbul(materPara, relaComp, &
+                      ndim, mini, &
+                      alpha, dsbdep, &
+                      lVect_, traceEpsiTher_)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
         character(len=16), intent(in) :: relaComp
-        aster_logical, intent(in) :: resi, mini
-        real(kind=8), intent(out) :: alpha, dsbdep(2*ndim, 2*ndim), traceEpsiTher
+        integer(kind=8), intent(in) :: ndim
+        aster_logical, intent(in) :: mini
+        real(kind=8), intent(out) :: alpha, dsbdep(2*ndim, 2*ndim)
+        aster_logical, optional, intent(in) :: lVect_
+        real(kind=8), optional, intent(out) :: traceEpsiTher_
     end subroutine tanbul
 end interface

@@ -40,7 +40,7 @@ def _use_fortran(keywords):
         if key in keywords:
             return True
 
-    if keywords["METHODE"] in ("MODELE_REDUIT", "NEWTON_KRYLOV"):
+    if keywords["METHODE"] in ("MODELE_REDUIT",):
         return True
 
     for comp in force_list(keywords["COMPORTEMENT"]):

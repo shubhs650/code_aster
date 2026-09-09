@@ -15,26 +15,29 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0054(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
-! aslint: disable=W1504,W0104
+                  compor, carcri, instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
+!
     implicit none
+!
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmtevp.h"
-#include "asterfort/rccoma.h"
-#include "asterfort/utmess.h"
+!
     integer(kind=8) :: imate, ndim, kpg, ksp, codret
-    real(kind=8) :: crit(*), angmas(3)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: instam, instap
-    integer(kind=8) :: icomp, nvi
+    integer(kind=8) :: nvi
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigm(6), sigp(6)
-    real(kind=8) :: vim(*), vip(*)
+    real(kind=8) :: vim(nvi), vip(nvi)
     real(kind=8) :: dsidep(6, 6)
-    character(len=16) :: compor(*), option
     character(len=8) :: typmod(*)
     character(len=*) :: fami
 !
@@ -66,19 +69,14 @@ subroutine lc0054(fami, kpg, ksp, ndim, imate, &
 !               DSIDEP    MATRICE DE COMPORTEMENT TANGENT A T+DT OU T
 !.......................................................................
 !               CODRET
-    character(len=16) :: mcmate
-    integer(kind=8) :: iret
-    real(kind=8) :: r8bid
-!
-    call rccoma(imate, 'ELAS', 1, mcmate, iret)
-!
-    if (mcmate .eq. 'ELAS') then
-        call nmtevp(fami, kpg, ksp, ndim, typmod, &
-                    imate, compor, crit, instam, instap, &
-                    deps, sigm, vim, option, sigp, &
-                    vip, dsidep, r8bid, r8bid, codret)
-    else
-        call utmess('F', 'ALGORITH6_88')
-    end if
+    character(len=16) :: relaComp
+    ASSERT(nvi .eq. 5)
+    relaComp = compor(RELA_NAME)
+
+    call nmtevp(fami, kpg, ksp, ndim, typmod, &
+                imate, relaComp, carcri, instam, instap, &
+                deps, sigm, vim, option, sigp, &
+                vip, dsidep, codret)
+
 !
 end subroutine

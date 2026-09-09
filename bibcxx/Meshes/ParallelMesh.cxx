@@ -31,6 +31,7 @@
 #include "IOManager/AsterToMedWriter.h"
 #include "Meshes/ParallelMesh.h"
 #include "ParallelUtilities/AsterMPI.h"
+#include "PythonBindings/Fortran.h"
 #include "Supervis/Exceptions.h"
 #include "Utilities/Tools.h"
 
@@ -43,7 +44,9 @@ ParallelMesh::ParallelMesh( const std::string &name )
       _globalNodeIds( getName() + ".NUNOLG" ),
       _globalCellIds( getName() + ".NUMALG" ),
       _lastGhostsLayer( getName() + ".LASTGHOLAYER" ),
-      _joints( std::make_shared< Joints >( getName() + ".JOIN" ) ) {};
+      _joints( std::make_shared< Joints >( getName() + ".JOIN" ) ) {
+    set_option( "HPCMode", 1 );
+};
 
 void ParallelMesh::_buildGlobal2LocalNodeIdsMapPtr() {
     _global2localNodeIdsPtr = std::make_shared< MapLong >();
@@ -205,7 +208,9 @@ void ParallelMesh::setGroupOfCells( const std::string &name, const VectorLong &c
         ASTERINTEGER size = cell_ids_u.size(), un = 1;
         CALLO_ADDGROUPELEM( getName(), &un );
         CALLO_ADDGRPMA( getName(), name_s, cell_ids_u.data(), &size, (ASTERLOGICAL *)&isAdded );
-        _groupsOfCells->build( true );
+        if ( isAdded ) {
+            _groupsOfCells->build( true );
+        }
     }
     this->updateGlobalGroupOfCells();
 };
@@ -232,7 +237,9 @@ void ParallelMesh::setGroupOfNodes( const std::string &name, const VectorLong &n
                            []( ASTERINTEGER &d ) { d += 1; } );
             CALLO_ADDGROUPNODE( getName(), &un );
             CALLO_ADDGRPNO( getName(), name_s, node_ids_u.data(), &size, (ASTERLOGICAL *)&isAdded );
-            _groupsOfNodes->build( true );
+            if ( isAdded ) {
+                _groupsOfNodes->build( true );
+            }
         }
     }
     this->updateGlobalGroupOfNodes();
@@ -563,6 +570,10 @@ void ParallelMesh::create_joints( const VectorLong &domains, const VectorLong &g
     const auto nbCells = getNumberOfCells();
     if ( globalCellIds.size() == 0 ) {
         _globalCellIds->allocate( nbCells, -1 );
+        // ----- A huge value is used for global numbering of cells which are not
+        //       owned by current processor because to obtain the true value
+        //       it must be mandatory to communicate (#34152)
+        _globalCellIds->assign( -std::numeric_limits< ASTERINTEGER >::max() );
     } else {
         ( *_globalCellIds ) = globalCellIds;
     }
@@ -670,10 +681,10 @@ const VectorLong ParallelMesh::getAllMedCellsTypes() const {
 }
 
 bool ParallelMesh::printMedFile( const std::filesystem::path &fileName, bool local,
-                                 std::array< int, 3 > version ) const {
+                                 std::array< int, 3 > version, const std::string &mode ) const {
 #ifdef ASTER_HAVE_MED
     auto aTMWriter = AsterToMedWriter();
-    return aTMWriter.printMesh( *this, fileName, local );
+    return aTMWriter.printMesh( *this, fileName, local, "", mode );
 #else
     return false;
 #endif

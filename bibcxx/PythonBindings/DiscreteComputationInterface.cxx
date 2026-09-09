@@ -74,23 +74,23 @@ void exportDiscreteComputationToPython( py::module_ &mod ) {
       Return the imposed displacement assembled vector
 
       Arguments:
-            disp_curr (FieldOnNodes): current displacement vector
+            U (FieldOnNodes): current displacement vector
 
       Returns:
             FieldOnNodes: dual reaction vector (B^T*lambda)
         )",
-              py::arg( "disp_curr" ) )
+              py::arg( "U" ) )
         .def( "getDualPrimal", &DiscreteComputation::getDualPrimal,
               R"(
       Return the Dirichlet load vector
 
       Arguments:
-            disp_curr (FieldOnNodes): current displacement vector
+            U (FieldOnNodes): current displacement vector
 
       Returns:
             FieldOnNodes: Dirichlet load vector
               )",
-              py::arg( "primal_curr" ), py::arg( "scaling" ) = 1.0 )
+              py::arg( "U" ), py::arg( "scaling" ) = 1.0 )
         .def( "getThermalExchangeForces", &DiscreteComputation::getThermalExchangeForces,
               R"(
       Return the elementary thermal Exchange forces vector

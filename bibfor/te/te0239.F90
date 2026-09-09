@@ -21,16 +21,17 @@ subroutine te0239(option, nomte)
 !
     use Behaviour_type
     use Behaviour_module
-!
+    use MaterialPara_module
+    use MaterialPara_type
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
 !
-#include "asterc/r8nnem.h"
 #include "asterf_types.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/defgen.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/effi.h"
-#include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/matdtd.h"
@@ -61,75 +62,72 @@ subroutine te0239(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ndimLdc = 2
-    character(len=4), parameter :: fami = "RIGI"
-    integer(kind=8) :: nbcou, npge, icontm, ideplm, ivectu, icou, inte, icontp
+    character(len=8), parameter :: fami = "RIGI"
+    real(kind=8), parameter :: zero = 0.d0, un = 1.d0, deux = 2.d0
+    integer(kind=8), parameter:: nbPara = 1
+    character(len=8), parameter :: paraName(nbPara) = 'TEMP'
+    integer(kind=8), parameter :: nbProp = 2
+    character(len=16), pointer :: compor(:) => null()
+    character(len=16), parameter :: propName(nbProp) = (/'E ', 'NU'/)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8), parameter :: npge = 3
+    character(len=8), parameter :: typmod(2) = (/'C_PLAN  ', '        '/)
+    integer(kind=8) :: nbLayer, icontm, ideplm, ivectu, iLayer, inte, icontp
     integer(kind=8) :: kpki, k1, k2, kompt, ivarim, ivarip, iinstm, iinstp, lgpg, ideplp
-    integer(kind=8) :: icarcr, nbvari, jcret, codret
+    integer(kind=8) :: jvCarcri, nbvari, jcret, codret
     real(kind=8) :: cisail, zic, coef, rhos, rhot, epsx3, gsx3, sgmsx3
-    real(kind=8) :: zmin, hic, depsx3
+    real(kind=8) :: zmin, epLayer, depsx3
     integer(kind=8) :: itab(8), jnbspi
-    character(len=8) :: nompar, elrefe
-    real(kind=8) :: tempm
-    real(kind=8) :: dfdx(3), zero, un, deux
+    real(kind=8) :: tempMoy
+    real(kind=8) :: dfdx(3)
     real(kind=8) :: test, test2, eps, nu, h, cosa, sina, cour, r
     real(kind=8) :: jacp, kappa, correc
     real(kind=8) :: eps2d(4), deps2d(4), sigtdi(5), sigmtd(5)
     real(kind=8) :: x3
     real(kind=8) :: dtild(5, 5), dtildi(5, 5), dsidep(6, 6)
     real(kind=8) :: rtangi(9, 9), rtange(9, 9), sigm2d(4), sigp2d(4)
-    real(kind=8) :: angmas(3)
-    integer(kind=8) :: nno, kp, npg, i, j, k, imatuu, icaco, ndimv
+    integer(kind=8) :: nno, kpg, npg, i, j, k, imatuu, ndimv
     integer(kind=8) :: ivarix
-    integer(kind=8) :: ipoids, ivf, idfdk, igeom, imate
-    integer(kind=8) :: nbpar, cod, iret, ksp
+    integer(kind=8) :: ipoids, ivf, idfdk, jvGeom, jvMaterc
+    integer(kind=8) :: cod, iret, ksp
     aster_logical :: testl1, testl2
-    type(Behaviour_Integ) :: BEHinteg
-    integer(kind=8), parameter :: nbres = 2
-    character(len=16), pointer :: compor(:) => null()
-    character(len=16), parameter :: nomres(nbres) = (/'E ', 'NU'/)
-    integer(kind=8) :: valret(nbres)
-    real(kind=8) :: valres(nbres)
-    parameter(npge=3)
-    data zero, un, deux/0.d0, 1.d0, 2.d0/
-    character(len=16) :: defo_comp, rela_comp, rela_cpla
+    type(Behaviour_Integ) :: BEHInteg
+    character(len=16) :: defoComp, relaComp, relaCpla
     aster_logical :: lVect, lMatr, lVari, lSigm
-    character(len=8), parameter :: typmod(2) = (/'C_PLAN  ', '        '/)
+    type(Material_Para) :: materPara
     blas_int :: b_incx, b_incy, b_n
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
     ivarip = 1
-!
     eps = 1.d-3
     codret = 0
-
-!   Angle du mot clef MASSIF de AFFE_CARA_ELEM, initialisé à r8nnem (on ne s'en sert pas)
-    angmas = r8nnem()
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-!
-    call elref1(elrefe)
-    call elrefe_info(fami='RIGI', nno=nno, npg=npg, &
+    call elrefe_info(fami=fami, nno=nno, npg=npg, &
                      jpoids=ipoids, jvf=ivf, jdfde=idfdk)
 
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    h = plateCara%thick
+    kappa = plateCara%shearCoef
+    correc = plateCara%metric
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
 ! - Get input fields
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PCACOQU', 'L', icaco)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PVARIMR', 'L', ivarim)
     call jevech('PINSTMR', 'L', iinstm)
     call jevech('PDEPLMR', 'L', ideplm)
     call jevech('PCONTMR', 'L', icontm)
     call jevech('PINSTPR', 'L', iinstp)
     call jevech('PDEPLPR', 'L', ideplp)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PCARCRI', 'L', icarcr)
-    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                itab=itab)
-!      LGPG = MAX(ITAB(6),1)*ITAB(7) resultats faux sur Bull avec ifort
+    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=itab)
     if (itab(6) .le. 1) then
         lgpg = itab(7)
     else
@@ -137,18 +135,27 @@ subroutine te0239(option, nomte)
     end if
     call jevech('PNBSP_I', 'L', jnbspi)
 
-! - Properties of shell
-    h = zr(icaco)
-    kappa = zr(icaco+1)
-    correc = zr(icaco+2)
-    zmin = -h/2.d0
+! - Properties of behaviour
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
 
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndimLdc, typmod, option, &
-                              compor, zr(icarcr), &
-                              zr(iinstm), zr(iinstp), &
-                              fami, zi(imate), &
-                              BEHinteg)
+! - Properties of behaviour
+    relaComp = compor(RELA_NAME)
+    defoComp = compor(DEFO)
+    relaCpla = compor(PLANESTRESS)
+    read (compor(NVAR), '(I16)') nbvari
+
+! - Initialisation of behaviour datastructure
+    call behaviourInit(BEHInteg)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
 
 ! - Select objects to construct from option name
     call behaviourOption(option, compor, &
@@ -156,36 +163,42 @@ subroutine te0239(option, nomte)
                          lVari, lSigm, &
                          codret)
 
-! - Properties of behaviour
-    rela_comp = compor(RELA_NAME)
-    defo_comp = compor(DEFO)
-    rela_cpla = compor(PLANESTRESS)
-    read (compor(NVAR), '(I16)') nbvari
+! - Set main parameters for behaviour (on cell)
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jvCarcri), &
+                              zr(iinstm), zr(iinstp), &
+                              materPara, BEHInteg)
+
+! - Properties of shell
+    h = plateCara%thick
+    kappa = plateCara%shearCoef
+    correc = plateCara%metric
+    zmin = -h/2.d0
 
 ! - Some checks
-    if (rela_cpla .eq. 'COMP_ELAS') then
-        if (rela_comp .ne. 'ELAS') then
+    if (relaCpla .eq. 'COMP_ELAS') then
+        if (relaComp .ne. 'ELAS') then
             call utmess('F', 'PLATE1_8')
         end if
     end if
-    if (defo_comp(6:10) .eq. '_REAC') then
-        call utmess('A', 'PLATE1_9', sk=defo_comp)
+    if (defoComp(6:10) .eq. '_REAC') then
+        call utmess('A', 'PLATE1_9', sk=defoComp)
     end if
 
-!--- NBRE DE  COUCHES ET LONG. MAX
-    nbcou = zi(jnbspi-1+1)
-    if (nbcou .le. 0) then
+!- NBRE DE  COUCHES ET LONG. MAX
+    nbLayer = zi(jnbspi-1+1)
+    if (nbLayer .le. 0) then
         call utmess('F', 'PLATE1_10')
     end if
-    if (nbcou .gt. 10) then
+    if (nbLayer .gt. 10) then
         call utmess('F', 'PLATE1_11')
     end if
+
 !---- EPAISSEUR DE CHAQUE COUCHE
-    hic = h/nbcou
-    ndimv = npg*npge*nbcou*nbvari
-!
+    epLayer = h/nbLayer
+    ndimv = npg*npge*nbLayer*nbvari
+
 ! - Get output fields
-!
     if (lMatr) then
         call jevech('PMATUUR', 'E', imatuu)
     end if
@@ -207,35 +220,32 @@ subroutine te0239(option, nomte)
 !
     call r8inir(81, 0.d0, rtange, 1)
     kpki = 0
+
 !-- DEBUT DE BOUCLE D'INTEGRATION SUR LA SURFACE NEUTRE
-    do kp = 1, npg
-        k = (kp-1)*nno
-        call dfdm1d(nno, zr(ipoids+kp-1), zr(idfdk+k), zr(igeom), dfdx, &
+    do kpg = 1, npg
+        k = (kpg-1)*nno
+        call dfdm1d(nno, zr(ipoids+kpg-1), zr(idfdk+k), zr(jvGeom), dfdx, &
                     cour, jacp, cosa, sina)
         r = zero
+        do i = 1, nno
+            r = r+zr(jvGeom+2*i-2)*zr(ivf+k+i-1)
+        end do
 !
         call r8inir(5, 0.d0, sigmtd, 1)
         call r8inir(25, 0.d0, dtild, 1)
-!
-!-- BOUCLE SUR LES POINTS D'INTEGRATION SUR LA SURFACE
-!
-        do i = 1, nno
-            r = r+zr(igeom+2*i-2)*zr(ivf+k+i-1)
-        end do
+
 !
 !===============================================================
 !     -- RECUPERATION DE LA TEMPERATURE POUR LE MATERIAU:
 !     -- SI LA TEMPERATURE EST CONNUE AUX NOEUDS :
-        call moytpg('RIGI', kp, 3, '-', tempm, &
-                    iret)
-        nbpar = 1
-        nompar = 'TEMP'
-        call rcvalb('RIGI', kp, 1, '-', zi(imate), &
-                    ' ', 'ELAS', nbpar, nompar, [tempm], &
-                    2, nomres, valres, valret, 1)
-!
-        nu = valres(2)
-        cisail = valres(1)/(un+nu)
+        call moytpg('RIGI', kpg, 3, '-', tempMoy, iret)
+        call rcvalb('RIGI', kpg, 1, '-', &
+                    zi(jvMaterc), ' ', 'ELAS', &
+                    nbPara, paraName, [tempMoy], &
+                    nbProp, propName, propVale, propCode, &
+                    1)
+        nu = propVale(2)
+        cisail = propVale(1)/(un+nu)
 !
 !       ON EST EN AXIS:
         jacp = jacp*r
@@ -246,23 +256,20 @@ subroutine te0239(option, nomte)
         if (test2 .ge. un) correc = zero
 !
         testl1 = (test .le. eps .or. correc .eq. zero)
-        testl2 = ( &
-                 test2 .le. eps .or. correc .eq. zero .or. abs(cosa) .le. eps .or. abs(cour*r) &
-                 .le. eps .or. abs(cosa-cour*r) .le. eps &
-                 )
-!
-!-- DEBUT DE BOUCLE D'INTEGRATION DANS L'EPAISSEUR
-!
-        do icou = 1, nbcou
+        testl2 = (test2 .le. eps .or. correc .eq. zero .or. abs(cosa) .le. eps .or. &
+                  abs(cour*r) .le. eps .or. abs(cosa-cour*r) .le. eps)
+
+! ----- DEBUT DE BOUCLE D'INTEGRATION DANS L'EPAISSEUR
+        do iLayer = 1, nbLayer
             do inte = 1, npge
                 if (inte .eq. 1) then
-                    zic = zmin+(icou-1)*hic
+                    zic = zmin+(iLayer-1)*epLayer
                     coef = 1.d0/3.d0
                 else if (inte .eq. 2) then
-                    zic = zmin+hic/2.d0+(icou-1)*hic
+                    zic = zmin+epLayer/2.d0+(iLayer-1)*epLayer
                     coef = 4.d0/3.d0
                 else
-                    zic = zmin+hic+(icou-1)*hic
+                    zic = zmin+epLayer+(iLayer-1)*epLayer
                     coef = 1.d0/3.d0
                 end if
 !
@@ -301,15 +308,15 @@ subroutine te0239(option, nomte)
 !           CALCUL DU NUMERO DU POINT D'INTEGRATION COURANT
                 kpki = kpki+1
                 k1 = 4*(kpki-1)
-                k2 = lgpg*(kp-1)+(npge*(icou-1)+inte-1)*nbvari
-                ksp = (icou-1)*npge+inte
+                k2 = lgpg*(kpg-1)+(npge*(iLayer-1)+inte-1)*nbvari
+                ksp = (iLayer-1)*npge+inte
 !
                 do i = 1, 4
                     sigm2d(i) = zr(icontm+k1+i-1)
                 end do
 
 ! ------------- Set main parameters for behaviour (on point)
-                call behaviourSetParaPoin(kp, ksp, BEHinteg)
+                call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ------------- Integrate
 !     INTEGRATION DE LA LOI DE COMPORTEMENT POUR LES COQUE_1D :
@@ -319,21 +326,21 @@ subroutine te0239(option, nomte)
                 dsidep = 0.d0
                 sigp2d = 0.d0
                 cod = 0
-                call nmcomp(BEHinteg, &
-                            fami, kp, ksp, ndimLdc, typmod, &
-                            zi(imate), compor, zr(icarcr), zr(iinstm), zr(iinstp), &
-                            4, eps2d, deps2d, 4, sigm2d, &
-                            zr(ivarim+k2), option, angmas, &
-                            sigp2d, zr(ivarip+k2), 36, dsidep, cod)
+                call nmcomp(BEHInteg, &
+                            ndimLdc, option, typmod, &
+                            zr(iinstm), zr(iinstp), &
+                            compor, zr(jvCarcri), multComp, &
+                            4, eps2d, deps2d, &
+                            4, sigm2d, &
+                            zr(ivarim+k2), &
+                            sigp2d, zr(ivarip+k2), &
+                            36, dsidep, cod)
 
                 if (lSigm) then
                     do i = 1, 4
                         zr(icontp+k1+i-1) = sigp2d(i)
                     end do
                 end if
-!
-!           COD=1 : ECHEC INTEGRATION LOI DE COMPORTEMENT
-!           COD=3 : C_PLAN DEBORST SIGZZ NON NUL
                 if (cod .ne. 0) then
                     if (codret .ne. 1) then
                         codret = cod
@@ -349,7 +356,7 @@ subroutine te0239(option, nomte)
                                 dtildi)
                     do i = 1, 5
                         do j = 1, 5
-                            dtild(i, j) = dtild(i, j)+dtildi(i, j)*0.5d0*hic*coef
+                            dtild(i, j) = dtild(i, j)+dtildi(i, j)*0.5d0*epLayer*coef
                         end do
                     end do
                 end if
@@ -364,7 +371,7 @@ subroutine te0239(option, nomte)
                     sigtdi(5) = sgmsx3/rhos
 !
                     do i = 1, 5
-                        sigmtd(i) = sigmtd(i)+sigtdi(i)*0.5d0*hic*coef
+                        sigmtd(i) = sigmtd(i)+sigtdi(i)*0.5d0*epLayer*coef
                     end do
                 end if
 !-- FIN DE BOUCLE SUR LES POINTS D'INTEGRATION DANS L'EPAISSEUR

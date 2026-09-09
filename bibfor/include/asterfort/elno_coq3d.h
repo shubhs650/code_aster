@@ -15,18 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine elno_coq3d(option,nomte,nb1,nb2,npgsr,npgsn,nso,nbcou, &
-                      geom,cara,valpg,outno,lzr,matr, lgreen)
-        character(len=16) :: nomte
-        character(len=16) :: option
-        integer(kind=8) :: nb1,nb2,npgsr,npgsn,nso,nbcou
-        real(kind=8) :: geom(*),cara(*),valpg(*),outno(*),lzr(*),matr(*)
-        aster_logical :: lgreen
+    subroutine elno_coq3d(plateCara, plateOrie, &
+                          lgreen, option, nomte, &
+                          nb2, &
+                          npgsn, nso, nbLayer, &
+                          matr, pgVale, noVale)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        aster_logical, intent(in):: lgreen
+        character(len=16), intent(in) :: option, nomte
+        integer(kind=8), intent(in) :: nb2, npgsn, nso, nbLayer
+        real(kind=8), intent(in) :: matr(*), pgVale(*)
+        real(kind=8), intent(out) :: noVale(*)
     end subroutine elno_coq3d
 end interface

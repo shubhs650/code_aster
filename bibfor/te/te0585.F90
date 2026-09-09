@@ -21,7 +21,6 @@ subroutine te0585(option, nomte)
     use pipeElem_module
     implicit none
 !
-#include "asterfort/assert.h"
 #include "asterfort/pipeElem_type.h"
 #include "asterfort/tuforc.h"
 #include "jeveux.h"

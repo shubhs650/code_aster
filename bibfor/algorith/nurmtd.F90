@@ -19,35 +19,40 @@
 !
 subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
                   vff1, vff2, idff1, vu, &
-                  vp, typmod, igeom, mate, mini, &
+                  vp, typmod, jvGeom, jvMaterCode, mini, &
                   matr)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
-!
 #include "asterfort/calkbb.h"
 #include "asterfort/calkbp.h"
 #include "asterfort/calkce.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/tanbul.h"
+#include "jeveux.h"
+#include "MeshTypes_type.h"
+!
     aster_logical :: mini
     integer(kind=8) :: ndim, nno1, nno2, npg, iw, idff1
-    integer(kind=8) :: mate
-    integer(kind=8) :: vu(3, 27), vp(27)
-    integer(kind=8) :: igeom
+    integer(kind=8) :: vu(3, MT_NNOMAX), vp(MT_NNOMAX)
+    integer(kind=8) :: jvGeom, jvMaterCode
     real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg)
     character(len=8) :: typmod(*)
     real(kind=8) :: matr(*)
 !
-!-----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 !          CALCUL DE LA RIGIDITE MECANIQUE POUR LES ELEMENTS
 !          INCOMPRESSIBLES POUR LES PETITES DEFORMATIONS
 !          3D/D_PLAN/AXIS
 !          ROUTINE APPELEE PAR TE0597
-!-----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  NDIM    : DIMENSION DE L'ESPACE
 ! IN  NNO1    : NOMBRE DE NOEUDS DE L'ELEMENT LIES AUX DEPLACEMENTS
 ! IN  NNO2    : NOMBRE DE NOEUDS DE L'ELEMENT LIES A LA PRESSION
@@ -63,29 +68,33 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
 ! IN  MATE    : MATERIAU CODE
 ! IN  MINI    : STABILISATION BULLE - MINI ELEMENT
 ! OUT MATR    : MATRICE DE RIGIDITE
-!-----------------------------------------------------------------------
 !
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: ksp = 1
+    character(len=8), parameter :: fami = "RIGI"
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    character(len=16), parameter :: relaComp = 'ELAS'
+    aster_logical, parameter :: miniForBubble = ASTER_TRUE
     aster_logical :: axi
-    integer(kind=8) :: g
+    integer(kind=8) :: kpg
     integer(kind=8) :: ia, na, sa, ib, nb, sb, ja, jb
     integer(kind=8) :: os, kk
     integer(kind=8) :: vuiana, vpsa
     integer(kind=8) :: idim
-    real(kind=8) :: rac2
     real(kind=8) :: r, w, dff1(nno1, ndim)
     real(kind=8) :: dsidep(2*ndim, 2*ndim)
     real(kind=8) :: def(2*ndim, nno1, ndim), deftr(nno1, ndim)
     real(kind=8) :: ddev(2*ndim, 2*ndim), devd(2*ndim, 2*ndim)
     real(kind=8) :: dddev(2*ndim, 2*ndim)
-    real(kind=8) :: bary(3)
+    real(kind=8) :: coorBary(3)
     real(kind=8) :: t1
     real(kind=8) :: idev(6, 6), idev2(4, 4)
-    real(kind=8) :: alpha, trepst
+    real(kind=8) :: alpha
     real(kind=8) :: presm(nno2), presd(nno2)
     real(kind=8) :: kbb(ndim, ndim), kbp(ndim, nno2)
     real(kind=8) :: kce(nno2, nno2), rce(nno2)
     real(kind=8) :: fm(3, 3)
-    character(len=16) :: compor, option
 !
     data fm/1.d0, 0.d0, 0.d0,&
      &                  0.d0, 1.d0, 0.d0,&
@@ -100,35 +109,38 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
      &                  0.d0, 0.d0, 0.d0, 3.d0, 0.d0, 0.d0,&
      &                  0.d0, 0.d0, 0.d0, 0.d0, 3.d0, 0.d0,&
      &                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 3.d0/
-!-----------------------------------------------------------------------
+    type(Material_Para) :: materPara
 !
-! - INITIALISATION
+! --------------------------------------------------------------------------------------------------
+!
     axi = typmod(1) .eq. 'AXIS'
-    rac2 = sqrt(2.d0)
-    option = 'RIGI_MECA       '
-    compor = 'ELAS            '
-!
     call r8inir(nno2, 0.d0, presm, 1)
     call r8inir(nno2, 0.d0, presd, 1)
-!
+
 ! - RECUPERATION  DES DONNEEES RELATIVES AU REPERE D'ORTHOTROPIE
 ! - COORDONNEES DU BARYCENTRE ( POUR LE REPRE CYLINDRIQUE )
-    bary(1) = 0.d0
-    bary(2) = 0.d0
-    bary(3) = 0.d0
+    coorBary = 0.d0
     do ia = 1, nno1
         do idim = 1, ndim
-            bary(idim) = bary(idim)+zr(igeom+idim+ndim*(ia-1)-1)/nno1
+            coorBary(idim) = coorBary(idim)+zr(jvGeom+idim+ndim*(ia-1)-1)/nno1
         end do
     end do
-!
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, jvMaterCode, materPara)
+
+! - Set local coordinate system from user
+    call getUserLCSWithBaryCenter(ndim, coorBary, materPara%lcsPara)
+
 ! - CALCUL POUR CHAQUE POINT DE GAUSS
-    do g = 1, npg
-!
+    do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! - CALCUL DES ELEMENTS GEOMETRIQUES
 ! - CALCUL DE DFDI,F,EPS,R(EN AXI) ET POIDS
-        call dfdmip(ndim, nno1, axi, zr(igeom), g, &
-                    iw, vff1(1, g), idff1, r, w, &
+        call dfdmip(ndim, nno1, axi, zr(jvGeom), kpg, &
+                    iw, vff1(1, kpg), idff1, r, w, &
                     dff1)
 !
 ! - CALCUL DE LA MATRICE B EPS_ij=B_ijkl U_kl
@@ -145,7 +157,7 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
 ! - TERME DE CORRECTION (3,3) AXI QUI PORTE EN FAIT SUR LE DDL 1
             if (axi) then
                 do na = 1, nno1
-                    def(3, na, 1) = fm(3, 3)*vff1(na, g)/r
+                    def(3, na, 1) = fm(3, 3)*vff1(na, kpg)/r
                 end do
             end if
         else
@@ -167,10 +179,12 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
                 deftr(na, ia) = def(1, na, ia)+def(2, na, ia)+def(3, na, ia)
             end do
         end do
-!
-! - CALCUL DE LA MATRICE D'ELASTICITE BULLE
-        call tanbul(ndim, g, mate, compor, &
-                    .false._1, .true._1, alpha, dsidep, trepst)
+
+! ----- Compute "bubble" matrix
+        call tanbul(materPara, relaComp, &
+                    ndim, miniForBubble, &
+                    alpha, dsidep)
+
         dsidep(4, 4) = dsidep(4, 4)/2.d0
         if (ndim .eq. 3) then
             dsidep(5, 5) = dsidep(5, 5)/2.d0
@@ -228,7 +242,7 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
                 do sb = 1, nno2
                     if (vp(sb) .lt. vuiana) then
                         kk = os+vp(sb)
-                        t1 = deftr(na, ia)*vff2(sb, g)
+                        t1 = deftr(na, ia)*vff2(sb, kpg)
                         matr(kk) = matr(kk)+w*t1
                     end if
                 end do
@@ -245,7 +259,7 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
                 do ib = 1, ndim
                     if (vu(ib, nb) .lt. vpsa) then
                         kk = os+vu(ib, nb)
-                        t1 = vff2(sa, g)*deftr(nb, ib)
+                        t1 = vff2(sa, kpg)*deftr(nb, ib)
                         matr(kk) = matr(kk)+w*t1
                     end if
                 end do
@@ -255,7 +269,7 @@ subroutine nurmtd(ndim, nno1, nno2, npg, iw, &
             do sb = 1, nno2
                 if (vp(sb) .le. vpsa) then
                     kk = os+vp(sb)
-                    t1 = -vff2(sa, g)*vff2(sb, g)*alpha
+                    t1 = -vff2(sa, kpg)*vff2(sb, kpg)*alpha
                     matr(kk) = matr(kk)+w*t1-kce(sa, sb)
                 end if
             end do

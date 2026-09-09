@@ -15,20 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine calc_coor_elga(modelZ, ligrel, chgeom, chgaus, &
-                          cacoquZ_)
 !
+subroutine calc_coor_elga(modelZ, ligrel, chgeom, chgaus, &
+                          caraElemZ_)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterfort/calcul.h"
 #include "asterfort/dismoi.h"
+#include "asterfort/xajcin.h"
 !
     character(len=*), intent(in) :: modelZ
     character(len=19), intent(in) :: ligrel
-    character(len=19), intent(in) :: chgeom
-    character(len=19), intent(in) :: chgaus
-    character(len=*), optional, intent(in) :: cacoquZ_
+    character(len=19), intent(in) :: chgeom, chgaus
+    character(len=*), optional, intent(in) :: caraElemZ_
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -43,43 +44,45 @@ subroutine calc_coor_elga(modelZ, ligrel, chgeom, chgaus, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=8) :: lpain(6), lpaout(1)
-    character(len=16) :: option
-    character(len=19) :: lchin(6), lchout(1)
-    integer(kind=8) :: nbchin, nfiss
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    character(len=16), parameter :: option = 'COOR_ELGA'
+    integer(kind=8) :: nfiss
 !
 ! --------------------------------------------------------------------------------------------------
 !
+
+! - Initializations
+    call dismoi('NB_FISS_XFEM', modelZ, 'MODELE', repi=nfiss)
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom
-    nbchin = 1
+    nbFieldIn = 1
 
-    if (present(cacoquZ_)) then
-        lpain(2) = 'PCACOQU'
-        lchin(2) = cacoquZ_(1:19)
-        nbchin = 2
+! - Add fields for orientation
+    if (present(caraElemZ_)) then
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElemZ_)
     end if
-!   si le modele comporte des elements X-FEM, on ajoute les
-!   champs ad hoc
-    call dismoi('NB_FISS_XFEM', modelZ, 'MODELE', repi=nfiss)
+
+! - Add fields for XFEM
     if (nfiss .gt. 0) then
-        lpain(2) = 'PPINTTO'
-        lchin(2) = modelZ(1:8)//'.TOPOSE.PIN'
-        lpain(3) = 'PPMILTO'
-        lchin(3) = modelZ(1:8)//'.TOPOSE.PMI'
-        lpain(4) = 'PCNSETO'
-        lchin(4) = modelZ(1:8)//'.TOPOSE.CNS'
-        lpain(5) = 'PLONCHA'
-        lchin(5) = modelZ(1:8)//'.TOPOSE.LON'
-        nbchin = nbchin+5
+        call xajcin(modelZ, option, nbFieldInMax, lchin, lpain, nbFieldIn)
     end if
-!
+
+! - Add output field and compute
     lpaout(1) = 'PCOORPG'
     lchout(1) = chgaus
-    option = 'COOR_ELGA'
-
-    call calcul('S', option, ligrel, nbchin, lchin, &
-                lpain, 1, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', option, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 !
 end subroutine

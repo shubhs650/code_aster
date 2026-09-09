@@ -49,7 +49,7 @@ subroutine nmimps(ds_print, ds_conv, sderro)
     integer(kind=8) :: i_resi, nb_resi
     real(kind=8) :: valr(2)
     character(len=16) :: valk(2)
-    aster_logical :: lprint, l_swap_rela_maxi, l_swap_comp_rela
+    aster_logical :: lprint, l_swap_rela_maxi
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -58,7 +58,6 @@ subroutine nmimps(ds_print, ds_conv, sderro)
 ! - Messages from convergence swapping
 !
     call nmerge(sderro, 'RESI_MAXR', l_swap_rela_maxi)
-    call nmerge(sderro, 'RESI_MAXN', l_swap_comp_rela)
 !
 ! - Print for this step ?
 !
@@ -68,12 +67,7 @@ subroutine nmimps(ds_print, ds_conv, sderro)
 !
     if (lprint) then
         call utmess('I', 'MECANONLINE6_60')
-        if (l_swap_comp_rela) then
-            call utmess('I', 'MECANONLINE6_61')
-            call utmess('I', 'MECANONLINE2_96')
-        end if
         if (l_swap_rela_maxi) then
-            call utmess('I', 'MECANONLINE6_62')
             call GetResi(ds_conv, type='RESI_GLOB_MAXI', user_para_=valr(2))
             valr(1) = ds_conv%swap_trig
             call utmess('I', 'MECANONLINE2_98', nr=2, valr=valr)

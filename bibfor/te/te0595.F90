@@ -18,13 +18,15 @@
 !
 subroutine te0595(option, nomte)
 !
-    use Behaviour_module, only: behaviourOption
-!
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
@@ -34,10 +36,9 @@ subroutine te0595(option, nomte)
 #include "asterfort/nofipd.h"
 #include "asterfort/nufilg.h"
 #include "asterfort/nufipd.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -58,21 +59,23 @@ subroutine te0595(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = 'RIGI'
     aster_logical :: mini, matsym
-    integer(kind=8) :: ndim, nnod, nnop, npg, ntrou
+    integer(kind=8) :: ndim, nnod, nnop, npg, nbElrefe
     integer(kind=8) :: icoret, codret, iret
     integer(kind=8) :: iw, ivfd, ivfp, idfd
     integer(kind=8) :: jtab(7), lgpg
     integer(kind=8) :: vu(3, 27), vg(27), vp(27), vpi(3, 27)
-    integer(kind=8) :: igeom, imate, icontm, ivarim
-    integer(kind=8) :: iinstm, iinstp, iddlm, iddld, icarcr
+    integer(kind=8) :: jvGeom, jvMaterc, icontm, ivarim
+    integer(kind=8) :: jvInstmr, jvInstpr, jvDeplmr, jvDeplpr, jvCarcri
     integer(kind=8) :: ivectu, icontp, ivarip, imatuu
     integer(kind=8) :: nddl, ibid
-    real(kind=8) :: angmas(3)
-    character(len=8) :: lielrf(10), typmod(2), alias8
-    character(len=16) :: defo_comp
+    character(len=8) :: listElrefe(10), typmod(2), alias8
+    character(len=16) :: defoComp
     aster_logical :: lMatr, lVect, lVari, lSigm
     character(len=16), pointer :: compor(:) => null()
+    type(Behaviour_Integ) :: BEHInteg
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -83,76 +86,83 @@ subroutine te0595(option, nomte)
     codret = 0
     matsym = ASTER_TRUE
     mini = ASTER_FALSE
-!
-! - Get element parameters
-!
-    call elref2(nomte, 10, lielrf, ntrou)
-    ASSERT(ntrou .ge. 2)
-    call elrefe_info(elrefe=lielrf(2), fami='RIGI', &
-                     ndim=ndim, nno=nnop, npg=npg, &
-                     jpoids=iw, jvf=ivfp)
-    call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nnod, npg=npg, &
+
+! - List of ELREFE
+    call elref2(nomte, 10, listElrefe, nbElrefe)
+    ASSERT(nbElrefe .ge. 2)
+
+! - Get shape functions
+    call elrefe_info(elrefe=listElrefe(2), fami=fami, &
+                     nno=nnop, jvf=ivfp)
+    call elrefe_info(elrefe=listElrefe(1), fami=fami, ndim=ndim, nno=nnod, npg=npg, &
                      jpoids=iw, jvf=ivfd, jdfde=idfd)
-!
-! - Type of finite element
-!
+
+! - Modelling
+    typmod = ' '
     if (ndim .eq. 2 .and. lteatt('AXIS', 'OUI')) then
-        typmod(1) = 'AXIS  '
+        typmod(1) = 'AXIS'
     else if (ndim .eq. 2 .and. lteatt('D_PLAN', 'OUI')) then
-        typmod(1) = 'D_PLAN  '
+        typmod(1) = 'D_PLAN'
     else if (ndim .eq. 3) then
         typmod(1) = '3D'
     else
         ASSERT(ASTER_FALSE)
     end if
-    typmod(2) = '        '
-!
+    typmod(2) = ' '
+
 ! - MINI ELEMENT ?
-!
     mini = ASTER_FALSE
     call teattr('S', 'ALIAS8', alias8, ibid)
     if (alias8(6:8) .eq. 'TR3' .or. alias8(6:8) .eq. 'TE4') then
         mini = ASTER_TRUE
     end if
-!
+
 ! - Get input fields
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
+    call jevech('PINSTMR', 'L', jvInstmr)
+    call jevech('PINSTPR', 'L', jvInstpr)
     call jevech('PCONTMR', 'L', icontm)
     call jevech('PVARIMR', 'L', ivarim)
-    call jevech('PDEPLMR', 'L', iddlm)
-    call jevech('PDEPLPR', 'L', iddld)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PCARCRI', 'L', icarcr)
-    call jevech('PINSTMR', 'L', iinstm)
-    call jevech('PINSTPR', 'L', iinstp)
+    call jevech('PDEPLMR', 'L', jvDeplmr)
+    call jevech('PDEPLPR', 'L', jvDeplpr)
     call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg = max(jtab(6), 1)*jtab(7)
-!
-! - Get orientation
-!
-    call getElemOrientation(ndim, nnod, igeom, angmas)
-!
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nnod, jvGeom, materPara%lcsPara)
+
+! - Get behaviour parameters
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
+
+! - Get parameters for behaviour
+    defoComp = compor(DEFO)
+
 ! - Select objects to construct from option name
-!
     call behaviourOption(option, compor, &
                          lMatr, lVect, &
                          lVari, lSigm, &
                          codret)
-!
-! - Properties of behaviour
-!
-    defo_comp = compor(DEFO)
-!
+
+! - Set main parameters for behaviour (on cell)
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jvCarcri), &
+                              zr(jvInstmr), zr(jvInstpr), &
+                              materPara, BEHInteg)
+
 ! - Get output fields
-!
     if (lMatr) then
         matsym = ASTER_TRUE
-        if (defo_comp .eq. 'PETIT') then
+        if (defoComp .eq. 'PETIT') then
             call jevech('PMATUUR', 'E', imatuu)
-        elseif (defo_comp .eq. 'GDEF_LOG') then
-            call nmtstm(zr(icarcr), imatuu, matsym)
+        elseif (defoComp .eq. 'GDEF_LOG') then
+            call nmtstm(zr(jvCarcri), imatuu, matsym)
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -166,42 +176,45 @@ subroutine te0595(option, nomte)
     if (lVari) then
         call jevech('PVARIPR', 'E', ivarip)
     end if
-!
+
 ! - Compute options
-!
-    if (defo_comp .eq. 'PETIT') then
+    if (defoComp .eq. 'PETIT') then
         if (lteatt('INCO', 'C2 ')) then
 ! --------- Get index of dof
             call niinit(typmod, ndim, nnod, 0, &
                         nnop, 0, vu, vg, vp, &
                         vpi)
             nddl = nnod*ndim+nnop
-            call nufipd(ndim, nnod, nnop, npg, iw, &
+            call nufipd(BEHInteg, &
+                        ndim, nnod, nnop, npg, iw, &
                         zr(ivfd), zr(ivfp), idfd, vu, vp, &
-                        zr(igeom), typmod, option, zi(imate), compor, &
-                        lgpg, zr(icarcr), zr(iinstm), zr(iinstp), zr(iddlm), &
-                        zr(iddld), angmas, zr(icontm), zr(ivarim), zr(icontp), &
+                        zr(jvGeom), typmod, option, compor, &
+                        lgpg, zr(jvCarcri), zr(jvInstmr), zr(jvInstpr), zr(jvDeplmr), &
+                        zr(jvDeplpr), zr(icontm), zr(ivarim), zr(icontp), &
                         zr(ivarip), mini, zr(ivectu), &
                         zr(imatuu), codret, &
                         lSigm, lVect, lMatr)
+
         else if (lteatt('INCO', 'C2O')) then
 ! --------- Get index of dof
             call niinit(typmod, ndim, nnod, 0, &
                         nnop, nnop, vu, vg, vp, &
                         vpi)
             nddl = nnod*ndim+nnop+nnop*ndim
-            call nofipd(ndim, nnod, nnop, nnop, npg, &
+            call nofipd(BEHInteg, &
+                        ndim, nnod, nnop, nnop, npg, &
                         iw, zr(ivfd), zr(ivfp), zr(ivfp), idfd, &
-                        vu, vp, vpi, zr(igeom), typmod, &
-                        option, nomte, zi(imate), compor, lgpg, &
-                        zr(icarcr), zr(iinstm), zr(iinstp), zr(iddlm), zr(iddld), &
-                        angmas, zr(icontm), zr(ivarim), zr(icontp), zr(ivarip), &
+                        vu, vp, vpi, zr(jvGeom), typmod, &
+                        option, nomte, compor, lgpg, &
+                        zr(jvCarcri), zr(jvInstmr), zr(jvInstpr), zr(jvDeplmr), zr(jvDeplpr), &
+                        zr(icontm), zr(ivarim), zr(icontp), zr(ivarip), &
                         zr(ivectu), zr(imatuu), codret, &
                         lSigm, lVect, lMatr)
         else
             ASSERT(ASTER_FALSE)
         end if
-    else if (defo_comp .eq. 'GDEF_LOG') then
+
+    else if (defoComp .eq. 'GDEF_LOG') then
         if (lteatt('INCO', 'C2 ')) then
             ASSERT(.not. mini)
 ! --------- Get index of dof
@@ -209,11 +222,12 @@ subroutine te0595(option, nomte)
                         nnop, 0, vu, vg, vp, &
                         vpi)
             nddl = nnod*ndim+nnop
-            call nufilg(ndim, nnod, nnop, npg, iw, &
+            call nufilg(BEHInteg, &
+                        ndim, nnod, nnop, npg, iw, &
                         zr(ivfd), zr(ivfp), idfd, vu, vp, &
-                        zr(igeom), typmod, option, zi(imate), compor, &
-                        lgpg, zr(icarcr), zr(iinstm), zr(iinstp), zr(iddlm), &
-                        zr(iddld), angmas, zr(icontm), zr(ivarim), zr(icontp), &
+                        zr(jvGeom), typmod, option, compor, &
+                        lgpg, zr(jvCarcri), zr(jvInstmr), zr(jvInstpr), zr(jvDeplmr), &
+                        zr(jvDeplpr), zr(icontm), zr(ivarim), zr(icontp), &
                         zr(ivarip), zr(ivectu), zr(imatuu), &
                         matsym, codret, &
                         lVect, lMatr)
@@ -223,9 +237,8 @@ subroutine te0595(option, nomte)
     else
         ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - Save return code
-!
     if (lSigm) then
         call jevech('PCODRET', 'E', icoret)
         zi(icoret) = codret

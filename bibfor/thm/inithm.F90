@@ -17,13 +17,12 @@
 ! --------------------------------------------------------------------
 !
 subroutine inithm(ds_thm, &
-                  angl_naut, tbiot, phi0, &
+                  tbiot, phi0, &
                   epsv, depsv, &
                   epsvm, cs0, mdal, dalal, &
                   alpha0, alphfi, cbiot, unsks)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -34,7 +33,7 @@ subroutine inithm(ds_thm, &
 #include "asterfort/THM_type.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3), tbiot(6), phi0, epsv, depsv
+    real(kind=8), intent(in) :: tbiot(6), phi0, epsv, depsv
     real(kind=8), intent(out) :: epsvm, cs0, dalal, mdal(6), alphfi, alpha0, cbiot, unsks
 !
 ! --------------------------------------------------------------------------------------------------
@@ -46,10 +45,6 @@ subroutine inithm(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
 ! In  tbiot            : Biot tensor
 ! In  phi0             : initial porosity
 ! In  epsv             : current volumic strain
@@ -95,9 +90,9 @@ subroutine inithm(ds_thm, &
 ! --------- Compute Biot modulus
             call unsmfi(ds_thm, phi0, tbiot, cs0)
 ! --------- Compute differential thermal expansion ratio
-            call dilata(ds_thm, angl_naut, phi0, tbiot, alphfi)
+            call dilata(ds_thm, phi0, tbiot, alphfi)
 ! --------- Compute thermic quantities
-            call thmTherElas(ds_thm, angl_naut, mdal, dalal)
+            call thmTherElas(ds_thm, mdal, dalal)
         end if
     else
         if (ds_thm%ds_material%biot%type .eq. BIOT_TYPE_ISOT) then
@@ -114,9 +109,8 @@ subroutine inithm(ds_thm, &
             ASSERT(ASTER_FALSE)
         end if
     end if
-!
+
 ! - Previous volumic strain
-!
     epsvm = epsv-depsv
 !
 end subroutine

@@ -17,14 +17,17 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
-                  typmod, option, imate, &
-                  compor, mult_comp, lgpg, carcri, &
+subroutine nmplxd(FECell, FEBasis, FEQuad, &
+                  nno, npg, ndim, &
+                  typmod, option, &
+                  compor, carcri, multComp, &
+                  BEHInteg, &
                   instam, instap, &
                   dispPrev, dispIncr, &
-                  angmas, sigmPrev, vim, &
-                  matsym, sigmCurr, vip, &
-                  matuu, vectu, codret)
+                  lgpg, sigmPrev, vim, &
+                  sigmCurr, vip, &
+                  matsym, matuu, vectu, &
+                  codret)
 !
     use FE_topo_module
     use FE_quadrature_module
@@ -34,15 +37,15 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
     use FE_mechanics_module
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/crirup.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/nmcomp.h"
-#include "asterfort/Behaviour_type.h"
 #include "FE_module.h"
 !
     type(FE_Cell), intent(in) :: FECell
@@ -51,16 +54,15 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
     integer(kind=8), intent(in) :: nno, npg, ndim
     character(len=8), intent(in) :: typmod(2)
     character(len=16), intent(in) :: option
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(COMPOR_SIZE), mult_comp
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), multComp
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-    integer(kind=8), intent(in) :: lgpg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     real(kind=8), intent(in) :: instam, instap
     real(kind=8), intent(inout) :: dispPrev(ndim, nno), dispIncr(ndim, nno)
-    real(kind=8), intent(in) :: angmas(*)
+    integer(kind=8), intent(in) :: lgpg
     real(kind=8), intent(inout) :: sigmPrev(2*ndim, npg), vim(lgpg, npg)
-    aster_logical, intent(in) :: matsym
     real(kind=8), intent(inout) :: sigmCurr(2*ndim, npg), vip(lgpg, npg)
+    aster_logical, intent(in) :: matsym
     real(kind=8), intent(inout) :: matuu(*), vectu(ndim, nno)
     integer(kind=8), intent(inout) :: codret
 !
@@ -104,38 +106,28 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
     aster_logical :: lVect, lMatr, lSigm
     integer(kind=8) :: kpg, i_tens, ipoids, ivf, idfde
     integer(kind=8) :: cod(MAX_QP)
-    real(kind=8) :: BGSEval(3, MAX_BS)
-    real(kind=8) :: def(6, MAX_BS, 3)
+    real(kind=8) :: BGSEval(3, MAX_BS_CG)
+    real(kind=8) :: def(6, MAX_BS_CG, 3)
     real(kind=8) :: coorpg(3)
     real(kind=8) :: eps(6), deps(6)
     real(kind=8) :: dsidep(6, 6), sigmPost(6), sigmPrep(6)
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    type(Behaviour_Integ) :: BEHinteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
     cod = 0
 
 ! - Finite element parameters
+    ASSERT(BEHInteg%materPara%schemePara%fami .eq. FEQuad%fami)
     call elrefe_info(fami=FEQuad%fami, jpoids=ipoids, jvf=ivf, jdfde=idfde)
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instam, instap, &
-                              FEQuad%fami, imate, &
-                              BEHinteg)
 
 ! - Prepare external state variables (geometry)
     call behaviourPrepESVAGeom(nno, npg, ndim, &
                                ipoids, ivf, idfde, &
-                               FECell%coorno(1:ndim, 1:nno), BEHinteg, &
+                               FECell%coorno(1:ndim, 1:nno), BEHInteg, &
                                dispPrev, dispIncr)
 
 ! - Quantities to compute
@@ -150,6 +142,7 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
 
 ! ----- Kinematic - Previous strains
         eps = FEEvalGradSymMat(FEBasis, dispPrev, coorpg, BGSEval)
+
 ! ----- Kinematic - Increment of strains
         deps = FEEvalGradSymMat(FEBasis, dispIncr, coorpg, BGSEval)
 
@@ -165,17 +158,20 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
         end do
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         sigmPost = 0.d0
-        call nmcomp(BEHinteg, &
-                    FEQuad%fami, kpg, ksp, ndim, typmod, &
-                    imate, compor, carcri, instam, instap, &
-                    6, eps, deps, 6, sigmPrep, &
-                    vim(1, kpg), option, angmas, &
-                    sigmPost, vip(1, kpg), 36, dsidep, &
-                    cod(kpg), mult_comp)
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    6, eps, deps, &
+                    6, sigmPrep, &
+                    vim(1, kpg), &
+                    sigmPost, vip(1, kpg), &
+                    36, dsidep, &
+                    cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
@@ -203,8 +199,9 @@ subroutine nmplxd(FECell, FEBasis, FEQuad, nno, npg, ndim, &
 
 ! - For POST_ITER='CRIT_RUPT'
     if (carcri(13) .gt. 0.d0) then
-        call crirup(FEQuad%fami, imate, ndim, npg, lgpg, &
-                    option, compor, sigmCurr, vip, vim, &
+        call crirup(BEHInteg%materPara, &
+                    ndim, npg, lgpg, &
+                    option, sigmCurr, vip, vim, &
                     instam, instap)
     end if
 !

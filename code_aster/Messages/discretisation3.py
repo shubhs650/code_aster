@@ -47,18 +47,10 @@ Nombre de pas maximum: %(i1)d
     23: _("""La valeur maximale du résidu est de %(r1)13.6G ."""),
     30: _("""Si cet événement se déclenche, on arrête le calcul."""),
     31: _("""Si cet événement se déclenche, on découpe le pas de temps."""),
-    32: _(
-        """Si cet événement se déclenche, on fait quelques itérations de Newton supplémentaires."""
-    ),
-    35: _("""Si cet événement se déclenche, on adapte le coefficient de pénalisation."""),
     36: _("""Si cet événement se déclenche, on continue le calcul."""),
-    41: _(
-        """On peut augmenter au maximum de %(r1).2f %% le nombre d'itérations mais quand ce maximum sera atteint, on ne découpera pas le pas de temps."""
+    37: _(
+        """Si cet événement se déclenche, on arrête le calcul en archivant le dernier pas de temps."""
     ),
-    42: _(
-        """On peut augmenter au maximum de %(r1).2f %% le nombre d'itérations et quand ce maximum sera atteint, on pourra découper le pas de temps."""
-    ),
-    45: _("""On ne dépassera pas un coefficient de %(r1)13.6G."""),
     50: _("""Le schéma d'adaptation %(i1)d du pas de temps ne se déclenche pas."""),
     51: _("""Le schéma d'adaptation %(i1)d du pas de temps se déclenche à tous les instants."""),
     52: _("""Le schéma d'adaptation %(i1)d du pas de temps se déclenche pour un seuil donné."""),
@@ -100,4 +92,8 @@ Nombre de pas maximum: %(i1)d
     85: _(
         """Le pas de temps suivant sera modifié à l'aide d'un coefficient NB_ITER_NEWTON_REF dont la référence est %(i1)d."""
     ),
+    86: _(
+        """Le premier pas de temps (%(r1)f) est plus petit que PAS_INIT (%(r2)f). PAS_INIT est ignoré."""
+    ),
+    87: _("""Un premier pas de temps est inséré (PAS_INIT=%(r1)f)."""),
 }

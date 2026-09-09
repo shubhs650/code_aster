@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine pjspco(moa1, moa2, corres, base, noca, &
+subroutine pjspco(moa1, moa2, corres, base, caraElem, &
                   method, isole)
 !
 !
@@ -33,7 +33,7 @@ subroutine pjspco(moa1, moa2, corres, base, noca, &
 !
     aster_logical :: isole
     character(len=1) :: base
-    character(len=8) :: moa1, moa2, noca, masp
+    character(len=8) :: moa1, moa2, caraElem, masp
     character(len=16) :: corres
     character(len=19) :: method
 !
@@ -64,9 +64,9 @@ subroutine pjspco(moa1, moa2, corres, base, noca, &
     end if
     masp = '&&PJSPCO'
     if (method .eq. 'SOUS_POINT_MATER') then
-        call pjmasp(moa2, masp, corres, noca)
+        call pjmasp(moa2, masp, corres, caraElem)
     else if (method .eq. 'SOUS_POINT_RIGI') then
-        call pjrisp(moa2, masp, corres, noca)
+        call pjrisp(moa2, masp, corres, caraElem)
     else
         ASSERT(.false.)
     end if

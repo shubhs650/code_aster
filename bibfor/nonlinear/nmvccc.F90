@@ -16,9 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
-                  lpaout, lchout, exis_temp, exis_hydr, exis_ptot, &
-                  exis_sech, exis_epsa, calc_meta, base, vect_elem)
+subroutine nmvccc(model, &
+                  nbFieldInMax, nbFieldIn, lpain, lchin, &
+                  nbFieldOutMax, nbFieldout, lpaout, lchout, &
+                  exis_temp, exis_hydr, exis_ptot, &
+                  exis_sech, exis_epsa, calc_meta, &
+                  vectElem)
 !
     implicit none
 !
@@ -28,22 +31,16 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
 #include "asterfort/dismoi.h"
 #include "asterfort/reajre.h"
 !
-!
     character(len=8), intent(in) :: model
-    integer(kind=8), intent(in) :: nbout
-    integer(kind=8), intent(in) :: nbin
-    character(len=8), intent(in) :: lpain(nbin)
-    character(len=19), intent(in) :: lchin(nbin)
-    character(len=8), intent(in) :: lpaout(nbout)
-    character(len=19), intent(inout) :: lchout(nbout)
-    aster_logical, intent(in) :: exis_temp
-    aster_logical, intent(in) :: exis_hydr
-    aster_logical, intent(in) :: exis_ptot
-    aster_logical, intent(in) :: exis_sech
-    aster_logical, intent(in) :: exis_epsa
+    integer(kind=8), intent(in) :: nbFieldOut, nbFieldOutMax
+    integer(kind=8), intent(in) :: nbFieldIn, nbFieldInMax
+    character(len=8), intent(in) :: lpain(nbFieldInMax)
+    character(len=19), intent(in) :: lchin(nbFieldInMax)
+    character(len=8), intent(in) :: lpaout(nbFieldOutMax)
+    character(len=19), intent(inout) :: lchout(nbFieldOutMax)
+    aster_logical, intent(in) :: exis_temp, exis_hydr, exis_ptot, exis_sech, exis_epsa
     aster_logical, intent(in) :: calc_meta
-    character(len=1), intent(in) :: base
-    character(len=19), intent(in) :: vect_elem
+    character(len=19), intent(in) :: vectElem
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -54,8 +51,8 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  model          : name of model
-! In  nbin           : number of input fields
-! In  nbout          : number of output fields
+! In  nbFieldIn           : number of input fields
+! In  nbFieldOut          : number of output fields
 ! In  lpain          : list of input field parameters
 ! In  lchin          : list of input fields
 ! In  lpaout         : list of output field parameters
@@ -66,33 +63,33 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
 ! In  exis_sech      : .true. if drying variable command exists
 ! In  exis_epsa      : .true. if non-elastic strain variable command exists
 ! In  calc_meta      : .true. to compute metallurgy variable command
-! In  base           : JEVEUX base to create objects
-! In  vect_elem      : name of elementary vectors
+! In  vectElem      : name of elementary vectors
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=1), parameter :: jvBase = "V"
     character(len=6) :: masque
     character(len=16) :: option
-    character(len=24) :: ligrmo
+    character(len=24) :: modelLigrel
     integer(kind=8) :: nbr
 !
 ! --------------------------------------------------------------------------------------------------
 !
     nbr = 0
     masque = '.VEXXX'
-    call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
-!
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+
 ! - Temperature
-!
     if (exis_temp) then
         nbr = nbr+1
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_TEMP_R'
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 ! - Hydration
@@ -100,12 +97,13 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
     if (exis_hydr) then
         nbr = nbr+1
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_HYDR_R'
-        call calcul('S', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), 'V')
+        call calcul('S', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 ! - Total pressure (THM)
@@ -113,12 +111,13 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
     if (exis_ptot) then
         nbr = nbr+1
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_PTOT_R'
-        call calcul('S', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), 'V')
+        call calcul('S', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 ! - Drying
@@ -126,12 +125,13 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
     if (exis_sech) then
         nbr = nbr+1
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_SECH_R'
-        call calcul('S', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), 'V')
+        call calcul('S', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 ! - Non-elastic strain
@@ -139,12 +139,13 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
     if (exis_epsa) then
         nbr = nbr+1
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_EPSA_R'
-        call calcul('S', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), 'V')
+        call calcul('S', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 ! - Metallurgy
@@ -152,12 +153,13 @@ subroutine nmvccc(model, nbin, nbout, lpain, lchin, &
     if (calc_meta) then
         nbr = 6
         call codent(nbr, 'D0', masque(4:6))
-        lchout(1) = vect_elem(1:8)//masque
+        lchout(1) = vectElem(1:8)//masque
         option = 'CHAR_MECA_META_Z'
-        call calcul('S', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(vect_elem, lchout(1), 'V')
+        call calcul('S', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElem, lchout(1), jvBase)
     end if
 !
 end subroutine

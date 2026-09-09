@@ -30,9 +30,6 @@ from cataelem.Options.options import OP
 # ----------------
 
 
-CCACOQU = LocatedComponents(phys=PHY.CACOQU_R, type="ELEM", components=("EP", "KAPPA", "C_METR"))
-
-
 NDEPLAC = LocatedComponents(phys=PHY.DEPL_C, type="ELNO", components=("DX", "DY", "DRZ"))
 
 
@@ -221,7 +218,7 @@ class MECXSE3(Element):
         OP.CHAR_MECA_PESA_R(
             te=233,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PPESANR, LC.CPESANR),
@@ -242,7 +239,7 @@ class MECXSE3(Element):
         OP.CHAR_MECA_ROTA_R(
             te=232,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PROTATR, LC.CROTATR),
@@ -257,7 +254,7 @@ class MECXSE3(Element):
         OP.CHAR_MECA_TEMP_R(
             te=225,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.CHAR_MECA_TEMP_R.PVARCPR, LC.ZVARCPG),
@@ -267,7 +264,11 @@ class MECXSE3(Element):
         ),
         OP.COOR_ELGA(
             te=478,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, NGEOMER), (OP.COOR_ELGA.PNBSP_I, ENBSP_I)),
+            para_in=(
+                (SP.PCACOQU, LC.CSHLAXI),
+                (SP.PGEOMER, NGEOMER),
+                (OP.COOR_ELGA.PNBSP_I, ENBSP_I),
+            ),
             para_out=((OP.COOR_ELGA.PCOORPG, EGGEOP_R), (OP.COOR_ELGA.PCOORSU, EGGEOP_R)),
         ),
         OP.DEGE_ELGA(
@@ -291,7 +292,7 @@ class MECXSE3(Element):
         OP.EFGE_ELGA(
             te=451,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.EFGE_ELGA.PNBSP_I, ENBSP_I),
                 (SP.PSIEFR, ECONTPG),
@@ -301,7 +302,7 @@ class MECXSE3(Element):
         OP.EFGE_ELNO(
             te=185,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -324,7 +325,7 @@ class MECXSE3(Element):
         OP.EPSI_ELGA(
             te=237,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (OP.EPSI_ELGA.PNBSP_I, ENBSP_I),
@@ -339,7 +340,7 @@ class MECXSE3(Element):
         OP.FORC_NODA(
             te=234,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PCOMPOR, LC.CCOMPOR),
                 (SP.PSIEFR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -353,7 +354,7 @@ class MECXSE3(Element):
         OP.FULL_MECA(
             te=239,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA.PCONTMR, ECONTPG),
@@ -382,7 +383,7 @@ class MECXSE3(Element):
         OP.MASS_INER(
             te=227,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.MASS_INER.PVARCPR, LC.ZVARCPG),
@@ -392,7 +393,7 @@ class MECXSE3(Element):
         OP.MASS_MECA(
             te=226,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.MASS_MECA.PVARCPR, LC.ZVARCPG),
@@ -404,7 +405,7 @@ class MECXSE3(Element):
             te=226,
             para_in=(
                 (SP.PACCELR, DDL_MECA),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.M_GAMMA.PVARCPR, LC.ZVARCPG),
@@ -424,7 +425,7 @@ class MECXSE3(Element):
         OP.PREP_VRC(
             te=408,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (OP.PREP_VRC.PINST_R, CTEMPSR),
                 (OP.PREP_VRC.PNBSP_I, ENBSP_I),
                 (SP.PTEMPEF, LC.CTEMPEF),
@@ -436,7 +437,7 @@ class MECXSE3(Element):
         OP.RAPH_MECA(
             te=239,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.RAPH_MECA.PCONTMR, ECONTPG),
@@ -463,7 +464,7 @@ class MECXSE3(Element):
         OP.RIGI_MECA(
             te=221,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PVARCPR, LC.ZVARCPG),
@@ -483,7 +484,7 @@ class MECXSE3(Element):
         OP.RIGI_MECA_TANG(
             te=239,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_TANG.PCONTMR, ECONTPG),
@@ -511,7 +512,7 @@ class MECXSE3(Element):
         OP.SIEF_ELGA(
             te=237,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -544,29 +545,40 @@ class MECXSE3(Element):
         OP.TEMP_ELGA(
             te=126,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLAXI),
                 (OP.TEMP_ELGA.PNBSP_I, ENBSP_I),
                 (OP.TEMP_ELGA.PVARCPR, LC.ZVARCPG),
             ),
             para_out=((SP.PTEMP_R, ETHERGA),),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PSIEF_R, EEFFRNR),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
     )

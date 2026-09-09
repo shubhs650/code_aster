@@ -22,13 +22,12 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PVARCPR = InputParameter(phys=PHY.VARI_R, comment="""  PVARCPR : VARIABLES DE COMMANDE  """)
 
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
 )
 
@@ -157,6 +156,7 @@ RIGI_MECA = Option(
         CondCalcul("+", ((AT.FLUIDE, "OUI"), (AT.ABSO, "OUI"))),
         CondCalcul("+", ((AT.POUTRE, "OUI"), (AT.FSI, "OUI"))),
         CondCalcul("-", ((AT.FLUIDE, "OUI"), (AT.FSI, "OUI"), (AT.FORMULATION, "U_P_PHI"))),
-        CondCalcul("-", ((AT.TYPMOD2, "ELEMJOIN"), (AT.INTERFACE, "OUI"))),
+        CondCalcul("-", ((AT.PHENO, "ME"), (AT.INTERFACE, "OUI"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "INTSOLPI"))),
     ),
 )

@@ -15,43 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine lc7046(BEHinteg, &
+! aslint: disable=W0104
+!
+subroutine lc7046(BEHInteg, &
                   fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
+                  instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
 !
     use Behaviour_type
-!
     implicit none
 !
 #include "asterfort/lcejtu.h"
 !
-! aslint: disable=W1504,W0104
-!
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
+    integer(kind=8), intent(in) :: imate, nvi
+    real(kind=8), intent(in) :: instam, instap
     real(kind=8), intent(in) :: epsm(6)
     real(kind=8), intent(in) :: deps(6)
     real(kind=8), intent(in) :: sigm(6)
-    real(kind=8), intent(in) :: vim(*)
+    real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(out) :: sigp(6)
-    real(kind=8), intent(out) :: vip(*)
+    real(kind=8), intent(out) :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
-    integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(out) :: dsidep(6, 6)
     integer(kind=8), intent(out) :: codret
 !
@@ -64,9 +56,9 @@ subroutine lc7046(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 !
     codret = 0
-    call lcejtu(BEHinteg, &
-                fami, kpg, ksp, ndim, imate, &
-                option, epsm, deps, sigm, sigp, &
+    call lcejtu(BEHInteg, &
+                ndim, option, &
+                epsm, deps, sigm, sigp, &
                 dsidep, vim, vip, typmod, &
                 instam, instap)
 end subroutine

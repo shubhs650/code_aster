@@ -32,7 +32,6 @@ subroutine deflg2(gn, lamb, logl, pes, feta, &
 !     OUT  ME    utilitaires pour DEFLG3 : tenseur M d'ordre 4
 ! ----------------------------------------------------------------------
 #include "asterc/r8miem.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/symt46.h"
     real(kind=8) :: gn(3, 3), lamb(3), logl(3)
     real(kind=8) :: di(3), theta(3, 3)

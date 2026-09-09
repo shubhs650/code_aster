@@ -15,12 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine fornpd(option, nomte)
-        character(len=16) :: option
-        character(len=16) :: nomte
+    subroutine fornpd(plateCara, plateOrie, &
+                      option, nomte)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: option, nomte
     end subroutine fornpd
 end interface

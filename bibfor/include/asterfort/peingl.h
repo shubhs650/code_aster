@@ -15,18 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine peingl(resu, modele, mate, mateco, cara, nh,&
-                      nbocc, motfaz)
-        character(len=*) :: resu
-        character(len=*) :: modele
-        character(len=*) :: mate, mateco
-        character(len=*) :: cara
-        integer(kind=8) :: nh
-        integer(kind=8) :: nbocc
-        character(len=*) :: motfaz
+    subroutine peingl(tablOutZ, &
+                      modelZ, materFieldZ, materCodeZ, caraElemZ, numeHarm, &
+                      nbFactorKeyword, factorKeywordZ)
+        character(len=*), intent(in) :: tablOutZ
+        character(len=*), intent(in) :: modelZ, materFieldZ, materCodeZ, caraElemZ
+        integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
+        character(len=*), intent(in) :: factorKeywordZ
     end subroutine peingl
 end interface

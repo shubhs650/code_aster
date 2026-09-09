@@ -16,29 +16,34 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
-                  resi, mini, &
-                  alpha, dsbdep, traceEpsiTher)
+subroutine tanbul(materPara, relaComp, &
+                  ndim, mini, &
+                  alpha, dsbdep, &
+                  lVect_, traceEpsiTher_)
 !
+    use MaterialPara_type
     use BehaviourStrain_type
     implicit none
 !
 #include "asterc/r8miem.h"
 #include "asterc/r8vide.h"
 #include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/epstmc.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/get_elas_para.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
 #include "jeveux.h"
 !
-    integer(kind=8), intent(in) :: ndim, kpg, jvMaterCode
+    type(Material_Para), intent(inout) :: materPara
     character(len=16), intent(in) :: relaComp
-    aster_logical, intent(in) :: resi, mini
-    real(kind=8), intent(out) :: alpha, dsbdep(2*ndim, 2*ndim), traceEpsiTher
+    integer(kind=8), intent(in) :: ndim
+    aster_logical, intent(in) :: mini
+    real(kind=8), intent(out) :: alpha, dsbdep(2*ndim, 2*ndim)
+    aster_logical, optional, intent(in) :: lVect_
+    real(kind=8), optional, intent(out) :: traceEpsiTher_
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -52,27 +57,25 @@ subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
 ! IN  NDIM    : DIMENSION DE L'ESPACE
 ! IN  G       : NUMERO DU POINT DE GAUSS
 ! IN  MATE    : NUMERO DU MATERIAU
-! IN  COMPOR  : NOM DU COMPORTEMENT
 ! OUT ALPHA   : INVERSE DE KAPPA
 ! OUT DSBDEP  : MATRICE TANGENTE BULLE
 ! OUT TREPST  : TRACE DU TENSEUR DES DEFORMATIONS THERMIQUES
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = 'RIGI'
     integer(kind=8) :: k, jvTime, iret
     real(kind=8) :: e, nu, time
     real(kind=8) :: epsiTher(6)
-    real(kind=8) :: coef, coef1, coef2, coef3, anglNaut(3)
-    integer(kind=8) :: elasID
-    character(len=16) :: elasKeyword
-    aster_logical :: hasEpsiTher
+    real(kind=8) :: coef, coef1, coef2, coef3
+    aster_logical :: hasEpsiTher, lVect
     type(All_Varc_Strain) :: allVarcStrain
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    traceEpsiTher = 0.d0
+    lVect = ASTER_FALSE
+    if (present(lVect_)) then
+        lVect = lVect_
+    end if
     dsbdep = 0.d0
     alpha = 0.d0
     if (.not. (relaComp(1:4) .eq. 'ELAS' .or. relaComp(1:9) .eq. 'VMIS_ISOT')) then
@@ -89,18 +92,19 @@ subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
     allVarcStrain%time = time
 
 ! - Get elastic parameters
-    call get_elas_id(jvMaterCode, elasID, elasKeyword)
-    anglNaut = 0.d0
-    if (elasID .ne. ELAS_ISOT) then
+    if (materPara%elasID .ne. ELAS_ISOT) then
         call utmess("F", "ELEMENTSINCO_2")
     end if
     if (allVarcStrain%hasTime) then
-        call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, &
-                           elasID, elasKeyword, time=time, &
+        call get_elas_para(materPara%schemePara%fami, materPara%jvMaterCode, '+', &
+                           materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                           materPara%elasID, materPara%elasKeyword, &
+                           time=time, &
                            e_=e, nu_=nu)
     else
-        call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, &
-                           elasID, elasKeyword, &
+        call get_elas_para(materPara%schemePara%fami, materPara%jvMaterCode, '+', &
+                           materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                           materPara%elasID, materPara%elasKeyword, &
                            e_=e, nu_=nu)
     end if
     alpha = (3.d0*(1.d0-2.d0*nu))/e
@@ -128,12 +132,14 @@ subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
     end if
 
 ! - Compute residual
-    if (resi) then
+    if (lVect) then
         time = r8vide()
         epsiTher = 0.d0
+        ASSERT(present(traceEpsiTher_))
+        traceEpsiTher_ = 0.d0
+
 ! ----- Compute thermal strains
-        call epstmc(fami, '+', kpg, ksp, ndim, &
-                    time, anglNaut, jvMaterCode, &
+        call epstmc(materPara, '+', time, ndim, &
                     VARC_STRAIN_TEMP, allVarcStrain, &
                     epsiTher)
 
@@ -146,7 +152,7 @@ subroutine tanbul(ndim, kpg, jvMaterCode, relaComp, &
         end do
         if (hasEpsiTher) then
             do k = 1, 3
-                traceEpsiTher = traceEpsiTher+epsiTher(k)
+                traceEpsiTher_ = traceEpsiTher_+epsiTher(k)
             end do
         end if
     end if

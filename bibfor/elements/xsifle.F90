@@ -35,6 +35,7 @@ subroutine xsifle(ndim, ifa, jptint, cface, igeom, &
 #include "asterfort/lteatt.h"
 #include "asterfort/tecach.h"
 #include "asterfort/xjacf2.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xjacff.h"
 #include "asterfort/xsifl1.h"
 #include "asterfort/xxmmvd.h"
@@ -85,9 +86,9 @@ subroutine xsifle(ndim, ifa, jptint, cface, igeom, &
     integer(kind=8) :: nnof, npgf, ipoidf, ivff, idfdef
     integer(kind=8) :: ipgf, zxain, heavn(nnop, 5)
     integer(kind=8) :: ddld, ddls, ncompn, ino, ig, iret, jtab(7)
-    real(kind=8) :: xg(3), jac, ff(27), nd(3)
+    real(kind=8) :: xg(3), jac, ff(MT_NNOMAX3D), nd(3)
     real(kind=8) :: angl(2)
-    real(kind=8) :: e, nu, mu, ka, coeff, coeff3, r27bid(27)
+    real(kind=8) :: e, nu, mu, ka, coeff, coeff3, rnbid(MT_NNOMAX3D)
     real(kind=8) :: dfdi(nnop, ndim)
     real(kind=8) :: he(2)
 !
@@ -169,13 +170,13 @@ subroutine xsifle(ndim, ifa, jptint, cface, igeom, &
             call xjacff(elref, elrefc, elc, ndim, fpg, &
                         jptint, ifa, cface, ipgf, nnop, &
                         nnos, igeom, jbasec, xg, jac, &
-                        ff, r27bid, dfdi, nd, tau1, &
+                        ff, rnbid, dfdi, nd, tau1, &
                         tau2)
         else if (ndim .eq. 2) then
             call xjacf2(elref, elrefc, elc, ndim, fpg, &
                         jptint, ifa, cface, ndim, ipgf, &
                         nnop, nnos, igeom, jbasec, xg, &
-                        jac, ff, r27bid, dfdi, nd, &
+                        jac, ff, rnbid, dfdi, nd, &
                         tau1)
         end if
         call xsifl1(elref, angl, basloc, coeff, coeff3, &

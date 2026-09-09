@@ -18,7 +18,7 @@
 
 subroutine nm3dco(fami, kpg, ksp, ndim, option, &
                   imate, sigm, deps, vim, sigp, &
-                  vip, dsidep, crildc, codret)
+                  vip, dsidep, carcri, codret)
 !
     implicit none
 ! ----------------------------------------------------------------------
@@ -36,16 +36,16 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
 ! OUT SIGP     : CONTRAINTES PLUS
 ! OUT VIP       : VARIABLE INTERNES PLUS
 ! OUT DSIDEP    : DSIG/DEPS
-!     ------------------------------------------------------------------
-!     ARGUMENTS
-!     ------------------------------------------------------------------
-!     ------------------------------------------------------------------
+!
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
+
     real(kind=8) :: sigm(6), deps(6), vim(*)
-    real(kind=8) :: sigp(6), vip(*), dsidep(6, 6), crildc(3)
+    real(kind=8) :: sigp(6), vip(*), dsidep(6, 6)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     character(len=16) :: option
     character(len=*) :: fami
     integer(kind=8) :: ndim, imate, codret, kpg, ksp
@@ -96,8 +96,8 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
     plas = vim(3)
 !
 ! --- PARAMETRES DE CONVERGENCE
-    resi = crildc(3)
-    itemax = nint(crildc(1))
+    resi = carcri(3)
+    itemax = nint(carcri(1))
 !
 !
 !     CALCUL DE LA DEFORMATION CRITIQUE
@@ -204,7 +204,7 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
                         vip(1) = vim(1)
                         vip(2) = vim(2)
                         vip(3) = vim(3)
-                        goto 9999
+                        goto 998
                     end if
 !     TERME1 : F(SIG,R)
                     terme1 = (j2/(1.d0-dcoef))-rini-limit
@@ -373,8 +373,8 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
             end do
             do k = 1, ndimsi
                 do m = 1, ndimsi
-                    dsidep(k, m) = dsidep(k, m)-((bcoef/ccoef)*((sigd(k)/(rini+limit))*(sigd(m)/(&
-                         &rini+limit))))
+                    dsidep(k, m) = dsidep(k, m)- &
+                                   ((bcoef/ccoef)*((sigd(k)/(rini+limit))*(sigd(m)/(rini+limit))))
                 end do
             end do
 !
@@ -403,8 +403,9 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
             end do
             do k = 1, ndimsi
                 do m = 1, ndimsi
-                dsidep(k, m) = (dsidep(k, m)-((bcoef/ccoef)*((sigd(k)/((1.d0-dcoef)*(rini+limit))) &
-                                                           *(sigd(m)/((1.d0-dcoef)*(rini+limit))))))
+                    dsidep(k, m) = (dsidep(k, m)- &
+                                    ((bcoef/ccoef)*((sigd(k)/((1.d0-dcoef)*(rini+limit))) &
+                                                    *(sigd(m)/((1.d0-dcoef)*(rini+limit))))))
                 end do
             end do
         end if
@@ -419,5 +420,5 @@ subroutine nm3dco(fami, kpg, ksp, ndim, option, &
         end do
     end if
 !
-9999 continue
+998 continue
 end subroutine

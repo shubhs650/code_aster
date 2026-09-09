@@ -46,7 +46,8 @@
                  'ROTR_FK ', 'SIGN_DYZ', 'SINCOS_A', 'SINCOS_B', 'SINCOS_G', &
                  'SS1_NAME', 'SS2_NAME', 'STIF_NOR', 'FEXT_MPI', 'BKLDEFT0', &
                  'BKL_DEFP', 'BKL_RIGI', 'BKL_DEFT', 'BKL_AMOR', 'AMOR_IN ', &
-                 'NB_ETRAC'/
+                 'NB_ETRAC', 'NB_DICIN', 'DEC_KELA', 'DEC_LIMY', 'DEC_KCIN', &
+                 'DEC_PUIS', 'DEC_LIMU'/
 
 !   R               : Real
 !   C               : Complex
@@ -68,7 +69,8 @@
                  'K24', 'R  ', 'R  ', 'R  ', 'R  ', &
                  'K24', 'K24', 'R  ', 'R  ', 'R  ', &
                  'R  ', 'R  ', 'R  ', 'R  ', 'I  ', &
-                 'I  '/
+                 'I  ', 'I  ', 'R  ', 'R  ', 'R  ', &
+                 'R  ', 'R  '/
 
 ! -------------------------------------------------------------------------
 !   parind = -2 : vector global        ; = -1 : scalar global ;
@@ -90,5 +92,6 @@
                   2,  2,  1,  1,  1, &
                   1,  2,  2,  2,  2, &
                   1,  1,  1, -2,  1, &
-                  2,  2,  2,  2,  1,&
-                 -1/
+                  2,  2,  2,  2,  1, &
+                 -1, -1,  2,  2,  2, &
+                  2,  2/

@@ -150,10 +150,9 @@ subroutine irvari(ifi, field_med, vari_elga, field_loca, ligrel, &
     if (hasMFront(compor)) then
         call utmess('F', "COMPOR6_7")
     end if
-!
+
 ! - Prepare informations about internal variables
-!
-    call comp_meca_pvar(ligrel, comporMap_=compor, comporInfo=comporInfo)
+    call comp_meca_pvar(ligrel, compor, comporInfo)
 
 ! - Access to informations
     call jeveuo(comporInfo(1:19)//'.INFO', 'L', vi=comporInfoInfo)

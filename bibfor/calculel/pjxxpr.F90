@@ -41,9 +41,11 @@ subroutine pjxxpr(resu1, resu2, moa1, moa2, corres, &
 !
 #include "jeveux.h"
 #include "asterf_types.h"
+#include "asterc/getfac.h"
 #include "asterc/getres.h"
 #include "asterfort/assert.h"
 #include "asterfort/dismoi.h"
+#include "asterfort/exlim5.h"
 #include "asterfort/gettco.h"
 #include "asterfort/getvid.h"
 #include "asterfort/getvr8.h"
@@ -83,10 +85,10 @@ subroutine pjxxpr(resu1, resu2, moa1, moa2, corres, &
 !
     integer(kind=8) :: ibid, ie, iret, jordr, nbordr, i, iordr, tmod(1)
     integer(kind=8) :: iains1, iains2, nbsym, isym, ico, ind, nbmax
-    integer(kind=8) :: iexi, jpara, ier, inume
+    integer(kind=8) :: iexi, jpara, ier, inume, nbocc
     parameter(nbmax=50)
     integer(kind=8) :: ipar, ipar1, ipar2
-    aster_logical :: acceno, lxfem, lpjxfem, l_parallel_mesh
+    aster_logical :: acceno, lxfem, lpjxfem, l_parallel_mesh, l_emis
     real(kind=8) :: r8b, prec, inst
     complex(kind=8) :: c16b
     character(len=1) :: typerr
@@ -189,6 +191,13 @@ subroutine pjxxpr(resu1, resu2, moa1, moa2, corres, &
         call jeveuo('&&PJXXPR.NUME_ORDRE', 'L', jordr)
     end if
 !
+    call getfac('VIS_A_VIS', nbocc)
+    if (nbocc .gt. 0) then
+        if (ligrel .ne. ' ' .and. prolong%prol_vale_r .eq. 'NON') then
+            call exlim5('VIS_A_VIS', 'GROUP_MA_2', 'TOUT_2', resu2, mo2, ligrel)
+        end if
+    end if
+!
     noms2 = resu2
     call jeexin(noms2//'.DESC', iret)
     if (iret .eq. 0) then
@@ -224,16 +233,17 @@ subroutine pjxxpr(resu1, resu2, moa1, moa2, corres, &
             prfchn = noojb(1:19)
         end if
         !
+        l_emis = ASTER_FALSE
         do i = 1, nbordr
             iordr = zi(jordr+i-1)
             call rsexch(' ', resu1, nomsym(isym), iordr, ch1, iret)
             if (iret .gt. 0) goto 20
             ! PROJECTION DU CHAMP SI POSSIBLE
             call rsexch(' ', resu2, nomsym(isym), iordr, ch2, iret)
+            call dismoi('TYPE_CHAMP', ch1, 'CHAMP', repk=tych)
             ! VERIF ULTIME DANS LE CAS XFEM SI LE CHAMP EST NODAL
             lpjxfem = .false._1
             if (lxfem) then
-                call dismoi('TYPE_CHAMP', ch1, 'CHAMP', repk=tych)
                 if (tych .eq. 'NOEU' .and. nomsym(isym) .eq. 'DEPL') lpjxfem = .true._1
             end if
             if (method(1:10) .eq. 'SOUS_POINT') then
@@ -254,9 +264,26 @@ subroutine pjxxpr(resu1, resu2, moa1, moa2, corres, &
             end if
             ASSERT(iret .eq. 0 .or. iret .eq. 1 .or. iret .eq. 10)
             ! ELGA ET CART : ON NE FAIT RIEN
-            if (iret .eq. 10) goto 20
+            if (iret .eq. 10 .and. tych .eq. 'CART') goto 20
 !
-            if (iret .gt. 0) then
+            if (iret .eq. 10) then
+                if (acceno) then
+                    ! L'UTILISATEUR A DEMANDE EXPLICITEMENT LA PROJECTION :
+                    typerr = 'F'
+                else
+                    ! L'utilisateur n'a pas demande explicitement la projection
+                    !   ==> on se contente d'une alarme
+                    typerr = 'A'
+                end if
+                valk(1) = nomsym(isym)
+                valk(2) = resu1
+                if (.not. l_emis) then
+                    call utmess(typerr, 'CALCULEL4_76', nk=2, valk=valk)
+                    l_emis = ASTER_TRUE
+                end if
+                goto 20
+            end if
+            if (iret .eq. 1) then
                 if (acceno) then
                     ! L'UTILISATEUR A DEMANDE EXPLICITEMENT LA PROJECTION :
                     typerr = 'F'

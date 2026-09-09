@@ -57,7 +57,7 @@ subroutine vector_update_ghost_values_c(vector, nume_equa, mode)
     integer(kind=8) :: iret1, iret2, jjoine, nbnoee, idprn1, idprn2, nec
     integer(kind=8) :: jjoinr, jnujoie1, jnujoir1, nbnoer, nddll
     integer(kind=8) :: numnoe, nb_comm, gd, domj_i, jnujoie2, jnujoir2
-    integer(kind=8) :: jvaleue2, jvaleur2
+    integer(kind=8) :: jvaleue2, jvaleur2, nbLigrTot, iLigrT
     aster_logical :: ldebug, l_parallel_mesh, lbidir
     integer(kind=8), pointer :: v_nuls(:) => null()
     integer(kind=8), pointer :: v_deeg(:) => null()
@@ -66,6 +66,7 @@ subroutine vector_update_ghost_values_c(vector, nume_equa, mode)
     integer(kind=8), pointer :: v_dom(:) => null()
     integer(kind=8), pointer :: v_gco(:) => null()
     integer(kind=4), pointer :: v_pgid(:) => null()
+    integer(kind=8), pointer :: v_lilt(:) => null()
 !
     mpi_int :: n4r, n4e, tag4, numpr4
     mpi_int :: mrank, msize, mpicou
@@ -122,6 +123,8 @@ subroutine vector_update_ghost_values_c(vector, nume_equa, mode)
     call jeveuo(nume_equa//'.NULG', 'L', jnulg)
     call jeveuo(nume_equa//'.PDDL', 'L', jprddl)
     call jeveuo(nume_equa//'.NEQU', 'L', jnequ)
+    call jeveuo(nume_equa//'.LILT', 'L', vi=v_lilt)
+    call jelira(nume_equa//'.LILT', 'LONMAX', ival=nbLigrTot)
     nloc = zi(jnequ)
 
 !
@@ -243,7 +246,12 @@ subroutine vector_update_ghost_values_c(vector, nume_equa, mode)
     call dismoi('NUM_GD_SI', nume_equa, 'NUME_EQUA', repi=gd)
     nec = nbec(gd)
     call jelira(nume_equa//'.PRNO', 'NMAXOC', nlili, k8bid)
-    do ili = 2, nlili
+    do iLigrT = 2, nbLigrTot
+        if (v_lilt(iLigrT) .eq. -1) then
+            cycle
+        else
+            ili = v_lilt(iLigrT)
+        end if
         call jenuno(jexnum(nume_equa//'.LILI', ili), nomlig)
         call create_graph_comm(nomlig, "LIGREL", nb_comm, comm_name, tag_name)
         if (nb_comm > 0) then
@@ -374,7 +382,7 @@ subroutine vector_update_ghost_values_c(vector, nume_equa, mode)
 !
 ! -- debug
     if (ldebug) then
-        print *, "DEBUG IN vect_asse_update_ghost_values"
+        print *, "DEBUG IN vector_update_ghost_values_c"
         call jeexin(nume_equa//'.NULS', iret)
         if (iret == 0) then
             call crnustd(nume_equa)

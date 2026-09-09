@@ -18,23 +18,27 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine ngfint(option, typmod, ndim, nddl, neps, &
-                  npg, w, b, compor, fami, &
-                  mat, angmas, lgpg, carcri, instam, &
-                  instap, ddlm, ddld, ni2ldc, sigmam, &
-                  vim, sigmap, vip, fint, matsym, matuu, matns, &
-                  lMatr, lVect, lSigm, codret)
-        character(len=8) :: typmod(2)
-        character(len=*) :: fami
-        character(len=16) :: option, compor(COMPOR_SIZE)
-        integer(kind=8) :: ndim, nddl, neps, npg, mat, lgpg
+    subroutine ngfint(BEHinteg, &
+                      option, typmod, ndim, nddl, neps, &
+                      npg, w, b, compor, &
+                      lgpg, carcri, instam, instap, &
+                      ddlm, ddld, ni2ldc, sigmam, &
+                      vim, sigmap, vip, fint, matsym, matuu, matns, &
+                      lMatr, lVect, lSigm, codret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        character(len=16) :: option
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        integer(kind=8) :: ndim, nddl, neps, npg, lgpg
         real(kind=8) :: w(neps, npg), ni2ldc(neps, npg), b(neps, npg, nddl)
-        real(kind=8) :: angmas(3), carcri(*), instam, instap
+        real(kind=8) :: instam, instap
         real(kind=8) :: ddlm(nddl), ddld(nddl)
         real(kind=8) :: sigmam(neps, npg), sigmap(neps, npg)
         real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg), fint(nddl)
-        real(kind=8),intent(out):: matuu((nddl*(nddl+1))/2)
-        real(kind=8),intent(out),target :: matns(nddl, nddl)
+        real(kind=8), intent(out):: matuu((nddl*(nddl+1))/2)
+        real(kind=8), intent(out), target :: matns(nddl, nddl)
         aster_logical, intent(in) :: matsym, lMatr, lVect, lSigm
         integer(kind=8), intent(out) :: codret
     end subroutine ngfint

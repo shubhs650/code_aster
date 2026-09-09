@@ -77,12 +77,12 @@ subroutine te0027(option, nomte)
     real(kind=8) :: dudm(3, 4), dfdm(3, 4), dtdm(3, 4), der(4), dvdm(3, 4)
     real(kind=8) :: energi(2), rho(1), om, omo
     real(kind=8) :: ecin, prod3, prod4, accele(3), e(1), nu(1), mu
-    type(Behaviour_Integ) :: BEHinteg
+    type(Behaviour_Integ) :: BEHInteg
 !
     aster_logical :: grand, fonc, incr, epsini
 !
     integer(kind=8) :: icodre(1)
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(4), typmod(2)
     character(len=16), pointer :: compor(:) => null()
     character(len=16) :: phenom
@@ -97,7 +97,7 @@ subroutine te0027(option, nomte)
     typmod(2) = ' '
 
 ! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
 !
     fami = 'RIGI'
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
@@ -369,7 +369,7 @@ subroutine te0027(option, nomte)
             end do
         else
 !
-            call nmelnl(BEHinteg, &
+            call nmelnl(BEHInteg, &
                         fami, kp, 1, &
                         ndim, typmod, matcod, compor, &
                         eps, 0.d0, 0.d0, sigl, energi)

@@ -284,6 +284,12 @@ Il faut préciser un concept EVOL_NOLI en prédiction de type 'DEPL_CALCULE'
   Le pilotage est incompatible avec la méthode NEWTON_KRYLOV.
 """
     ),
+    49: _(
+        """
+La recherche linéaire est ignorée pour cette itération : le résidu est orthogonal
+à la direction de descente. On conserve le pas de Newton.
+"""
+    ),
     50: _(
         """
  Pilotage.
@@ -310,13 +316,19 @@ Il n'y a aucun degré de liberté de déplacement sur le modèle.
     55: _(
         """
   Vous utilisez l'indicateur de convergence RESI_REFE_RELA et une modélisation %(k1)s.
-  Vous devez renseigner la valeur de référence %(k2)s dans CONVERGENCE.
+  Vous devez renseigner la valeur de référence %(k2)s dans CONVERGENCE_REFE.
 """
     ),
     56: _(
         """
   Il n'est pas possible actuellement de calculer des modes vibratoires (MODE_VIBR)
   sur un modèle dont au moins une matrice assemblée (masse ou raideur) est non-symétrique.
+"""
+    ),
+    57: _(
+        """
+  Vous utilisez l'indicateur de convergence RESI_REFE_RELA et une modélisation %(k1)s.
+  La valeur de référence %(k2)s dans CONVERGENCE_REFE n'est pas utilisée.
 """
     ),
     59: _(

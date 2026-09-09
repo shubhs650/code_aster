@@ -19,8 +19,8 @@
 !
 !
 interface
-    subroutine cvmcvg(dy, ddy, nr, itmax, toler,&
-                      iter, intg, typess, essai, icomp,&
+    subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
+                      iter, intg, typess, essai, cutLevel, &
                       irteti)
         real(kind=8) :: dy(*)
         real(kind=8) :: ddy(*)
@@ -31,7 +31,7 @@ interface
         integer(kind=8) :: intg
         integer(kind=8) :: typess
         real(kind=8) :: essai
-        integer(kind=8) :: icomp
+        integer(kind=8) :: cutLevel
         integer(kind=8) :: irteti
     end subroutine cvmcvg
 end interface

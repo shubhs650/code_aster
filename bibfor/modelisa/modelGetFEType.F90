@@ -83,8 +83,6 @@ subroutine modelGetFEType(iocc, phenom, modeli_in, idx_modelisa, modeli)
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'#3'
     elseif (formul .eq. 'QUARTIQUE') then
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'#4'
-    elseif (formul .eq. 'QUINTIQUE') then
-        modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'#5'
     elseif (formul .eq. 'CONSTANTE_MIXTE') then
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'$0'
     elseif (formul .eq. 'LINEAIRE_MIXTE') then
@@ -95,8 +93,6 @@ subroutine modelGetFEType(iocc, phenom, modeli_in, idx_modelisa, modeli)
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'$3'
     elseif (formul .eq. 'QUARTIQUE_MIXTE') then
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'$4'
-    elseif (formul .eq. 'QUINTIQUE_MIXTE') then
-        modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'$5'
     elseif (formul .eq. 'U_P_PHI') then
         modeli = modeli_in(1:min(lxlgut(modeli_in), 14))//'#1'
     elseif (formul .eq. 'U_P') then

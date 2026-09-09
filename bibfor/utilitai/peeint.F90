@@ -26,7 +26,6 @@ subroutine peeint(tableOut, model, nbocc)
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/assert.h"
-#include "asterfort/char8_to_int.h"
 #include "asterfort/convertFieldNodeToNeutElem.h"
 #include "asterfort/copisd.h"
 #include "asterfort/detrsd.h"

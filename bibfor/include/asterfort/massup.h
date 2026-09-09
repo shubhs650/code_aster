@@ -15,23 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine massup(option, ndim, dlns, nno, nnos,&
-                      mate, phenom, npg, ipoids, idfde,&
-                      geom, vff1, imatuu, icodre, igeom,&
+    subroutine massup(jvMaterCode, &
+                      option, ndim, dlns, nno, nnos, &
+                      npg, ipoids, idfde, &
+                      geom, vff1, imatuu, icodre, igeom, &
                       ivf)
-        integer(kind=8) :: npg
-        integer(kind=8) :: nno
-        integer(kind=8) :: ndim
         character(len=16) :: option
+        integer(kind=8) :: ndim, nno, nnos, npg
         integer(kind=8) :: dlns
-        integer(kind=8) :: nnos
-        integer(kind=8) :: mate
-        character(len=16) :: phenom
-        integer(kind=8) :: ipoids
+        integer(kind=8) :: ipoids, jvMaterCode
         integer(kind=8) :: idfde
         real(kind=8) :: geom(ndim, nno)
         real(kind=8) :: vff1(nno, npg)

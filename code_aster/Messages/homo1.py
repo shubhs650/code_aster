@@ -108,7 +108,7 @@ Le fichier fourni ne contient pas de correcteurs.
     ),
     18: _(
         """
-Le point demandé est partagé par plusieurs (%(i1)d) domaines du calcul distribué et cela peut avoir une influence négligeable sur les valeurs interpolées.
+Le point demandé est partagé par plusieurs (%(i1)d) domaines du calcul distribué et cela peut avoir une influence sur les valeurs interpolées.
 
 Conseil :
 Vous pouvez sauvegarder le résultat dans un fichier unique puis le recharger en séquentiel.
@@ -127,6 +127,11 @@ La pression fournie n'est pas une fonction du temps.
     21: _(
         """
 Le maillage fourni, %(k1)s, est linéaire. Il est recommandé d'utiliser un maillage quadratique pour cette application.
+"""
+    ),
+    22: _(
+        """
+Le point demandé est hors du domaine.
 """
     ),
 }

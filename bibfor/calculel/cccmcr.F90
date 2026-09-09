@@ -15,13 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine cccmcr(jcesdd, numma, jrepe, jconx2, jconx1, &
                   jcoord, adcar1, adcar2, ialpha, ibeta, &
                   iepais, jalpha, jbeta, jgamma, ligrmo, &
                   ino, pgl, modeli, codret)
+!
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
 #include "asterfort/c3drep.h"
 #include "asterfort/cesexi.h"
@@ -30,6 +31,7 @@ subroutine cccmcr(jcesdd, numma, jrepe, jconx2, jconx1, &
 #include "asterfort/mpglcp.h"
 #include "asterfort/teattr.h"
 #include "asterfort/typele.h"
+#include "jeveux.h"
 !
     integer(kind=8) :: jcesdd, numma, jrepe, jconx2, jconx1, jcoord
     integer(kind=8) :: ialpha, ibeta, iepais, jalpha, adcar1(3), adcar2(3)
@@ -155,7 +157,7 @@ subroutine cccmcr(jcesdd, numma, jrepe, jconx2, jconx1, &
         call cesexi('S', jcesdc, jceslc, numma, 1, 1, iepais, iad)
         epais = zr(jcesvc-1+iad)
         call c3drep(nomte, epais, alpha, beta, coordc, inos, pgl)
-!
+
     else if (atcoq .eq. 'OUI' .and. atmod .ne. 'CQ3' .and. atmod .ne. 'GRM' .and. &
              atmod .ne. 'GRC' .and. atmod .ne. 'CQA' .and. atmod .ne. 'MMB') then
         do ino2 = 1, nbnol

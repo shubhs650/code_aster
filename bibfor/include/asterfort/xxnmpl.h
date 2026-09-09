@@ -16,16 +16,25 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom,&
-                      he, nfh, ddlc, ddlm, nfe,&
-                      instam, instap, ideplp, sigm, vip,&
-                      basloc, nnop, npg, typmod, option,&
-                      imate, compor, lgpg, carcri, idepl,&
-                      lsn, lst, idecpg, sig, vi,&
-                      matuu, ivectu, codret, nfiss, heavn, jstno,&
+    subroutine xxnmpl(BEHInteg, &
+                      option, typmod, &
+                      compor, carcri, &
+                      elrefp, elrese, ndim, coorse, jvGeom, &
+                      he, nfh, ddlc, ddlm, nfe, &
+                      instam, instap, ideplp, sigm, vip, &
+                      basloc, nnop, npg, &
+                      lgpg, idepl, &
+                      lsn, lst, idecpg, sig, vi, &
+                      matuu, ivectu, codret, nfiss, heavn, jstno, &
                       lMatr, lVect, lSigm)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         aster_logical, intent(in) :: lMatr, lVect, lSigm
         integer(kind=8) :: nfiss
         integer(kind=8) :: lgpg
@@ -37,7 +46,7 @@ interface
         character(len=8) :: elrefp
         character(len=8) :: elrese
         real(kind=8) :: coorse(*)
-        integer(kind=8) :: igeom
+        integer(kind=8) :: jvGeom
         real(kind=8) :: he(nfiss)
         integer(kind=8) :: ddlc
         integer(kind=8) :: ddlm
@@ -47,11 +56,6 @@ interface
         real(kind=8) :: sigm(2*ndim, npg)
         real(kind=8) :: vip(lgpg, npg)
         real(kind=8) :: basloc(3*ndim*nnop)
-        character(len=8) :: typmod(*)
-        character(len=16) :: option
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
         integer(kind=8) :: idepl
         real(kind=8) :: lsn(nnop)
         real(kind=8) :: lst(nnop)

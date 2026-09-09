@@ -22,32 +22,25 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PNBSP_I = OutputParameter(phys=PHY.NBSP_I, type="ELEM")
-
 
 PERREUR = OutputParameter(phys=PHY.ERRE_R, type="ELEM")
 
-
 PPRES_R = OutputParameter(phys=PHY.PRES_R, type="ELEM")
-
 
 PSOUR_R = OutputParameter(phys=PHY.SOUR_R, type="ELEM")
 
-
 PGEOM_R = OutputParameter(phys=PHY.GEOM_R, type="ELEM")
-
 
 PCOEH_R = OutputParameter(phys=PHY.COEH_R, type="ELEM")
 
-
 PFLUN_R = OutputParameter(phys=PHY.FLUN_R, type="ELEM")
 
+PCADISK = OutputParameter(phys=PHY.CADISK_R, type="ELEM")
 
-PNEUT_F = OutputParameter(phys=PHY.NEUT_F, type="ELEM")
+PTEMP_R = OutputParameter(phys=PHY.TEMP_R, type="ELEM")
 
-PNEUT_K8 = OutputParameter(phys=PHY.NEUT_K8, type="ELEM")
-
+PCAMA_R = OutputParameter(phys=PHY.CAMA_R, type="ELEM")
 
 TOU_INI_ELEM = Option(
     para_in=(),
@@ -57,15 +50,17 @@ TOU_INI_ELEM = Option(
         SP.PFORC_R,
         PGEOM_R,
         PNBSP_I,
-        SP.PNEU1_R,
+        SP.PNEUT_R,
+        SP.PNEUT_I,
+        SP.PNEUT_F,
         PPRES_R,
         PSOUR_R,
         PCOEH_R,
         PFLUN_R,
-        PNEUT_F,
-        SP.PNEUT_I,
         SP.PDEPLEL,
-        PNEUT_K8,
+        PCADISK,
+        PTEMP_R,
+        PCAMA_R,
     ),
     condition=(
         CondCalcul("+", ((AT.PHENO, "ME"),)),

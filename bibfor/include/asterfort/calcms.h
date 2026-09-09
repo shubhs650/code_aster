@@ -15,12 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine calcms(nbphas, nbcomm, cpmono, nmat, pgl2,&
-                      coeft, angmas, nfs, nsg, toutms)
+    subroutine calcms(materPara, &
+                      nbphas, nbcomm, cpmono, nmat, pgl2, &
+                      coeft, nfs, nsg, toutms)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         integer(kind=8) :: nsg
         integer(kind=8) :: nfs
         integer(kind=8) :: nmat
@@ -29,7 +30,6 @@ interface
         character(len=24) :: cpmono(5*nmat+1)
         real(kind=8) :: pgl2(3, 3)
         real(kind=8) :: coeft(nmat)
-        real(kind=8) :: angmas(3)
         real(kind=8) :: toutms(nbphas, nfs, nsg, 7)
     end subroutine calcms
 end interface

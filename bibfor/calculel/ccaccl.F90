@@ -83,10 +83,9 @@ subroutine ccaccl(option, &
 !
     character(len=24), parameter :: canbva = '&&CCACCL.CANBVA'
     character(len=24), parameter :: chnlin = '&&CCACCL.PNONLIN'
-    integer(kind=8) :: iret, paraIndx, iParaIn, inume, nbsp
-    character(len=8) :: mesh, paraCurr, caraElemToApply, parain
+    integer(kind=8) :: iret, paraIndx, inume, nbsp
+    character(len=8) :: mesh, caraElemToApply, parain
     character(len=19) :: compor, comporToApply
-    character(len=24) :: chcara(18)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -97,17 +96,6 @@ subroutine ccaccl(option, &
 
 ! - Get mesh
     call dismoi('NOM_MAILLA', modelZ, 'MODELE', repk=mesh)
-
-! - Change PCACOQU parameter (????)
-    call mecara(caraElemZ, chcara)
-    if (caraElemZ(1:8) .ne. ' ') then
-        do iParaIn = 1, nbParaIn
-            paraCurr = lpain(iParaIn)
-            if (paraCurr .eq. 'PCACOQU') then
-                lchin(iParaIn) = chcara(7)
-            end if
-        end do
-    end if
 
 ! - Special cases
     if (option .eq. 'EFGE_ELNO') then

@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_read_mfront(keywf, i_comp, extern_addr)
+subroutine comp_read_mfront(factorKeyword, iFactorKeyword, adrsMGIS)
 !
     implicit none
 !
@@ -24,9 +24,9 @@ subroutine comp_read_mfront(keywf, i_comp, extern_addr)
 #include "asterfort/getvid.h"
 #include "asterfort/jeveuo.h"
 !
-    character(len=16), intent(in) :: keywf
-    integer(kind=8), intent(in) :: i_comp
-    character(len=16), intent(out) :: extern_addr
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
+    character(len=16), intent(out) :: adrsMGIS
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -36,29 +36,22 @@ subroutine comp_read_mfront(keywf, i_comp, extern_addr)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In      keywf      : factor keyword to read (COMPORTEMENT)
-! In      i_comp     : factor keyword index
-! Out     extern_ptr : MGIS address
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
+! Out adrsMGIS         : MGIS address
 !
 ! --------------------------------------------------------------------------------------------------
-    character(len=8) :: mgb
-    character(len=16), pointer :: addr(:) => null()
+!
+    character(len=8) :: compMFront
+    character(len=16), pointer :: compMFrontAddr(:) => null()
     integer(kind=8) :: nbret
 !
-! - Get parameters
+! --------------------------------------------------------------------------------------------------
 !
-    ASSERT(i_comp .ne. 0)
-
-    call getvid(keywf, "COMPOR_MFRONT", i_comp, scal=mgb, nbret=nbret)
-    if (nbret .ne. 1) then
-        ! May happen when called from comp_ntvari if iMap does not match a factkeyword!
-        print *, "MGISDBG: compor_mgis object not found: factor keyword: '", &
-            keywf, "', occ:", i_comp
-        ! hmm...
-        ASSERT(.false.)
-    end if
-
-    call jeveuo(mgb//'.ADDR', 'L', vk16=addr)
-    extern_addr = addr(1)
+    ASSERT(iFactorKeyword .ne. 0)
+    call getvid(factorKeyword, "COMPOR_MFRONT", iFactorKeyword, scal=compMFront, nbret=nbret)
+    ASSERT(nbRet .eq. 1)
+    call jeveuo(compMFront//'.ADDR', 'L', vk16=compMFrontAddr)
+    adrsMGIS = compMFrontAddr(1)
 !
 end subroutine

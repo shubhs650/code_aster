@@ -15,29 +15,29 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W1504,W0104
+!
 subroutine lc0040(fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, neps, &
+                  carcri, instam, instap, neps, &
                   epsm, deps, nsig, sigm, nvi, vim, &
-                  option, angmas, sigp, vip, typmod, icomp, &
+                  option, sigp, vip, typmod, &
                   ndsde, dsidep, codret)
-
 !
-!
-
     implicit none
+!
 #include "asterfort/assert.h"
 #include "asterfort/lcdp_wrap.h"
+#include "asterfort/Behaviour_type.h"
 
-    integer(kind=8)      :: imate, ndim, kpg, ksp, codret, icomp
-    integer(kind=8)      :: nvi, neps, nsig, ndsde
-    real(kind=8) :: carcri(*), angmas(*)
+    integer(kind=8) :: imate, ndim, kpg, ksp, codret
+    integer(kind=8) :: nvi, neps, nsig, ndsde
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: instam, instap
     real(kind=8) :: epsm(*), deps(*)
     real(kind=8) :: sigm(*), sigp(*)
-    real(kind=8) :: vim(*), vip(*)
+    real(kind=8) :: vim(nvi), vip(nvi)
     real(kind=8) :: dsidep(*)
-    character(len=16) :: compor(*), option
+    character(len=16) :: option
     character(len=8) :: typmod(*)
     character(len=*) :: fami
 ! ----------------------------------------------------------------------
@@ -47,8 +47,8 @@ subroutine lc0040(fami, kpg, ksp, ndim, imate, &
     ASSERT(neps .eq. nsig)
 
     call lcdp_wrap(fami, kpg, ksp, ndim, imate, &
-                   carcri, instam, instap, neps, epsm, &
-                   deps, vim, option, sigm, sigp, vip, &
-                   typmod, dsidep, codret)
+                   carcri, neps, epsm, &
+                   deps, vim, option, sigp, vip, &
+                   dsidep, codret)
 
 end subroutine

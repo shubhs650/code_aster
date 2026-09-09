@@ -15,7 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+#include "asterfort/Behaviour_type.h"
+!
 subroutine lcmohr(ndim, &
                   typmod, imate, carcri, option, &
                   dstrai0, stresm0, stres, vim, vip, &
@@ -66,7 +68,7 @@ subroutine lcmohr(ndim, &
     character(len=8)  :: typmod(*)
     character(len=16) :: option
     integer(kind=8)           :: ndim, imate, codret
-    real(kind=8)      :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8)      :: dstrai(6), dstrai0(6)
     real(kind=8)      :: stresm(6), stresm0(6), stres(6)
     real(kind=8)      :: vim(*), vip(*)

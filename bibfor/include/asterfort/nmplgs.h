@@ -17,35 +17,38 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2,&
-                      vff2, idfde2, npg, iw, geom,&
-                      typmod, option, mate, compor, carcri,&
-                      instam, instap, angmas, ddlm, ddld,&
-                      sigm, lgpg, vim, sigp, vip,&
-                      matr, vect, codret, livois,&
-                      nbvois, numa, lisoco, nbsoco,&
+    subroutine nmplgs(BEHInteg, &
+                      ndim, nno1, nno2, npg, &
+                      vff1, idfde1, &
+                      vff2, idfde2, &
+                      iw, geom, &
+                      typmod, option, compor, carcri, &
+                      instam, instap, &
+                      ddlm, ddld, &
+                      lgpg, sigm, vim, &
+                      sigp, vip, &
+                      matr, vect, codret, &
+                      livois, &
+                      nbvois, numa, lisoco, nbsoco, &
                       lVari, lSigm, lMatr, lVect)
-        integer(kind=8) :: lgpg
-        integer(kind=8) :: npg
-        integer(kind=8) :: nno2
-        integer(kind=8) :: nno1
-        integer(kind=8) :: ndim
-        real(kind=8) :: vff1(nno1, npg)
-        integer(kind=8) :: idfde1
-        real(kind=8) :: vff2(nno2, npg)
-        integer(kind=8) :: idfde2
-        integer(kind=8) :: iw
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        aster_logical, intent(in) :: lVari, lSigm, lMatr, lVect
+        integer(kind=8), intent(in) :: ndim, nno1, nno2, npg
+        real(kind=8), intent(in) :: vff1(nno1, npg)
+        integer(kind=8), intent(in) :: idfde1
+        real(kind=8), intent(in) :: vff2(nno2, npg)
+        integer(kind=8), intent(in) :: idfde2
+        integer(kind=8), intent(in) :: iw
         real(kind=8) :: geom(ndim, nno1)
-        character(len=8) :: typmod(*)
-        character(len=16) :: option
-        integer(kind=8) :: mate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
         real(kind=8) :: instam
         real(kind=8) :: instap
-        real(kind=8) :: angmas(3)
         real(kind=8) :: ddlm(*)
         real(kind=8) :: ddld(*)
+        integer(kind=8), intent(in) :: lgpg
         real(kind=8) :: sigm(2*ndim, npg)
         real(kind=8) :: vim(lgpg, npg)
         real(kind=8) :: sigp(2*ndim, npg)
@@ -53,12 +56,11 @@ interface
         real(kind=8) :: matr(*)
         real(kind=8) :: vect(*)
         integer(kind=8) :: codret
-        integer(kind=8), parameter :: nvoima=12, nscoma=4
+        integer(kind=8), parameter :: nvoima = 12, nscoma = 4
         integer(kind=8) :: livois(1:nvoima)
         integer(kind=8) :: nbvois
         integer(kind=8) :: numa
         integer(kind=8) :: lisoco(1:nvoima, 1:nscoma, 1:2)
         integer(kind=8) :: nbsoco(1:nvoima)
-        aster_logical, intent(in) :: lVari, lSigm, lMatr, lVect
     end subroutine nmplgs
 end interface

@@ -35,6 +35,9 @@ siyy = sief_s.SIYY
 vy = sief_s.VY
 mfz = sief_s.MFZ
 
+for norme in ("NORM_1", "NORM_2", "NORM_INFINITY"):
+    test.assertAlmostEqual(sief.norm(norme), sief_s.norm(norme), 8, msg="norm")
+
 cmps = sief_s.getComponents()
 test.assertEqual(len(cmps), 12, msg="cmps")
 

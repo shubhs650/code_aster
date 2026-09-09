@@ -425,6 +425,7 @@ DYNA_LINE = MACRO(
                     RHO=SIMP(statut="o", typ="R", val_min=0.0),
                     AMOR_HYST=SIMP(statut="f", typ="R", val_min=0.0, val_max=1.0),
                 ),
+                SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
                 # Paramètres du calcul Miss
                 PARAMETRE=FACT(
                     statut="f",
@@ -442,7 +443,6 @@ DYNA_LINE = MACRO(
                     Z0=SIMP(statut="f", typ="R", defaut=0.0),
                     TYPE=SIMP(statut="f", typ="TXM", into=("BINAIRE", "ASCII"), defaut="ASCII"),
                     ALLU=SIMP(statut="f", typ="R", defaut=0.0),
-                    SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
                     DREF=SIMP(statut="f", typ="R"),
                     OFFSET_MAX=SIMP(statut="f", typ="R"),
                     OFFSET_NB=SIMP(statut="f", typ="I"),
@@ -460,7 +460,6 @@ DYNA_LINE = MACRO(
                     b_noauto=BLOC(
                         condition="""equal_to("AUTO", 'NON')""",
                         regles=(ENSEMBLE("SPEC_MAX", "SPEC_NB"),),
-                        ALGO=SIMP(statut="f", typ="TXM", into=("DEPL", "REGU")),
                         RFIC=SIMP(statut="f", typ="R", defaut=0.0),
                         SPEC_MAX=SIMP(statut="f", typ="R"),
                         SPEC_NB=SIMP(statut="f", typ="I"),
@@ -585,6 +584,7 @@ DYNA_LINE = MACRO(
                     RHO=SIMP(statut="o", typ="R", val_min=0.0),
                     AMOR_HYST=SIMP(statut="f", typ="R", val_min=0.0, val_max=1.0),
                 ),
+                SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
                 # Paramètres du calcul Miss
                 PARAMETRE=FACT(
                     statut="f",
@@ -601,7 +601,6 @@ DYNA_LINE = MACRO(
                     Z0=SIMP(statut="f", typ="R", defaut=0.0),
                     TYPE=SIMP(statut="f", typ="TXM", into=("BINAIRE", "ASCII"), defaut="ASCII"),
                     ALLU=SIMP(statut="f", typ="R", defaut=0.0),
-                    SURF=SIMP(statut="f", typ="TXM", into=("OUI", "NON"), defaut="NON"),
                     DREF=SIMP(statut="f", typ="R"),
                     OFFSET_MAX=SIMP(statut="f", typ="R"),
                     OFFSET_NB=SIMP(statut="f", typ="I"),
@@ -618,7 +617,6 @@ DYNA_LINE = MACRO(
                     b_noauto_tran=BLOC(
                         condition="""equal_to("AUTO", 'NON')""",
                         regles=(PRESENT_PRESENT("SPEC_MAX", "SPEC_NB"),),
-                        ALGO=SIMP(statut="f", typ="TXM", into=("DEPL", "REGU")),
                         RFIC=SIMP(statut="f", typ="R", defaut=0.0),
                         SPEC_MAX=SIMP(statut="f", typ="R"),
                         SPEC_NB=SIMP(statut="f", typ="I"),

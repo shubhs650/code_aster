@@ -24,11 +24,12 @@ subroutine lcgeominit(elem_dime, &
 !
 #include "jeveux.h"
 #include "asterfort/jevech.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: nb_node_slav, nb_node_mast
-    real(kind=8), intent(out) :: elem_slav_init(nb_node_slav, elem_dime)
-    real(kind=8), intent(out) :: elem_mast_init(nb_node_mast, elem_dime)
+    real(kind=8), intent(out) :: elem_slav_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(out) :: elem_mast_init(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -57,7 +58,7 @@ subroutine lcgeominit(elem_dime, &
 !
     do i_node_slav = 1, nb_node_slav
         do i_dime = 1, elem_dime
-            elem_slav_init(i_node_slav, i_dime) = &
+            elem_slav_init(i_dime, i_node_slav) = &
                 zr(jv_geom+(i_node_slav-1)*elem_dime+i_dime-1)
         end do
     end do
@@ -66,7 +67,7 @@ subroutine lcgeominit(elem_dime, &
 !
     do i_node_mast = 1, nb_node_mast
         do i_dime = 1, elem_dime
-            elem_mast_init(i_node_mast, i_dime) = &
+            elem_mast_init(i_dime, i_node_mast) = &
                 zr(jv_geom+nb_node_slav*elem_dime+(i_node_mast-1)*elem_dime+i_dime-1)
         end do
     end do

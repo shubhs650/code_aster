@@ -15,18 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterf_types.h"
 !
 interface
-    subroutine coqrep(pgl, alpha, beta, t2iu, t2ui,&
-                      c, s)
-        real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: alpha
-        real(kind=8) :: beta
-        real(kind=8) :: t2iu(*)
-        real(kind=8) :: t2ui(*)
-        real(kind=8) :: c
-        real(kind=8) :: s
+    subroutine coqrep(pgl, alpha, beta, &
+                      t2iu_, t2ui_, &
+                      c_, s_)
+        real(kind=8), intent(in) :: pgl(3, 3), alpha, beta
+        real(kind=8), optional, intent(out):: t2iu_(4), t2ui_(4)
+        real(kind=8), optional, intent(out):: c_, s_
     end subroutine coqrep
 end interface

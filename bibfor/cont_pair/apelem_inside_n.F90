@@ -31,11 +31,11 @@ subroutine apelem_inside_n(pair_tole, elem_dime, elem_code, &
     integer(kind=8), intent(in) :: elem_dime
     character(len=8), intent(in) :: elem_code
     integer(kind=8), intent(in) :: nb_poin_coor
-    real(kind=8), intent(in) :: poin_coor(elem_dime-1, 4)
-    real(kind=8), intent(in) :: poin_coor_ori(elem_dime-1, 4)
+    real(kind=8), intent(in) :: poin_coor(2, 4)
+    real(kind=8), intent(in) :: poin_coor_ori(2, 4)
     integer(kind=8), intent(inout) :: nb_poin_inte
-    real(kind=8), intent(inout) :: poin_inte(elem_dime-1, 16)
-    real(kind=8), intent(inout) :: poin_inte_ori(elem_dime-1, 16)
+    real(kind=8), intent(inout) :: poin_inte(2, 16)
+    real(kind=8), intent(inout) :: poin_inte_ori(2, 16)
     integer(kind=8), intent(inout) :: inte_neigh(4)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ subroutine apelem_inside_n(pair_tole, elem_dime, elem_code, &
     prev(1) = nb_poin_coor
     if (elem_dime .eq. 2) then
         do i_node = 1, nb_poin_coor
-            call projInsideCell(pair_tole, elem_dime, elem_code, poin_coor(1, i_node), iret)
+            call projInsideCell(pair_tole, elem_dime, elem_code, poin_coor(1:2, i_node), iret)
             if (iret == 0) then
                 nb_poin_inte = nb_poin_inte+1
                 ASSERT(nb_poin_inte .le. 16)

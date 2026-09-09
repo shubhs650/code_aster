@@ -29,8 +29,6 @@ subroutine nmevdg(sddisc, hvalIncr, iEvent, i_echec_acti)
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
-#include "asterfort/tbacce.h"
-#include "asterfort/tbliva.h"
 #include "asterfort/utdidt.h"
 !
     integer(kind=8) :: iEvent, i_echec_acti

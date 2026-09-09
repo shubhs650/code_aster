@@ -19,9 +19,9 @@
 !
 subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
-#include "asterc/getfac.h"
 #include "asterc/indik8.h"
 #include "asterc/r8pi.h"
 #include "asterc/r8prem.h"
@@ -81,6 +81,11 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
+!
+    integer(kind=8) :: nbFieldIn, nbFieldOut
     character(len=16), parameter :: factorKeyword = "LIAISON_ELEM"
     integer(kind=8), parameter :: nbCmpMaxi = 330
     character(len=4), parameter :: valeType = "REEL"
@@ -91,11 +96,10 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
     character(len=8) :: betaf, model, k8bid, caraElem
     character(len=8) :: mesh, cmpName(nbCmpMaxi)
     character(len=8) :: beamNodeName
-    character(len=8) :: lpain(4), lpaout(2)
     character(len=9) :: nomte
     character(len=16) :: motcle(2), typmcl(2), option
     character(len=19) :: modelLigrel, ligrel
-    character(len=24) :: lchin(4), lchout(2), nolili, valk(2)
+    character(len=24) :: nolili, valk(2)
     character(len=24) :: jvCellName, jvNodeName
     character(len=24) :: vale1, vale2, grnoma
     character(len=24) :: nodeGroupName
@@ -147,7 +151,7 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
 !
     call getvtx(factorKeyword, 'OPTION', iocc=iocc, scal=option, nbret=iop)
 
-! - INITIALISATIONS
+! - Initialiations
     typcoe = 'REEL'
     betaf = '&FOZERO'
     beta = 0.0d0
@@ -156,6 +160,10 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
     un = 1.0d0
     ccmp = (0.0d0, 0.0d0)
     dispCmpNume = 0
+    lchin = ' '
+    lpain = ' '
+    lchout = ' '
+    lpaout = ' '
 
 !
     ligrel = '&&RAPOCO'
@@ -180,7 +188,7 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
     end if
 
 ! - Get components
-    nomte = 'D_DEPL_R_'
+    nomte = 'DDEPL_R_'
 !
     call jeveuo(jexnom('&CATA.GD.NOMCMP', physQuanName), 'L', vk8=cataCmpName)
     call jelira(jexnom('&CATA.GD.NOMCMP', physQuanName), 'LONMAX', cataCmpNameSize)
@@ -295,18 +303,25 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
 ! - CALCUL SUR CHAQUE ELEMENT DE BORD A RELIER A LA POUTRE
 ! - DES CARACTERISTIQUES GEOMETRIQUES SUIVANTES :
 ! - SOMME/S_ELEMENT(1,X,Y,Z,X*X,Y*Y,Z*Z,X*Y,X*Z,Y*Z)DS
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = mesh//'.COORDO'
-    lpain(2) = 'PCACOQU'
-    lchin(2) = caraElem//'.CARCOQUE'
-    lpain(3) = 'PCAORIE'
-    lchin(3) = mapBeamAxis
+    nbFieldIn = 1
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem, caorienZ_=mapBeamAxis)
+
+! - Set output field
     lpaout(1) = 'PCASECT'
-    lchout(1) = fieldSection
+    lchout(1) = fieldSection(1:19)
+    nbFieldOut = 1
 !
-    call calcul('S', 'CARA_SECT_POUT3', ligrel, 3, lchin, &
-                lpain, 1, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', 'CARA_SECT_POUT3', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 
 ! - VECTEUR DES QUANTITES GEOMETRIQUES PRECITEES SOMMEES
 ! - SUR LA SURFACE DE RACCORD, CES QUANTITES SERONT NOTEES :
@@ -384,22 +399,29 @@ subroutine rapoco(numeDofZ, iocc, listRelaZ, loadZ)
 ! - AVEC X = XM - XG = NJ*XJ - XG
 ! -      Y = YM - YG = NJ*YJ - YG
 ! -      Z = ZM - ZG = NJ*ZJ - ZG
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = mesh//'.COORDO'
     lpain(2) = 'PORIGIN'
-    lchin(2) = mapSection
-    lpain(3) = 'PCACOQU'
-    lchin(3) = caraElem//'.CARCOQUE'
-    lpain(4) = 'PCAORIE'
-    lchin(4) = mapBeamAxis
+    lchin(2) = mapSection(1:19)
+    nbFieldIn = 2
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem, caorienZ_=mapBeamAxis)
+
+! - Set output fields
     lpaout(1) = 'PVECTU1'
     lpaout(2) = 'PVECTU2'
     lchout(1) = '&&RAPOCO.VECT_XYZNI'
     lchout(2) = '&&RAPOCO.VECT2'
+    nbFieldOut = 2
 !
-    call calcul('S', 'CARA_SECT_POUT4', ligrel, 4, lchin, &
-                lpain, 2, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', 'CARA_SECT_POUT4', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 
 ! - CREATION DES .RERR DES VECTEURS EN SORTIE DE CALCUL
     call vemare('V', '&&RAPOCO', model)

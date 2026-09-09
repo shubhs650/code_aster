@@ -43,6 +43,7 @@ subroutine affdef(tmp, nom, nel, tab, ier)
 !           5 : MECA_POU_D_TG
 !          11 : MECA_POU_D_EM
 !          12 : MECA_POU_D_TGM
+!          14 : MECA_S8P2
 !
 ! --- ------------------------------------------------------------------
 !     TAB  1      2      3      4      5     6     7     8    9    10
@@ -110,7 +111,8 @@ subroutine affdef(tmp, nom, nel, tab, ier)
         if ((nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_POU_D_T)) .or. &
             (nel .eq. elem_supp%catanum(idx1poutre+ACE_MEFS_POU_D_T)) .or. &
             (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_POU_D_TG)) .or. &
-            (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_POU_D_TGM))) then
+            (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_POU_D_TGM)) .or. &
+            (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_S8P2))) then
             do j = 1, nt
                 if (zr(jdge+otpe(j)-1) .ge. tst) then
                     valk(1) = nom

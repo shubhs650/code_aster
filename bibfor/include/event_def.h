@@ -60,18 +60,16 @@ character(len=16), parameter :: failEventKeyword(FAIL_EVT_NB) = (/'ERREUR       
                                                                   'NB_PAS_MAXI     '/)
 
 ! Defines for ECHEC/ACTION
-#define FAIL_ACT_NB               5
+#define FAIL_ACT_NB               4
 #define FAIL_ACT_STOP             1
 #define FAIL_ACT_CUT              2
-#define FAIL_ACT_ITER             3
-#define FAIL_ACT_ADAPT_COEF       4
-#define FAIL_ACT_CONTINUE         5
+#define FAIL_ACT_CONTINUE         3
+#define FAIL_ACT_ARCHI            4
 
 character(len=16), parameter :: failActionKeyword(FAIL_ACT_NB) = (/'ARRET           ', &
                                                                    'DECOUPE         ', &
-                                                                   'ITER_SUPPL      ', &
-                                                                   'ADAPT_COEF_PENA ', &
-                                                                   'CONTINUE        '/)
+                                                                   'CONTINUE        ', &
+                                                                   'ARCHIVAGE       '/)
 ! Defines for ADAPTATION/EVENEMENT
 #define ADAP_EVT_NB               3
 #define ADAP_EVT_NONE             1

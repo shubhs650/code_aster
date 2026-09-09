@@ -22,6 +22,7 @@ from ..Language.DataStructure import *
 from ..Language.Syntax import *
 from ..Commons.c_comportement import compat_syntax
 
+
 MECA_NON_LINE = MACRO(
     nom="MECA_NON_LINE",
     op=OPS("code_aster.MacroCommands.meca_non_line_ops.meca_non_line_ops"),
@@ -69,6 +70,8 @@ MECA_NON_LINE = MACRO(
     ),
     # -------------------------------------------------------------------
     CONVERGENCE=C_CONVERGENCE("MECA_NON_LINE"),
+    # -------------------------------------------------------------------
+    OBSERVATION=C_OBSERVATION("MECANIQUE"),
     # -------------------------------------------------------------------
     ARCHIVAGE=C_ARCHIVAGE(),
     # -------------------------------------------------------------------

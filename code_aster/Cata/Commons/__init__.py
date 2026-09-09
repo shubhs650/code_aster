@@ -32,6 +32,7 @@ from .c_comportement import C_COMPORTEMENT
 from .c_comportement_dyna import C_COMPORTEMENT_DYNA
 from .c_contact import C_CONTACT
 from .c_convergence import C_CONVERGENCE
+from .c_convergence_refe import C_CONVERGENCE_REFE
 from .c_etat_init import C_ETAT_INIT
 from .c_increment import C_INCREMENT
 from .c_mesure import C_MESURE

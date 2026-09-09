@@ -43,7 +43,6 @@ module HHO_postpro_module
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jevech.h"
-#include "asterfort/mecact.h"
 #include "asterfort/megeom.h"
 #include "asterfort/readVector.h"
 #include "asterfort/rsexch.h"
@@ -220,7 +219,7 @@ contains
         integer(kind=8) :: total_dofs, cbs, fbs, jvect, i, ipg, ndim, idim, cbs_cmp
         real(kind=8), dimension(MSIZE_CELL_VEC) :: sol_T
         real(kind=8), dimension(MSIZE_CELL_SCAL) :: sol_T_dim
-        real(kind=8), dimension(3, MAX_QP_CELL) :: post_sol
+        real(kind=8), dimension(3, MSIZE_QP_CELL) :: post_sol
 !
         ndim = hhoCell%ndim
         sol_T = 0.d0
@@ -649,7 +648,7 @@ contains
         type(HHO_basis_cell) :: hhoBasisCell
         integer(kind=8) :: total_dofs, cbs, fbs, ipg
         real(kind=8), dimension(MSIZE_CELL_SCAL) :: sol_T
-        real(kind=8), dimension(MAX_QP_CELL) :: post_sol
+        real(kind=8), dimension(MSIZE_QP_CELL) :: post_sol
 !
         sol_T = 0.d0
         post_sol = 0.d0

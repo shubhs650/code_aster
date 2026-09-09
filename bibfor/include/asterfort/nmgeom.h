@@ -23,12 +23,11 @@
 interface
     subroutine nmgeom(ndim, nno, axi, grand, geom,&
                       kpg, ipoids, ivf, idfde, depl,&
-                      ldfdi, poids, dfdi, f, eps,&
-                      r)
-        integer(kind=8) :: nno
+                      ldfdi, poids, dfdi, f, eps, r)
         integer(kind=8) :: ndim
-        aster_logical :: axi
-        aster_logical :: grand
+        integer(kind=8) :: nno
+        aster_logical, intent(in) :: axi
+        aster_logical, intent(in) :: grand
         real(kind=8) :: geom(ndim, nno)
         integer(kind=8) :: kpg
         integer(kind=8) :: ipoids
@@ -38,8 +37,8 @@ interface
         aster_logical :: ldfdi
         real(kind=8) :: poids
         real(kind=8) :: dfdi(nno, ndim)
-        real(kind=8) :: f(3, 3)
-        real(kind=8) :: eps(6)
-        real(kind=8) :: r
+        real(kind=8), intent(out) :: f(3, 3)
+        real(kind=8), intent(out) :: eps(:)
+        real(kind=8), intent(out) :: r
     end subroutine nmgeom
 end interface

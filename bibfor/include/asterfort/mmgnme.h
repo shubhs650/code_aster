@@ -24,7 +24,7 @@ interface
                       kappa , vech1 , vech2 , h     ,&
                       matrme)
         integer(kind=8), intent(in) :: ndim, nnm, nne
-        real(kind=8), intent(in) :: wpg, ffe(9),dffm(2,9)
+        real(kind=8), intent(in) :: wpg, ffe(9),dffm(2,MT_NNOMAX2D)
         real(kind=8), intent(in) :: jacobi, coefac, jeu, dlagrc
         real(kind=8), intent(in) :: mprnt1(3,3), mprnt2(3,3)
         real(kind=8), intent(in) :: kappa(2,2), vech1(3), vech2(3), h(2,2)

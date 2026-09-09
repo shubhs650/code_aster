@@ -15,130 +15,103 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine matrc2(nbpar, nompar, valpar, kcis, matc, &
-                  vectt)
 !
+subroutine matrc2(plateOrie, vectBaseKpg, tempMoye, kcis, matrElas)
+!
+    use plate_type
     implicit none
 !
-#include "jeveux.h"
-#include "asterc/r8dgrd.h"
 #include "asterfort/coqrep.h"
 #include "asterfort/jevech.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utbtab.h"
 #include "asterfort/utmess.h"
-    integer(kind=8) :: nbpar
-    real(kind=8) :: valpar(*), kcis, matc(5, 5), vectt(3, 3)
-    character(len=8) :: nompar(*)
+#include "jeveux.h"
 !
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(in) :: vectBaseKpg(3, 3)
+    real(kind=8), intent(in) :: tempMoye, kcis
+    real(kind=8), intent(out) :: matrElas(5, 5)
 !
-    real(kind=8) :: valres(26)
-    integer(kind=8) :: icodre(26)
-    character(len=16) :: nomres(26)
-    character(len=32) :: phenom
-    real(kind=8) :: young, nu, nult, nutl, alpha, beta
-    real(kind=8) :: passag(3, 3), pas2(2, 2), dorth(3, 3), work(3, 3), d(3, 3)
-    real(kind=8) :: dcis(2, 2), c, s, d2(2, 2), el, et, glt, gtn, delta
-    real(kind=8) :: r8bid4(4)
-    integer(kind=8) :: i, j, jmate, nbv, jcoqu
+! --------------------------------------------------------------------------------------------------
 !
-    do i = 1, 5
-        do j = 1, 5
-            matc(i, j) = 0.d0
-        end do
-    end do
+    integer(kind=8), parameter :: nbPropMaxi = 5
+    character(len=16) :: propName(nbPropMaxi)
+    real(kind=8) :: propVale(nbPropMaxi)
+    integer(kind=8) :: propCode(nbPropMaxi)
+    integer(kind=8), parameter :: nbPara = 1
+    character(len=8), parameter :: paraName(nbPara) = (/'TEMP'/)
+    real(kind=8) :: paraVale(nbPara)
+    character(len=32) :: elasKeyword
+    real(kind=8) :: young, nu, nult, nutl
+    real(kind=8) :: dorth(3, 3), work(3, 3), d(3, 3)
+    real(kind=8) :: dcis(2, 2), d2(2, 2), el, et, glt, gtn, delta
+    integer(kind=8) :: i, j, jvMaterc, nbProp
+    real(kind=8) :: passag(3, 3), pas2(2, 2), c, s
 !
-    call jevech('PMATERC', 'L', jmate)
+! --------------------------------------------------------------------------------------------------
 !
-    call rccoma(zi(jmate), 'ELAS', 1, phenom, icodre(1))
-!
-    if (phenom .eq. 'ELAS') then
-        nbv = 2
-        nomres(1) = 'E'
-        nomres(2) = 'NU'
-    else if (phenom .eq. 'ELAS_ORTH') then
-        nomres(1) = 'E_L'
-        nomres(2) = 'E_T'
-        nomres(3) = 'NU_LT'
-        nomres(4) = 'G_LT'
-        nomres(5) = 'G_TN'
-        nbv = 5
-    else
-        call utmess('F', 'ELEMENTS_45', sk=phenom)
-    end if
-!
-    if (phenom .eq. 'ELAS') then
-!
-        call rcvalb('RIGI', 1, 1, '+', zi(jmate), &
-                    ' ', phenom, nbpar, nompar, valpar, &
-                    nbv, nomres, valres, icodre, 1)
-!
-!     MATERIAU ISOTROPE
-!
-        young = valres(1)
-        nu = valres(2)
-!
-!     CONSTRUCTION DE LA MATRICE DE COMPORTEMENT MATC : (5,5)
-!
-        matc(1, 1) = young/(1.d0-nu*nu)
-        matc(1, 2) = matc(1, 1)*nu
-        matc(2, 1) = matc(1, 2)
-        matc(2, 2) = matc(1, 1)
-        matc(3, 3) = young/2.d0/(1.d0+nu)
-        matc(4, 4) = matc(3, 3)*kcis
-        matc(5, 5) = matc(4, 4)
-!
-    else if (phenom .eq. 'ELAS_ORTH') then
-!
-! ----   INTERPOLATION DES COEFFICIENTS EN FONCTION DE LA TEMPERATURE
-! ----   ET DU TEMPS
-!        -----------
-        call rcvalb('RIGI', 1, 1, '+', zi(jmate), &
-                    ' ', phenom, nbpar, nompar, valpar, &
-                    nbv, nomres, valres, icodre, 1)
-!
-        el = valres(1)
-        et = valres(2)
-        nult = valres(3)
-        glt = valres(4)
-        gtn = valres(5)
+    matrElas = 0.d0
+    paraVale(1) = tempMoye
+
+! - Access to material
+    call jevech('PMATERC', 'L', jvMaterc)
+    call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
+
+    if (elasKeyword .eq. 'ELAS') then
+        nbProp = 2
+        propName(1) = 'E'
+        propName(2) = 'NU'
+        call rcvalb('RIGI', 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, paraVale, &
+                    nbProp, propName, &
+                    propVale, propCode, 1)
+        young = propVale(1)
+        nu = propVale(2)
+
+! ----- CONSTRUCTION DE LA MATRICE
+        matrElas(1, 1) = young/(1.d0-nu*nu)
+        matrElas(1, 2) = matrElas(1, 1)*nu
+        matrElas(2, 1) = matrElas(1, 2)
+        matrElas(2, 2) = matrElas(1, 1)
+        matrElas(3, 3) = young/2.d0/(1.d0+nu)
+        matrElas(4, 4) = matrElas(3, 3)*kcis
+        matrElas(5, 5) = matrElas(4, 4)
+
+    else if (elasKeyword .eq. 'ELAS_ORTH') then
+        nbProp = 5
+        propName(1) = 'E_L'
+        propName(2) = 'E_T'
+        propName(3) = 'NU_LT'
+        propName(4) = 'G_LT'
+        propName(5) = 'G_TN'
+        call rcvalb('RIGI', 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, paraVale, &
+                    nbProp, propName, &
+                    propVale, propCode, 1)
+        el = propVale(1)
+        et = propVale(2)
+        nult = propVale(3)
+        glt = propVale(4)
+        gtn = propVale(5)
         nutl = et*nult/el
         delta = 1.d0-nult*nutl
-!
         dorth(1, 1) = el/delta
         dorth(1, 2) = nult*et/delta
+        dorth(1, 3) = 0.d0
         dorth(2, 2) = et/delta
         dorth(2, 1) = dorth(1, 2)
-        dorth(3, 3) = glt
-        dorth(1, 3) = 0.d0
         dorth(2, 3) = 0.d0
         dorth(3, 1) = 0.d0
         dorth(3, 2) = 0.d0
-!
-! --- RECUPERATION DES ANGLES DETERMINANT LE REPERE UTILISATEUR
-! --- PAR RAPPORT AU REPERE GLOBAL :
-!     ============================
-        call jevech('PCACOQU', 'L', jcoqu)
-!
-        alpha = zr(jcoqu+1)*r8dgrd()
-        beta = zr(jcoqu+2)*r8dgrd()
-!
-!     CALCUL DU COSINUS ET DU SINUS DE L'ANGLE ENTRE LE REPERE
-!     INTRINSEQUE ET LE REPERE UTILISATEUR
-        call coqrep(vectt, alpha, beta, r8bid4, r8bid4, &
-                    c, s)
-!
-!
-! ----   TENSEUR D'ELASTICITE DANS LE REPERE INTRINSEQUE :
-! ----   D_GLOB = PASSAG_T * D_ORTH * PASSAG
-!
-        do i = 1, 3
-            do j = 1, 3
-                passag(i, j) = 0.d0
-            end do
-        end do
+        dorth(3, 3) = glt
+
+        call coqrep(vectBaseKpg, plateOrie%alpha, plateOrie%beta, &
+                    c_=c, s_=s)
+        passag = 0.d0
         passag(1, 1) = c*c
         passag(2, 2) = c*c
         passag(1, 2) = s*s
@@ -148,33 +121,30 @@ subroutine matrc2(nbpar, nompar, valpar, kcis, matc, &
         passag(2, 3) = -c*s
         passag(3, 2) = 2.d0*c*s
         passag(3, 3) = c*c-s*s
-!
-        call utbtab('ZERO', 3, 3, dorth, passag, &
-                    work, d)
-!
+        call utbtab('ZERO', 3, 3, dorth, passag, work, d)
         do i = 1, 3
             do j = 1, 3
-                matc(i, j) = d(i, j)
+                matrElas(i, j) = d(i, j)
             end do
         end do
 !
-        dcis(1, 1) = glt
-        dcis(1, 2) = 0.d0
-        dcis(2, 1) = 0.d0
-        dcis(2, 2) = gtn
+        pas2 = 0.d0
         pas2(1, 1) = c
         pas2(2, 2) = c
         pas2(1, 2) = s
         pas2(2, 1) = -s
-        call utbtab('ZERO', 2, 2, dcis, pas2, &
-                    work, d2)
+        dcis(1, 1) = glt
+        dcis(1, 2) = 0.d0
+        dcis(2, 1) = 0.d0
+        dcis(2, 2) = gtn
+        call utbtab('ZERO', 2, 2, dcis, pas2, work, d2)
         do i = 1, 2
             do j = 1, 2
-                matc(3+i, 3+j) = d2(i, j)
+                matrElas(3+i, 3+j) = d2(i, j)
             end do
         end do
-
-!
+    else
+        call utmess('F', 'ELEMENTS_45', sk=elasKeyword)
     end if
 !
 end subroutine

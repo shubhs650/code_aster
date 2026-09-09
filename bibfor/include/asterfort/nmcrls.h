@@ -18,11 +18,11 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine nmcrls(sddisc, listInstJv, numeInit, numeEnd, &
-                      nbInstNew, dtmin)
+    subroutine nmcrls(sddisc, listInstJv, numeInstInit, numeInstEnd, &
+                      nbInstNew, timeIncrMini)
         character(len=19), intent(in) :: sddisc, listInstJv
-        integer(kind=8), intent(in) :: numeInit, numeEnd
+        integer(kind=8), intent(in) :: numeInstInit, numeInstEnd
         integer(kind=8), intent(out) :: nbInstNew
-        real(kind=8), intent(out) :: dtmin
+        real(kind=8), intent(out) :: timeIncrMini
     end subroutine nmcrls
 end interface

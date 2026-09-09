@@ -360,12 +360,13 @@ Arguments:
     filename (Path|str): Name of the file
     local (bool=True) : print local values only (relevant for a ParallelMesh only)
     version (list): list of size 3 ([major, minor, release])
+    mode (str): 'a' or 'w' ('w' to overwrite file)
 
 Returns:
     Bool: True if of
             )",
               py::arg( "fileName" ), py::arg( "local" ) = true,
-              py::arg( "version" ) = std::array< int, 3 >( { 0, 0, 0 } ) );
+              py::arg( "version" ) = std::array< int, 3 >( { 0, 0, 0 } ), py::arg( "mode" ) = 'a' );
 };
 
 #endif /* ASTER_HAVE_MPI */

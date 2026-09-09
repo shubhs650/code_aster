@@ -16,11 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaCoupling(ds_thm, j_mater, temp)
+interface
+    subroutine thmGetParaCoupling(ds_thm, temp)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
         real(kind=8), intent(in) :: temp
     end subroutine thmGetParaCoupling
-end interface 
+end interface

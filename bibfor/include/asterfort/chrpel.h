@@ -17,17 +17,13 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine chrpel(champ1, repere, nom_cham, icham, type_cham, &
-                      nomch, model, carele, ligrel, lModelVariable)
-        character(len=*)  :: champ1
-        character(len=*)  :: repere
-        character(len=*)  :: nom_cham
-        integer(kind=8) :: icham
-        character(len=*)  :: type_cham
-        character(len=*)  :: nomch
-        character(len=8)  :: model
-        character(len=8)  :: carele
-        character(len=19) :: ligrel
+    subroutine chrpel(fieldOutZ, repereZ, fieldNameZ, iOccField, fieldDimeZ, &
+                      model, caraElem, ligrelCalcZ, lModelVariable)
+        character(len=*), intent(in) :: fieldOutZ, repereZ, fieldDimeZ
+        integer(kind=8), intent(in) :: iOccField
+        character(len=*), intent(in) :: fieldNameZ
+        character(len=8), intent(in) :: model, caraElem
+        character(len=*), intent(in) :: ligrelCalcZ
         aster_logical, intent(in) :: lModelVariable
     end subroutine chrpel
 end interface

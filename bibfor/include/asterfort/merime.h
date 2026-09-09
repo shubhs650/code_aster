@@ -18,18 +18,19 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine merime(modelz, nbLoad       , listLoadK24     ,&
-                      matez , matecoz      , caraElemz       ,&
-                      time  , comporMultz  , matrElemz       , modeFourier,&
-                      basez , listElemCalcz, hasExteStatVari_, onlyDirichlet_)
+    subroutine merime(modelz, nbLoad, listLoadK24, &
+                      materFieldZ, materCodeZ, caraElemz, &
+                      time, comporMultz, matrElemz, modeFourier, &
+                      jvBaseZ, listElemCalcz, &
+                      hasExteStatVari_, onlyDirichlet_)
         character(len=*), intent(in) :: modelz
         integer(kind=8), intent(in) :: nbLoad
-        character(len=24), pointer :: listLoadK24(:) 
-        character(len=*), intent(in) :: matez, matecoz, caraElemz
+        character(len=24), pointer :: listLoadK24(:)
+        character(len=*), intent(in) :: materFieldZ, materCodeZ, caraElemz
         real(kind=8), intent(in) :: time
         character(len=*), intent(in) :: comporMultz, matrElemz
         integer(kind=8), intent(in) :: modeFourier
-        character(len=*), intent(in) :: basez, listElemCalcz
+        character(len=*), intent(in) :: jvBaseZ, listElemCalcz
         aster_logical, intent(in), optional :: hasExteStatVari_, onlyDirichlet_
     end subroutine merime
 end interface

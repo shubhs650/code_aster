@@ -68,7 +68,7 @@ DEFI_GROUP = OPER(
         MAILLE=SIMP(statut="c", typ=ma, validators=NoRepeat(), max="**"),
         INTERSEC=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
         UNION=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
-        DIFFE=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
+        DIFFE=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**", min=1),
         TYPE_MAILLE=SIMP(
             statut="f",
             typ="TXM",
@@ -228,7 +228,7 @@ DEFI_GROUP = OPER(
             NOEUD=SIMP(statut="c", typ=no, validators=NoRepeat(), max="**"),
             INTERSEC=SIMP(statut="f", typ=grno, validators=NoRepeat(), max="**"),
             UNION=SIMP(statut="f", typ=grno, validators=NoRepeat(), max="**"),
-            DIFFE=SIMP(statut="f", typ=grno, validators=NoRepeat(), max="**"),
+            DIFFE=SIMP(statut="f", typ=grno, validators=NoRepeat(), max="**", min=1),
             b_nom_group_ma=BLOC(
                 condition="""exists("GROUP_MA")""",
                 NOM=SIMP(statut="f", typ="TXM", validators=NoRepeat(), max="**"),

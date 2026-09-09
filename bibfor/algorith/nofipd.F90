@@ -17,44 +17,47 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
+subroutine nofipd(BEHInteg, &
+                  ndim, nnod, nnop, nnog, npg, &
                   iw, vffd, vffp, vffg, idffd, &
-                  vu, vp, vpi, geomi, typmod, &
-                  option, nomte, mate, compor, lgpg, &
-                  carcri, instm, instp, ddlm, ddld, &
-                  angmas, sigm, vim, sigp, vip, &
-                  vect, matr, codret, lSigm, lVect, &
-                  lMatr)
+                  vu, vp, vpi, &
+                  geomi, typmod, option, nomte, compor, &
+                  lgpg, carcri, instm, instp, &
+                  ddlm, ddld, &
+                  sigm, vim, sigp, vip, &
+                  vect, matr, codret, &
+                  lSigm, lVect, lMatr)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/nmcomp.h"
 #include "asterfort/nmepsi.h"
 #include "asterfort/tanbul.h"
+#include "MeshTypes_type.h"
 #include "asterfort/uthk.h"
 #include "blas/ddot.h"
-#include "asterfort/Behaviour_type.h"
 !
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8) :: ndim, nnod, nnop, nnog, npg, iw, idffd, lgpg
-    integer(kind=8) :: mate
-    integer(kind=8) :: vu(3, 27), vp(27), vpi(3, 27)
+    integer(kind=8) :: vu(3, MT_NNOMAX), vp(MT_NNOMAX), vpi(3, MT_NNOMAX)
     integer(kind=8) :: codret
     real(kind=8) :: vffd(nnod, npg), vffp(nnop, npg), vffg(nnog, npg)
     real(kind=8) :: instm, instp
-    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*), angmas(*)
+    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*)
     real(kind=8) :: sigm(2*ndim+1, npg), sigp(2*ndim+1, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
     real(kind=8) :: vect(*), matr(*)
-    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-    character(len=8), intent(in)  :: typmod(2)
-    character(len=16), intent(in)  :: compor(COMPOR_SIZE), option
+    character(len=16), intent(in) :: option
     character(len=16) :: nomte
     aster_logical, intent(in) :: lSigm, lVect, lMatr
 !
@@ -82,7 +85,6 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
 ! IN  GEOMI   : COORDONEES DES NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  MATE    : MATERIAU CODE
 ! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
@@ -91,7 +93,6 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
 ! IN  INSTP   : INSTANT DE CALCUL
 ! IN  DDLM    : DEGRES DE LIBERTE A L'INSTANT PRECEDENT
 ! IN  DDLD    : INCREMENT DES DEGRES DE LIBERTE
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  SIGM    : CONTRAINTES A L'INSTANT PRECEDENT
 ! IN  VIM     : VARIABLES INTERNES A L'INSTANT PRECEDENT
 ! OUT SIGP    : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
@@ -102,21 +103,21 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = "RIGI"
     aster_logical, parameter :: mini = ASTER_FALSE, grand = ASTER_FALSE
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
     aster_logical :: axi
     integer(kind=8) :: kpg, nddl
     integer(kind=8) :: ia, na, ra, sa, ib, nb, rb, sb, ja, jb
     integer(kind=8) :: os, kk
     integer(kind=8) :: vuiana, vpiana, vpsa
     integer(kind=8) :: cod(npg)
-    character(len=16) :: rela_comp
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    real(kind=8) :: deplm(3*27), depld(3*27)
+    character(len=16) :: relaComp
+    real(kind=8) :: deplm(3*MT_NNOMAX), depld(3*MT_NNOMAX)
     real(kind=8) :: r, w, dff1(nnod, ndim)
-    real(kind=8) :: presm(27), presd(27)
-    real(kind=8) :: gpresm(3*27), gpresd(3*27)
+    real(kind=8) :: presm(MT_NNOMAX), presd(MT_NNOMAX)
+    real(kind=8) :: gpresm(3*MT_NNOMAX), gpresd(3*MT_NNOMAX)
     real(kind=8) :: pm, pd, gpm(ndim), gpd(ndim), pim(ndim), pid(ndim)
     real(kind=8) :: fm(3, 3), epsm(6), deps(6)
     real(kind=8) :: sigma(6), sigmPrep(6), sigtr
@@ -127,7 +128,6 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
     real(kind=8) :: alpha, trepst
     real(kind=8) :: dsbdep(2*ndim, 2*ndim)
     real(kind=8) :: stab, hk
-    type(Behaviour_Integ) :: BEHinteg
     real(kind=8), parameter :: idev(6, 6) = reshape((/2.d0, -1.d0, -1.d0, 0.d0, 0.d0, 0.d0, &
                                                       -1.d0, 2.d0, -1.d0, 0.d0, 0.d0, 0.d0, &
                                                       -1.d0, -1.d0, 2.d0, 0.d0, 0.d0, 0.d0, &
@@ -151,22 +151,11 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
         matr(1:nddl*(nddl+1)/2) = 0.d0
     end if
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
-
 ! - Compute stabilization
     call uthk(nomte, geomi, hk, ndim, 1)
     stab = 1.d-4*hk*hk
-!
+
 ! - Extract for fields
-!
     do na = 1, nnod
         do ia = 1, ndim
             deplm(ia+ndim*(na-1)) = ddlm(vu(ia, na))
@@ -183,15 +172,15 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
             gpresd(ia+ndim*(ra-1)) = ddld(vpi(ia, ra))
         end do
     end do
-!
+
 ! - Properties of behaviour
-!
-    rela_comp = compor(RELA_NAME)
+    relaComp = compor(RELA_NAME)
 
 ! - Loop on Gauss points
     do kpg = 1, npg
         epsm = 0.d0
         deps = 0.d0
+
 ! ----- Kinematic - Previous strains
         call dfdmip(ndim, nnod, axi, geomi, kpg, &
                     iw, vffd(1, kpg), idffd, r, w, &
@@ -199,10 +188,12 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dff1, deplm, fm, epsm)
         divum = epsm(1)+epsm(2)+epsm(3)
+
 ! ----- Kinematic - Increment of strains
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dff1, depld, fm, deps)
         ddivu = deps(1)+deps(2)+deps(3)
+
 ! ----- Pressure and "gonflement"
         b_n = to_blas_int(nnop)
         b_incx = to_blas_int(1)
@@ -230,6 +221,7 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
             b_incy = to_blas_int(1)
             gpd(ia) = ddot(b_n, dff1(1, ia), b_incx, presd, b_incy)
         end do
+
 ! ----- Kinematic - Product [F].[B]
         if (ndim .eq. 2) then
             do na = 1, nnod
@@ -259,12 +251,14 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
         else
             ASSERT(ASTER_FALSE)
         end if
+
 ! ----- CALCUL DE TRACE(B)
         do na = 1, nnod
             do ia = 1, ndim
                 deftr(na, ia) = def(1, na, ia)+def(2, na, ia)+def(3, na, ia)
             end do
         end do
+
 ! ----- Prepare stresses
         do ia = 1, 3
             sigmPrep(ia) = sigm(ia, kpg)+sigm(2*ndim+1, kpg)
@@ -274,22 +268,30 @@ subroutine nofipd(ndim, nnod, nnop, nnog, npg, &
         end do
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
-! ----- Integrator
+! ----- Compute behaviour
         sigma = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    6, epsm, deps, 6, sigmPrep, &
-                    vim(1, kpg), option, angmas, &
-                    sigma, vip(1, kpg), 36, dsidep, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    6, epsm, deps, &
+                    6, sigmPrep, &
+                    vim(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    36, dsidep, &
+                    cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
+
 ! ----- Compute "bubble" matrix
-        call tanbul(ndim, kpg, mate, rela_comp, &
-                    lVect, mini, alpha, dsbdep, trepst)
+        call tanbul(BEHInteg%materPara, relaComp, &
+                    ndim, mini, &
+                    alpha, dsbdep, &
+                    lVect, trepst)
+
 ! ----- Internal forces
         if (lVect) then
             sigtr = sigma(1)+sigma(2)+sigma(3)

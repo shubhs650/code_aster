@@ -543,7 +543,7 @@ contains
         real(kind=8), optional, intent(out) :: c_(PIPE_TENS_SIZE, PIPE_TENS_SIZE)
         real(kind=8), optional, intent(out) :: cisail_
 ! ----- Local
-        character(len=4), parameter :: fami = "RIGI"
+        character(len=8), parameter :: fami = "RIGI"
         integer(kind=8), parameter :: nbProp = 2, nbPara = 1
         character(len=8), parameter :: paraName = 'TEMP'
         character(len=16), parameter :: propName(nbProp) = (/'E ', 'NU'/)
@@ -568,7 +568,7 @@ contains
         end if
 
 ! ----- Type of elasticity
-        call rccoma(zi(jvMaterCode), 'ELAS', 1, elasKeyword)
+        call rccoma(jvMaterCode, 'ELAS', 1, elasKeyword)
         if (elasKeyword .ne. 'ELAS') then
             call utmess('F', 'PIPE1_46', sk=elasKeyword)
         end if
@@ -576,12 +576,12 @@ contains
 ! ----- Get parameters of elasticity
         if (lTempAtPg) then
             call rcvalb(fami, kpg_, kspg_, '+', &
-                        zi(jvMaterCode), ' ', elasKeyword, &
+                        jvMaterCode, ' ', elasKeyword, &
                         0, ' ', [0.d0], &
                         nbProp, propName, propVale, &
                         propError, 1)
         else
-            call rcvala(zi(jvMaterCode), ' ', elasKeyword, &
+            call rcvala(jvMaterCode, ' ', elasKeyword, &
                         nbPara, paraName, [temp_], &
                         nbProp, propName, propVale, &
                         propError, 1)
@@ -628,19 +628,19 @@ contains
 !
 ! Get thermal parameters for pipes
 !
-! In  jvMaterCode      : adress for material parameters
+! In  jvMaterC         : adress for material parameters
 ! In  temp             : current temperature
 ! Out c                : elasticity matrix for pipe
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine pipeGetTherProp(jvMaterCode, temp, c)
+    subroutine pipeGetTherProp(jvMaterc, temp, c)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        integer(kind=8), intent(in) :: jvMaterCode
+        integer(kind=8), intent(in) :: jvMaterc
         real(kind=8), intent(in) :: temp
         real(kind=8), intent(out) :: c(2, 2)
 ! ----- Local
-        character(len=4), parameter :: fami = "RIGI"
+        character(len=8), parameter :: fami = "RIGI"
         integer(kind=8), parameter :: nbProp = 2, nbPara = 1
         character(len=8), parameter :: paraName = 'TEMP'
         character(len=16), parameter :: propName(nbProp) = (/'E ', 'NU'/)
@@ -654,14 +654,14 @@ contains
         c = 0.d0
 
 ! ----- Type of elasticity
-        call rccoma(zi(jvMaterCode), 'ELAS', 1, elasKeyword)
+        call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
         if (elasKeyword .ne. 'ELAS') then
             call utmess('F', 'PIPE1_46', sk=elasKeyword)
         end if
 
 ! ----- Get parameters of elasticity
         call rcvalb(fami, 1, 1, '+', &
-                    zi(jvMaterCode), ' ', elasKeyword, &
+                    zi(jvMaterc), ' ', elasKeyword, &
                     nbPara, paraName, [temp], &
                     nbProp, propName, propVale, &
                     propError, 1)
@@ -1428,15 +1428,15 @@ contains
 !
 ! Get density for pipes
 !
-! In  jvMaterCode      : adress for material parameters
+! In  jvMaterC         : adress for material parameters
 ! Out rho              : density
 ! In  temp             : given temperature
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine pipeGetDensity(jvMaterCode, rho, temp_)
+    subroutine pipeGetDensity(jvMaterc, rho, temp_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        integer(kind=8), intent(in) :: jvMaterCode
+        integer(kind=8), intent(in) :: jvMaterc
         real(kind=8), optional, intent(in) :: temp_
         real(kind=8), intent(out) :: rho
 ! ----- Local
@@ -1452,17 +1452,17 @@ contains
 !
         rho = 0.d0
         if (present(temp_)) then
-            call rcvala(zi(jvMaterCode), ' ', 'ELAS', &
+            call rcvala(zi(jvMaterc), ' ', 'ELAS', &
                         nbPara, paraName, [temp_], &
                         nbProp, propName, propVale, &
                         propError, 1)
             rho = propVale(1)
         else
-            call rccoma(zi(jvMaterCode), 'ELAS', 1, elasKeyword)
+            call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
             if (elasKeyword .eq. 'ELAS' .or. &
                 elasKeyword .eq. 'ELAS_ISTR' .or. &
                 elasKeyword .eq. 'ELAS_ORTH') then
-                call rcvalb(fami, kpg, spt, poum, zi(jvMaterCode), &
+                call rcvalb(fami, kpg, spt, poum, zi(jvMaterc), &
                             ' ', elasKeyword, &
                             0, ' ', [0.d0], &
                             nbProp, propName, propVale, propError, &
@@ -1552,6 +1552,10 @@ contains
 
 ! ----- Evaluation of  components of lineic force in global base
         if (typeScal .eq. 'R') then
+            lGlob = zr(jvLoad+6) .eq. 0.d0
+            if (.not. lGlob) then
+                call utmess('F', 'PIPE1_45')
+            end if
             lCplxRealPart = ASTER_TRUE
             call evalLineLoad(typeScal, lCplxRealPart, lGravity, &
                               jvLoad, jvTime, jvGeom, &
@@ -1564,6 +1568,10 @@ contains
 ! ----- Complex algebra case
         nbComp = 1
         if (typeScal .eq. 'C') then
+            lGlob = zc(jvLoad+6) .eq. 0.d0
+            if (.not. lGlob) then
+                call utmess('F', 'PIPE1_45')
+            end if
             nbComp = 2
         end if
 
@@ -2501,7 +2509,7 @@ contains
 ! Compute generalized forces at Gauss points (EFGE_ELGA) - Linear case
 !
 ! In  pipeElem         : properties of pipe element
-! In  jvMaterCode      : adress for material parameters
+! In  jvMaterC         : adress for material parameters
 ! In  jvDisp           : adress for displacements
 ! In  nbDof            : number of DOF in element
 ! In  nspg             : number of Gauss sub-points
@@ -2520,7 +2528,7 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
     subroutine pipeEfgeElgaLine(pipeElem, &
-                                jvMaterCode, jvDisp, &
+                                jvMaterc, jvDisp, &
                                 nbDof, nspg, npg, xpg, &
                                 nbSect, nbLayer, &
                                 nspgSect, nspgLayer, &
@@ -2530,7 +2538,7 @@ contains
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         type(pipeElem_Prop), intent(in) :: pipeElem
-        integer(kind=8) :: jvMaterCode, jvDisp
+        integer(kind=8) :: jvMaterc, jvDisp
         integer(kind=8), intent(in) :: nbDof
         integer(kind=8), intent(in) :: npg, nspg
         real(kind=8), intent(in) :: xpg(npg)
@@ -2565,8 +2573,8 @@ contains
         end if
 
 ! ----- Get elastic properties
-        call jevech('PMATERC', 'L', jvMaterCode)
-        call pipeGetElasProp(jvMaterCode, temp_=meanTemp, &
+        call jevech('PMATERC', 'L', jvMaterc)
+        call pipeGetElasProp(zi(jvMaterc), temp_=meanTemp, &
                              c_=elasMatr)
 
 ! ----- Get displacements  (in local base)
@@ -2575,7 +2583,7 @@ contains
 
         do kpg = 1, npg
 ! --------- Compute thermal strain and stress
-            call verifg('RIGI', kpg, nspg, '+', zi(jvMaterCode), epsiTher)
+            call verifg('RIGI', kpg, nspg, '+', zi(jvMaterc), epsiTher)
             sigmTher(1) = (elasMatr(1, 1)+elasMatr(1, 2))*epsiTher
             sigmTher(2) = (elasMatr(2, 1)+elasMatr(2, 2))*epsiTher
 

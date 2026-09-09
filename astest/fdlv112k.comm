@@ -213,14 +213,13 @@ CALC_MISS(
     UNITE_RESU_FORC=28,
     SOURCE_SOL=_F(POINT=(-60.5, -96.8, 0.0), DIRECTION=(1.0, 0.0, 0.0)),
     ISSF="OUI",
+    SURF="NON",
     PARAMETRE=_F(
         FREQ_MIN=0.1,
         FREQ_MAX=3.0,
         FREQ_PAS=2.9,
         Z0=5.0,
-        SURF="NON",
         # Valeurs en manuel :
-        ALGO="REGU",
         OFFSET_MAX=1000,
         OFFSET_NB=5000,
     ),

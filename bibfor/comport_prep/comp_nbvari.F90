@@ -16,9 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
-                       post_iter, mult_comp, regu_visc, post_incr, &
-                       extern_type, extern_addr, &
+subroutine comp_nbvari(relaComp, defoComp, typeCpla, kitComp, &
+                       postIter, multComp, reguVisc, postIncr, &
+                       solvBehavType, adrsMGIS, &
                        nbVariUMAT, &
                        nbVari, numeLaw, nbVariKit, numeLawKit)
 !
@@ -26,15 +26,17 @@ subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
 !
 #include "asterc/mgis_get_sizeof_isvs.h"
 #include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/comp_meca_l.h"
 #include "asterfort/comp_nbvari_kit.h"
 #include "asterfort/comp_nbvari_std.h"
 #include "asterfort/jeveuo.h"
 !
-    character(len=16), intent(in) :: rela_comp, defo_comp, type_cpla
-    character(len=16), intent(in) :: kit_comp(4), post_iter
-    character(len=16), intent(in) :: mult_comp, regu_visc, post_incr, extern_addr
-    integer(kind=8), intent(in) :: extern_type
+    character(len=16), intent(in) :: relaComp, defoComp, typeCpla, kitComp(4)
+    character(len=16), intent(in) :: postIter, multComp, reguVisc, postIncr
+    integer(kind=8), intent(in) :: solvBehavType
+    character(len=16), intent(in) :: adrsMGIS
     integer(kind=8), intent(in) :: nbVariUMAT
     integer(kind=8), intent(out) :: nbVari, numeLaw, nbVariKit(4), numeLawKit(4)
 !
@@ -46,16 +48,16 @@ subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  rela_comp        : RELATION comportment
-! In  defo_comp        : DEFORMATION comportment
-! In  type_cpla        : plane stress method
-! In  kit_comp         : KIT comportment
-! In  mult_comp        : multi-comportment (for crystal)
-! In  post_iter        : type of post-treatment at each Newton iteration
-! In  regu_visc        : keyword for viscuous regularization
-! In  post_incr        : type of post-treatment at end of time step
-! In  external_type    : type of type of integration (internal, official, proto, umat)
-! In  external_ptr     : address of external behaviour
+! In  relaComp         : behaviour (RELATION keyword)
+! In  defoComp         : model of strain (DEFORMATION keyword)
+! In  typeCpla         : plane stress method (analytical or De Borst algorithm)
+! In  kitComp          : KIT behaviour
+! In  postIter         : type of post_treatment at each Newton iteration (POST_ITER keyword)
+! In  multComp         : name of map for multi-behaviours (DEFI_COMPOR)
+! In  reguVisc         : keyword for viscuous regularization (REGU_VISC keyword)
+! In  postIncr         : type of post-treatment at end of time step (POST_INCR keyword)
+! In  solvBehavType    : type of type of integration (internal, official, proto, umat)
+! In  adrsMGIS         : address (hexadecimal) for the MGIS Behaviour
 ! In  nbVariUMAT       : number of internal state variables for UMAT
 ! Out nbVari           : number of internal state variables
 ! Out numeLaw          : index of subroutine for behaviour
@@ -76,17 +78,17 @@ subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
     numeLawKit = 0
 
 ! - Detection of specific cases
-    call comp_meca_l(rela_comp, 'KIT', l_kit)
-    call comp_meca_l(rela_comp, 'CRISTAL', l_cristal)
-    call comp_meca_l(rela_comp, 'KIT_META', l_kit_meta)
-    call comp_meca_l(rela_comp, 'KIT_THM', l_kit_thm)
-    call comp_meca_l(rela_comp, 'KIT_DDI', l_kit_ddi)
-    call comp_meca_l(rela_comp, 'KIT_CG', l_kit_cg)
+    call comp_meca_l(relaComp, 'KIT', l_kit)
+    call comp_meca_l(relaComp, 'CRISTAL', l_cristal)
+    call comp_meca_l(relaComp, 'KIT_META', l_kit_meta)
+    call comp_meca_l(relaComp, 'KIT_THM', l_kit_thm)
+    call comp_meca_l(relaComp, 'KIT_DDI', l_kit_ddi)
+    call comp_meca_l(relaComp, 'KIT_CG', l_kit_cg)
 
 ! - Get number of internal state variables for KIT
     nbVariFromKit = 0
     if (l_kit) then
-        call comp_nbvari_kit(kit_comp, &
+        call comp_nbvari_kit(kitComp, &
                              l_kit_meta, l_kit_thm, l_kit_ddi, l_kit_cg, &
                              nbVariFromKit, nbVariKit, numeLawKit)
     end if
@@ -94,32 +96,33 @@ subroutine comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
 ! - Special for CRISTAL
     nbVariCrystal = 0
     if (l_cristal) then
-        call jeveuo(mult_comp(1:8)//'.CPRI', 'L', vi=cpri)
+        call jeveuo(multComp(1:8)//'.CPRI', 'L', vi=cpri)
         nbVariCrystal = cpri(3)
-        if (defo_comp .eq. 'SIMO_MIEHE') then
+        if (defoComp .eq. 'SIMO_MIEHE') then
             nbVariCrystal = nbVariCrystal+3+9
         end if
     end if
 
 ! - Get number of internal state variables
-    call comp_nbvari_std(rela_comp, defo_comp, type_cpla, &
-                         kit_comp, post_iter, regu_visc, post_incr, &
+    call comp_nbvari_std(relaComp, defoComp, typeCpla, &
+                         kitComp, postIter, reguVisc, postIncr, &
                          nbVari, numeLaw)
 
 ! - Get number of internal state variables for external behaviours
-    nbVariExte = 0
-    if (extern_type .ne. 0) then
-        if (extern_type .eq. 1 .or. extern_type .eq. 2) then
-            ! MFront offi/proto
-            call mgis_get_sizeof_isvs(extern_addr, nbVariExte)
-            if (nbVariExte .eq. 0) then
-                nbVariExte = 1
-            end if
-        else
-            ! UMAT
-            nbVariExte = nbVariUMAT
+    if (solvBehavType .eq. SOLV_BEHAV_ASTER) then
+        nbVariExte = 0
+    elseif (solvBehavType .eq. SOLV_BEHAV_MGIS_OFFI .or. &
+            solvBehavType .eq. SOLV_BEHAV_MGIS_PROTO) then
+        call mgis_get_sizeof_isvs(adrsMGIS, nbVariExte)
+        if (nbVariExte .eq. 0) then
+            nbVariExte = 1
         end if
         nbVariKit(4) = nbVariExte
+    elseif (solvBehavType .eq. SOLV_BEHAV_UMAT) then
+        nbVariExte = nbVariUMAT
+        nbVariKit(4) = nbVariExte
+    else
+        ASSERT(ASTER_FALSE)
     end if
 
 ! - Total number of internal state variables

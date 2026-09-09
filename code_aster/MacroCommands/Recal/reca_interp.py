@@ -171,9 +171,9 @@ class Sim_exp:
                 L_J[i] = L_J[i] / L_J_init[i]
             else:
                 if unite_resu:
-                    fic = open(os.getcwd() + "/fort." + str(unite_resu), "a")
-                    fic.write(message)
-                    fic.close()
+                    message = f"Erreur: division par zéro dans norme_J pour L_J_init = {L_J_init}\n"
+                    with open(os.path.join(os.getcwd(), f"fort.{unite_resu}"), "a") as fic:
+                        fic.write(message)
                 UTMESS("F", "RECAL0_44", valr=L_J_init)
                 return
 

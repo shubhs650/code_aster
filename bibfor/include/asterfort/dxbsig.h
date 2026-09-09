@@ -15,17 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxbsig(nomte, xyzl, pgl, sigma, bsigma,&
-                      option)
-        character(len=16) :: nomte
-        real(kind=8) :: xyzl(3, 1)
-        real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: sigma(*)
-        real(kind=8) :: bsigma(*)
-        character(len=*) :: option
+    subroutine dxbsig(plateCara, plateOrie, &
+                      nomte, optionZ, &
+                      xyzl, pgl, sigma, &
+                      bsigma)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        character(len=*), intent(in) :: optionZ
+        real(kind=8), intent(in) :: xyzl(3, 1), pgl(3, 3)
+        real(kind=8), intent(in) :: sigma(*)
+        real(kind=8), intent(out) :: bsigma(*)
     end subroutine dxbsig
 end interface

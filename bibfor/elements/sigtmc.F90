@@ -16,12 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine sigtmc(fami, nbsig, npg, ndim, &
-                  time, jvMaterCode, anglNaut, &
+subroutine sigtmc(materPara, time, &
+                  nbsig, npg, ndim, &
                   indxVarcStrain, sigmVarc)
 !
     use BehaviourStrain_module
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8miem.h"
@@ -29,11 +31,9 @@ subroutine sigtmc(fami, nbsig, npg, ndim, &
 #include "asterfort/dmatmc.h"
 #include "asterfort/epstmc.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: nbsig, npg, ndim
+    type(Material_Para), intent(inout) :: materPara
     real(kind=8), intent(in) :: time
-    integer(kind=8), intent(in) :: jvMaterCode
-    real(kind=8), intent(in) :: anglNaut(3)
+    integer(kind=8), intent(in) :: nbsig, npg, ndim
     integer(kind=8), intent(in) :: indxVarcStrain
     real(kind=8), intent(out) :: sigmVarc(nbsig*npg)
 !
@@ -43,13 +43,10 @@ subroutine sigtmc(fami, nbsig, npg, ndim, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
-! In  nno              : number of nodes of element
+! IO  materPara        : parameters of material
+! In  time             : current time
 ! In  nbsig            : number of components for stress tensors (4 or 6)
 ! In  npg              : number of Gauss points
-! In  time             : current time
-! In  anglNaut         : nautical angles for definition of basis for non-isotropic elasticity
-! In  jvMaterCode      : adress for material parameters
 ! In  indxVarcStrain   : index of external state variable
 ! Out sigmVarc         : Stresses from external state variables
 !
@@ -69,9 +66,11 @@ subroutine sigtmc(fami, nbsig, npg, ndim, &
 
 ! - Loop on Gauss points
     do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! ----- Compute inelastic strains from external state variables
-        call epstmc(fami, "+", kpg, ksp, ndim, &
-                    time, anglNaut, jvMaterCode, &
+        call epstmc(materPara, "+", time, ndim, &
                     indxVarcStrain, allVarcStrain, &
                     epsiVarc)
 
@@ -86,8 +85,7 @@ subroutine sigtmc(fami, nbsig, npg, ndim, &
             epsiVarc(4:6) = 2.d0*epsiVarc(4:6)
 
 ! --------- Compute Hooke matrix [D]
-            call dmatmc(fami, jvMaterCode, time, '+', kpg, &
-                        ksp, anglNaut, nbsig, d)
+            call dmatmc(materPara, "+", time, nbsig, d)
 
 ! --------- Compute stresses from external state variables
             do iSigm = 1, nbsig

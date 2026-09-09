@@ -52,7 +52,7 @@ def impr_table_ops(self, FORMAT, TABLE, INFO, **args):
     Filtre = []
     if args["FILTRE"]:
         for Fi in args["FILTRE"]:
-            dF = Fi.cree_dict_valeurs(Fi.mc_liste)
+            dF = Fi
             for mc in list(dF.keys()):
                 if dF[mc] is None:
                     del dF[mc]
@@ -105,7 +105,7 @@ def impr_table_ops(self, FORMAT, TABLE, INFO, **args):
         if args["TRI"]:
             # une seule occurence de TRI
             T0 = args["TRI"][0]
-            dT = T0.cree_dict_valeurs(T0.mc_liste)
+            dT = T0
             tab.sort(CLES=dT["NOM_PARA"], ORDRE=dT["ORDRE"])
 
         # ----- 4. Impression

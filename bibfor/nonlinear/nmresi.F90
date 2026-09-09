@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504
+! aslint: disable=W1504, W0413
 !
 subroutine nmresi(mesh, list_func_acti, ds_material, &
                   nume_dof, sdnume, &
@@ -34,6 +34,7 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/asmpi_info.h"
 #include "asterfort/assert.h"
 #include "asterfort/cnoadd.h"
 #include "asterfort/dismoi.h"
@@ -59,6 +60,7 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
 #include "asterfort/romAlgoNLCorrEFMecaResidual.h"
 #include "asterfort/nmequi.h"
 #include "asterfort/utmess.h"
+#include "asterfort/vector_update_ghost_values.h"
 !
     character(len=8), intent(in) :: mesh
     integer(kind=8), intent(in) :: list_func_acti(*)
@@ -115,17 +117,17 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
 !
     integer(kind=8) :: ifm, niv
     integer(kind=8), pointer :: v_ccid(:) => null()
-    integer(kind=8) :: nb_equa, i_equa
-    character(len=24) :: mate, varc_refe
+    integer(kind=8) :: nb_equa, i_equa, rank
+    character(len=24) :: materField, varcRefe
     aster_logical :: l_stat, l_load_cine, l_cont_cont, l_cont_lac, l_rom, l_macr
     aster_logical :: l_resi_refe, l_varc_init, l_resi_comp, l_rela
     aster_logical :: l_no_disp, l_pilo, l_disp
     aster_logical :: l_parallel_mesh
     character(len=19) :: profch
-    character(len=19) :: varc_prev, disp_prev
+    character(len=19) :: varcPrev, disp_prev
     character(len=19) :: cndiri, cnbudi, cnfext, cnfexp
     character(len=19) :: cnrefe, cnfinp, cndirp, cnbudp, cnrefp
-    character(len=19) :: cndfdo, cnequi, cndipi, cnsstr
+    character(len=19) :: cndfdo, cnequi, cndipi, cnsstr, cndfdp
     real(kind=8) :: vale_equi, vale_refe, vale_varc
     integer(kind=8) :: r_rela_indx, r_resi_indx, r_equi_indx
     integer(kind=8) :: r_refe_indx, r_char_indx, r_comp_indx
@@ -141,7 +143,10 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     real(kind=8), pointer :: v_cndiri(:) => null()
     real(kind=8), pointer :: v_fvarc_init(:) => null()
     integer(kind=8), pointer :: v_deeq(:) => null()
+    integer(kind=8), pointer :: v_pddl(:) => null()
     real(kind=8), pointer :: v_cnequi(:) => null()
+    real(kind=8), pointer :: vale(:) => null()
+    mpi_int :: mrank
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -154,7 +159,7 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
 ! - Initialisations
 !
     profch = ' '
-    varc_prev = ' '
+    varcPrev = ' '
     disp_prev = ' '
     cndiri = ' '
     cnbudi = ' '
@@ -164,8 +169,8 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     cnequi = ' '
     cndipi = ' '
     cnsstr = ' '
-    mate = ds_material%mater
-    varc_refe = ds_material%varc_refe
+    materField = ds_material%mater
+    varcRefe = ds_material%varc_refe
     call dismoi('NB_EQUA', nume_dof, 'NUME_DDL', repi=nb_equa)
     r_rela_vale = 0.d0
     r_refe_vale = 0.d0
@@ -208,7 +213,7 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
 ! - Get hat variables
 !
     call nmchex(hval_incr, 'VALINC', 'DEPMOI', disp_prev)
-    call nmchex(hval_incr, 'VALINC', 'COMMOI', varc_prev)
+    call nmchex(hval_incr, 'VALINC', 'COMMOI', varcPrev)
     call nmchex(hval_veasse, 'VEASSE', 'CNDIPI', cndipi)
     call nmchex(hval_veasse, 'VEASSE', 'CNDIRI', cndiri)
     call nmchex(hval_veasse, 'VEASSE', 'CNBUDI', cnbudi)
@@ -221,6 +226,7 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     cndirp = '&&NMRESI.CNDIRP'
     cnbudp = '&&NMRESI.CNBUDP'
     cnrefp = '&&NMRESI.CNREFP'
+    cndfdp = '&&CNCHAR.DFDO2'
 
 ! - Compute external forces
     call nmfext(eta, list_func_acti, hval_veasse, cnfext, ds_contact, sddyna, nlDynaDamping)
@@ -256,12 +262,14 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     call cnoadd(cndiri, cndirp)
     call cnoadd(cnbudi, cnbudp)
     if (l_resi_refe) call cnoadd(cnrefe, cnrefp)
+    call cnoadd(cndfdo, cndfdp)
 #else
     cnfexp = cnfext
     cnfinp = ds_system%cnfint
     cndirp = cndiri
     cnbudp = cnbudi
     cnrefp = cnrefe
+    cndfdp = cndfdo
 #endif
 !
 ! - Compute lack of balance forces
@@ -270,8 +278,12 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
     call nmequi(l_disp, l_pilo, l_macr, cnequi, &
                 cnfinp, cnfexp, cndirp, cnsstr, &
                 ds_contact, &
-                cnbudp, cndfdo, &
+                cnbudp, cndfdp, &
                 cndipi, eta)
+    if (l_parallel_mesh) then
+        call jeveuo(cnequi//'.VALE', 'L', vr=vale)
+        call vector_update_ghost_values(vale, nume_dof(1:14)//'.NUME', 'BIDIR')
+    end if
 !
 ! - Compute RESI_COMP_RELA
 !
@@ -295,7 +307,17 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
 !
 ! - Compute
 !
+    if (l_parallel_mesh) then
+        call jeveuo(profch(1:19)//'.PDDL', 'L', vi=v_pddl)
+        call asmpi_info(rank=mrank)
+        rank = to_aster_int(mrank)
+    end if
     do i_equa = 1, nb_equa
+        if (l_parallel_mesh) then
+            if (v_pddl(i_equa) .ne. rank) then
+                cycle
+            end if
+        end if
         if (l_no_disp) then
             if (v_cndiri(i_equa) .ne. 0.d0) then
                 cycle
@@ -409,12 +431,12 @@ subroutine nmresi(mesh, list_func_acti, ds_material, &
             if (r_char_vale .gt. resi_glob_rela) then
                 r_varc_vale = r_varc_vale/r_char_vale
                 if (r_varc_vale .gt. resi_glob_rela) then
-                    call nmvcmx(mate, mesh, varc_refe, varc_prev)
+                    call nmvcmx(materField, varcRefe, varcPrev)
                 end if
             end if
         else
             if (r_varc_vale .gt. resi_glob_maxi) then
-                call nmvcmx(mate, mesh, varc_refe, varc_prev)
+                call nmvcmx(materField, varcRefe, varcPrev)
             end if
         end if
     end if

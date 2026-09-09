@@ -27,6 +27,7 @@ subroutine xmilar(ndim, ndime, elrefp, geom, pinref, &
 #include "asterfort/reerel.h"
 #include "asterfort/xnormv.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: ndim, ndime, ia, ib, im, ip
     real(kind=8) :: milara(3), milarb(3), pinref(*), geom(*)
     real(kind=8) :: ksia(ndime), ksib(ndime), pintt(*), pmitt(*)
@@ -49,7 +50,7 @@ subroutine xmilar(ndim, ndime, elrefp, geom, pinref, &
 !     ----------------------------------------------------------------
 !
     integer(kind=8) :: nno, j
-    real(kind=8) :: x(81), newpt(ndim), pta(ndim), ptb(ndim), ptm(ndim), ff(27)
+    real(kind=8) :: x(3*MT_NNOMAX3D), newpt(ndim), pta(ndim), ptb(ndim), ptm(ndim), ff(MT_NNOMAX)
     real(kind=8) :: ab(ndime), aip(ndime), normab, normaip, s
     blas_int :: b_incx, b_incy, b_n
 !

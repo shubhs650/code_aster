@@ -16,18 +16,27 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine c3drep(nomte, epais, alpha, beta, coord, &
-                  numnoe, pgl)
+subroutine c3drep(nomte, &
+                  epais, alpha, beta, &
+                  nodeCoor, nodeNume, &
+                  pgl)
+!
+    use plate_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/jeveuo.h"
 #include "asterfort/vdrep2.h"
 #include "asterfort/vectan.h"
 #include "asterfort/vectgt.h"
-    integer(kind=8) :: numnoe
-    character(len=16) :: nomte
-    real(kind=8) :: epais, alpha, beta, coord(3, 9), pgl(3, 3)
-!     ------------------------------------------------------------------
+#include "jeveux.h"
+!
+    character(len=16), intent(in) :: nomte
+    real(kind=8), intent(in) :: epais, alpha, beta
+    real(kind=8), intent(in) :: nodeCoor(3, *)
+    integer(kind=8), intent(in) :: nodeNume
+    real(kind=8), intent(out) :: pgl(3, 3)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !         CETTE ROUTINE REALISE LA MEME TACHE QUE COQREP MAIS POUR LES
 !         COQUES 3D
@@ -35,61 +44,69 @@ subroutine c3drep(nomte, epais, alpha, beta, coord, &
 !         LA VARIETE (LE REPERE DE LA VARIETE EST OBTENU PAR LA MATRICE
 !         DE PASSAGE GLOBAL -> LOCAL) AINSI QUE SON INVERSE
 !
-!     ------------------------------------------------------------------
-    integer(kind=8) :: nb1, nb2, npgsr, i, j, k, ind, intsr
+! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: vecta(9, 2, 3), vectn(9, 3), vectg(2, 3), vectt(3, 3)
-    real(kind=8) :: zero, vectpt(9, 2, 3), vectmp(3, 3), pgltmp(3, 3)
-    real(kind=8) :: matevn(2, 2, 10), matevg(2, 2, 10), v
+    real(kind=8), parameter:: zero = 0.d0
+    integer(kind=8), parameter :: ptType = 0
+    integer(kind=8) :: nb1, nb2, npgsr, i, j, k, intsr
+    real(kind=8) :: vectNorm(9, 3), vectBaseKpg(3, 3)
+    real(kind=8) :: vectTang(9, 2, 3), vectmp(3, 3), pgltmp(3, 3)
+    real(kind=8) :: matevn(2, 2, 10), v
     real(kind=8), pointer :: desr(:) => null()
     integer(kind=8), pointer :: desi(:) => null()
+    type(plateOrie_Para) :: plateOrie
 !
-    zero = 0.d0
+! --------------------------------------------------------------------------------------------------
+!
+
+! - Access to static objects of COQUE_3D
     call jeveuo('&INEL.'//nomte(1:8)//'.DESI', 'L', vi=desi)
     call jeveuo('&INEL.'//nomte(1:8)//'.DESR', 'L', vr=desr)
     nb1 = desi(1)
     nb2 = desi(2)
     npgsr = desi(3)
-!
-!     -- POUR REMPLIR LZR+1090+...  ET CALCULER VECTN :
-    call vectan(nb1, nb2, coord, desr, vecta, &
-                vectn, vectpt)
-!
-!     -- POUR REMPLIR LZR+2000+... :
-!     -- QUELLE VALEUR POUR IND ? FICHE ???
-! ind=0 => calcul aux points d'intégration réduite
-! ind=1 => calcul aux points d'intégration normale
-    ind = 0
+
+! - Compute local basis
+    call vectan(nb1, nb2, &
+                nodeCoor, desr, &
+                vectNorm, vectTang)
+    plateOrie%vectNorm = vectNorm
+    plateOrie%vectTang = vectTang
+
+! - Compute local basis at integration points
     k = 0
     do intsr = 1, npgsr
-        call vectgt(ind, nb1, coord, zero, intsr, &
-                    desr, epais, vectn, vectg, vectt)
+        call vectgt(plateOrie, ptType, nb1, &
+                    nodeCoor, zero, intsr, &
+                    epais, desr, &
+                    vectBaseKpg)
         do j = 1, 3
             do i = 1, 3
                 k = k+1
-                desr(1+2000+k-1) = vectt(i, j)
+                desr(1+2000+k-1) = vectBaseKpg(i, j)
             end do
         end do
     end do
+
+! - Compute global<=>local matrices (at nodes and integration points)
+    call vdrep2(alpha, beta, nb2, npgsr, desr, matevn)
 !
-    call vdrep2(alpha, beta, desi, desr, matevn, &
-                matevg)
-!
-    vectmp(1, 1) = matevn(1, 1, numnoe)
-    vectmp(1, 2) = matevn(1, 2, numnoe)
-    vectmp(2, 1) = matevn(2, 1, numnoe)
-    vectmp(2, 2) = matevn(2, 2, numnoe)
+    vectmp(1, 1) = matevn(1, 1, nodeNume)
+    vectmp(1, 2) = matevn(1, 2, nodeNume)
+    vectmp(2, 1) = matevn(2, 1, nodeNume)
+    vectmp(2, 2) = matevn(2, 2, nodeNume)
     vectmp(1, 3) = 0.d0
     vectmp(2, 3) = 0.d0
     vectmp(3, 3) = 1.d0
     vectmp(3, 1) = 0.d0
     vectmp(3, 2) = 0.d0
-!
+
+! - Compute PGL
     k = 0
     do j = 1, 3
         do i = 1, 3
             k = k+1
-            pgltmp(i, j) = desr(1+1090+(numnoe-1)*9+k-1)
+            pgltmp(i, j) = desr(1+1090+(nodeNume-1)*9+k-1)
         end do
     end do
     do i = 1, 3

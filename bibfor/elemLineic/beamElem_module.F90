@@ -33,7 +33,6 @@ module beamElem_module
     private :: beamNMatrStraight, beamNMatrCurved
 ! ==================================================================================================
     private
-#include "asterc/r8pi.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/beamElem_type.h"

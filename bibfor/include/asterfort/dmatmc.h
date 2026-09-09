@@ -15,24 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine dmatmc(fami, mater , time, poum ,ipg,&
-                      ispg, angl_naut, nbsig,dr_,&
-                      l_modi_cp, di_)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: mater
-        real(kind=8), intent(in) :: time
+    subroutine dmatmc(materPara, poum, time, &
+                      tensSize, dr_, l_modi_cp, di_)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         character(len=*), intent(in) :: poum
-        integer(kind=8), intent(in) :: ipg
-        integer(kind=8), intent(in) :: ispg
-        real(kind=8), intent(in) :: angl_naut(3)
-        integer(kind=8), intent(in) :: nbsig
-        real(kind=8), optional, intent(out) :: dr_(nbsig, nbsig)
-        real(kind=8), optional, intent(out) :: di_(nbsig, nbsig)
+        real(kind=8), intent(in) :: time
+        integer(kind=8), intent(in) :: tensSize
+        real(kind=8), optional, intent(out) :: dr_(tensSize, tensSize), di_(tensSize, tensSize)
         aster_logical, optional, intent(in) :: l_modi_cp
     end subroutine dmatmc
 end interface

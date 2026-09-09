@@ -29,11 +29,11 @@ interface
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_code
         integer(kind=8), intent(in) :: nb_poin_coor
-        real(kind=8), intent(in) :: poin_coor(elem_dime-1,4)
-        real(kind=8), intent(in) :: poin_coor_ori(elem_dime-1,4)
+        real(kind=8), intent(in) :: poin_coor(2,4)
+        real(kind=8), intent(in) :: poin_coor_ori(2,4)
         integer(kind=8), intent(inout) :: nb_poin_inte
-        real(kind=8), intent(inout) :: poin_inte(elem_dime-1,16)
-        real(kind=8), intent(inout) :: poin_inte_ori(elem_dime-1,16)
+        real(kind=8), intent(inout) :: poin_inte(2,16)
+        real(kind=8), intent(inout) :: poin_inte_ori(2,16)
         integer(kind=8), intent(inout) :: inte_neigh(4)
     end subroutine apelem_inside_n
 end interface

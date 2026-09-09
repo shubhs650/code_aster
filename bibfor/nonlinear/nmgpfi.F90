@@ -17,21 +17,25 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504, W1306
 !
-subroutine nmgpfi(fami, option, typmod, ndim, nno, &
-                  npg, geomInit, compor, imate, mult_comp, &
-                  lgpg, carcri, angmas, instm, instp, &
-                  dispPrev, dispIncr, sigmPrev, vim, sigmCurr, &
-                  vip, fint, matr, codret)
+subroutine nmgpfi(BEHInteg, &
+                  typmod, option, &
+                  nno, npg, ndim, geomInit, &
+                  compor, carcri, multComp, &
+                  instm, instp, &
+                  dispPrev, dispIncr, &
+                  lgpg, sigmPrev, vim, &
+                  sigmCurr, vip, &
+                  fint, matr, codret)
 !
     use Behaviour_type
     use Behaviour_module
-!
+    use MaterialPara_type
     implicit none
 !
-#include "asterf_types.h"
-#include "jeveux.h"
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/crirup.h"
 #include "asterfort/dfdmip.h"
@@ -43,15 +47,17 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
 #include "blas/dscal.h"
-#include "asterfort/Behaviour_type.h"
+#include "MeshTypes_type.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: ndim, nno, npg, imate, lgpg
-    character(len=8) :: typmod(2)
-    character(len=*) :: fami
-    character(len=16) :: option, compor(COMPOR_SIZE)
-    character(len=16), intent(in) :: mult_comp
-    real(kind=8) :: geomInit(*), carcri(CARCRI_SIZE), instm, instp
-    real(kind=8) :: angmas(3)
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8) :: ndim, nno, npg, lgpg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: option
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: multComp
+    real(kind=8) :: geomInit(*), instm, instp
     real(kind=8) :: dispPrev(*), dispIncr(*), sigmPrev(2*ndim, npg)
     real(kind=8) :: vim(lgpg, npg), sigmCurr(2*ndim, npg), vip(lgpg, npg)
     real(kind=8) :: matr(*), fint(*)
@@ -97,17 +103,16 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1
-    aster_logical :: grand, axi
-    aster_logical :: lMatr, lSigm
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    aster_logical, parameter :: grand = ASTER_TRUE
+    aster_logical :: axi, lMatr, lSigm
     integer(kind=8) :: lij(3, 3), ia, ja, na, ib, jb, nb, kpg, kk, os, ija
     integer(kind=8) :: nddl, ndu, vu(3, 27), ivf, iw, idff
     integer(kind=8) :: cod(npg)
-    real(kind=8) :: geomPrev(3*27), geomCurr(3*27), r, w, dff(nno, 4)
+    real(kind=8) :: geomPrev(3*MT_NNOMAX3D), geomCurr(3*MT_NNOMAX3D), r, w, dff(nno, 4)
     real(kind=8) :: jacoPrev, jacoIncr, jacoCurr, fPrev(3, 3), fIncr(3, 3), coef
     real(kind=8) :: sigmPrevComp(6), tauCurr(6), dsidep(6, 3, 3)
     real(kind=8) :: rbid, tbid(6), t1, t2
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    type(Behaviour_Integ) :: BEHinteg
     integer(kind=8), parameter :: vij(3, 3) = reshape((/1, 4, 5, 4, 2, 6, 5, 6, 3/), (/3, 3/))
     aster_logical :: resi
     blas_int :: b_incx, b_incy, b_n
@@ -115,8 +120,6 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!
-    grand = ASTER_TRUE
     axi = typmod(1) .eq. 'AXIS'
     lSigm = L_SIGM(option)
 
@@ -127,22 +130,13 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
     tbid = r8vide()
     codret = 0
 !
-    call elrefe_info(fami=fami, jpoids=iw, jvf=ivf, jdfde=idff)
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndimBizarre, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, imate, &
-                              BEHinteg)
+    call elrefe_info(fami=BEHInteg%materPara%schemePara%fami, &
+                     jpoids=iw, jvf=ivf, jdfde=idff)
 
 ! - Prepare external state variables (geometry)
     call behaviourPrepESVAGeom(nno, npg, ndim, &
                                iw, ivf, idff, &
-                               geomInit, BEHinteg, &
+                               geomInit, BEHInteg, &
                                dispPrev, dispIncr)
 
 !
@@ -165,8 +159,7 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
     b_n = to_blas_int(nddl)
     b_incx = to_blas_int(1)
     b_incy = to_blas_int(1)
-    call daxpy(b_n, 1.d0, dispPrev, b_incx, geomPrev, &
-               b_incy)
+    call daxpy(b_n, 1.d0, dispPrev, b_incx, geomPrev, b_incy)
     b_n = to_blas_int(nddl)
     b_incx = to_blas_int(1)
     b_incy = to_blas_int(1)
@@ -174,9 +167,8 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
     b_n = to_blas_int(nddl)
     b_incx = to_blas_int(1)
     b_incy = to_blas_int(1)
-    call daxpy(b_n, 1.d0, dispIncr, b_incx, geomCurr, &
-               b_incy)
-!
+    call daxpy(b_n, 1.d0, dispIncr, b_incx, geomCurr, b_incy)
+
 ! - Loop on Gauss points
     cod = 0
     do kpg = 1, npg
@@ -203,12 +195,12 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
         call nmmalu(nno, axi, r, zr(ivf+(kpg-1)*nno), dff, lij)
 
 ! ----- Kinematic - Jacobians
-        jacoPrev = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))-fPrev(2, 1)*(fPr&
-                   &ev(1, 2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+fPrev(3, 1)*(fPrev(1, 2)*fPrev(&
-                   &2, 3)-fPrev(1, 3)*fPrev(2, 2))
-        jacoIncr = fIncr(1, 1)*(fIncr(2, 2)*fIncr(3, 3)-fIncr(2, 3)*fIncr(3, 2))-fIncr(2, 1)*(fIn&
-                   &cr(1, 2)*fIncr(3, 3)-fIncr(1, 3)*fIncr(3, 2))+fIncr(3, 1)*(fIncr(1, 2)*fIncr(&
-                   &2, 3)-fIncr(1, 3)*fIncr(2, 2))
+        jacoPrev = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))- &
+                   fPrev(2, 1)*(fPrev(1, 2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+ &
+                   fPrev(3, 1)*(fPrev(1, 2)*fPrev(2, 3)-fPrev(1, 3)*fPrev(2, 2))
+        jacoIncr = fIncr(1, 1)*(fIncr(2, 2)*fIncr(3, 3)-fIncr(2, 3)*fIncr(3, 2))- &
+                   fIncr(2, 1)*(fIncr(1, 2)*fIncr(3, 3)-fIncr(1, 3)*fIncr(3, 2))+ &
+                   fIncr(3, 1)*(fIncr(1, 2)*fIncr(2, 3)-fIncr(1, 3)*fIncr(2, 2))
         jacoCurr = jacoPrev*jacoIncr
 
 ! ----- Check jacobian
@@ -223,21 +215,26 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)
         call dcopy(b_n, sigmPrev(1, kpg), b_incx, sigmPrevComp, b_incy)
+
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         cod(kpg) = 0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndimBizarre, typmod, &
-                    imate, compor, carcri, instm, instp, &
-                    9, fPrev, fIncr, 6, sigmPrevComp, &
-                    vim(1, kpg), option, angmas, &
-                    tauCurr, vip(1, kpg), 54, dsidep, &
-                    cod(kpg), mult_comp)
+        call nmcomp(BEHInteg, &
+                    ndimBizarre, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    9, fPrev, fIncr, &
+                    6, sigmPrevComp, &
+                    vim(1, kpg), &
+                    tauCurr, vip(1, kpg), &
+                    54, dsidep, &
+                    cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
+
 ! ----- Conversion from/to Voigt notation
         if (resi) then
             b_n = to_blas_int(3)
@@ -256,6 +253,7 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
             b_incx = to_blas_int(6)
             call dscal(b_n, coef, dsidep(6, 1, 1), b_incx)
         end if
+
 ! ----- Internal forces and Cauchy stresses
         if (resi) then
             b_n = to_blas_int(2*ndim)
@@ -278,6 +276,7 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
                 end do
             end do
         end if
+
 ! ----- Tangent matrix (non-symmetric)
         if (lMatr) then
             if (.not. resi) then
@@ -348,18 +347,17 @@ subroutine nmgpfi(fami, option, typmod, ndim, nno, &
             end if
         end if
     end do
-!
+
 ! - For POST_ITER='CRIT_RUPT'
-!
     if (carcri(13) .gt. 0.d0) then
-        call crirup(fami, imate, ndim, npg, lgpg, &
-                    option, compor, sigmCurr, vip, vim, &
+        call crirup(BEHInteg%materPara, &
+                    ndim, npg, lgpg, &
+                    option, sigmCurr, vip, vim, &
                     instm, instp)
     end if
 !
 999 continue
-!
+
 ! - Return code summary
-!
     call codere(cod, npg, codret)
 end subroutine

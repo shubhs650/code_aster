@@ -19,27 +19,27 @@
 !
 !
 interface
-    subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, deuxmu, lamf, deumuf, &
-                               gt, gc, gf, seuil, alpha, alfmc, epsic, epsiels, epsilim,&
+    subroutine glrc_recup_mate(jvMaterCode, relaComp, lrgm, ep, lambda, deuxmu, lamf, deumuf, &
+                               gt, gc, gf, seuil, alpha, alfmc, epsic, epsiels, epsilim, &
                                is_param_opt_, val_param_opt_)
-      integer(kind=8), intent(in) :: imate
-      character(len=16), intent(in) :: compor
-      real(kind=8), optional, intent(out) :: lambda
-      real(kind=8), optional, intent(out) :: deuxmu
-      real(kind=8), optional, intent(out) :: lamf
-      real(kind=8), optional, intent(out) :: deumuf
-      real(kind=8), optional, intent(out) :: gt
-      real(kind=8), optional, intent(out) :: gc
-      real(kind=8), optional, intent(out) :: gf
-      real(kind=8), optional, intent(out) :: seuil
-      real(kind=8), optional, intent(out) :: alpha
-      real(kind=8), optional, intent(out) :: alfmc
-      real(kind=8), optional, intent(out) :: epsic
-      real(kind=8), optional, intent(out) :: epsiels
-      real(kind=8), optional, intent(out) :: epsilim
-      real(kind=8), intent(in) :: ep
-      aster_logical, intent(in) :: lrgm
-      aster_logical, optional, intent(out) :: is_param_opt_(*)
-      real(kind=8), optional, intent(out) :: val_param_opt_(*)
+        integer(kind=8), intent(in) :: jvMaterCode
+        character(len=16), intent(in) :: relaComp
+        real(kind=8), optional, intent(out) :: lambda
+        real(kind=8), optional, intent(out) :: deuxmu
+        real(kind=8), optional, intent(out) :: lamf
+        real(kind=8), optional, intent(out) :: deumuf
+        real(kind=8), optional, intent(out) :: gt
+        real(kind=8), optional, intent(out) :: gc
+        real(kind=8), optional, intent(out) :: gf
+        real(kind=8), optional, intent(out) :: seuil
+        real(kind=8), optional, intent(out) :: alpha
+        real(kind=8), optional, intent(out) :: alfmc
+        real(kind=8), optional, intent(out) :: epsic
+        real(kind=8), optional, intent(out) :: epsiels
+        real(kind=8), optional, intent(out) :: epsilim
+        real(kind=8), intent(in) :: ep
+        aster_logical, intent(in) :: lrgm
+        aster_logical, optional, intent(out) :: is_param_opt_(*)
+        real(kind=8), optional, intent(out) :: val_param_opt_(*)
     end subroutine glrc_recup_mate
 end interface

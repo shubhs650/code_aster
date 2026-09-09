@@ -15,12 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0402(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
-!
-#include "jeveux.h"
 !
 #include "asterfort/antisy.h"
 #include "asterfort/btdbma.h"
@@ -39,169 +39,81 @@ subroutine te0402(option, nomte)
 #include "asterfort/sigvte.h"
 #include "asterfort/vectan.h"
 #include "asterfort/vectgt.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
 !
-! ......................................................................
-!     FONCTION :  CALCUL DE LA MATRICE DES CONTRAINTES INITIALES
-!                 POUR LE FLAMBEMENT LINEAIRE
+! --------------------------------------------------------------------------------------------------
 !
-!                 COQUE_3D
+! CALCUL DE LA MATRICE DES CONTRAINTES INITIALES POUR LE FLAMBEMENT LINEAIRE
 !
-!                 OPTION :  RIGI_GEOM
+! COQUE_3D
 !
-!    ARGUMENTS :
-!    DONNEES   :       OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
-!
-!
-!
-!---- DECLARATIONS BIDONS
+! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: bid33(3, 3)
-!
-!
-!
-!
-!---- DECLARATIONS LOCALES
-!
-    integer(kind=8) :: i, j
-    integer(kind=8) :: in
-    integer(kind=8) :: ii, jj
+    integer(kind=8) :: i, j, in, ii, jj
     integer(kind=8) :: irig
-    integer(kind=8) :: kompt
-    integer(kind=8) :: kpgs
-!
-!
-    real(kind=8) :: sigmtd(5)
-!
-    real(kind=8) :: sigmt(3, 3)
-!
-    real(kind=8) :: sigmEner(3, 3)
-!
-    real(kind=8) :: barsig(9, 9)
-!
-    real(kind=8) :: vecni(3), antni(3, 3)
-!
-    real(kind=8) :: veczn(27)
-    real(kind=8) :: antzi(3, 3)
-!
-    real(kind=8) :: rignc(3, 3)
-    real(kind=8) :: vri(2601)
-!
-!
-!
-!---- DECLARATIONS STANDARDS
-!
-    integer(kind=8) :: igeom, icontr, imatuu
-!
-    integer(kind=8) :: lzi, lzr, jcara
-!
+    integer(kind=8) :: kompt, kpgs
+    real(kind=8) :: sigmtd(5), sigmt(3, 3), sigmEner(3, 3), barsig(9, 9)
+    real(kind=8) :: vecni(3), antni(3, 3), veczn(27), antzi(3, 3), rignc(3, 3), vri(2601)
+    integer(kind=8) :: jvGeom, icontr, imatuu
+    integer(kind=8) :: lzi, lzr
     integer(kind=8) :: nb1, nb2
-!
-!
-!
-!
-!---- DECLARATIONS PROPRES COQUE_3D
-!
     integer(kind=8) :: inte, intsn
-!
     real(kind=8) :: epais
-!
-    integer(kind=8) :: npge, npgsn, k1
-!
-    real(kind=8) :: vecta(9, 2, 3)
-    real(kind=8) :: vectn(9, 3), vectpt(9, 2, 3)
-!
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
-!
+    integer(kind=8) :: npgsn, k1
+    real(kind=8) :: vectTangKpg(2, 3), vectBaseKpg(3, 3)
     real(kind=8) :: jm1(3, 3), detj
-!
     real(kind=8) :: hstout(5, 9)
+    real(kind=8) :: j1dn2(9, 51), j1dn3(9, 27)
+    real(kind=8) :: btild3(5, 27), ksi3s2
+    integer(kind=8), parameter :: npge = 3
+    real(kind=8) :: epsval(npge), poids(npge)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    real(kind=8) :: j1dn2(9, 51)
-    real(kind=8) :: j1dn3(9, 27)
+! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: btild3(5, 27)
-!
-    parameter(npge=3)
-    real(kind=8) :: epsval(npge), ksi3s2, poids(npge)
 
-!
-!       POIDS DES POINTS DE GAUSS DANS LA TRANCHE
-!
-    poids(1) = 0.33333333333333d0
-    poids(2) = 1.33333333333333d0
-    poids(3) = 0.33333333333333d0
-!
-!---- RECUPERATION DES POINTEURS ( L : LECTURE, E : ECRITURE )
-!
-!
-!....... GEOMETRIE ( COORDONNEES DES NOEUDS )
-!
-    call jevech('PGEOMER', 'L', igeom)
-!
-!....... CONTRAINTES DE CAUCHY ( CONFONDUES AVEC PK2 )
-!
-!        -- PASSAGE DES CONTRAINTES DANS LE REPERE INTRINSEQUE :
-    call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', &
-                icontr, 'S')
-!
-!....... MATRICE SYMETRISEE DE RIGIDITE GEOMETRIQUE
-!
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
+
+! - Get stress
+    call cosiro(plateCara, plateOrie, &
+                'PCONTRR', 'L', 'UI', 'G', &
+                icontr)
+
+! - MATRICE SYMETRISEE DE RIGIDITE GEOMETRIQUE
     call jevech('PMATUUR', 'E', imatuu)
-!
-!
-!
-!
-!
-!---- RECUPERATION DES OBJETS INITIALISES ( SAUF NPGSR )
-!
-!....... LES ENTIERS
-!
+
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
-!
-!------- NOMBRE DE NOEUDS ( NB1 : SERENDIP , NB2 : LAGRANGE )
-!
+    call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
     nb1 = zi(lzi-1+1)
     nb2 = zi(lzi-1+2)
-!
-!------- NBRE POINTS INTEGRATIONS ( NPGSR : REDUITE , NPGSN : NORMALE )
-!
     npgsn = zi(lzi-1+4)
-!
-!....... LES REELS ( FONCTIONS DE FORMES, DERIVEES ET POIDS )
-!
-    call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
-!
-!
-!------ CARACTERISTIQUES DE COQUE
-!
-    call jevech('PCACOQU', 'L', jcara)
-!
-    epais = zr(jcara)
-!
-!       COORDONNEES DES POINTS DE GAUSS DANS LA TRANCHE
+
+! - Get parameters of plate
+    epais = plateCara%thick
+
+! - COORDONNEES DES POINTS DE GAUSS DANS LA TRANCHE
     epsval(1) = zr(lzr-1+1251)
     epsval(2) = zr(lzr-1+1252)
     epsval(3) = zr(lzr-1+1253)
-!
-!       POIDS DES POINTS DE GAUSS DANS LA TRANCHE
-!
+
+! - POIDS DES POINTS DE GAUSS DANS LA TRANCHE
     poids(1) = 0.33333333333333d0
     poids(2) = 1.33333333333333d0
     poids(3) = 0.33333333333333d0
-!
-!
-!
-!
-!---- VECTEURS DE BASE AUX NOEUDS
-!
-    call vectan(nb1, nb2, zr(igeom), zr(lzr), vecta, &
-                vectn, vectpt)
-!
-!
-!
+
 !        CALCUL DE LA MATRICE DE RIGIDITE GEOMETRIQUE
 !
 !            RIG ( 6 * NB1 + 3 , 6 * NB1 + 3 )
@@ -221,17 +133,11 @@ subroutine te0402(option, nomte)
 !---- COMPTEUR DES POINTS D INTEGRATIONS ( EPAISSEUR * SURFACE )
 !
     kpgs = 0
-!
-!---- BOUCLE SUR LES POINTS D INTEGRATION SUR L EPAISSEUR
-!
     do inte = 1, npge
 !
 !------- COORDONNEE ISOPARAMETRIQUE SUR L EPAISSEUR  DIVISEE PAR DEUX
 !
         ksi3s2 = epsval(inte)/2.d0
-!
-!------- BOUCLE SUR LES POINTS D INTEGRATION SUR LA SURFACE MOYENNE
-!
         do intsn = 1, npgsn
 !
             kpgs = kpgs+1
@@ -257,29 +163,27 @@ subroutine te0402(option, nomte)
 !           VECTT ( 3 , 3 ) =  ( T_2 )  = ( LAMDA0 ) T
 !                              ( N   )
 !
-            call vectgt(1, nb1, zr(igeom), ksi3s2, intsn, &
-                        zr(lzr), epais, vectn, vectg, vectt)
+            call vectgt(plateOrie, 1, nb1, &
+                        zr(jvGeom), ksi3s2, intsn, &
+                        epais, zr(lzr), &
+                        vectBaseKpg, vectTangKpg)
 !
 !---------- ROTATION DU TENSEUR DES CONTRAINTES : LOCALES --> GLOBALES
 !
 !           SIGMA =  ( VECTT ) T * SIGMT * VECTT
 !
-            call btkb(3, 3, 3, sigmt, vectt, &
+            call btkb(3, 3, 3, sigmt, vectBaseKpg, &
                       bid33, sigmEner)
-!
-!
-!
-!
-!
+
 !---------- POUR LE TERME NON CLASSIQUE
 !
 !---------- CALCUL DE    HSTOUT ( 5 , 9 ) = H ( 5 , 6 )  * S ( 6 , 9 )
 !
-            call hsall(vectt, hstout)
+            call hsall(vectBaseKpg, hstout)
 !
 !---------- CALCUL DE LA MATRICE JACOBIENNE INVERSE       JM1 ( 3, 3 )
 !
-            call jacbm1(epais, vectg, vectt, bid33, jm1, &
+            call jacbm1(epais, vectTangKpg, vectBaseKpg, bid33, jm1, &
                         detj)
 !
 !---------- CALCUL DE
@@ -298,69 +202,50 @@ subroutine te0402(option, nomte)
 !           ( BTILD3 ( 5 , 27 ) ) T * SIGMTD ( 5 ) *
 !           POIDS SURFACE MOYENNE * DETJ * POIDS EPAISSEUR
 !           VOIR ROUTINE INI080 , HSJ1F
-!
             call btsig(3*nb2, 5, zr(lzr-1+127+intsn-1)*detj*poids(inte), btild3, &
                        sigmtd, veczn)
+
 !---------- POUR LE TERME CLASSIQUE
-!
 !---------- BARSIG   ( 9 , 9 )
-!
             call sigbar(sigmEner, barsig)
-!
+
 !---------- CALCUL DE
 !           J1DN2 ( 9 , 6 * NB1 + 3 ) =
 !           JTILDM1 ( 9 , 9 ) * DNDQSI2 ( 9 , 6 * NB1 + 3 )
 !
 !           INDN = 1 INTEGRATION NORMALE
 !           INDC = 1 COMPLET
-!
             call jm1dn2(1, 1, nb1, nb2, zr(lzr), &
-                        epais, ksi3s2, intsn, vectn, jm1, &
+                        epais, ksi3s2, intsn, plateOrie%vectNorm, jm1, &
                         j1dn2)
-!
+
 !---------- RIG  ( 6 * NB1 + 3 , 6 * NB1 + 3 )  = INTERALE
 !           ( J1DN2 ( 9 , 6 * NB1 + 3 ) ) T * BARSIG ( 9 , 9 )
 !           *                               J1DN2 ( 9 , 6 * NB1 + 3 ) *
 !           POIDS SURFACE MOYENNE * DETJ * POIDS EPAISSEUR
 !           VOIR ROUTINE INI080 , HSJ1F
-!
             call btdbma(j1dn2, barsig, zr(lzr-1+127+intsn-1)*detj*poids(inte), 9, &
                         6*nb1+3, vri)
-!
         end do
     end do
-!
-!---- PAS DE RIGIDITE DE ROTATION AUTOUR NORMALE
-!
-!
-!
-!---- RIGIDITE NON CLASSIQUE
-!
-!---- BOULE SUR TOUS LES NOEUDS
-!
+
+! - RIGIDITE NON CLASSIQUE
     do in = 1, nb2
-!
-!------- MATRICE ANTISYMETRIQUE    ANTZI ( 3 , 3 ) AU NOEUD
-!
+!------ MATRICE ANTISYMETRIQUE    ANTZI ( 3 , 3 ) AU NOEUD
         call antisy(veczn((in-1)*3+1), 1.d0, antzi)
-!
-!------- NORMALE INITIALE ET SA MATRICE ANTISYM AU NOEUD
-!
+
+!------ NORMALE INITIALE ET SA MATRICE ANTISYM AU NOEUD
         do ii = 1, 3
-            vecni(ii) = vectn(in, ii)
+            vecni(ii) = plateOrie%vectNorm(in, ii)
         end do
-!
         call antisy(vecni, 1.d0, antni)
-!
-!------- RIGIDITE ROTATION NON CLASSIQUE RIGN ( 3 , 3 ) NON SYMETRIQUE
-!
+
+!------ RIGIDITE ROTATION NON CLASSIQUE RIGN ( 3 , 3 ) NON SYMETRIQUE
         call promat(antzi, 3, 3, 3, antni, &
                     3, 3, 3, rignc)
-!
-!------- RAJOUT DE LA PARTIE SYMETRIQUE DE RIGN ( 3 , 3 )
-!
+
+!------ RAJOUT DE LA PARTIE SYMETRIQUE DE RIGN ( 3 , 3 )
         if (in .le. nb1) then
-!
 !---------- NOEUDS DE SERENDIP
             do jj = 1, 3
                 do ii = 1, 3
@@ -372,7 +257,6 @@ subroutine te0402(option, nomte)
                 end do
             end do
         else
-!
 !---------- SUPERNOEUD
             do jj = 1, 3
                 do ii = 1, 3
@@ -385,32 +269,13 @@ subroutine te0402(option, nomte)
             end do
         end if
     end do
-!
-!
-!
-!
-!______________________________________________________________________
-!
-!---- STOCKAGE DE LA PARTIE TRIANGULAIRE SUPERIEURE  DANS
-!
-!                       ZR ( IMATUU )
-!
-!______________________________________________________________________
+
+! - STOCKAGE DE LA PARTIE TRIANGULAIRE SUPERIEURE
 !     JEU D INDICES I J POUR LA PARTIE TRIANGULAIRE SUPERIEURE
-!
 !     ZR ( IMATUU ---> IMATUU + TAILLE  - 1 ) : TRIANGULAIRE SUP DE RIG
-!
 !     TAILLE = NDDLET * ( 1 + (NDDLET - 1)/2 ) : NDDLET = 6 * NB1 + 3
-!
 !     VOIR ROUTINE TRANLG
-!
-!
-!
-!
-!---- COMPTEUR DE POSITION
-!
     kompt = 0
-!
     do j = 1, 6*nb1+3
         do i = 1, j
             kompt = kompt+1

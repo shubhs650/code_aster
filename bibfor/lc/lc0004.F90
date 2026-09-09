@@ -15,23 +15,27 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W0104
+! aslint: disable=W0104
 !
 subroutine lc0004(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
+                  compor, carcri, instam, instap, &
+                  deps, sigm, vim, option, &
                   sigp, vip, typmod, &
                   nvi, dsidep, codret)
-
+!
     implicit none
+!
 #include "asterfort/nmchab.h"
+#include "asterfort/Behaviour_type.h"
+!
     integer(kind=8) :: kpg, ksp, ndim, imate, codret, nvi
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
-    real(kind=8) :: angmas(*)
-    real(kind=8) :: crit(*), instam, instap, epsm(6), deps(6)
-    real(kind=8) :: sigm(6), vim(*), sigp(6), vip(*), dsidep(6, 6)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16) :: option
+    real(kind=8) :: instam, instap, deps(6)
+    real(kind=8) :: sigm(6), vim(nvi), sigp(6), vip(nvi), dsidep(6, 6)
 !
 !
 
@@ -79,10 +83,12 @@ subroutine lc0004(fami, kpg, ksp, ndim, imate, &
 !               L'ORDRE :  XX,YY,ZZ,SQRT(2)*XY,SQRT(2)*XZ,SQRT(2)*YZ
 !               -----------------------------------------------------
 !
+    character(len=16) :: relaComp
 !
-!
-    call nmchab(fami, kpg, ksp, ndim, typmod, &
-                imate, compor(1:3), crit, instam, instap, &
+
+    relaComp = compor(RELA_NAME)
+    call nmchab(fami, kpg, ksp, ndim, &
+                imate, relaComp, carcri, instam, instap, &
                 deps, sigm, vim, option, sigp, &
                 vip, dsidep, codret)
 end subroutine

@@ -15,59 +15,71 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxroep(rho, epais)
+! aslint: disable=W0413
+!
+subroutine dxroep(plateCara, rho, epais)
+!
+    use plate_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8maem.h"
 #include "asterfort/jevech.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
-    real(kind=8) :: rho, epais
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    real(kind=8), intent(out) :: rho, epais
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     APPEL DES MASSE VOLUMIQUE DU MATERIAU ET EPAISSEUR DE LA PLAQUE
-!     ------------------------------------------------------------------
-    integer(kind=8) :: jmate, nbv, jcoqu, iadzi, iazk24
-    real(kind=8) :: r8bid, valres(2)
-    integer(kind=8) :: icodre(2)
-    character(len=24) :: valk(2)
-    character(len=8) :: nomail
-    character(len=16) :: nomres(2)
-    character(len=32) :: phenom
-! --DEB
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbPropMaxi = 2
+    real(kind=8) :: propVale(nbPropMaxi)
+    integer(kind=8) :: propCode(nbPropMaxi)
+    character(len=16) :: propName(nbPropMaxi)
+    integer(kind=8) :: jvMaterc, nbProp, iadzi, iazk24
+    real(kind=8) :: r8bid
+    character(len=32) :: elasKeyword
+!
+! --------------------------------------------------------------------------------------------------
 !
     r8bid = 0.d0
-    call jevech('PMATERC', 'L', jmate)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
 !
-    call rccoma(zi(jmate), 'ELAS', 1, phenom, icodre(1))
-!
-    if (phenom .eq. 'ELAS_COQMU') then
-        nomres(1) = 'HOM_19'
-        nomres(2) = 'HOM_20'
-        nbv = 2
-        call rcvala(zi(jmate), ' ', phenom, 0, ' ', [r8bid], nbv, nomres, valres, icodre, 1)
-        epais = valres(1)
-        rho = valres(2)
+    if (elasKeyword .eq. 'ELAS_COQMU') then
+        propName(1) = 'HOM_19'
+        propName(2) = 'HOM_20'
+        nbProp = 2
+        call rcvala(zi(jvMaterc), ' ', elasKeyword, &
+                    0, ' ', [r8bid], &
+                    nbProp, propName, &
+                    propVale, propCode, 1)
+        epais = propVale(1)
+        rho = propVale(2)
         if (rho .eq. r8maem()) then
             call tecael(iadzi, iazk24)
-            nomail = zk24(iazk24-1+3) (1:8)
-            valk(1) = 'RHO'
-            valk(2) = nomail
-            call utmess('F', 'ELEMENTS4_81', nk=2, valk=valk)
+            call utmess('F', 'ELEMENTS4_81', sk='RHO', si=zi(iadzi-1+1))
         end if
-!
-    elseif (phenom .eq. 'ELAS' .or. phenom .eq. 'ELAS_COQUE' .or. &
-            phenom .eq. 'ELAS_ISTR' .or. phenom .eq. 'ELAS_ORTH' .or. &
-            phenom .eq. 'ELAS_GLRC' .or. phenom .eq. 'ELAS_DHRC') then
-        nomres(1) = 'RHO'
-        nbv = 1
-        call rcvala(zi(jmate), ' ', phenom, 0, ' ', [r8bid], nbv, nomres, valres, icodre, 1)
-        rho = valres(1)
-        call jevech('PCACOQU', 'L', jcoqu)
-        epais = zr(jcoqu)
-!
+
+    elseif (elasKeyword .eq. 'ELAS' .or. elasKeyword .eq. 'ELAS_COQUE' .or. &
+            elasKeyword .eq. 'ELAS_ISTR' .or. elasKeyword .eq. 'ELAS_ORTH' .or. &
+            elasKeyword .eq. 'ELAS_GLRC' .or. elasKeyword .eq. 'ELAS_DHRC') then
+        propName(1) = 'RHO'
+        nbProp = 1
+        call rcvala(zi(jvMaterc), ' ', elasKeyword, &
+                    0, ' ', [r8bid], &
+                    nbProp, propName, &
+                    propVale, propCode, 1)
+        rho = propVale(1)
+        epais = plateCara%thick
+
     else
         call utmess('F', 'ELEMENTS_50')
     end if

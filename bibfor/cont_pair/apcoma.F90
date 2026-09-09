@@ -23,13 +23,14 @@ subroutine apcoma(mesh, newgeo, elem_nume, elem_nbnode, elem_coor)
 #include "asterfort/assert.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnum.h"
+#include "MeshTypes_type.h"
 !
 !
     character(len=8), intent(in) :: mesh
     character(len=19), intent(in) :: newgeo
     integer(kind=8), intent(in) :: elem_nume
     integer(kind=8), intent(in) :: elem_nbnode
-    real(kind=8), intent(out) :: elem_coor(27)
+    real(kind=8), intent(out) :: elem_coor(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -54,7 +55,7 @@ subroutine apcoma(mesh, newgeo, elem_nume, elem_nbnode, elem_coor)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    elem_coor(1:27) = 0.d0
+    elem_coor = 0.d0
     ASSERT(elem_nbnode .gt. 0)
     ASSERT(elem_nbnode .le. nbnmax)
 !
@@ -69,9 +70,9 @@ subroutine apcoma(mesh, newgeo, elem_nume, elem_nbnode, elem_coor)
 !
     call jeveuo(newgeo(1:19)//'.VALE', 'L', vr=v_newgeo_vale)
     do i_node = 1, elem_nbnode
-        elem_coor(3*(i_node-1)+1) = v_newgeo_vale(3*(node_nume(i_node)-1)+1)
-        elem_coor(3*(i_node-1)+2) = v_newgeo_vale(3*(node_nume(i_node)-1)+2)
-        elem_coor(3*(i_node-1)+3) = v_newgeo_vale(3*(node_nume(i_node)-1)+3)
+        elem_coor(1, i_node) = v_newgeo_vale(3*(node_nume(i_node)-1)+1)
+        elem_coor(2, i_node) = v_newgeo_vale(3*(node_nume(i_node)-1)+2)
+        elem_coor(3, i_node) = v_newgeo_vale(3*(node_nume(i_node)-1)+3)
     end do
 !
 end subroutine

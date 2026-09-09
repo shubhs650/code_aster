@@ -38,12 +38,13 @@ subroutine cnoadd(chno, chnop)
 #include "asterfort/asmpi_info.h"
 
     integer(kind=8) :: rang, nbproc
-    integer(kind=8) :: iaux, jvale, jprddl, nbeq
+    integer(kind=8) :: iaux, jprddl, nbeq
     mpi_int :: mrank, msize
     character(len=8)  :: k8bid
     character(len=16) :: typsd
     character(len=19) :: cn19, nume_equa, nommai, cn19p
     integer(kind=8), dimension(:), pointer :: delg => null()
+    real(kind=8), dimension(:), pointer :: vale => null()
 !----------------------------------------------------------------
     call jemarq()
 
@@ -68,12 +69,12 @@ subroutine cnoadd(chno, chnop)
         call asmpi_info(rank=mrank, size=msize)
         rang = to_aster_int(mrank)
         nbproc = to_aster_int(msize)
-        call jeveuo(cn19p//'.VALE', 'E', jvale)
+        call jeveuo(cn19p//'.VALE', 'E', vr=vale)
 
         do iaux = 1, nbeq
             ! if (zi(jprddl+iaux-1) .ne. rang) then
             if (delg(iaux) .ge. 0d0 .and. zi(jprddl+iaux-1) .ne. rang) then
-                zr(jvale-1+iaux) = 0.d0
+                vale(iaux) = 0.d0
             end if
         end do
 

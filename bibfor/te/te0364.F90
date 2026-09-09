@@ -28,6 +28,7 @@ subroutine te0364(option, nomte)
 #include "asterfort/mmGetCoefficients.h"
 #include "asterfort/mmGetProjection.h"
 #include "asterfort/mmGetStatus.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmGetShapeFunctions.h"
 #include "asterfort/mmmpha.h"
 #include "asterfort/mmmsta.h"
@@ -84,9 +85,10 @@ subroutine te0364(option, nomte)
     real(kind=8) :: kappa(2, 2)
     real(kind=8) :: mprojn(3, 3), h(2, 2)
     real(kind=8) :: vech1(3), vech2(3)
-    real(kind=8) :: ffe(9), ffm(9), ffl(9), dffm(2, 9), ddffm(3, 9)
-    real(kind=8) :: ffe_prev(9), ffm_prev(9), ffl_prev(9)
-    real(kind=8) :: dffm_prev(2, 9), ddffm_prev(3, 9)
+    real(kind=8) :: ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), ffl(MT_NNOMAX2D)
+    real(kind=8) :: dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
+    real(kind=8) :: ffe_prev(MT_NNOMAX2D), ffm_prev(MT_NNOMAX2D), ffl_prev(MT_NNOMAX2D)
+    real(kind=8) :: dffm_prev(2, MT_NNOMAX2D), ddffm_prev(3, MT_NNOMAX2D)
     real(kind=8) :: alpha_cont
     real(kind=8) :: dnepmait1, dnepmait2, taujeu1, taujeu2
     real(kind=8) :: xpc, ypc, xpr, ypr

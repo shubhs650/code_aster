@@ -242,16 +242,9 @@ CALC_MISS(
     GROUP_MA_INTERF="SRADIE2",
     UNITE_IMPR_ASTER=26,
     UNITE_RESU_IMPE=25,
+    SURF="OUI",
     PARAMETRE=_F(
-        FREQ_MIN=2.0,
-        FREQ_MAX=3.0,
-        FREQ_PAS=1.0,
-        Z0=-11.60,
-        DREF=30.0,
-        SURF="OUI",
-        ALGO="DEPL",
-        OFFSET_MAX=60,
-        OFFSET_NB=300,
+        FREQ_MIN=2.0, FREQ_MAX=3.0, FREQ_PAS=1.0, Z0=-11.60, DREF=30.0, OFFSET_MAX=60, OFFSET_NB=300
     ),
 )
 

@@ -16,15 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine inithm(ds_thm   ,&
-                      angl_naut, tbiot , phi0 ,&
-                      epsv     , depsv ,&
-                      epsvm    , cs0   , mdal , dalal,&
-                      alpha0   , alphfi, cbiot, unsks)
+interface
+    subroutine inithm(ds_thm, &
+                      tbiot, phi0, &
+                      epsv, depsv, &
+                      epsvm, cs0, mdal, dalal, &
+                      alpha0, alphfi, cbiot, unsks)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(in) :: tbiot(6)
         real(kind=8), intent(in) :: phi0
         real(kind=8), intent(in) :: epsv, depsv
@@ -34,4 +33,4 @@ interface
         real(kind=8), intent(out) :: alphfi, alpha0
         real(kind=8), intent(out) :: cbiot, unsks
     end subroutine inithm
-end interface 
+end interface

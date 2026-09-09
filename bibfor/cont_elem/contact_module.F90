@@ -15,12 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 module contact_module
 !
     use contact_type
-!     use contact_algebra_module
-!
     implicit none
 !
     private
@@ -39,6 +38,7 @@ module contact_module
 #include "asterfort/reerel.h"
 #include "contact_module.h"
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -374,9 +374,9 @@ contains
         integer(kind=8), intent(in) :: elem_nbnode
         character(len=8), intent(in) :: elem_code
         real(kind=8), intent(in) :: coor_qp(2)
-        real(kind=8), intent(out), optional :: shape_(9)
-        real(kind=8), intent(out), optional :: dshape_(2, 9)
-        real(kind=8), intent(out), optional :: ddshape_(3, 9)
+        real(kind=8), intent(out), optional :: shape_(MT_NNOMAX2D)
+        real(kind=8), intent(out), optional :: dshape_(2, MT_NNOMAX2D)
+        real(kind=8), intent(out), optional :: ddshape_(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -385,15 +385,13 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
         if (present(shape_)) then
-            call mmnonf(elem_dime, elem_nbnode, elem_code, coor_qp(1), coor_qp(2), &
+            call mmnonf(elem_code, coor_qp(1), coor_qp(2), &
                         shape_)
         end if
-!
         if (present(dshape_)) then
-            call mmdonf(elem_dime, elem_nbnode, elem_code, coor_qp(1), coor_qp(2), &
+            call mmdonf(elem_code, coor_qp(1), coor_qp(2), &
                         dshape_)
         end if
-!
         if (present(ddshape_)) then
             call mm2onf(elem_dime, elem_nbnode, elem_code, coor_qp(1), coor_qp(2), &
                         ddshape_)
@@ -410,8 +408,8 @@ contains
 !
         character(len=8), intent(in) :: elem_code
         real(kind=8), intent(in) :: coor_qp(3)
-        real(kind=8), intent(out), optional :: shape_(27)
-        real(kind=8), intent(out), optional :: dshape_(3, 27)
+        real(kind=8), intent(out), optional :: shape_(MT_NNOMAX3D)
+        real(kind=8), intent(out), optional :: dshape_(3, MT_NNOMAX3D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -440,8 +438,8 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dshape(3, 27)
-        real(kind=8), intent(out) :: gradFunc(3, 27)
+        real(kind=8), intent(in) :: dshape(3, MT_NNOMAX3D)
+        real(kind=8), intent(out) :: gradFunc(3, MT_NNOMAX3D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -492,11 +490,10 @@ contains
 !
 !===================================================================================================
 !
-    subroutine shapeFuncLagr(elem_dime, elem_code, coor_qp, shape_)
+    subroutine shapeFuncLagr(elem_code, coor_qp, shape_)
 !
         implicit none
 !
-        integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_code
         real(kind=8), intent(in) :: coor_qp(2)
         real(kind=8), intent(out) :: shape_(4)
@@ -509,7 +506,7 @@ contains
 !
         character(len=8) :: elem_code_lagr
         integer(kind=8) :: elem_nbnode_lagr
-        real(kind=8) :: ff(9)
+        real(kind=8) :: ff(MT_NNOMAX2D)
 !
         if (elem_code == "SE2") then
             elem_code_lagr = "SE2"
@@ -527,7 +524,7 @@ contains
             ASSERT(ASTER_FALSE)
         end if
 !
-        call mmnonf(elem_dime, elem_nbnode_lagr, elem_code_lagr, coor_qp(1), coor_qp(2), &
+        call mmnonf(elem_code_lagr, coor_qp(1), coor_qp(2), &
                     ff)
         shape_(1:4) = ff(1:4)
     end subroutine
@@ -568,7 +565,7 @@ contains
         implicit none
 !
         integer(kind=8), intent(in) :: nb_node
-        real(kind=8), intent(in) :: nodes_coor(3, 9)
+        real(kind=8), intent(in) :: nodes_coor(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -669,7 +666,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_ma(2, 9)
+        real(kind=8), intent(in) :: dfunc_ma(2, MT_NNOMAX2D)
         real(kind=8) :: evalDtestM(3, MAX_LAGA_DOFS, 2)
 !
 ! --------------------------------------------------------------------------------------------------

@@ -79,6 +79,11 @@ class ListOfTables {
      * @param id Table identifier
      */
     TablePtr getTable( const std::string id );
+
+    /**
+     * @brief Set a Table
+     */
+    void setTable( const std::string, const TablePtr );
 };
 
 #endif /* LISTOFTABLES_H_ */

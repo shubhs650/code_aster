@@ -16,19 +16,22 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine matrHooke3d(elasID, anglNaut, &
+subroutine matrHooke3d(materPara, &
                        h, g, g1, g2, g3, &
                        matr_elas)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/dpassa.h"
 #include "asterfort/ElasticityMaterial_type.h"
+#include "asterfort/MaterialPara_type.h"
 #include "asterfort/utbtab.h"
+#include "asterfort/utmess.h"
 !
-    integer(kind=8), intent(in) :: elasID
-    real(kind=8), intent(in) :: anglNaut(3)
+    type(Material_Para), intent(in) :: materPara
     real(kind=8), intent(in) :: g, h(6)
     real(kind=8), intent(in) :: g1, g2, g3
     real(kind=8), intent(out) :: matr_elas(6, 6)
@@ -41,9 +44,8 @@ subroutine matrHooke3d(elasID, anglNaut, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  elasID           : type of elasticity
-! In  anglNaut         : nautical angles
-! In  h                : Hook coefficient (all)
+! In  materPara        : parameters of material
+! In  h                : Hooke coefficients (all)
 ! In  g                : shear ratio (isotropic/Transverse isotropic)
 ! In  g1               : shear ratio (Orthotropic)
 ! In  g2               : shear ratio (Orthotropic)
@@ -52,11 +54,14 @@ subroutine matrHooke3d(elasID, anglNaut, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: irep, i, j
-    real(kind=8) :: matr_tran(6, 6), dorth(6, 6), work(6, 6)
+    integer(kind=8) :: irep, i, j, elasID
+    real(kind=8) :: matr_tran(6, 6), dorth(6, 6), work(6, 6), anglNaut(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    elasID = materPara%elasID
+    anglNaut = materPara%lcsPara%lcsAngle
+
     matr_elas = 0.d0
     dorth = 0.d0
     work = 0.d0
@@ -77,6 +82,9 @@ subroutine matrHooke3d(elasID, anglNaut, &
         matr_elas(6, 6) = g
 
     else if (elasID .eq. ELAS_ORTH .or. elasID .eq. ELAS_VISC_ORTH) then
+        if (.not. chckLCSDefine(materPara%lcsPara)) then
+            call utmess("F", "ALGORITH8_20")
+        end if
         dorth(1, 1) = h(1)
         dorth(1, 2) = h(2)
         dorth(1, 3) = h(3)
@@ -106,6 +114,9 @@ subroutine matrHooke3d(elasID, anglNaut, &
         end if
 
     else if (elasID .eq. ELAS_ISTR .or. elasID .eq. ELAS_VISC_ISTR) then
+        if (.not. chckLCSDefine(materPara%lcsPara)) then
+            call utmess("F", "ALGORITH8_20")
+        end if
         dorth(1, 1) = h(1)
         dorth(1, 2) = h(2)
         dorth(1, 3) = h(3)

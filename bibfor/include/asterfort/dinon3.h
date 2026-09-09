@@ -23,18 +23,19 @@
 interface
     subroutine dinon3(neq, ul, dul, utl, nno,&
                       nbcomp, varimo, raide, nbpar, param,&
-                      okdire, varipl)
-        integer(kind=8) :: nbpar
-        integer(kind=8) :: nbcomp
-        integer(kind=8) :: neq
-        real(kind=8) :: ul(neq)
-        real(kind=8) :: dul(neq)
-        real(kind=8) :: utl(neq)
-        integer(kind=8) :: nno
-        real(kind=8) :: varimo(nbcomp*3)
-        real(kind=8) :: raide(nbcomp)
-        real(kind=8) :: param(6, nbpar)
-        aster_logical :: okdire(6)
-        real(kind=8) :: varipl(nbcomp*3)
+                      okdire, varipl, dforcz)
+        integer(kind=8), intent(in) :: nbpar
+        integer(kind=8), intent(in) :: nbcomp
+        integer(kind=8), intent(in) :: neq
+        real(kind=8), intent(in) :: ul(neq)
+        real(kind=8), intent(in) :: dul(neq)
+        real(kind=8), intent(in) :: utl(neq)
+        integer(kind=8), intent(in) :: nno
+        real(kind=8), intent(in) :: varimo(nbcomp*3)
+        real(kind=8), intent(inout) :: raide(nbcomp)
+        real(kind=8), intent(in) :: param(6, nbpar)
+        aster_logical, intent(in) :: okdire(6)
+        real(kind=8), intent(out) :: varipl(nbcomp*3)
+        real(kind=8), intent(out), optional :: dforcz(6)
     end subroutine dinon3
 end interface

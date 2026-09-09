@@ -30,16 +30,12 @@ import socket
 import tempfile
 import time
 import warnings
+from pathlib import Path
 from subprocess import Popen
 
-try:
-    from asrun import create_run_instance
-
-    HAS_ASRUN = True
-except ImportError:
-    HAS_ASRUN = False
-
 import aster
+
+from run_aster.config import CFG
 
 from .logger import logger
 from .mpi_utils import MPI
@@ -47,9 +43,6 @@ from .strfunc import convert, maximize_lines
 from .version import get_version
 
 DEBUG = False
-TMPDIR = (
-    os.environ.get("ASTER_TMPDIR") or os.environ.get("TMPDIR") or os.environ.get("TEMP") or "/tmp"
-)
 
 
 def set_debug(value):
@@ -62,7 +55,7 @@ def _print(*args):
     """Fonction 'print'."""
     l_str = []
     for arg in args:
-        if type(arg) not in (str, str):
+        if type(arg) is not str:
             arg = repr(arg)
         l_str.append(arg)
     text = convert(" ".join(l_str))
@@ -158,22 +151,21 @@ def get_time():
     return time.strftime("%H:%M:%S") + ".%03d" % msec
 
 
-def get_shared_tmpdir(prefix, default_dir=TMPDIR):
+def get_shared_tmpdir(prefix, dir=None):
     """Return a shared temporary directory.
 
-    If asrun shared tmpdir is not known, use *default_dir*.
-    """
-    shared_tmp = default_dir
-    if HAS_ASRUN:
-        if getattr(get_shared_tmpdir, "cache_run", None) is None:
-            get_shared_tmpdir.cache_run = create_run_instance(
-                debug_stderr=False, log_progress="asrun.log"
-            )
-        run = get_shared_tmpdir.cache_run
-        shared_tmp = run.get("shared_tmp")
+    All processes should have access to this directory.
 
-    shared_tmp = shared_tmp or os.getcwd()
-    tmpdir = tempfile.mkdtemp(dir=shared_tmp, prefix=prefix)
+    The arguments are the same as for `tempfile.mkdtemp`.
+    """
+    dir = dir or CFG.get("shared_tmpdir")
+    if "$" in str(dir):
+        logger.warning("Missing environment variables, can not expand: %s", dir)
+        dir = Path.home() / ".shared_tmp"
+        dir.mkdir(parents=True, exist_ok=True)
+        logger.warning("This value is used instead: %s", dir)
+        logger.warning("Contact the administrator of this installation.")
+    tmpdir = tempfile.mkdtemp(dir=dir, prefix=prefix)
     return tmpdir
 
 
@@ -194,15 +186,12 @@ class SharedTmpdir(contextlib.AbstractContextManager):
         # may be forced with:
         del tmpdir
 
-    Arguments:
-        prefix (str): Prefix to be used for the temporary directory.
-        default_dir (str): Local pathname that will be used if *asrun* is not
-            available (default: /tmp).
+    Arguments are as for `tempfile.mkdtemp`.
     """
 
-    def __init__(self, prefix, default_dir=TMPDIR):
+    def __init__(self, prefix, dir=None):
         self._prefix = prefix
-        self._dir = default_dir
+        self._dir = dir
         self._path = None
 
     @property
@@ -245,18 +234,15 @@ class SharedTmpdir(contextlib.AbstractContextManager):
 
 
 @contextlib.contextmanager
-def shared_tmpdir(prefix, default_dir=TMPDIR):
+def shared_tmpdir(prefix, dir=None):
     """Return a shared temporary directory with automatic cleanup, to be used
     as a context manager.
 
-    Arguments:
-        prefix (str): Prefix to be used for the temporary directory.
-        default_dir (str): Local pathname that will be used if *asrun* is not
-            available (default: /tmp).
+    Arguments are as for `tempfile.mkdtemp`.
 
     Returns:
         str: Path of the temporary directory.
     """
     warnings.warn("Prefer use SharedTmpdir object", DeprecationWarning)
-    tmpdir = SharedTmpdir(prefix, default_dir)
+    tmpdir = SharedTmpdir(prefix, dir)
     yield tmpdir.path

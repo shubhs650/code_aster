@@ -17,208 +17,231 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504,C1505
 !
-subroutine redece(BEHinteg, &
-                  fami, kpg, ksp, ndim, typmod, &
-                  l_epsi_varc, imate, materi, compor, mult_comp, &
-                  carcri, instam, instap, neps, epsm, &
-                  deps, nsig, sigm, nvi, vim, option, &
-                  angmas, numlc, sigp, vip, &
-                  ndsde, dsidep, codret)
-
+subroutine redece(BEHInteg, &
+                  ndim, option, typmod, &
+                  instam, instap, &
+                  compor, carcri, multComp, &
+                  neps, epsm, deps, &
+                  nsig, sigm, &
+                  nvi, vim, &
+                  sigp, vip, &
+                  ndsde, dsidep, codret, &
+                  l_epsi_varc, numlc)
+!
     use calcul_module, only: ca_iredec_, ca_td1_, ca_tf1_, ca_timed1_, ca_timef1_
     use Behaviour_type
     use Behaviour_module
-
     implicit none
-
+!
 #include "asterf_types.h"
-#include "asterfort/Behaviour_type.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/lc0000.h"
 #include "asterfort/utmess.h"
-
-    type(Behaviour_Integ) :: BEHinteg
-    character(len=*) :: fami
-    integer(kind=8) :: imate, ndim, kpg, ksp, numlc
-    integer(kind=8) :: neps, nsig, ndsde
-    aster_logical, intent(in) :: l_epsi_varc
-    integer(kind=8), intent(in):: nvi
-    real(kind=8) :: carcri(*), angmas(*)
-    real(kind=8) :: instam, instap
-    real(kind=8) :: epsm(neps), deps(neps)
-    real(kind=8) :: sigm(nsig), sigp(nsig)
-    real(kind=8) :: vim(nvi), vip(nvi)
-    real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
-                           merge(neps, 6, nsig*neps .eq. ndsde))
-    character(len=8)  :: typmod(*)
-    character(len=16) :: compor(*), option
-    character(len=8), intent(in) :: materi
-    character(len=16), intent(in) :: mult_comp
-    integer(kind=8), intent(out):: codret
-
-! --------------------------------------------------------------------------------------------------
-! INTEGRATION DU COMPORTEMENT : PRISE EN CHARGE D'UN EVENTUEL REDECOUPAGE LOCAL DU PAS DE TEMPS
-! --------------------------------------------------------------------------------------------------
-! in  fami,kpg,ksp  : famille et numero du (sous)point de gauss
-!     ndim    : dimension de l'espace
-!               3 : 3d , 2 : d_plan ,axis ou  c_plan
-!     typmod  : modelisation ex: 1:3d, 2:inco
-!     imate   : adresse du materiau code
-!     compor  : comportement :  (1) = type de relation comportement
-!                               (2) = nb variables internes / pg
-!                               (3) = hypothese sur les deformations
-!                               (4) etc... (voir grandeur compor)
-!     mult_comp : multi-comportement (pour polycristal)
-!     carcri  : criteres de convergence locaux (voir grandeur carcri)
-!     instam  : instant du calcul precedent
-!     instap  : instant du calcul
-!     neps    : nombre de cmp de epsdt et depst (suivant modelisation)
-!     epsm   : deformations totales a l'instant du calcul precedent
-!     deps   : increment de deformation totale :
-!                depst(t) = depst(mecanique(t)) + depst(dilatation(t))
-!     nsig    : nombre de cmp de sigd et sigf (suivant modelisation)
-!     sigm    : contraintes au debut du pas de temps
-!     vim    : variables internes au debut du pas de temps
-!     option  : option demandee : rigi_meca_tang , full_meca , raph_meca
-!     angmas  : les trois angles du mot_clef massif (affe_cara_elem),
-!               + un reel qui vaut 0 si nautiquies ou 2 si euler
-!               + les 3 angles d'euler
-!     numlc   : numero de loi de comportement issue du catalogue de lc
 !
-! out sigp    : contraintes a la fin du pas de temps
-! var vip     : variables internes
-!                in  : estimation (iteration precedente ou lag. augm.)
-!                out : a la fin du pas de temps t+
-!     ndsde   : dimension de dsidep
-!     dsidep    : operateur tangent dsig/deps ou dsig/df
-!     codret  : code retour loi de comporment :
-!               codret=0 : tout va bien
-!               codret=1 : echec dans l'integration de la loi
-!               codret=2 : ok loi de comportement mais condition non respectee -> pas de cvg globale
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8), intent(in) :: ndim
+    character(len=16), intent(in) :: option
+    character(len=8), intent(in) :: typmod(2)
+    real(kind=8), intent(in) :: instam, instap
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: multComp
+    integer(kind=8), intent(in) :: neps
+    real(kind=8), intent(in) :: epsm(neps), deps(neps)
+    integer(kind=8), intent(in) :: nsig
+    real(kind=8), intent(in) :: sigm(nsig)
+    integer(kind=8), intent(in) :: nvi
+    real(kind=8), intent(in) :: vim(nvi)
+    real(kind=8), intent(inout) :: sigp(nsig), vip(nvi)
+    integer(kind=8), intent(in) :: ndsde
+    real(kind=8), intent(inout) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
+                                          merge(neps, 6, nsig*neps .eq. ndsde))
+    integer(kind=8), intent(inout) :: codret
+    aster_logical, intent(in) :: l_epsi_varc
+    integer(kind=8), intent(in)::  numlc
+!
 ! --------------------------------------------------------------------------------------------------
+!
+! Mechanical non-linear behaviours
+!
+! Management of local time step division
+!
+! --------------------------------------------------------------------------------------------------
+!
+! IO  BEHInteg         : parameters for integration of behaviour
+! In  option           : option to compute
+! In  typmod           : type of modeling (3D, 2D, etc.)
+! In  jvMaterCode      : adress for material parameters
+! In  instam           : time at beginning of current time step
+! In  instap           : time at end of current time step
+! In  compor           : description of behaviour
+! In  carcri           : parameters for integration of behaviour
+! In  multComp         : name of JEVEUX object for multi-behaviour (DEFI_COMPOR)
+! In  neps             : size of strain tensor
+! In  epsm_inp         : strain tensor at beginning of current time step
+! In  deps_inp         : increment of strain tensor from beginning of current time step
+! In  nsig             : size of stress tensor
+! In  sigm             : stress tensor at beginning of current time step
+! In  vim              : internal state variables at beginning of current time step
+! IO  sigp             : stress tensor at end of current time step
+! IO  vip              : internal state variables at end of current time step
+! In  ndsde            : size of jacobian matrix (dSig/dEps)
+! IO  dsidep           : jacobian matrix (dSig/dEps)
+! IO  codret           : return code from integration of behaviour
+!     LDC_ERROR_NONE => No problem
+!     LDC_ERROR_NCVG => convergence default
+!     LDC_ERROR_QUAL => quality problem
+!     LDC_ERROR_CPLA => stress plane algorithm not converged
+!     LDC_ERROR_DVAL => out of bound for validity
+! In  l_epsi_varc      : flag to compute non-mechanical strains (from external state variables)
+! In  num_lc           : index of behaviour to integrate
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter:: NBR_DECOUP_MAX = 5
     aster_logical:: lMatrPred, lMatr, lSigm, lVari
-    integer(kind=8), parameter:: SANS = 0, FORCE = 1, AUTO = 2, NBR_DECOUP_MAX = 5
-    integer(kind=8):: decoup
-    integer(kind=8) :: niv_dec, niv_ini, npas, iip, codret_sub, pas
+    integer(kind=8) :: cutStrategy, cutLevel, niv_ini, npas, iterIntePas, codret_sub, pas
     real(kind=8) :: epsm_sub(neps), deps_sub(neps), sigm_sub(nsig), vim_sub(nvi)
     real(kind=8) :: deltat, tm, tp
     real(kind=8) :: dsidep_sub(merge(nsig, 6, nsig*neps .eq. ndsde), &
                                merge(neps, 6, nsig*neps .eq. ndsde))
-    character(len=16) :: defo_comp
+    character(len=16) :: defoComp
+!
 ! --------------------------------------------------------------------------------------------------
+!
+    iterIntePas = nint(carcri(ITER_INTE_PAS))
+    defoComp = compor(DEFO)
 
-    iip = nint(carcri(ITER_INTE_PAS))
+! - Option (operators) to compute
     lSigm = L_SIGM(option)
     lMatr = L_MATR(option)
     lVari = L_VARI(option)
     lMatrPred = L_MATR_PRED(option)
-    defo_comp = compor(DEFO)
 
-    ! Pour les variables de commande
+! - To manage external state variable
     ca_iredec_ = 1
     ca_timed1_ = instam
     ca_timef1_ = instap
     ca_td1_ = instam
     ca_tf1_ = instap
 
-    ! Strategie de redecoupage local
-    if (abs(iip) .le. 1 .or. lMatrPred) then
-        decoup = SANS
-    else if (iip .le. -2) then
-        decoup = AUTO
-    else if (iip .ge. 2) then
-        decoup = FORCE
+! - Select strategy of local time step division
+    if (abs(iterIntePas) .le. 1 .or. lMatrPred) then
+        cutStrategy = LDC_TIMEDIV_NONE
+    else if (iterIntePas .le. -2) then
+        cutStrategy = LDC_TIMEDIV_AUTO
+    else if (iterIntePas .ge. 2) then
+        cutStrategy = LDC_TIMEDIV_FORC
     end if
 
 ! --------------------------------------------------------------------------------------------------
 !  Integration du comportement sans redecoupage
 ! --------------------------------------------------------------------------------------------------
-
-    if (decoup .eq. SANS) then
-        niv_dec = 2
-        codret = 0
-        call lc0000(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    l_epsi_varc, imate, materi, compor, mult_comp, &
-                    carcri, instam, instap, neps, epsm, &
-                    deps, nsig, sigm, vim, option, &
-                    angmas, numlc, sigp, vip, &
-                    ndsde, dsidep, niv_dec, nvi, codret)
+    if (cutStrategy .eq. LDC_TIMEDIV_NONE) then
+        codret = LDC_ERROR_NONE
+        BEHInteg%behavPara%cutLevel = LDC_TIMEDIV_AUTO
+        call lc0000(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    nvi, vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, codret, &
+                    l_epsi_varc, numlc)
         goto 999
     end if
 
 ! --------------------------------------------------------------------------------------------------
 !  Integration du comportement avec redecoupage
 ! --------------------------------------------------------------------------------------------------
-
-    ! Tests de compatibilite
-    if (typmod(2) .eq. 'GRADVARI') call utmess('F', 'COMPOR2_10', sk=typmod(2))
-    if (numlc .ge. 8000 .and. numlc .lt. 9000) call utmess('F', 'COMPOR2_10', sk='KIT_DDI')
-    if (defo_comp .eq. 'SIMO_MIEHE') call utmess('F', 'COMPOR2_10', sk='SIMO_MIEHE')
+! - Some checks
+    if (typmod(2) .eq. 'GRADVARI') then
+        call utmess('F', 'COMPOR2_10', sk=typmod(2))
+    end if
+    if (numlc .ge. 8000 .and. numlc .lt. 9000) then
+        call utmess('F', 'COMPOR2_10', sk='KIT_DDI')
+    end if
+    if (defoComp .eq. 'SIMO_MIEHE') then
+        call utmess('F', 'COMPOR2_10', sk='SIMO_MIEHE')
+    end if
     ASSERT(lSigm)
     ASSERT(lVari)
 
-    ! niveau de decoupe initial (si FORCE, on commence avec npas, si AUTO avec 1 seul pas)
-    niv_ini = merge(0, 1, decoup .eq. AUTO)
+! - Initial level of local time step division
+    niv_ini = merge(0, 1, cutStrategy .eq. LDC_TIMEDIV_AUTO)
 
-    ! Boucle sur les niveaux de decoupage
-    do niv_dec = niv_ini, NBR_DECOUP_MAX
-        codret = 0
-        npas = max(1, merge(1, abs(iip)*(2**(niv_dec-1)), niv_dec .eq. 0))
+! - Boucle sur les niveaux de decoupage
+    do cutLevel = niv_ini, NBR_DECOUP_MAX
+        codret = LDC_ERROR_NONE
+
+! ----- Number of divisions
+        npas = max(1, merge(1, abs(iterIntePas)*(2**(cutLevel-1)), cutLevel .eq. 0))
         deltat = (instap-instam)/npas
-        deps_sub = deps/npas
 
-        ! Initialisation des parametres d'entree
+! ----- Prepare input parameters
+        deps_sub = deps/npas
         vim_sub = vim
         sigm_sub = sigm
+        if (lMatr) then
+            dsidep = 0
+        end if
 
-        if (lMatr) dsidep = 0
-
-        ! Boucle sur les sous-pas
+! ----- Boucle sur les sous-pas
         do pas = 1, npas
-
+! --------- Prepare input parameters
             epsm_sub = epsm+(pas-1)*deps_sub
             tm = instam+(pas-1)*deltat
             tp = instam+pas*deltat
             ca_td1_ = tm
             ca_tf1_ = tp
-            codret_sub = 0
+            codret_sub = LDC_ERROR_NONE
             vip = vim_sub
+            BEHInteg%behavPara%cutLevel = cutLevel
 
-            call lc0000(BEHinteg, &
-                        fami, kpg, ksp, ndim, typmod, &
-                        l_epsi_varc, imate, materi, compor, mult_comp, &
-                        carcri, tm, tp, neps, epsm_sub, &
-                        deps_sub, nsig, sigm_sub, vim_sub, option, &
-                        angmas, numlc, sigp, vip, &
-                        ndsde, dsidep_sub, niv_dec, nvi, codret_sub)
+! --------- Main switch to the integration of behaviour laws
+            call lc0000(BEHInteg, &
+                        ndim, option, typmod, &
+                        tm, tp, &
+                        compor, carcri, multComp, &
+                        neps, epsm_sub, deps_sub, &
+                        nsig, sigm_sub, &
+                        nvi, vim_sub, &
+                        sigp, vip, &
+                        ndsde, dsidep_sub, codret_sub, &
+                        l_epsi_varc, numlc)
 
             select case (codret_sub)
-            case (0)
+            case (LDC_ERROR_NONE)
                 continue
-            case (1)
-                codret = 1
+            case (LDC_ERROR_NCVG)
+                codret = LDC_ERROR_NCVG
                 exit
-            case (2)
-                codret = 2
+            case (LDC_ERROR_QUAL)
+                codret = LDC_ERROR_QUAL
                 if (pas .ne. npas) exit
             case default
                 ASSERT(ASTER_FALSE)
             end select
 
-            ! Matrice tangente finale = moyenne des matrices tangentes a chaque pas (faute de mieux)
-            if (lMatr) dsidep = dsidep+dsidep_sub/npas
+! --------- Jacobian matrix is an average of Jacobian matrices at each sub-step
+            if (lMatr) then
+                dsidep = dsidep+dsidep_sub/npas
+            end if
 
-            ! Actualisation des parametres d'entree
+! --------- Update input parameters
             sigm_sub = sigp
             vim_sub = vip
 
         end do
-        ! si codret=0, on a converge ; si codret=1 ou 2, on redecoupe
-        if (codret .eq. 0) goto 999
+        if (codret .eq. LDC_ERROR_NONE) then
+            goto 999
+        end if
 
     end do
 
 999 continue
-    ASSERT(codret .ge. 0 .and. codret .le. 2)
+    ASSERT(codret .ge. LDC_ERROR_NONE .and. codret .le. LDC_ERROR_QUAL)
 end subroutine

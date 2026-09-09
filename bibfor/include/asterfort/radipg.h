@@ -15,12 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine radipg(sig1, sig2, npg, nbsig, radia,&
-                      cosang, ind, compor, imate, nvi,&
+    subroutine radipg(sig1, sig2, npg, nbsig, radia, &
+                      cosang, ind, relaComp, imate, nvi, &
                       vari1, vari2)
         real(kind=8) :: sig1(*)
         real(kind=8) :: sig2(*)
@@ -29,7 +27,7 @@ interface
         real(kind=8) :: radia(*)
         real(kind=8) :: cosang(*)
         integer(kind=8) :: ind
-        character(len=16) :: compor
+        character(len=16) :: relaComp
         integer(kind=8) :: imate
         integer(kind=8) :: nvi
         real(kind=8) :: vari1(*)

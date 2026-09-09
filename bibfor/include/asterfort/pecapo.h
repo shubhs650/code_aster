@@ -15,14 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
 !
-!
-interface 
-    subroutine pecapo(resu,modele,cara,nh)
-        character(len=*) :: resu
-        character(len=*) :: modele
-        character(len=*) :: cara
-        integer(kind=8) :: nh
+interface
+    subroutine pecapo(tablOutZ, modelZ, numeHarm)
+        character(len=*), intent(in) :: tablOutZ, modelZ
+        integer(kind=8), intent(in) :: numeHarm
     end subroutine pecapo
 end interface

@@ -36,6 +36,7 @@ module FE_Basis_module
 #include "FE_module.h"
 #include "jeveux.h"
 #include "MeshTypes_type.h"
+#include "FE_basis_module.h"
 ! --------------------------------------------------------------------------------------------------
 !
 ! FE - generic
@@ -161,7 +162,7 @@ contains
 !
         integer(kind=8) :: i, iadzi, iazk24
         real(kind=8) :: jaco(3, 3), cojac(3, 3), jacob
-        real(kind=8), dimension(3, MAX_BS) :: BSGrad, BSGrad2
+        real(kind=8), dimension(3, MAX_BS_CG) :: BSGrad, BSGrad2
 !
         ASSERT(.not. this%l_skin)
         BSGrad = 0.d0
@@ -257,7 +258,7 @@ contains
 !
         class(FE_Basis), intent(in) :: this
         real(kind=8), dimension(3), intent(in) :: point
-        real(kind=8), dimension(MAX_BS) :: basisScalEval
+        real(kind=8), dimension(MAX_BS_CG) :: basisScalEval
 !
 ! --------------------------------------------------------------------------------------------------
 !   fe - basis functions
@@ -290,7 +291,7 @@ contains
         class(FE_Basis), intent(in) :: this
         real(kind=8), dimension(3), intent(in) :: point
         real(kind=8), dimension(3, 3), optional, intent(in) :: jacob_
-        real(kind=8), dimension(3, MAX_BS) :: BSGradEval
+        real(kind=8), dimension(3, MAX_BS_CG) :: BSGradEval
 !
 ! --------------------------------------------------------------------------------------------------
 !   fe - basis functions

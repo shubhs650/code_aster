@@ -181,9 +181,9 @@ RESU = STAT_NON_LINE(
     CONVERGENCE=_F(
         ITER_GLOB_MAXI=20,
         RESI_REFE_RELA=1.0e-6,
+        SIGM_REFE=sy_acier,
         EFFORT_REFE=1.0e5,
         MOMENT_REFE=1.0e3,
-        EPSI_REFE=1.0e-3,
     ),
 )
 

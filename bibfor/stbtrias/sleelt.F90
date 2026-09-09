@@ -18,7 +18,6 @@
 !
 subroutine sleelt(iunv, maxnod, nbtyma, indic, permut, &
                   nbmail, mint, mant, datset, inum)
-! aslint: disable=C0110
     implicit none
 !     ==============================================================
 !A PRESUPER
@@ -94,9 +93,11 @@ subroutine sleelt(iunv, maxnod, nbtyma, indic, permut, &
     integer(kind=8) :: nbmail(nbtyma), indic(nbtyma), permut(maxnod, nbtyma)
 !  --> DECLARATION DES VARIABLES LOCALES
     character(len=80) :: cbuf
+    integer(kind=8), allocatable :: nod82(:)
     integer(kind=8) :: ind, jnum, codgra, codmec, iprop, imat, icol, nbnode, inum
-    integer(kind=8) :: node(32), nod82(10000), ico, ibid2, icp, ino
+    integer(kind=8) :: node(32), ico, ibid2, icp, ino
     integer(kind=8) :: coddes, iphyb, imatb, nsizec, nsizei, nn, it
+
 !
 !  --------- FIN DECLARATION ----------
 !
@@ -109,6 +110,9 @@ subroutine sleelt(iunv, maxnod, nbtyma, indic, permut, &
     imes = iunifi('MESSAGE')
 !
     inum = 0
+
+! - Allocate big objects
+    allocate (nod82(10000))
 !
 ! --> LECTURE DES MAILLES DANS LE FICHIER UNIVERSEL
 !     ---------------------------------------------
@@ -272,5 +276,8 @@ subroutine sleelt(iunv, maxnod, nbtyma, indic, permut, &
 99  continue
     imes = iunifi('MESSAGE')
     write (imes, *) 'NOMBRE DE MAILLES :', inum
+
+! - DeAllocate big objects
+    deallocate (nod82)
     call jedema()
 end subroutine

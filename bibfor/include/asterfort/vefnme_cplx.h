@@ -17,22 +17,19 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine vefnme_cplx(option, base, model, mate, carael, &
-                           comporZ, timePrev, timeCurr, nh, ligrelz, varicomz, &
-                           sigmaPrev, sigmaz, strxz, deplz, vecelz)
-        character(len=16), intent(in) :: option
-        character(len=1), intent(in) :: base
+    subroutine vefnme_cplx(optionZ, jvBase, &
+                           model, materCode, caraElem, &
+                           comporZ, timePrev, timeCurr, nh, ligrelInZ, varcZ, &
+                           sigmPrev, sigmZ, strxz, deplz, vectElemZ)
+        character(len=*), intent(in) :: optionZ
+        character(len=1), intent(in) :: jvBase
         character(len=8), intent(in) :: model
         real(kind=8), intent(in) :: timePrev, timeCurr
-        character(len=8), intent(in) :: carael
-        character(len=24), intent(in) :: mate
-        character(len=*), intent(in) :: ligrelz
+        character(len=8), intent(in) :: caraElem
+        character(len=24), intent(in) :: materCode
+        character(len=*), intent(in) :: ligrelInZ
         integer(kind=8), intent(in) :: nh
-        character(len=*), intent(in) :: comporZ
-        character(len=*), intent(in) :: sigmaz, sigmaPrev
-        character(len=*), intent(in) :: varicomz
-        character(len=*), intent(in) :: strxz
-        character(len=*), intent(in) :: deplz
-        character(len=*), intent(inout) :: vecelz(*)
+        character(len=*), intent(in) :: comporZ, sigmZ, sigmPrev, varcZ, strxz, deplz
+        character(len=*), intent(inout) :: vectElemZ(2)
     end subroutine vefnme_cplx
 end interface

@@ -18,8 +18,10 @@
 !
 subroutine te0340(option, nomte)
 !
-    use Behaviour_module, only: behaviourOption
-!
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "jeveux.h"
@@ -30,6 +32,7 @@ subroutine te0340(option, nomte)
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
+#include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
 #include "blas/dcopy.h"
@@ -52,24 +55,28 @@ subroutine te0340(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = "RIGI"
     character(len=16), pointer :: compor(:) => null()
     character(len=16) :: comporKit(COMPOR_SIZE)
-    character(len=8) :: typmod(2), lielrf(10)
+    character(len=8):: typmod(2)
+    character(len=8) :: lielrf(10)
     integer(kind=8) :: nno1, nno2, npg, imatuu, lgpg, lgpg1, lgpg2
-    integer(kind=8) :: iw, ivf1, idf1, igeom, imate
+    integer(kind=8) :: iw, ivf1, idf1, jvGeom, jvMaterc
     integer(kind=8) :: npgn, idf1n
     integer(kind=8) :: ivf2, ino, i, nddl1
-    integer(kind=8) :: ivarim, ivarip, iinstm, iinstp
-    integer(kind=8) :: iddlm, iddld, icarcr
+    integer(kind=8) :: ivarim, ivarip, jvInstmr, jvInstpr
+    integer(kind=8) :: iddlm, iddld, jvCarcri
     integer(kind=8) :: ivectu, icontp
     integer(kind=8) :: ivarix
     integer(kind=8) :: jtab(7), jcret, codret
     integer(kind=8) :: ndim, iret, ntrou
     integer(kind=8) :: iu(3, 3), iuc(3), im(3), isect, icontm
     real(kind=8) :: tang(3, 3), a, geom(3, 3)
-    character(len=16) :: defo_comp, rela_comp, rela_cpla
+    character(len=16) :: defoComp
     aster_logical :: lVect, lMatr, lVari, lSigm
     blas_int :: b_incx, b_incy, b_n
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -78,9 +85,12 @@ subroutine te0340(option, nomte)
     ivectu = 1
     icontp = 1
     ivarip = 1
-!
-! - FONCTIONS DE FORME
-!
+
+    ! - Type of modelling
+    call teattr('S', 'TYPMOD', typmod(1))
+    call teattr('S', 'TYPMOD2', typmod(2))
+
+    ! - FONCTIONS DE FORME
     call elref2(nomte, 2, lielrf, ntrou)
     call elrefe_info(elrefe=lielrf(1), fami='RIGI', jvf=ivf1, jdfde=idf1)
     call elrefe_info(elrefe=lielrf(1), fami='NOEU', nno=nno1, npg=npgn, jdfde=idf1n)
@@ -88,86 +98,94 @@ subroutine te0340(option, nomte)
                      jvf=ivf2)
     ndim = 3
     nddl1 = 5
-!
+
 ! - DECALAGE D'INDICE POUR LES ELEMENTS D'INTERFACE
     call cginit(nomte, iu, iuc, im)
-!
-! - TYPE DE MODELISATION
-!
-    typmod(1) = '1D'
-    typmod(2) = ' '
-!
-!
+
 ! - Get input fields
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PVARIMR', 'L', ivarim)
     call jevech('PDEPLMR', 'L', iddlm)
     call jevech('PDEPLPR', 'L', iddld)
     call jevech('PCONTMR', 'L', icontm)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PCARCRI', 'L', icarcr)
     call jevech('PCAGNBA', 'L', isect)
-    call jevech('PINSTMR', 'L', iinstm)
-    call jevech('PINSTPR', 'L', iinstp)
-!
-! - Select objects to construct from option name
-!
-    call behaviourOption(option, compor, lMatr, lVect, lVari, &
-                         lSigm, codret)
-!
+    call jevech('PINSTMR', 'L', jvInstmr)
+    call jevech('PINSTPR', 'L', jvInstpr)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
+
+! - Get fields for non-linear behaviour
+    call jevech('PCARCRI', 'L', jvCarcri)
+    call jevech('PCOMPOR', 'L', vk16=compor)
+
 ! - Properties of behaviour
-!
-    rela_comp = compor(RELA_NAME)
-    defo_comp = compor(DEFO)
-    rela_cpla = compor(PLANESTRESS)
-!
-!     MISE A JOUR EVENTUELLE DE LA GEOMETRIE
-!
-    if (defo_comp .eq. 'PETIT') then
+    defoComp = compor(DEFO)
+
+! - Select objects to construct from option name
+    call behaviourOption(option, compor, &
+                         lMatr, lVect, &
+                         lVari, lSigm, &
+                         codret)
+
+! - Create compor kit
+    comporKit(1:COMPOR_SIZE) = compor(1:COMPOR_SIZE)
+
+! - Initialisation of behaviour datastructure
+    call behaviourInit(BEHInteg)
+
+! - Set main parameters for behaviour (on cell)
+    call behaviourSetParaCell(typmod, option, &
+                              comporKit, zr(jvCarcri), &
+                              zr(jvInstmr), zr(jvInstpr), &
+                              materPara, BEHInteg)
+
+!   MISE A JOUR EVENTUELLE DE LA GEOMETRIE
+    if (defoComp .eq. 'PETIT') then
         do ino = 1, nno1
             do i = 1, ndim
-                geom(i, ino) = zr(igeom-1+(ino-1)*ndim+i)
+                geom(i, ino) = zr(jvGeom-1+(ino-1)*ndim+i)
             end do
         end do
-    else if (defo_comp .eq. 'PETIT_REAC') then
+
+    else if (defoComp .eq. 'PETIT_REAC') then
         do ino = 1, nno1
             do i = 1, ndim
-                geom(i, ino) = zr( &
-                               igeom-1+(ino-1)*ndim+i)+zr(iddlm-1+(ino-1)*nddl1+i)+zr(iddld-1+(&
-                               &ino-1)*nddl1+i &
-                               )
+                geom(i, ino) = zr(jvGeom-1+(ino-1)*ndim+i)+ &
+                               zr(iddlm-1+(ino-1)*nddl1+i)+ &
+                               zr(iddld-1+(ino-1)*nddl1+i)
             end do
         end do
+
     else
-        call utmess('F', 'CABLE0_6', sk=defo_comp)
+        call utmess('F', 'CABLE0_6', sk=defoComp)
+
     end if
-!
-!     DEFINITION DES TANGENTES
-!
-    call cgtang(3, nno1, npgn, geom, zr(idf1n), &
-                tang)
-!
-!     SECTION DE LA BARRE
+
+!   DEFINITION DES TANGENTES
+    call cgtang(3, nno1, npgn, geom, zr(idf1n), tang)
+
+!   SECTION DE LA BARRE
     a = zr(isect)
-!
+
 ! - ON VERIFIE QUE PVARIMR ET PVARIPR ONT LE MEME NOMBRE DE V.I. :
-!
-    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                itab=jtab)
+    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg1 = max(jtab(6), 1)*jtab(7)
 !
     if (lVari) then
-        call tecach('OOO', 'PVARIPR', 'E', iret, nval=7, &
-                    itab=jtab)
+        call tecach('OOO', 'PVARIPR', 'E', iret, nval=7, itab=jtab)
         lgpg2 = max(jtab(6), 1)*jtab(7)
         ASSERT(lgpg1 .eq. lgpg2)
     end if
     lgpg = lgpg1
-!
+
 ! - Get output fields
-!
     if (lMatr) then
         call jevech('PMATUNS', 'E', imatuu)
     end if
@@ -186,18 +204,19 @@ subroutine te0340(option, nomte)
         b_incy = to_blas_int(1)
         call dcopy(b_n, zr(ivarix), b_incx, zr(ivarip), b_incy)
     end if
-!
+
 ! - FORCES INTERIEURES ET MATRICE TANGENTE
-!
-    do i = 1, COMPOR_SIZE
-        comporKit(i) = compor(i)
-    end do
-    call cgfint(ndim, nno1, nno2, npg, zr(iw), &
-                zr(ivf1), zr(ivf2), zr(idf1), geom, tang, &
-                typmod, option, zi(imate), comporKit, lgpg, &
-                zr(icarcr), zr(iinstm), zr(iinstp), zr(iddlm), zr(iddld), &
-                iu, iuc, im, a, zr(icontm), &
-                zr(ivarim), zr(icontp), zr(ivarip), zr(imatuu), zr(ivectu), &
+    call cgfint(BEHInteg, &
+                typmod, option, &
+                comporKit, zr(jvCarcri), &
+                ndim, nno1, nno2, npg, &
+                zr(iw), zr(ivf1), zr(ivf2), zr(idf1), &
+                geom, tang, &
+                zr(jvInstmr), zr(jvInstpr), zr(iddlm), zr(iddld), &
+                iu, iuc, im, a, &
+                lgpg, zr(icontm), zr(ivarim), &
+                zr(icontp), zr(ivarip), &
+                zr(imatuu), zr(ivectu), &
                 codret)
 !
     if (lSigm) then

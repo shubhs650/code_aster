@@ -15,18 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mbgchg(option, fami, nddl, nno, ncomp, kpg, imate, jvSief, &
-                      ipoids, ipesa, igeom, ivectu, vff, dff, h, alpha, beta, preten)
-        character(len=16) :: option
-        character(len=4) :: fami
-        integer(kind=8) :: nddl, nno, ncomp
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ipoids, igeom, jvSief, imate, ipesa
-        integer(kind=8) :: ivectu
-        real(kind=8) :: vff(nno), dff(2, nno), h, preten, alpha, beta
+    subroutine mbgchg(plateOrie, &
+                      option, fami, &
+                      nddl, nno, ncomp, kpg, &
+                      jvMaterc, jvSief, &
+                      ipoids, jvPesa, jvGeom, jvVect, &
+                      vff, dff, &
+                      h, preten)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: fami
+        integer(kind=8), intent(in) :: nddl, nno, ncomp
+        integer(kind=8), intent(in) :: kpg
+        integer(kind=8), intent(in) :: ipoids, jvGeom, jvMaterc, jvPesa
+        integer(kind=8), intent(in) :: jvVect, jvSief
+        real(kind=8), intent(in) :: dff(2, nno), vff(nno)
+        real(kind=8), intent(in) :: h, preten
     end subroutine mbgchg
 end interface

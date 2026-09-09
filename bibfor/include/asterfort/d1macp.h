@@ -15,19 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine d1macp(fami, mater, instan, poum, kpg,&
-                      ksp, angl, d1)
-        character(len=*) :: fami
-        integer(kind=8) :: mater
-        real(kind=8) :: instan
-        character(len=*) :: poum
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        real(kind=8) :: angl
-        real(kind=8) :: d1(4, *)
+    subroutine d1macp(materPara, poum, time, d1)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=*), intent(in) :: poum
+        real(kind=8), intent(in) :: time
+        real(kind=8), intent(out) :: d1(4, 4)
     end subroutine d1macp
 end interface

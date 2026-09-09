@@ -18,11 +18,14 @@
 !
 subroutine te0596(option, nomte)
 !
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
@@ -33,10 +36,12 @@ subroutine te0596(option, nomte)
 #include "asterfort/nufnpd.h"
 #include "asterfort/teattr.h"
 #include "asterfort/utmess.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! FONCTION REALISEE:  CALCUL DE L'OPTION FORC_NODA POUR LES ELEMENTS
 !                     INCOMPRESSIBLES A 2 CHAMPS UP
 !                     EN 3D/D_PLAN/AXI
@@ -44,28 +49,33 @@ subroutine te0596(option, nomte)
 !    - ARGUMENTS:
 !        DONNEES:      OPTION       -->  OPTION DE CALCUL
 !                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ----------------------------------------------------------------------
 !
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = "RIGI"
     aster_logical :: mini
     integer(kind=8) :: ndim, nno1, nno2, nnos, npg, jgn, ntrou
     integer(kind=8) :: iw, ivf1, ivf2, idf1, idf2
     integer(kind=8) :: vu(3, 27), vg(27), vp(27), vpi(3, 27)
-    integer(kind=8) :: igeom, jvSief, jvDisp, imate, ivectu
+    integer(kind=8) :: igeom, jvSief, jvDisp, jvMaterc, ivectu
     integer(kind=8) :: ibid
     character(len=16), pointer :: compor(:) => null()
+    character(len=16) :: relaComp, defoComp
     character(len=8) :: lielrf(10), typmod(2), alias8
-    character(len=24) :: valk
-! ----------------------------------------------------------------------
+    type(Material_Para) :: materPara
+!
+! --------------------------------------------------------------------------------------------------
 !
 ! - FONCTIONS DE FORMES ET POINTS DE GAUSS
     call elref2(nomte, 10, lielrf, ntrou)
     ASSERT(ntrou .ge. 2)
-    call elrefe_info(elrefe=lielrf(2), fami='RIGI', ndim=ndim, nno=nno2, nnos=nnos, &
+    call elrefe_info(elrefe=lielrf(2), fami=fami, ndim=ndim, nno=nno2, nnos=nnos, &
                      npg=npg, jpoids=iw, jvf=ivf2, jdfde=idf2, jgano=jgn)
-    call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nno1, nnos=nnos, &
+    call elrefe_info(elrefe=lielrf(1), fami=fami, ndim=ndim, nno=nno1, nnos=nnos, &
                      npg=npg, jpoids=iw, jvf=ivf1, jdfde=idf1, jgano=jgn)
 !
 ! - TYPE DE MODELISATION
+    typmod = ' '
     if (ndim .eq. 2 .and. lteatt('AXIS', 'OUI')) then
         typmod(1) = 'AXIS  '
     else if (ndim .eq. 2 .and. lteatt('D_PLAN', 'OUI')) then
@@ -73,76 +83,78 @@ subroutine te0596(option, nomte)
     else if (ndim .eq. 3) then
         typmod(1) = '3D'
     else
-        call utmess('F', 'ELEMENTS_34', sk=nomte)
+        ASSERT(ASTER_FALSE)
     end if
 !
     call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PMATERC', 'L', jvMaterc)
     call jevech('PSIEFR', 'L', jvSief)
     call jevech('PDEPLAR', 'L', jvDisp)
-    call jevech('PCOMPOR', 'L', vk16=compor)
     call jevech('PVECTUR', 'E', ivectu)
-!
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Non linear behaviour
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    relaComp = compor(RELA_NAME)
+    defoComp = compor(DEFO)
+
 ! - CALCUL DES FORCES INTERIEURES
-    if (compor(DEFO) .eq. 'PETIT ') then
+    if (defoComp .eq. 'PETIT ') then
         if (lteatt('INCO', 'C2 ')) then
-!
-! - MINI ELEMENT ?
             call teattr('S', 'ALIAS8', alias8, ibid)
             if (alias8(6:8) .eq. 'TR3' .or. alias8(6:8) .eq. 'TE4') then
-                mini = .true.
+                mini = ASTER_TRUE
             else
-                mini = .false.
+                mini = ASTER_FALSE
             end if
+
 ! --------- Get index of dof
             call niinit(typmod, ndim, nno1, 0, &
                         nno2, 0, vu, vg, vp, &
                         vpi)
-!
             call nufnpd(ndim, nno1, nno2, npg, iw, &
                         zr(ivf1), zr(ivf2), idf1, vu, vp, &
-                        typmod, zi(imate), compor, zr(igeom), zr(jvSief), &
-                        zr(jvDisp), mini, zr(ivectu))
+                        typmod, relaComp, zr(igeom), zr(jvSief), &
+                        zr(jvDisp), mini, zr(ivectu), &
+                        materPara)
+
         else if (lteatt('INCO', 'C2O')) then
 ! --------- Get index of dof
             call niinit(typmod, ndim, nno1, 0, &
                         nno2, nno2, vu, vg, vp, &
                         vpi)
-!
             call nofnpd(ndim, nno1, nno2, nno2, npg, &
                         iw, zr(ivf1), zr(ivf2), zr(ivf2), idf1, &
-                        vu, vp, vpi, typmod, zi(imate), &
-                        compor, zr(igeom), nomte, zr(jvSief), zr(jvDisp), &
-                        zr(ivectu))
+                        vu, vp, vpi, &
+                        typmod, relaComp, zr(igeom), nomte, zr(jvSief), zr(jvDisp), &
+                        zr(ivectu), &
+                        materPara)
         else
-            valk = compor(DEFO)
-            call utmess('F', 'MODELISA10_17', sk=valk)
+            call utmess('F', 'MODELISA10_17', sk=defoComp)
         end if
-    else if (compor(DEFO) .eq. 'GDEF_LOG') then
+    else if (defoComp .eq. 'GDEF_LOG') then
         if (lteatt('INCO', 'C2 ')) then
-!
-! - MINI ELEMENT ?
             call teattr('S', 'ALIAS8', alias8, ibid)
             if (alias8(6:8) .eq. 'TR3' .or. alias8(6:8) .eq. 'TE4') then
-! - PAS ENCORE INTRODUIT
-                valk = compor(DEFO)
-                call utmess('F', 'MODELISA10_18', sk=valk)
+                call utmess('F', 'MODELISA10_18', sk=defoComp)
             end if
+
 ! --------- Get index of dof
             call niinit(typmod, ndim, nno1, 0, &
                         nno2, 0, vu, vg, vp, &
                         vpi)
-!
             call nufnlg(ndim, nno1, nno2, npg, iw, &
                         zr(ivf1), zr(ivf2), idf1, vu, vp, &
-                        typmod, zi(imate), compor, zr(igeom), zr(jvSief), &
-                        zr(jvDisp), zr(ivectu))
+                        typmod, relaComp, zr(igeom), zr(jvSief), &
+                        zr(jvDisp), zr(ivectu), &
+                        materPara)
         else
-            valk = compor(DEFO)
-            call utmess('F', 'MODELISA10_17', sk=valk)
+            call utmess('F', 'MODELISA10_17', sk=defoComp)
         end if
     else
-        call utmess('F', 'ELEMENTS3_16', sk=compor(DEFO))
+        call utmess('F', 'ELEMENTS3_16', sk=defoComp)
     end if
 !
 end subroutine

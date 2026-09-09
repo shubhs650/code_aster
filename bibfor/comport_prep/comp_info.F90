@@ -45,16 +45,14 @@ subroutine comp_info(modelZ, compor)
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=19), parameter :: comporInfo = '&&NMDOCC.INFO'
-    character(len=8) :: model
-    character(len=19) :: ligrel
+    character(len=19) :: modelFED
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    model = modelZ(1:8)
-    call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrel)
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelFED)
 
 ! - Prepare informations about internal variables
-    call comp_meca_pvar(ligrel_=ligrel, comporMap_=compor, comporInfo=comporInfo)
+    call comp_meca_pvar(modelFED, compor, comporInfo)
 
 ! - Print informations about internal variables
     call imvari(comporInfo)

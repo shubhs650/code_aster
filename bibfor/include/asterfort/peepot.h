@@ -15,17 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine peepot(resu,modele,mate, mateco, cara,nh,&
-                      nbocc)
-          character(len=*) :: resu
-          character(len=*) :: modele
-          character(len=*) :: mate, mateco
-          character(len=*) :: cara
-          integer(kind=8) :: nh
-          integer(kind=8) :: nbocc
+    subroutine peepot(resuZ, modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                      numeHarm, nbocc)
+        character(len=*), intent(in):: resuZ, modelZ, materFieldZ, materCodeZ, caraElemZ
+        integer(kind=8), intent(in) :: numeHarm, nbocc
     end subroutine peepot
 end interface

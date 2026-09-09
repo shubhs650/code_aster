@@ -15,17 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504
+! aslint: disable=W0413
 !
-subroutine nmvprk(fami, kpg, ksp, ndim, &
-                  typmod, imat, comp, crit, timed, &
-                  timef, neps, epsdt, depst, sigd, &
-                  nvi, vind, opt, angmas, sigf, &
-                  vinf, dsde, iret, mult_comp_)
+subroutine nmvprk(BEHInteg, &
+                  option, typmod, ndim, &
+                  compor, carcri, &
+                  instam, instap, &
+                  neps, epsdt, depst, sigd, &
+                  nvi, vind, sigf, &
+                  vinf, dsde, iret, multComp_)
 !
+    use Behaviour_type
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/calsig.h"
 #include "asterfort/gerpas.h"
 #include "asterfort/lcdpeq.h"
@@ -35,6 +39,16 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 #include "asterfort/lcrksg.h"
 #include "asterfort/lcsmelas.h"
 #include "blas/dcopy.h"
+#include "jeveux.h"
+!
+    type(Behaviour_Integ), intent(in) :: BEHInteg
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: option
+    character(len=8), intent(in) :: typmod(2)
+    real(kind=8), intent(in) :: instam, instap
+    integer(kind=8), intent(in) :: nvi
+    character(len=16), optional, intent(in) :: multComp_
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -117,54 +131,74 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=*) :: fami
-    integer(kind=8), intent(in) :: nvi
-    integer(kind=8) :: imat, ndim, ndt, ndi, nr, kpg, ksp, i, nbphas, itmax
-    integer(kind=8) :: nmat, ioptio, idnr, nsg, nfs, nhsr, neps
+    integer(kind=8), parameter :: rungeKutta = 1, nmat = 6000
+    integer(kind=8), parameter ::  nsg = 30, nfs = 5, nhsr = 5
+    integer(kind=8) :: ndim, ndt, ndi, nr, i, nbphas, itmax
+    integer(kind=8) :: ioptio, idnr, neps
     integer(kind=8) :: irr, decirr, nbsyst, decal, gdef
-    character(len=16), optional, intent(in) :: mult_comp_
-!     POUR POLYCRISTAL, POUR POUVOIR STOCKER JUSQU'A 1000 PHASES
-    parameter(nmat=6000)
 !     POUR LCMATE (MONOCRISTAL) DIMENSIONS MAX
 !        NSG=NOMBRE DE SYSTEMES DE GLISSEMENT MAXIMUM
 !        NFS=NOMBRE DE FAMILLES DE SYSTEMES DE GLISSEMENT MAXIMUM
-    parameter(nsg=30)
-    parameter(nfs=5)
-    parameter(nhsr=5)
-    integer(kind=8) :: nbcomm(nmat, 3), numhsr(nmat), iret
-    real(kind=8) :: materd(nmat, 2), materf(nmat, 2), epsdt(neps), depst(neps)
+    integer(kind=8), allocatable :: nbcomm(:, :)
+    real(kind=8), allocatable :: materd(:, :), materf(:, :)
+    character(len=24), allocatable :: cpmono(:)
+    integer(kind=8), allocatable :: numhsr(:)
+    real(kind=8), allocatable :: cothe(:), dcothe(:)
+    real(kind=8), allocatable :: coeff(:), dcoeff(:), coel(:)
+    integer(kind=8) :: iret
+    real(kind=8) :: epsdt(neps), depst(neps)
     real(kind=8) :: rbid
-    real(kind=8) :: toler, ymfs, crit(*), vind(*), vinf(*), timed, timef
-    real(kind=8) :: sigd(6), sigf(6), dsde(6, *), angmas(*)
-    real(kind=8) :: cothe(nmat), dcothe(nmat), pgl(3, 3), epsd(9)
-    real(kind=8) :: coeff(nmat), dcoeff(nmat), coel(nmat), dtime, x
+    real(kind=8) :: toler, ymfs, vind(*), vinf(*)
+    real(kind=8) :: sigd(6), sigf(6), dsde(6, *)
+    real(kind=8) :: pgl(3, 3), epsd(9)
+    real(kind=8) :: dtime, x
 !     POUR POLYCRISTAL, 5 MATRICE HSR MAXI. POUR MONOCRISTAL, 1 MAXI
     real(kind=8) :: toutms(nfs, nsg, 6), hsr(nsg, nsg, nhsr), detot(9)
     character(len=3) :: matcst
-    character(len=8) :: mod, typma, typmod(*)
+    character(len=8) :: typmod1, typma
     character(len=11) :: meting
-    character(len=16) :: comp(*), opt, rela_comp, defo_comp, mult_comp
-    character(len=24) :: cpmono(5*nmat+1)
+    character(len=16) ::  relaComp, defoComp, multComp
     blas_int :: b_incx, b_incy, b_n
     common/tdim/ndt, ndi
     common/opti/ioptio, idnr
     common/meti/meting
     common/polycr/irr, decirr, nbsyst, decal, gdef
+    type(Material_Para) :: materPara
+    character(len=8) :: fami
+    integer(kind=8) :: jvMaterCode, kpg, ksp
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    itmax = int(crit(1))
-    toler = crit(3)
+    materPara = BEHInteg%materPara
+    jvMaterCode = materPara%jvMaterCode
+    fami = materPara%schemePara%fami
+    kpg = materPara%schemePara%kpg
+    ksp = materPara%schemePara%ksp
+
+    itmax = int(carcri(1))
+    toler = carcri(3)
     meting = 'RUNGE_KUTTA'
-    mod = typmod(1)
-    rela_comp = comp(1)
-    defo_comp = comp(3)
-    mult_comp = ' '
-    if (present(mult_comp_)) then
-        mult_comp = mult_comp_
+    typmod1 = typmod(1)
+    relaComp = compor(RELA_NAME)
+    defoComp = compor(DEFO)
+    multComp = ' '
+    if (present(multComp_)) then
+        multComp = multComp_
     end if
     gdef = 0
-    if (defo_comp .eq. 'SIMO_MIEHE') gdef = 1
+    if (defoComp .eq. 'SIMO_MIEHE') gdef = 1
+
+! - Allocate big objects
+    allocate (nbcomm(nmat, 3))
+    allocate (materd(nmat, 2))
+    allocate (materf(nmat, 2))
+    allocate (cpmono(5*nmat+1))
+    allocate (numhsr(nmat))
+    allocate (cothe(nmat))
+    allocate (dcothe(nmat))
+    allocate (coeff(nmat))
+    allocate (dcoeff(nmat))
+    allocate (coel(nmat))
 !
 !     YMFS EST UTILISE LORS DU CALCUL D ERREUR COMME MINIMUM DE
 !     CHAQUE COMPOSANTE DE VINT. L IDEAL SERAIT DE RENTRER CE
@@ -175,16 +209,16 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 ! --  RECUPERATION COEF(TEMP(T))) LOI ELASTO-PLASTIQUE A T ET/OU T+DT
 !                    NB DE CMP DIRECTES/CISAILLEMENT + NB VAR. INTERNES
 !
-    call lcmate(fami, kpg, ksp, comp, &
-                mod, imat, nmat, rbid, rbid, &
-                rbid, 1, typma, hsr, materd, &
-                materf, matcst, nbcomm, cpmono, angmas, &
-                pgl, 0, toler, ndt, ndi, &
-                nr, crit, nvi, vind, nfs, &
-                nsg, toutms, nhsr, numhsr, sigd, &
-                mult_comp)
+    call lcmate(materPara, &
+                carcri, relaComp, typmod1, &
+                nmat, rbid, rbid, rbid, rungeKutta, &
+                typma, hsr, materd, materf, matcst, &
+                nbcomm, cpmono, pgl, 0, &
+                toler, ndt, ndi, nr, &
+                nvi, vind, nfs, nsg, toutms, &
+                nhsr, numhsr, sigd, multComp)
 !
-    if (opt(1:9) .eq. 'RIGI_MECA') goto 900
+    if (option(1:9) .eq. 'RIGI_MECA') goto 900
 !
     b_n = to_blas_int(neps)
     b_incx = to_blas_int(1)
@@ -195,7 +229,7 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
     b_incy = to_blas_int(1)
     call dcopy(b_n, epsdt, b_incx, epsd, b_incy)
 !
-    dtime = timef-timed
+    dtime = instap-instam
 !
 ! --  INITIALISATION DES VARIABLES INTERNES A T
 !
@@ -211,8 +245,8 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 !
 !     INITIALISATIONS PARTICULIERES POUR CERTAINES LOIS
 !
-    call lcrkin(ndim, opt, rela_comp, materf, nbcomm, &
-                cpmono, nmat, mod, nvi, sigd, &
+    call lcrkin(ndim, option, relaComp, materf, nbcomm, &
+                cpmono, nmat, typmod1, nvi, sigd, &
                 sigf, vind, vinf, nbphas, iret)
     if (iret .eq. 9) then
 !        ENDOMMAGEMENT MAXI AU POINT DE GAUSS
@@ -220,11 +254,12 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
         goto 999
     end if
 !
-    call gerpas(fami, kpg, ksp, rela_comp, mod, &
-                imat, matcst, nbcomm, cpmono, nbphas, &
+    call gerpas(materPara, &
+                relaComp, typmod1, &
+                matcst, nbcomm, cpmono, nbphas, &
                 nvi, nmat, vinf, dtime, itmax, &
                 toler, ymfs, cothe, coeff, dcothe, &
-                dcoeff, coel, pgl, angmas, neps, &
+                dcoeff, coel, pgl, neps, &
                 epsd, detot, x, nfs, nsg, &
                 nhsr, numhsr, hsr, iret)
     if (iret .ne. 0) then
@@ -233,22 +268,22 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 !
 ! --  CALCUL DES CONTRAINTES
 !
-    if ((rela_comp .eq. 'MONOCRISTAL') .and. (gdef .eq. 1)) then
-        call lcrksg(rela_comp, nvi, vinf, epsd, detot, &
+    if ((relaComp .eq. 'MONOCRISTAL') .and. (gdef .eq. 1)) then
+        call lcrksg(relaComp, nvi, vinf, epsd, detot, &
                     nmat, coel, sigf)
     else
-        call calsig(fami, kpg, ksp, vinf, mod, &
-                    rela_comp, vinf, x, dtime, epsd, &
+        call calsig(fami, kpg, ksp, vinf, typmod1, &
+                    relaComp, vinf, x, dtime, epsd, &
                     detot, nmat, coel, sigf)
     end if
 !
-    call lcdpeq(vind, vinf, rela_comp, nbcomm, cpmono, &
+    call lcdpeq(vind, vinf, relaComp, nbcomm, cpmono, &
                 nmat, nvi, sigf, detot, epsd, &
                 materf, pgl)
 !
 900 continue
 !
-    if (opt(1:10) .eq. 'RIGI_MECA_' .and. gdef .eq. 1 .and. rela_comp .eq. 'MONOCRISTAL') then
+    if (option(1:10) .eq. 'RIGI_MECA_' .and. gdef .eq. 1 .and. relaComp .eq. 'MONOCRISTAL') then
         call lcsmelas(epsdt, depst, dsde, nmat=nmat, materd_=materd)
         iret = 0
         goto 999
@@ -256,10 +291,23 @@ subroutine nmvprk(fami, kpg, ksp, ndim, &
 !
 !     OPERATEUR TANGENT = ELASTIQUE OU SECANT (ENDOMMAGEMENT)
     if (materf(nmat, 1) .eq. 0) then
-        call lcopli('ISOTROPE', mod, materf(1, 1), dsde)
+        call lcopli('ISOTROPE', typmod1, materf(1, 1), dsde)
     else if (materf(nmat, 1) .eq. 1) then
-        call lcopli('ORTHOTRO', mod, materf(1, 1), dsde)
+        call lcopli('ORTHOTRO', typmod1, materf(1, 1), dsde)
     end if
 !
 999 continue
+
+! - De-Allocate big objects
+    deallocate (nbcomm)
+    deallocate (materd)
+    deallocate (materf)
+    deallocate (cpmono)
+    deallocate (numhsr)
+    deallocate (cothe)
+    deallocate (dcothe)
+    deallocate (coeff)
+    deallocate (dcoeff)
+    deallocate (coel)
+!
 end subroutine

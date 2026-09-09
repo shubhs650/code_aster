@@ -39,8 +39,8 @@ subroutine lcstco(l_upda_jaco, l_norm_smooth, i_reso_geom, &
     real(kind=8), intent(out) :: gapi
     integer(kind=8), intent(out) :: nmcp
     integer(kind=8), intent(out) :: nb_poin_inte
-    real(kind=8), intent(out) :: poin_inte_sl(16)
-    real(kind=8), intent(out) :: poin_inte_ma(16)
+    real(kind=8), intent(out) :: poin_inte_sl(2, 8)
+    real(kind=8), intent(out) :: poin_inte_ma(2, 8)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -67,14 +67,14 @@ subroutine lcstco(l_upda_jaco, l_norm_smooth, i_reso_geom, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: jpcf
+    integer(kind=8) :: jpcf, ino
 
 ! --------------------------------------------------------------------------------------------------
 !
     call jevech('PCONFR', 'L', jpcf)
 !
-    poin_inte_sl(:) = 0.d0
-    poin_inte_ma(:) = 0.d0
+    poin_inte_sl = 0.d0
+    poin_inte_ma = 0.d0
     indi_cont = nint(zr(jpcf-1+5))
     lagrc_curr = (zr(jpcf-1+6))
     l_upda_jaco = nint(zr(jpcf-1+2)) .eq. 1
@@ -85,7 +85,9 @@ subroutine lcstco(l_upda_jaco, l_norm_smooth, i_reso_geom, &
     nb_poin_inte = nint(zr(jpcf-1+8))
     i_reso_geom = nint(zr(jpcf-1+41))
     ASSERT(i_reso_geom .eq. ALGO_NEWT)
-    poin_inte_sl(1:nb_poin_inte*2) = zr(jpcf-1+8+1:jpcf-1+8+2*nb_poin_inte)
-    poin_inte_ma(1:nb_poin_inte*2) = zr(jpcf-1+24+1:jpcf-1+24+2*nb_poin_inte)
+    do ino = 1, nb_poin_inte
+        poin_inte_sl(1:2, ino) = zr(jpcf-1+8+2*(ino-1)+1:jpcf-1+8+2*ino)
+        poin_inte_ma(1:2, ino) = zr(jpcf-1+24+2*(ino-1)+1:jpcf-1+24+2*ino)
+    end do
 !
 end subroutine

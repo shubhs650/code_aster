@@ -48,3 +48,9 @@ void ForwardGeneralizedDOFNumberingPtr::setPointer( const GeneralizedDOFNumberin
     _ptr = ptr;
     _isSet = true;
 };
+
+const std::string ForwardGeneralizedDOFNumberingPtr::getName() {
+    if ( !_isSet )
+        throw std::runtime_error( "No pointer set" );
+    return _ptr->getName();
+};

@@ -17,20 +17,18 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine pmimpr(ind, inst, indimp, valimp,&
-                      iter, eps, sig, vi, nbvari,&
-                      r, ee, eini)
-        integer(kind=8) :: nbvari
-        integer(kind=8) :: ind
-        real(kind=8) :: inst
-        integer(kind=8) :: indimp(6)
-        real(kind=8) :: valimp(6)
-        integer(kind=8) :: iter
-        real(kind=8) :: eps(6)
-        real(kind=8) :: sig(6)
-        real(kind=8) :: vi(nbvari)
-        real(kind=8) :: r(12)
-        real(kind=8) :: ee
-        real(kind=8) :: eini
+    subroutine pmimpr(prtLevel, &
+                      timeCurr, iterNewt, &
+                      loadType_, valeImpo_, &
+                      epsi_, sigm_, nbVari_, vi_, resi_, &
+                      ee_, eini_)
+        integer(kind=8), intent(in) :: prtLevel
+        real(kind=8), intent(in) :: timeCurr
+        integer(kind=8), intent(in) :: iterNewt
+        integer(kind=8), optional, intent(in) :: loadType_(6)
+        real(kind=8), optional, intent(in) :: valeImpo_(6)
+        integer(kind=8), optional, intent(in) :: nbvari_
+        real(kind=8), optional, intent(in) :: epsi_(6), sigm_(6), vi_(*), resi_(12)
+        real(kind=8), optional, intent(in) :: ee_, eini_
     end subroutine pmimpr
 end interface

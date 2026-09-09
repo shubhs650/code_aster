@@ -23,7 +23,7 @@ cata_msg = {
     1: _("""Liste des champs lus."""),
     2: _("""Champ %(k1)s."""),
     3: _("""Pour le numéro d'ordre %(i1)d, le paramètre d'accès de nom %(k1)s vaut %(r1)g."""),
-    4: _("""Ce champ n'est pas autorisé dans le résultat."""),
+    4: _("""Ce champ n'est pas autorisé dans le résultat : '%(k1)s'."""),
     5: _(
         """le numéro d'archivage est inférieur au numéro précédent. Il doit être strictement croissant."""
     ),

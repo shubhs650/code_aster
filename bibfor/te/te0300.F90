@@ -68,7 +68,7 @@ subroutine te0300(option, nomte)
     real(kind=8) :: xno1, xno2, yno1, yno2, d1, d2
 !
     integer(kind=8) :: icodre(3)
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(3), elrefe
     character(len=16) :: nomres(3)
 !

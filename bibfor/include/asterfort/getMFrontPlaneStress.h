@@ -15,14 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine getMFrontPlaneStress(keywf, i_comp, rela_comp, l_mfront_cp)
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
-        character(len=16), intent(in) :: rela_comp
+    subroutine getMFrontPlaneStress(relaComp, relaCompPY, &
+                                    factorKeyword, iFactorKeyword, &
+                                    l_mfront_cp)
+        character(len=16), intent(in) :: relaComp, relaCompPY
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
         aster_logical, intent(out) :: l_mfront_cp
     end subroutine getMFrontPlaneStress
 end interface

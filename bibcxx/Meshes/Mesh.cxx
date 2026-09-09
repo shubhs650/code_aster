@@ -80,7 +80,9 @@ void Mesh::setGroupOfCells( const std::string &name, const VectorLong &cell_ids 
         ASTERINTEGER size = cell_ids_u.size(), un = 1;
         CALLO_ADDGROUPELEM( getName(), &un );
         CALLO_ADDGRPMA( getName(), name_s, cell_ids_u.data(), &size, (ASTERLOGICAL *)&isAdded );
-        _groupsOfCells->build( true );
+        if ( isAdded ) {
+            _groupsOfCells->build( true );
+        }
     }
 };
 
@@ -94,7 +96,9 @@ void Mesh::setGroupOfNodes( const std::string &name, const VectorLong &node_ids,
         ASTERINTEGER size = node_ids_u.size(), un = 1;
         CALLO_ADDGROUPNODE( getName(), &un );
         CALLO_ADDGRPNO( getName(), name_s, node_ids_u.data(), &size, (ASTERLOGICAL *)&isAdded );
-        _groupsOfNodes->build( true );
+        if ( isAdded ) {
+            _groupsOfNodes->build( true );
+        }
     }
 };
 
@@ -304,10 +308,10 @@ void Mesh::addCellLabels( const VectorString &labels ) {
 }
 
 bool Mesh::printMedFile( const std::filesystem::path &fileName, bool local,
-                         std::array< int, 3 > version ) const {
+                         std::array< int, 3 > version, const std::string &mode ) const {
 #ifdef ASTER_HAVE_MED
     auto aTMWriter = AsterToMedWriter();
-    return aTMWriter.printMesh( *this, fileName, local );
+    return aTMWriter.printMesh( *this, fileName, local, "", mode );
 #else
     return false;
 #endif

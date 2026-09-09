@@ -17,22 +17,19 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmextr_comp(field     , field_disc , field_type     , meshz    , modelz   ,&
-                           cara_elemz, ds_material, ds_constitutive, disp_curr, strx_curr,&
-                           varc_curr , time       , ligrelz)
+    subroutine nmextr_comp(field, field_disc, field_type, &
+                           meshZ, modelZ, caraElemZ, &
+                           ds_material, ds_constitutive, &
+                           dispCurrZ, strxCurrZ, varcCurrZ, time, ligrelZ_)
         use NonLin_Datastructure_type
         character(len=19), intent(in) :: field
         character(len=24), intent(in) :: field_type
         character(len=4), intent(in) :: field_disc
-        character(len=*), intent(in) :: modelz
-        character(len=*), intent(in) :: meshz
-        character(len=*), intent(in) :: cara_elemz
+        character(len=*), intent(in) :: modelZ, meshZ, caraElemZ
         type(NL_DS_Material), intent(in) :: ds_material
         type(NL_DS_Constitutive), intent(in) :: ds_constitutive
-        character(len=*), intent(in) :: disp_curr
-        character(len=*), intent(in) :: strx_curr
-        character(len=*), intent(in) :: varc_curr
+        character(len=*), intent(in) :: dispCurrZ, strxCurrZ, varcCurrZ
         real(kind=8), intent(in) :: time
-        character(len=*), optional, intent(in) :: ligrelz
+        character(len=*), optional, intent(in) :: ligrelZ_
     end subroutine nmextr_comp
 end interface

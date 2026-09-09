@@ -293,11 +293,16 @@ def check_asan(self):
     # setup runtime variables
     self.find_program("ldd")
     libasan = self.where_is_shlib(lib="asan")
-    self.env["ASAN_PRELOAD"] = [libasan]
-    self.env.append_unique("CONFIG_ENV_LD_PRELOAD", self.env["ASAN_PRELOAD"])
+    if libasan:
+        self.env["ASAN_PRELOAD"] = libasan
+        os.environ["LD_PRELOAD"] = libasan
+    if os.environ.get("LD_PRELOAD"):
+        self.env.append_unique("CONFIG_ENV_LD_PRELOAD", f"${{LD_PRELOAD:-{libasan}}}")
+
     self.start_msg("Setting default ASAN_OPTIONS")
     # to use the same defaults in catalo
     self.env["ASAN_DEFAULT_OPTIONS"] = defaults = "detect_odr_violation=1,detect_leaks=0"
-    opts = os.environ.get("ASAN_OPTIONS", f"${{ASAN_OPTIONS:-{defaults}}}")
-    self.env["CONFIG_ENV_ASAN_OPTIONS"] = opts
+    self.env["CONFIG_ENV_ASAN_OPTIONS"] = f"${{ASAN_OPTIONS:-{defaults}}}"
+    if not os.environ.get("ASAN_OPTIONS"):
+        os.environ["ASAN_OPTIONS"] = defaults
     self.end_msg(self.env["CONFIG_ENV_ASAN_OPTIONS"])

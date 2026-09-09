@@ -18,13 +18,14 @@
 !
 subroutine te0097(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
 #include "asterfort/assert.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
@@ -45,26 +46,28 @@ subroutine te0097(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = 'RIGI'
     real(kind=8), parameter :: nharm = 0.d0
     integer(kind=8), parameter :: npgMax = 27
     integer(kind=8) :: ndim, npg, jvWeightDisp, jvShapeDisp, jvDShapeDisp, jvShapePres
     integer(kind=8) :: idim
-    integer(kind=8) :: jvSigm, jvDisp, jvGeom, jvMate, nbsig
+    integer(kind=8) :: jvSigm, jvDisp, jvGeom, jvMaterc, nbsig
     integer(kind=8) :: kpg, isig, iNodeDisp, iNodePres, iOSGS
     integer(kind=8) :: nbNodeDisp, nbNodePres, nbNodeGonf
-    real(kind=8) :: sigmDisp(npgMax*6), anglNaut(3), time, sigmTrac(npgMax)
+    real(kind=8) :: sigmDisp(npgMax*6), time, sigmTrac(npgMax)
     real(kind=8) :: presGaus(npgMax), dispU(3*MT_NNOMAX), dispP(MT_NNOMAX)
     integer(kind=8) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX), vp(MT_NNOMAX), vpi(3, MT_NNOMAX)
     integer(kind=8) :: nbElrefe, iRefePres, iRefeGonf
     character(len=8) :: listElrefe(10), typmod(2)
     aster_logical :: lGonf
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
     nbsig = nbsigm()
     ASSERT(nbsig .le. 6)
 
-! - Current time
+! - Get current time
     time = r8vide()
 
 ! - Some unknonws
@@ -93,14 +96,14 @@ subroutine te0097(option, nomte)
     end if
 
 ! - Get paramers of finite element for displacements
-    call elrefe_info(elrefe=listElrefe(1), fami='RIGI', &
+    call elrefe_info(elrefe=listElrefe(1), fami=fami, &
                      ndim=ndim, nno=nbNodeDisp, npg=npg, &
                      jpoids=jvWeightDisp, jvf=jvShapeDisp, jdfde=jvDShapeDisp)
     ASSERT(npg .le. npgMax)
     ASSERT(nbNodeDisp .le. MT_NNOMAX)
 
 ! - Get paramers of finite element for pres
-    call elrefe_info(elrefe=listElrefe(iRefePres), fami='RIGI', &
+    call elrefe_info(elrefe=listElrefe(iRefePres), fami=fami, &
                      nno=nbNodePres, &
                      jvf=jvShapePres)
     ASSERT(nbNodePres .le. MT_NNOMAX)
@@ -108,7 +111,7 @@ subroutine te0097(option, nomte)
 ! - Get paramers of finite element for gonf
     nbNodeGonf = 0
     if (iRefeGonf .ne. 0) then
-        call elrefe_info(elrefe=listElrefe(iRefeGonf), fami='RIGI', &
+        call elrefe_info(elrefe=listElrefe(iRefeGonf), fami=fami, &
                          nno=nbNodeGonf)
     end if
     ASSERT(nbNodeGonf .le. MT_NNOMAX)
@@ -130,13 +133,20 @@ subroutine te0097(option, nomte)
                 ndim, nbNodeDisp, nbNodeGonf, nbNodePres, iOSGS, &
                 vu, vg, vp, vpi)
 
-! - Get input fields
+! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)
-    call jevech('PMATERC', 'L', jvMate)
+
+! - Current displacements (nodes)
     call jevech('PDEPLAR', 'L', jvDisp)
 
-! - Construct local anisotropic basis
-    call getElemOrientation(ndim, nbNodeDisp, jvGeom, anglNaut)
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nbNodeDisp, jvGeom, materPara%lcsPara)
 
 ! - Get displacements for u, v, w
     dispU = 0.d0
@@ -154,10 +164,11 @@ subroutine te0097(option, nomte)
 
 ! - Compute mechanical stress (without effect of external state variables)
     sigmDisp = 0.d0
-    call sigvmc('RIGI', nbNodeDisp, ndim, nbsig, npg, &
+    call sigvmc(materPara, &
+                nbNodeDisp, ndim, nbsig, npg, &
                 jvWeightDisp, jvShapeDisp, jvDShapeDisp, &
                 zr(jvGeom), dispU, &
-                time, anglNaut, zi(jvMate), nharm, &
+                time, nharm, &
                 sigmDisp)
 
     do kpg = 1, npg

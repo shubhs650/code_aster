@@ -15,18 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mbcine(nno, geom, dff, alpha, beta,&
+    subroutine mbcine(plateOrie, &
+                      nno, geom, dff, &
                       b, jac)
-        integer(kind=8) :: nno
-        real(kind=8) :: geom(3, nno)
-        real(kind=8) :: dff(2, nno)
-        real(kind=8) :: alpha
-        real(kind=8) :: beta
-        real(kind=8) :: b(3, 3, nno)
-        real(kind=8) :: jac
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: nno
+        real(kind=8), intent(in) :: geom(3, nno), dff(2, nno)
+        real(kind=8), intent(out) :: b(3, 3, nno), jac
     end subroutine mbcine
 end interface

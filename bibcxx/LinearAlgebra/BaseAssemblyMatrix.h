@@ -292,6 +292,23 @@ class BaseAssemblyMatrix : public DataStructure {
     }
 
     /**
+     * @brief Zero the Dirichlet BC DOFs in the given field
+     */
+    void zeroDirichletBCDOFs( FieldOnNodesReal &field ) const {
+        if ( !_ccid.exists() )
+            return; // No Dirichlet BCs to apply
+        VectorLong dirBC = getDirichletBCDOFs();
+        if ( dirBC.size() != field.size() + 1 )
+            raiseAsterError( "Field has incompatible size" );
+        field.updateValuePointers();
+        for ( auto i = 0; i < field.size(); i++ ) {
+            if ( dirBC[i] == 1 ) {
+                field[i] = 0.;
+            }
+        }
+    }
+
+    /**
      * @brief Return the scaling factor of Lagrange multipliers
      */
     ASTERDOUBLE getLagrangeScaling() const;

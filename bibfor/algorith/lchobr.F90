@@ -16,9 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine lchobr(toler, itmax, mod, nbmat, materf, &
-                  nr, nvi, depsm, sigm, vim, &
-                  seuil, vp, vecp, icomp, sigp, &
+subroutine lchobr(toler, itmax, nbmat, materf, &
+                  vim, &
+                  vp, cutLevel, sigp, &
                   vip, irtet)
     implicit none
 #include "asterc/r8dgrd.h"
@@ -32,10 +32,9 @@ subroutine lchobr(toler, itmax, mod, nbmat, materf, &
 #include "asterfort/trace.h"
 #include "asterfort/utmess.h"
 #include "blas/ddot.h"
-    integer(kind=8) :: itmax, nbmat, nr, nvi, icomp, irtet
-    real(kind=8) :: toler, materf(nbmat, 2), depsm(6), sigm(6)
-    real(kind=8) :: vim(*), sigp(6), vip(*), seuil, vp(3), vecp(3, 3)
-    character(len=8) :: mod
+    integer(kind=8) :: itmax, nbmat, cutLevel, irtet
+    real(kind=8) :: toler, materf(nbmat, 2)
+    real(kind=8) :: vim(*), sigp(6), vip(*), vp(3)
 ! ======================================================================
 ! --- LOI DE COMPORTEMENT DE TYPE HOEK BROWN MODIFIE -------------------
 ! --- *ELASTICITE ISOTROPE ---------------------------------------------
@@ -58,7 +57,6 @@ subroutine lchobr(toler, itmax, mod, nbmat, materf, &
 ! --- : SEUIL  : VARIABLE SEUIL ELASTIQUE ------------------------------
 ! --- : VP     : VALEURS PROPRES DU DEVIATEUR ELASTIQUE ----------------
 ! --- : VECP   : VECTEURS PROPRES DU DEVIATEUR ELASTIQUE ---------------
-! --- : ICOMP  : COMPTEUR POUR LE REDECOUPAGE DU PAS DE TEMPS ----------
 ! OUT : SIGP   : CONTRAINTES A L'INSTANT COURANT -----------------------
 ! --- : VIP    : VARIABLES INTERNES A L'INSTANT COURANT ----------------
 ! --- : IRTET  : CONTROLE DU REDECOUPAGE DU PAS DE TEMPS ---------------
@@ -145,7 +143,7 @@ subroutine lchobr(toler, itmax, mod, nbmat, materf, &
 ! -- ON OBTIENT DGAMMA_P NEGATIF : ON ESSAIE DE DECOUPER LE PAS DE TEMPS
 ! ======================================================================
     if (dgnp .lt. 0.d0) then
-        if ((icomp .eq. 0) .or. (icomp .eq. 1)) then
+        if ((cutLevel .eq. 0) .or. (cutLevel .eq. 1)) then
             call utmess('I', 'ALGORITH4_57')
             iteri = 1
             goto 100
@@ -194,7 +192,7 @@ subroutine lchobr(toler, itmax, mod, nbmat, materf, &
 ! ======================================================================
 ! --------- ON ESSAIE DE DECOUPER LE PAS DE TEMPS ----------------------
 ! ======================================================================
-        if ((icomp .eq. 0) .or. (icomp .eq. 1)) then
+        if ((cutLevel .eq. 0) .or. (cutLevel .eq. 1)) then
             call utmess('I', 'ALGORITH4_59')
             iteri = 1
             goto 100

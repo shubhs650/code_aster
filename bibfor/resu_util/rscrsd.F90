@@ -129,7 +129,7 @@ subroutine rscrsd(baseZ, resultNameZ, resultTypeZ, nbStore)
 !     ------------------------------------------------------------------
 !                      For mechanic
 !     ------------------------------------------------------------------
-    integer(kind=8), parameter :: nbFieldMeca = 134
+    integer(kind=8), parameter :: nbFieldMeca = 137
     character(len=16), parameter :: fieldMeca(nbFieldMeca) = (/ &
                                     'DEPL            ', 'VITE            ', 'ACCE            ', &
                                     'DEPL_ABSOLU     ', 'VITE_ABSOLU     ', 'ACCE_ABSOLU     ', &
@@ -181,7 +181,8 @@ subroutine rscrsd(baseZ, resultNameZ, resultTypeZ, nbStore)
                                     'HHO_DEPL        ', 'HHO_VITE        ', 'HHO_ACCE        ', &
                                     'PRES_NOEU       ', 'DEPL_ELGA       ', 'TEMP_ELGA       ', &
                                     'RESI_NOEU       ', 'RESI_RELA_NOEU  ', &
-                                    'ROC1_ELNO       ', 'ROC2_ELNO       '/)
+                                    'ROC1_ELNO       ', 'ROC2_ELNO       ', &
+                                    'SAUT_ELGA       ', 'SAUT_ELNO       ', 'SAUT_NOEU       '/)
 
 !     ------------------------------------------------------------------
 !                      For loads (EVOl_CHAR)

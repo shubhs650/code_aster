@@ -16,42 +16,28 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine cargri(lexc, densit, distn, dir11)
+subroutine cargri(plateCara, plateOrie, &
+                  densit, distn, dir11)
+!
+    use plate_type
     implicit none
+!
+#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "jeveux.h"
-#include "asterc/r8dgrd.h"
-#include "asterc/r8vide.h"
-#include "asterfort/jevech.h"
-    aster_logical :: lexc
-    real(kind=8) :: densit, distn, dir11(3)
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(out) :: densit, distn, dir11(3)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !         LECTURE DES CARACTERISTIQUES DES GRILLES
 !
-!  IN  LEXC : TRUE  SI GRILLE_EXCENTREE
-!             FALSE SI GRILLE_MEMBRANE
-!  OUT DENSIT : DENSITE D'ARMATURE
-!  OUT DISTN  : EXCENTREMENT ( R8VIDE() SI LEXC = .FALSE.)
-!  OUT DIR11  : DIRECTION DES ARMATURE
+! --------------------------------------------------------------------------------------------------
 !
-!     ------------------------------------------------------------------
-    real(kind=8) :: alpha, beta
-    integer(kind=8) :: icacoq
-!
-    call jevech('PCACOQU', 'L', icacoq)
-!
-    densit = zr(icacoq)
-    alpha = zr(icacoq+1)*r8dgrd()
-    beta = zr(icacoq+2)*r8dgrd()
-    dir11(1) = cos(beta)*cos(alpha)
-    dir11(2) = cos(beta)*sin(alpha)
-    dir11(3) = -sin(beta)
-!
-    if (lexc) then
-        distn = zr(icacoq+3)
-    else
-        distn = r8vide()
-    end if
+    densit = plateCara%section
+    distn = plateCara%offset
+    dir11 = plateOrie%gridDir11
 !
 end subroutine

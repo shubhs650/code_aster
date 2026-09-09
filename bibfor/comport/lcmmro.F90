@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine lcmmro(BEHinteg, omp, nvi, vind, vinf)
+subroutine lcmmro(BEHInteg, omp, nvi, vind, vinf)
 !
     use Behaviour_type
 !
@@ -28,7 +28,7 @@ subroutine lcmmro(BEHinteg, omp, nvi, vind, vinf)
 !
 !     Stockage variables internes rotation reseau
 !     ----------------------------------------------------------------
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: i, j, nvi, k
     real(kind=8) :: omp(3), dtheta, iden(3, 3), nax(3, 3), q(3, 3)
     real(kind=8) :: omegap(3, 3), omegae(3, 3), omega(3, 3), dq(3, 3)
@@ -45,7 +45,7 @@ subroutine lcmmro(BEHinteg, omp, nvi, vind, vinf)
 !
     do i = 1, 3
         do j = 1, 3
-            l(i, j) = BEHinteg%behavESVA%behavESVAGeom%gradVelo(3*(i-1)+j)
+            l(i, j) = BEHInteg%behavESVA%behavESVAGeom%gradVelo(3*(i-1)+j)
         end do
     end do
     do i = 1, 3

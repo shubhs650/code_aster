@@ -56,6 +56,12 @@ def assemblage_ops(self, MODELE, NUME_DDL, INFO, **args):
     info = INFO
     # Le nom de la variable doit être obligatoirement le nom de la commande
 
+    # Initialisation de rigel et masel
+    rigel = None
+    masel = None
+    lrigel = 0
+    lmasel = 0
+
     if numeddl in self.sdprods:
         # Si le concept numeddl est dans self.sdprods,
         # il doit être produit par la macro,
@@ -72,9 +78,6 @@ def assemblage_ops(self, MODELE, NUME_DDL, INFO, **args):
         # sans aucune charge (peut-être le cas en dynamique)
         if VECT_ASSE and not CHARGE:
             UTMESS("A", "MATRICE0_6")
-
-    lrigel = 0
-    lmasel = 0
 
     # Assemblage des matrices
     if MATR_ASSE:

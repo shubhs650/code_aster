@@ -19,13 +19,9 @@
 !
 !
 interface
-    subroutine SetResiRefe(ds_conv   , type_ ,&
-                           user_para_, cmp_name_, l_refe_test_)
+    subroutine SetResiRefe(mesh, ds_conv)
         use NonLin_Datastructure_type
+        character(len=8), intent(in):: mesh
         type(NL_DS_Conv), intent(inout) :: ds_conv
-        character(len=*), optional, intent(in) :: type_
-        character(len=*), optional, intent(in) :: cmp_name_
-        real(kind=8), optional, intent(in) :: user_para_
-        aster_logical, optional, intent(in) :: l_refe_test_
     end subroutine SetResiRefe
 end interface

@@ -85,6 +85,7 @@ subroutine w155ex(nomres, resu, nbordr, liordr)
     call getvtx(motfac, 'NOM_CHAM', iocc=1, nbval=10, vect=nomsym, &
                 nbret=nbsym)
     ASSERT(nbsym .gt. 0)
+    nucou = 0
     if (motfac .eq. 'EXTR_COQUE' .or. motfac .eq. 'EXTR_TUYAU') then
         call getvis(motfac, 'NUME_COUCHE', iocc=1, scal=nucou, nbret=ibid)
         call getvtx(motfac, 'NIVE_COUCHE', iocc=1, scal=nicou, nbret=ibid)

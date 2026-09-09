@@ -182,9 +182,6 @@ subroutine w039ca(ifi, form)
             titre = 'Chargement de SIGM_INTERNE'
             call w039c1(charge//'.CHME.SIINT', ifi, form, ligrel, titre)
 !
-            titre = 'Chargement de FORCE_ELEC'
-            call w039c1(charge//'.CHME.FELEC', ifi, form, ligrel, titre)
-!
             titre = 'Chargement de FLUX_THM_REP'
             call w039c1(charge//'.CHME.FLUX', ifi, form, ligrel, titre)
 !

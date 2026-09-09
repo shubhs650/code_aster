@@ -15,15 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine bsthpl(nomte, bsigth, indith)
-        character(len=16) :: nomte
-        real(kind=8) :: bsigth(24)
-        aster_logical :: indith
+    subroutine bsthpl(plateCara, plateOrie, &
+                      jvGeom, nomte, xyzl, &
+                      bsigth)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(plateCara_Para), intent(in) :: plateCara
+        integer(kind=8), intent(in) :: jvGeom
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: xyzl(3, *)
+        real(kind=8), intent(out) :: bsigth(24)
     end subroutine bsthpl
 end interface

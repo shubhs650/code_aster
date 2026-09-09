@@ -18,6 +18,8 @@
 !
 subroutine te0286(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -25,7 +27,6 @@ subroutine te0286(option, nomte)
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/ethdst.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
@@ -45,54 +46,64 @@ subroutine te0286(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
-    real(kind=8) :: sigmEner(162), bsigmEner(81), anglNaut(3)
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8), parameter :: zero = 0.d0
+    real(kind=8) :: sigmEner(162), bsigmEner(81)
     real(kind=8) :: time, nharm
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
-    integer(kind=8) :: jvMater, jvGeom, jvDisp, jvHarm
-    integer(kind=8) :: i, jvEner
-    integer(kind=8) :: iret, ndim2
+    integer(kind=8) :: jvGeom, jvHarmon, jvMaterc, jvDisp
+    integer(kind=8) :: jvEner
+    integer(kind=8) :: i, iret
     integer(kind=8) :: nbsig, ndim, nno, npg
     real(kind=8) :: enerTherTher, enerPote
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
                      jpoids=jvGaussWeight, jvf=jvBaseFunc, jdfde=jvDBaseFunc)
-!
-    ndim2 = 2
+
+! - Initializations
     if (lteatt('FOURIER', 'OUI')) then
         ndim = 3
     end if
-    time = r8vide()
     nbsig = nbsigm()
     ASSERT(nbsig .le. 6)
     ASSERT(npg .le. 27)
 
+! - Get Fourier mode
+    nharm = 0.d0
+    call tecach('NNO', 'PHARMON', 'L', iret, iad=jvHarmon)
+    if (jvHarmon .eq. 0) then
+        nharm = zero
+    else
+        nharm = dble(zi(jvHarmon))
+    end if
+
 ! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)
 
-! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
 
-! - Orthotropic parameters
-    call getElemOrientation(ndim2, nno, jvGeom, anglNaut)
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Get current time
+    time = r8vide()
 
 ! - Current displacements (nodes)
     call jevech('PDEPLAR', 'L', jvDisp)
 
-! - Get Fourier mode
-    nharm = 0.d0
-    call tecach('NNO', 'PHARMON', 'L', iret, iad=jvHarm)
-    if (jvHarm .ne. 0) then
-        nharm = dble(zi(jvHarm))
-    end if
-
 ! - Compute "real" stress tensor at Gauss points
-    call simtep(fami, nno, ndim, nbsig, npg, &
+    call simtep(materPara, &
+                nno, ndim, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 zr(jvGeom), zr(jvDisp), &
-                time, anglNaut, zi(jvMater), nharm, &
+                time, nharm, &
                 sigmEner)
 
 ! - CALCUL DU VECTEUR DES FORCES INTERNES (BT*SIGMA)
@@ -101,9 +112,10 @@ subroutine te0286(option, nomte)
                 bsigmEner)
 
 ! - CALCUL DU TERME EPSTH_T*D*EPSTH
-    call ethdst(fami, nno, ndim, nbsig, npg, &
+    call ethdst(materPara, &
+                nno, ndim, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
-                zr(jvGeom), time, anglNaut, zi(jvMater), &
+                zr(jvGeom), time, &
                 enerTherTher)
 
 ! - CALCUL DE L'ENERGIE POTENTIELLE : 1/2*UT*K*U - UT*FTH + 1/2*EPSTHT*D*EPSTH

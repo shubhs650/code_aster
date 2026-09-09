@@ -15,73 +15,76 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0423(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/dxbsig.h"
 #include "asterfort/dxefg2.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES VECTEURS ELEMENTAIRES
-!                          POUR LES ELEMENTS DE PLAQUE GENERALISEE
-!                          DKTG, DKQG, T3GG, Q4GG
-!                          OPTIONS : 'CHAR_MECA_TEMP_R'
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: i, jgeom, jcaco, jvecg
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: DKTG
+!
+! Options: CHAR_MECA_TEMP_R
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: nno, i, jvGeom, jvVect
     real(kind=8) :: pgl(3, 3), xyzl(3, 4)
-    real(kind=8) :: bsigmEner(24), sigt(32)
-    character(len=16) :: optio2
-! ----------------------------------------------------------------------
+    real(kind=8) :: forcNoda(24), sigt(32)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, jpoids=ipoids, &
-                     jvf=ivf, jdfde=idfdx, jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PGEOMER', 'L', jgeom)
-    call jevech('PCACOQU', 'L', jcaco)
-    call jevech('PVECTUR', 'E', jvecg)
-!
-! --- DETERMINATION DE LA MATRICE DE PASSAGE DU REPERE GLOBAL
-! --- AU REPERE LOCAL A L'ELEMENT
-!     ---------------------------
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
-! --- DETERMINATION DES COORDONNEES DES CONNECTIVITES DE L'ELEMENT
-! --- DANS SON REPERE LOCAL
-!     ---------------------
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-! --- CALCUL DES EFFORTS GENERALISES D'ORIGINE THERMIQUE
-! --- AUX POINTS D'INTEGRATION
-!     ------------------------
-!
-    call dxefg2(pgl, sigt)
-!
-! --- CALCUL DES EFFORTS INTERNES D'ORIGINE THERMIQUE
-! --- (I.E. SOMME_VOL(BT_SIG))
-!     ------------------------
-    optio2 = 'FORC_NODA'
-    call dxbsig(nomte, xyzl, pgl, sigt, bsigmEner, &
-                optio2)
-!
-! --- AFFECTATION DU VECTEUR DES FORCES ELEMENTAIRES EN SORTIE DU TE
-!     --------------------------------------------------------------
+    call elrefe_info(fami='RIGI', nno=nno)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! - CALCUL DES EFFORTS GENERALISES D'ORIGINE THERMIQUE AUX POINTS D'INTEGRATION
+    call dxefg2(plateCara, plateOrie, &
+                pgl, sigt)
+
+! - CALCUL DES EFFORTS INTERNES D'ORIGINE THERMIQUE
+    call dxbsig(plateCara, plateOrie, &
+                nomte, 'FORC_NODA', &
+                xyzl, pgl, sigt, &
+                forcNoda)
+
+! - AFFECTATION DU VECTEUR DES FORCES ELEMENTAIRES
+    call jevech('PVECTUR', 'E', jvVect)
     do i = 1, nno*6
-        zr(jvecg+i-1) = bsigmEner(i)
+        zr(jvVect+i-1) = forcNoda(i)
     end do
 !
 end subroutine

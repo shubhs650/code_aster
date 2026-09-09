@@ -27,11 +27,12 @@ subroutine mmgeom(ndim, &
     implicit none
 !
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmcaln.h"
 !
     integer(kind=8), intent(in) :: ndim, nne, nnm
     real(kind=8), intent(in) :: ffe(9), ffm(9)
-    real(kind=8), intent(in) :: elem_slav_coor(9, 3), elem_mast_coor(9, 3)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D), elem_mast_coor(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: tau1(3), tau2(3)
     real(kind=8), intent(out) :: norm(3), mprojn(3, 3), mprojt(3, 3)
     real(kind=8), intent(out) :: geomm(3), geome(3)
@@ -72,7 +73,7 @@ subroutine mmgeom(ndim, &
 !
     do idim = 1, ndim
         do inoe = 1, nne
-            geome(idim) = geome(idim)+ffe(inoe)*elem_slav_coor(inoe, idim)
+            geome(idim) = geome(idim)+ffe(inoe)*elem_slav_coor(idim, inoe)
         end do
     end do
 !
@@ -80,7 +81,7 @@ subroutine mmgeom(ndim, &
 !
     do idim = 1, ndim
         do inom = 1, nnm
-            geomm(idim) = geomm(idim)+ffm(inom)*elem_mast_coor(inom, idim)
+            geomm(idim) = geomm(idim)+ffm(inom)*elem_mast_coor(idim, inom)
         end do
     end do
 !

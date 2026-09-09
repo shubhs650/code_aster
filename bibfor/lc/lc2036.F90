@@ -18,36 +18,31 @@
 ! aslint: disable=W1504,W0104
 !
 subroutine lc2036(fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, neps, &
-                  epsm, deps, nsig, sigm, vim, &
-                  option, angmas, sigp, vip, &
-                  typmod, icomp, nvi, ndsde, &
+                  instam, instap, neps, &
+                  epsm, deps, nsig, sigm, nvi, vim, &
+                  option, sigp, vip, &
+                  typmod, ndsde, &
                   dsidep, codret)
 !
     implicit none
 !
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/eibex.h"
 !
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
+    integer(kind=8), intent(in) :: imate, nvi
+    real(kind=8), intent(in) :: instam, instap
     real(kind=8), intent(in) :: epsm(*)
     real(kind=8), intent(in) :: deps(*)
     real(kind=8), intent(in) :: sigm(*)
-    real(kind=8), intent(in) :: vim(*)
+    real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(out) :: sigp(*)
-    real(kind=8), intent(out) :: vip(*)
+    real(kind=8), intent(out) :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
-    integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(out) :: dsidep(*)
     integer(kind=8), intent(out) :: codret
     integer(kind=8), intent(in) :: neps

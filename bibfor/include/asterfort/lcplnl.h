@@ -19,16 +19,16 @@
 !
 interface
     subroutine lcplnl(BEHinteg, &
-                      fami, kpg, ksp, rela_comp, toler,&
-                      itmax, mod, imat, nmat, materd,&
-                      materf, nr, nvi, timed, timef,&
-                      deps, epsd, sigd, vind, compor,&
-                      nbcomm, cpmono, pgl, nfs, nsg,&
-                      toutms, hsr, sigf, vinf, icomp,&
+                      fami, kpg, ksp, relaComp, toler, &
+                      itmax, mod, imat, nmat, materd, &
+                      materf, nr, nvi, timed, timef, &
+                      deps, epsd, sigd, vind, compor, &
+                      nbcomm, cpmono, pgl, nfs, nsg, &
+                      toutms, hsr, sigf, vinf, &
                       codret, drdy, carcri)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
-        common/tdim/ ndt,ndi
+        common/tdim/ndt, ndi
         integer(kind=8) :: ndt
         integer(kind=8) :: ndi
         integer(kind=8) :: nsg
@@ -51,7 +51,7 @@ interface
         real(kind=8) :: epsd(*)
         real(kind=8) :: sigd(6)
         real(kind=8) :: vind(*)
-        character(len=16), intent(in) :: rela_comp
+        character(len=16), intent(in) :: relaComp
         character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         integer(kind=8) :: nbcomm(nmat, 3)
@@ -61,7 +61,6 @@ interface
         real(kind=8) :: hsr(nsg, nsg)
         real(kind=8) :: sigf(6)
         real(kind=8) :: vinf(*)
-        integer(kind=8) :: icomp
         integer(kind=8) :: codret
         real(kind=8) :: drdy(nr, nr)
     end subroutine lcplnl

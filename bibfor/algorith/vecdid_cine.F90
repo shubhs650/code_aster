@@ -31,7 +31,6 @@ subroutine vecdid_cine(charge, infoch, numedd, cncine)
 #include "asterfort/jexnom.h"
 #include "asterfort/jexnum.h"
 #include "asterfort/jeveuo.h"
-#include "asterfort/vtcreb.h"
 #include "asterfort/wkvect.h"
 !
 !

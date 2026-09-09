@@ -15,55 +15,70 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine w190ca(modele, carele, chmar1, chefge, chamfer, chefge0, chmar2)
+!
+subroutine w190ca(model, caraElem, chmar1, chefge, chamfer, chefge0, chmar2)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
+!
 #include "asterfort/calcul.h"
 #include "asterfort/exlim3.h"
-#include "asterfort/mecara.h"
-    character(len=8) :: modele, carele
-    character(len=19) :: chmar1, chmar2, chefge, chamfer, chefge0
+#include "asterfort/setStructFields.h"
 !
-! ----------------------------------------------------------------------
-!     CALCUL DE L'OPTION VERIFICATION DE FERRAILLAGE
+    character(len=8), intent(in) :: model, caraElem
+    character(len=19), intent(in) :: chmar1, chmar2, chefge, chamfer, chefge0
 !
-! IN  MODELE  : NOM DU MODELE
-! IN  CARELE  : CARACTERISTIQUES COQUES
-! IN  CHMAR1  : CHAMP DE MAR1_R
-! IN  CHEFGE  : CHAMP DE EFGE_ELNO
-! IN  CHEFGE0 : CHAMP DE EFGE_ELNO DE REFERENCE
-! IN  CHAMFER : CHAMP DE FERRAILLAGE
-! OUT CHMAR2  : RESULTAT DU CALCUL DE LA MARGE MECANIQUE
+! --------------------------------------------------------------------------------------------------
 !
-    character(len=8) :: lpain(6), lpaout(1)
-    character(len=16) :: option
-    character(len=19) :: chcara(18)
-    character(len=19) :: lchin(6), lchout(2), ligrel
+!  VERI_FERRAILLAGE
 !
-    call exlim3('AFFE', 'G', modele, ligrel)
-    option = 'MARG_ELEM'
+! --------------------------------------------------------------------------------------------------
 !
-    call mecara(carele, chcara)
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    character(len=16), parameter:: option = 'MARG_ELEM'
+    character(len=19) :: ligrel
 !
-    lpain(1) = 'PCACOQU'
-    lchin(1) = chcara(7)
-    lpain(2) = 'PVFER1'
-    lchin(2) = chmar1
-    lpain(3) = 'PEFFORR'
-    lchin(3) = chefge
-    lpain(4) = 'PCAGEPO'
-    lchin(4) = chcara(5)
-    lpain(5) = 'PEFFOR0'
-    lchin(5) = chefge0
-    lpain(6) = 'PVFER0'
-    lchin(6) = chamfer
+! --------------------------------------------------------------------------------------------------
 !
-!
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
+
+    call exlim3('AFFE', 'G', model, ligrel)
+
+! - Set input fields
+    nbFieldIn = 1
+    lpain(nbFieldIn) = 'PVFER1'
+    lchin(nbFieldIn) = chmar1
+    nbFieldIn = nbFieldIn+1
+    lpain(nbFieldIn) = 'PEFFORR'
+    lchin(nbFieldIn) = chefge
+    nbFieldIn = nbFieldIn+1
+    lpain(nbFieldIn) = 'PEFFOR0'
+    lchin(nbFieldIn) = chefge0
+    nbFieldIn = nbFieldIn+1
+    lpain(nbFieldIn) = 'PVFER0'
+    lchin(nbFieldIn) = chamfer
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Set output field
     lpaout(1) = 'PVFER2'
     lchout(1) = chmar2
-!
-    call calcul('S', option, ligrel, 6, lchin, &
-                lpain, 1, lchout, lpaout, 'G', &
-                'OUI')
+
+! - Compute
+    call calcul('S', option, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'G', 'OUI')
 !
 end subroutine

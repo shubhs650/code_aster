@@ -45,6 +45,7 @@ carelem = AFFE_CARA_ELEM(
         GROUP_MA_SEG2=("RESSORT_X", "RESSORT_Y", "RESSORT_Z", "RESSORT_RX", "RESSORT_RY"),
         VALE=(K, K, K, K, K),
         GROUP_NO_CENTRE=("centre_X", "centre_Y", "centre_Z", "centre_RX", "centre_RY"),
+        METHODE="UNIFORME",
     ),
     DISCRET=_F(GROUP_MA="centre_ALL", CARA="K_TR_D_N", VALE=(K0, K0, K0, K0, K0, K0)),
 )

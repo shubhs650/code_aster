@@ -28,28 +28,13 @@ import numpy.ma as ma
 
 from ..MedUtils.MedConverter import fromMedFileField1TSCells, toMedCouplingField
 from ..Objects import SimpleFieldOnCellsReal
-from ..Objects.Serialization import InternalStateBuilder
 from ..Utilities import injector
 from .component import ComponentOnCells
 
 
-class SFoCStateBuilder(InternalStateBuilder):
-    """Class that returns the internal state of a *SimpleFieldOnCells*."""
-
-    def restore(self, field):
-        """Restore the *DataStructure* content from the previously saved internal
-        state.
-
-        Arguments:
-            field (*DataStructure*): The *DataStructure* object to be restored.
-        """
-        super().restore(field)
-        field.build()
-
-
 @injector(SimpleFieldOnCellsReal)
 class ExtendedSimpleFieldOnCellsReal:
-    internalStateBuilder = SFoCStateBuilder
+    cata_sdj = "SD.sd_cham_elem_s.sd_cham_elem_s"
 
     @property
     def _cache(self):

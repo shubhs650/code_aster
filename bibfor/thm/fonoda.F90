@@ -17,20 +17,18 @@
 ! --------------------------------------------------------------------
 !
 subroutine fonoda(ds_thm, &
-                  jv_mater, ndim, fnoevo, &
+                  ndim, fnoevo, &
                   mecani, press1, press2, tempe, second, &
                   dimdef, dimcon, dt, congem, congep, &
                   r)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/thmEvalGravity.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    integer(kind=8), intent(in) :: jv_mater
     integer(kind=8), intent(in) :: ndim
     aster_logical, intent(in) :: fnoevo
     integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
@@ -49,7 +47,6 @@ subroutine fonoda(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  jv_mater         : coded material address
 ! In  ndim             : dimension of element (2 ou 3)
 ! In  fnoevo           : .true. if compute in non-linear operator (transient terms)
 ! In  mecani           : parameters for mechanic
@@ -81,7 +78,7 @@ subroutine fonoda(ds_thm, &
 !
 ! - Compute gravity
 !
-    call thmEvalGravity(jv_mater, 0.d0, gravity)
+    call thmEvalGravity(ds_thm, 0.d0, gravity)
 !
 ! - Get active physics
 !

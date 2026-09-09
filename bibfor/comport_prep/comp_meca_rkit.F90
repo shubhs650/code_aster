@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_meca_rkit(keywordfact, iocc, rela_comp, kit_comp, l_etat_init_)
+subroutine comp_meca_rkit(factorKeyword, iFactorKeyword, relaComp, kitComp)
 !
     implicit none
 !
@@ -27,11 +27,10 @@ subroutine comp_meca_rkit(keywordfact, iocc, rela_comp, kit_comp, l_etat_init_)
 #include "asterfort/lxlgut.h"
 #include "asterfort/thm_kit_read.h"
 !
-    character(len=16), intent(in) :: keywordfact
-    integer(kind=8), intent(in) :: iocc
-    character(len=16), intent(in) :: rela_comp
-    character(len=16), intent(out) :: kit_comp(4)
-    aster_logical, optional, intent(in) :: l_etat_init_
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
+    character(len=16), intent(in) :: relaComp
+    character(len=16), intent(out) :: kitComp(4)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -41,41 +40,36 @@ subroutine comp_meca_rkit(keywordfact, iocc, rela_comp, kit_comp, l_etat_init_)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  keywordfact      : factor keyword to read
-! In  iocc             : factor keyword index
-! In  rela_comp        : comportment relation
-! Out kit_comp         : KIT comportment
-! In  l_etat_init      : .true. if initial state is defined
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
+! In  relaComp         : behaviour (RELATION keyword)
+! In  kitComp          : KIT behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nocc
+    integer(kind=8) :: nbFactorKeyword
     character(len=16) :: rela_thmc, rela_hydr, rela_meca, rela_ther
     character(len=16) :: rela_flua, rela_plas, rela_cpla, rela_coup
     character(len=16) :: rela_cg(2)
     character(len=16) :: metaPhas, metaRela, relaCompMeta, metaGlob, metaPhasUser
-    aster_logical :: l_etat_init, lIsot, lCine
+    aster_logical :: lIsot, lCine
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    kit_comp(1:4) = 'VIDE'
-    l_etat_init = .false.
-    if (present(l_etat_init_)) then
-        l_etat_init = l_etat_init_
-    end if
+    kitComp = 'VIDE'
 !
-    if (rela_comp .eq. 'KIT_META') then
+    if (relaComp .eq. 'KIT_META') then
 ! ----- Get phase
         metaPhasUser = 'VIDE'
-        call getvtx(keywordfact, 'RELATION_KIT', iocc=iocc, &
-                    nbval=1, vect=metaPhasUser, nbret=nocc)
-        ASSERT(nocc .eq. 1)
+        call getvtx(factorKeyword, 'RELATION_KIT', iocc=iFactorKeyword, &
+                    nbval=1, vect=metaPhasUser, nbret=nbFactorKeyword)
+        ASSERT(nbFactorKeyword .eq. 1)
 
 ! ----- Using list of phases for mechanical  behaviours
         metaPhas = metaPhasUser(1:lxlgut(metaPhasUser))//"_MECA"
 
 ! ----- Get behaviour
-        call getvtx(keywordfact, 'RELATION', iocc=iocc, scal=relaCompMeta)
+        call getvtx(factorKeyword, 'RELATION', iocc=iFactorKeyword, scal=relaCompMeta)
 
 ! ----- Internal state variables (by phase)
         metaRela = 'VIDE'
@@ -120,32 +114,32 @@ subroutine comp_meca_rkit(keywordfact, iocc, rela_comp, kit_comp, l_etat_init_)
         else if ((relaCompMeta(11:13) .eq. 'RE') .or. (relaCompMeta(12:14) .eq. 'RE')) then
             metaGlob(12:16) = '_RE  '
         end if
-        kit_comp(1) = metaPhas
-        kit_comp(2) = metaRela
-        kit_comp(3) = metaGlob
+        kitComp(1) = metaPhas
+        kitComp(2) = metaRela
+        kitComp(3) = metaGlob
 
-    else if (rela_comp .eq. 'KIT_DDI') then
-        call ddi_kit_read(keywordfact, iocc, l_etat_init, &
+    else if (relaComp .eq. 'KIT_DDI') then
+        call ddi_kit_read(factorKeyword, iFactorKeyword, &
                           rela_flua, rela_plas, rela_cpla, rela_coup)
-        kit_comp(1) = rela_flua
-        kit_comp(2) = rela_plas
-        kit_comp(3) = rela_coup
-        kit_comp(4) = rela_cpla
+        kitComp(1) = rela_flua
+        kitComp(2) = rela_plas
+        kitComp(3) = rela_coup
+        kitComp(4) = rela_cpla
 
-    else if (rela_comp .eq. 'KIT_CG') then
-        call getvtx(keywordfact, 'RELATION_KIT', iocc=iocc, &
-                    nbval=2, vect=rela_cg, nbret=nocc)
-        ASSERT(nocc .eq. 2)
-        kit_comp(1) = rela_cg(1)
-        kit_comp(2) = rela_cg(2)
+    else if (relaComp .eq. 'KIT_CG') then
+        call getvtx(factorKeyword, 'RELATION_KIT', iocc=iFactorKeyword, &
+                    nbval=2, vect=rela_cg, nbret=nbFactorKeyword)
+        ASSERT(nbFactorKeyword .eq. 2)
+        kitComp(1) = rela_cg(1)
+        kitComp(2) = rela_cg(2)
 
-    elseif ((rela_comp(1:5) .eq. 'KIT_H') .or. (rela_comp(1:6) .eq. 'KIT_TH')) then
-        call thm_kit_read(keywordfact, iocc, &
-                          rela_comp, rela_thmc, rela_hydr, rela_meca, rela_ther)
-        kit_comp(1) = rela_meca
-        kit_comp(2) = rela_hydr
-        kit_comp(3) = rela_ther
-        kit_comp(4) = rela_thmc
+    elseif ((relaComp(1:5) .eq. 'KIT_H') .or. (relaComp(1:6) .eq. 'KIT_TH')) then
+        call thm_kit_read(factorKeyword, iFactorKeyword, &
+                          relaComp, rela_thmc, rela_hydr, rela_meca, rela_ther)
+        kitComp(1) = rela_meca
+        kitComp(2) = rela_hydr
+        kitComp(3) = rela_ther
+        kitComp(4) = rela_thmc
 
     else
         ASSERT(ASTER_FALSE)

@@ -22,7 +22,7 @@
 #ifndef NLDEF_H_
 #define NLDEF_H_
 
-#define _NL_NBPAR 81
+#define _NL_NBPAR 87
 
 #define _ANG_INIT 1
 #define _ANG_ROTA 2
@@ -105,10 +105,15 @@
 #define _BUCKLING_AMOR 79
 #define _BUCKLING_AMOR_IN 80
 #define _NB_DIS_CHOC_ELAS 81
-
+#define _NB_DIS_ECRO_CINE 82
+#define _ECRCIN_KELA 83
+#define _ECRCIN_LIMY 84
+#define _ECRCIN_KCIN 85
+#define _ECRCIN_PUIS 86
+#define _ECRCIN_LIMU 87
 
 ! Nombre de non linéarités
-#define _NL_NB_TYPES     9
+#define _NL_NB_TYPES     10
 ! Les non linéarités
 #define NL_CHOC            1
 #define NL_BUCKLING        2
@@ -119,6 +124,7 @@
 #define NL_FX_RELATIONSHIP 7
 #define NL_FV_RELATIONSHIP 8
 #define NL_DIS_CHOC_ELAS   9
+#define NL_DIS_ECRO_CINE  10
 ! Le nombre de variables internes
 #define NBVARINT_CHOC 20
 #define NBVARINT_FLAM 12
@@ -129,5 +135,6 @@
 #define NBVARINT_FXRL 3
 #define NBVARINT_FVRL 3
 #define NBVARINT_DCG  2
+#define NBVARINT_DECI  36
 
 #endif

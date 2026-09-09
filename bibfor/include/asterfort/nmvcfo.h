@@ -15,20 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmvcfo(type_comp, model    , mater    , mateco, cara_elem, compor,&
-                      varc_refe, hval_incr, vect_elem)
-        character(len=1), intent(in) :: type_comp
+    subroutine nmvcfo(poum, model, materField, materCode, caraElem, compor, &
+                      varcRefe, hval_incr, vectElem)
+        character(len=1), intent(in) :: poum
         character(len=24), intent(in) :: model
-        character(len=24), intent(in) :: mateco
-        character(len=24), intent(in) :: mater
-        character(len=24), intent(in) :: varc_refe
-        character(len=24), intent(in) :: cara_elem
+        character(len=24), intent(in) :: materField, materCode, caraElem
+        character(len=24), intent(in) :: varcRefe
         character(len=24), intent(in) :: compor
         character(len=19), intent(in) :: hval_incr(*)
-        character(len=19), intent(in) :: vect_elem
+        character(len=19), intent(in) :: vectElem
     end subroutine nmvcfo
 end interface

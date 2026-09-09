@@ -15,16 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine cargri(lexc, densit, distn, dir11)
-        aster_logical :: lexc
-        real(kind=8) :: densit
-        real(kind=8) :: distn
-        real(kind=8) :: dir11(3)
+    subroutine cargri(plateCara, plateOrie, &
+                      densit, distn, dir11)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8), intent(out) :: densit, distn, dir11(3)
     end subroutine cargri
 end interface

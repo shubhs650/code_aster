@@ -18,7 +18,7 @@
 
 subroutine pjxxco(typcal, method, lcorre, isole, resuin, &
                   cham1, moa1, moa2, noma1, noma2, &
-                  cnref, noca)
+                  cnref, caraElem)
 !
 !
 ! --------------------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ subroutine pjxxco(typcal, method, lcorre, isole, resuin, &
 !
     aster_logical :: isole
     character(len=4) :: typcal
-    character(len=8) :: resuin, moa1, moa2, noma1, noma2, cnref, noca
+    character(len=8) :: resuin, moa1, moa2, noma1, noma2, cnref, caraElem
     character(len=16) :: lcorre(2)
     character(len=19) :: cham1, method
 !
@@ -125,7 +125,7 @@ subroutine pjxxco(typcal, method, lcorre, isole, resuin, &
             proj1 = .false.
             if ((lnoeu) .or. (lelno) .or. (lelem)) then
                 if (method(1:10) .eq. 'SOUS_POINT') then
-                    call pjspco(moa1, moa2, lcorre(1), 'V', noca, method, isole)
+                    call pjspco(moa1, moa2, lcorre(1), 'V', caraElem, method, isole)
                 else
                     call pjefco(moa1, moa2, lcorre(1), 'V')
                 end if

@@ -15,10 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine op0175()
-!     COMMANDE :  CALC_FERRAILLAGE
-! ----------------------------------------------------------------------
+!
     implicit none
 !
 #include "jeveux.h"
@@ -41,48 +40,53 @@ subroutine op0175()
 #include "asterfort/w175ca.h"
 #include "asterfort/utmess.h"
 !
-    integer(kind=8) :: ifm, niv, n0, nuord
-    integer(kind=8) :: iret, jpara, ie, nbordr, i, nuordr
-    character(len=8) :: resu, model, caraElem
-    character(len=16) :: crit, concep, nomcmd
-    character(len=19) :: chfer1, chfer2, chefge, resu19, resuc1
+! --------------------------------------------------------------------------------------------------
+!
+! CALC_FERRAILLAGE
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ifm, niv, n0, numeStoreInit
+    integer(kind=8) :: iret, jvPara, ie, nbStore, iStore, numeStore
+    character(len=8) :: resultIn, resultOut, model, caraElem
+    character(len=16) :: crit, resultType, cmdName
+    character(len=19) :: chfer2, chefge
+    character(len=19), parameter :: chfer1 = '&&OP0175.CHFER1'
     real(kind=8) :: prec
-    integer(kind=8), pointer :: nume_ordre(:) => null()
-!     ------------------------------------------------------------------
+    integer(kind=8), pointer :: listStore(:) => null()
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
     call infmaj()
     call infniv(ifm, niv)
-!
-    call getres(resuc1, concep, nomcmd)
-    call getvid(' ', 'RESULTAT', scal=resu, nbret=n0)
-    resu19 = resu
-!
-!
-!     -- CHOIX DES INSTANTS DE CALCUL :
-!     ---------------------------------
+
+! - Get input/output results
+    call getres(resultOut, resultType, cmdName)
+    call getvid(' ', 'RESULTAT', scal=resultIn, nbret=n0)
+
+! - Get all storing index
     call getvr8(' ', 'PRECISION', scal=prec, nbret=ie)
     call getvtx(' ', 'CRITERE', scal=crit, nbret=ie)
-    call rsutnu(resu19, ' ', 0, '&&OP0175.NUME_ORDRE', nbordr, prec, crit, iret)
+    call rsutnu(resultIn, ' ', 0, '&&OP0175.NUME_ORDRE', nbStore, prec, crit, iret)
     ASSERT(iret .eq. 0)
-    ASSERT(nbordr .gt. 0)
-    call jeveuo('&&OP0175.NUME_ORDRE', 'L', vi=nume_ordre)
+    ASSERT(nbStore .gt. 0)
+    call jeveuo('&&OP0175.NUME_ORDRE', 'L', vi=listStore)
 !
 !
 !     -- ON PREND LE MODELE POUR LE 1ER INSTANT :
 !     --------------------------------------------
-    nuord = nume_ordre(1)
+    numeStoreInit = listStore(1)
 !
-    call rsadpa(resu, 'L', 1, 'MODELE', nuord, 0, sjv=jpara)
-    model = zk8(jpara)
+    call rsadpa(resultIn, 'L', 1, 'MODELE', numeStoreInit, 0, sjv=jvPara)
+    model = zk8(jvPara)
     ASSERT(model .ne. ' ')
     call getvtx(' ', 'CARA_ELEM', scal=caraElem, nbret=ie)
     ASSERT(caraElem .ne. ' ')
 !
 !     -- 1. ON CREE LE CHAMP DE DONNEES (CHFER1) :
 !     ---------------------------------------------
-    chfer1 = '&&OP0175.CHFER1'
+
     call w175af(model, chfer1)
     if (niv .gt. 1) then
         call imprsd('CARTE', chfer1, 6, 'CHFER1=')
@@ -90,20 +94,20 @@ subroutine op0175()
 !
 !     -- 2. ON APPELLE L'OPTION FERRAILLAGE :
 !     -------------------------------------------
-    do i = 1, nbordr
-        nuordr = nume_ordre(i)
-        call rsexch('F', resu19, 'EFGE_ELNO', nuordr, chefge, iret)
-        call rsexch(' ', resu19, 'FERR_ELEM', nuordr, chfer2, iret)
-        if (resu19 .eq. resuc1) then
+    do iStore = 1, nbStore
+        numeStore = listStore(iStore)
+        call rsexch('F', resultIn, 'EFGE_ELNO', numeStore, chefge, iret)
+        call rsexch(' ', resultIn, 'FERR_ELEM', numeStore, chfer2, iret)
+        if (resultIn .eq. resultOut) then
             if (iret .eq. 0) then
-                call utmess('A', 'CALCULEL_88', si=nuordr, sk=resu19)
+                call utmess('A', 'CALCULEL_88', si=numeStore)
             end if
         end if
         call w175ca(model, caraElem, chfer1, chefge, chfer2)
         if (niv .gt. 1) then
             call imprsd('CHAMP', chfer2, 6, 'CHFER2=')
         end if
-        call rsnoch(resu19, 'FERR_ELEM', nuordr)
+        call rsnoch(resultIn, 'FERR_ELEM', numeStore)
     end do
 !
     call jedema()

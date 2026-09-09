@@ -67,7 +67,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
 ! ----- Local variables
-        real(kind=8) :: funcEF(MAX_BS)
+        real(kind=8) :: funcEF(MAX_BS_CG)
         blas_int :: b_incx, b_incy, b_n
 !
         funcEF = FEBasis%func(point)
@@ -131,7 +131,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
 ! ----- Local variables
-        real(kind=8) :: funcEF(MAX_BS)
+        real(kind=8) :: funcEF(MAX_BS_CG)
         integer(kind=8) :: idim
         blas_int :: b_incx, b_incy, b_n
 !
@@ -191,7 +191,7 @@ contains
         real(kind=8), intent(in) :: val_nodes(*)
         real(kind=8), intent(in) :: point(3)
         real(kind=8) :: grad(3)
-        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS)
+        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS_CG)
 !
 ! --------------------------------------------------------------------------------------------------
 !   FE
@@ -205,7 +205,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: i
-        real(kind=8) :: gradEF(3, MAX_BS)
+        real(kind=8) :: gradEF(3, MAX_BS_CG)
 !
         grad = 0.d0
         if (present(BGSEval)) then
@@ -233,7 +233,7 @@ contains
         real(kind=8), intent(in) :: val_nodes(FEBasis%ndim, *)
         real(kind=8), intent(in) :: point(3)
         real(kind=8) :: grads(6)
-        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS)
+        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS_CG)
 !
 ! --------------------------------------------------------------------------------------------------
 !   FE
@@ -288,7 +288,7 @@ contains
         real(kind=8), intent(in) :: val_nodes(*)
         real(kind=8), intent(in) :: point(3)
         real(kind=8) :: grad(3, 3)
-        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS)
+        real(kind=8), intent(in), optional :: BGSEval(3, MAX_BS_CG)
 !
 ! --------------------------------------------------------------------------------------------------
 !   FE
@@ -302,7 +302,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: i, n, ind
-        real(kind=8) :: gradEF(3, MAX_BS), funcEF(MAX_BS), ur, r
+        real(kind=8) :: gradEF(3, MAX_BS_CG), funcEF(MAX_BS_CG), ur, r
 !
         grad = 0.d0
         if (present(BGSEval)) then

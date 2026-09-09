@@ -16,12 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine sigmmc(fami, nno, ndim, nbsig, npg, &
+subroutine sigmmc(materPara, &
+                  nno, ndim, nbsig, npg, &
                   jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                   nodeCoor, nodeDisp, &
-                  time, anglNaut, jvMaterCode, nharm, &
+                  time, nharm, &
                   sigm)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
@@ -31,12 +34,11 @@ subroutine sigmmc(fami, nno, ndim, nbsig, npg, &
 #include "jeveux.h"
 #include "MeshTypes_type.h"
 !
-    character(len=*), intent(in) :: fami
+    type(Material_Para), intent(inout) :: materPara
     integer(kind=8), intent(in) :: nno, ndim, nbsig, npg
     integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     real(kind=8), intent(in) :: nodeCoor(ndim*nno), nodeDisp(ndim*nno)
-    real(kind=8), intent(in) :: time, anglNaut(3)
-    integer(kind=8), intent(in) :: jvMaterCode
+    real(kind=8), intent(in) :: time
     real(kind=8), intent(in) :: nharm
     real(kind=8), intent(out) :: sigm(nbsig*npg)
 !
@@ -46,7 +48,7 @@ subroutine sigmmc(fami, nno, ndim, nbsig, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
+! IO  materPara        : parameters of material
 ! In  nno              : number of nodes of element
 ! In  ndim             : dimension of element (2 ou 3)
 ! In  nbsig            : number of components for stress tensors (4 or 6)
@@ -57,8 +59,6 @@ subroutine sigmmc(fami, nno, ndim, nbsig, npg, &
 ! In  nodeCoor         : coordinates of nodes
 ! In  nodeDisp         : displacements at nodes
 ! In  time             : current time
-! In  anglNaut         : nautical angles for definition of basis for non-isotropic elasticity
-! In  jvMaterCode      : adress for material parameters
 ! In  nharm            : Fourier mode
 ! Out sigm             : values of stress tensor at integration points
 !
@@ -78,15 +78,17 @@ subroutine sigmmc(fami, nno, ndim, nbsig, npg, &
 
 ! - Loop on Gauss points
     do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! ----- Compute [B] matrix (displacements to strains)
         call bmatmc(kpg, nbsig, nodeCoor, &
                     jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                     nno, nharm, jacgau, b)
 
 ! ----- Compute elasticity matrix
-        call dmatmc(fami, jvMaterCode, time, '+', &
-                    kpg, ksp, anglNaut, nbsig, &
-                    d)
+        call dmatmc(materPara, '+', time, &
+                    nbsig, d)
 
 ! ----- Compute SIEF_ELGA
         call dbudef(nodeDisp, b, d, nbsig, nbinco, &

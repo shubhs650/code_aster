@@ -16,11 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine tebiot(ds_thm, angl_naut, tbiot)
+interface
+    subroutine tebiot(ds_thm, tbiot)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(out) :: tbiot(6)
     end subroutine tebiot
-end interface 
+end interface

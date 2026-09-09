@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine dpvplc(typmod, option, imate, carcri, instam, &
                   instap, depsm, &
                   sigm, vim, sig, vip, dsidep, &
@@ -23,16 +23,17 @@ subroutine dpvplc(typmod, option, imate, carcri, instam, &
 !
     implicit none
 !
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/dpvpdi.h"
 #include "asterfort/dpvpma.h"
 #include "asterfort/dpvpre.h"
 #include "asterfort/get_varc.h"
 !
-!
     integer(kind=8) :: imate, iret
     real(kind=8) :: depsm(6), vim(*), vip(*), sig(6), dsidep(6, 6)
     real(kind=8) :: sigm(6)
-    real(kind=8) :: instam, instap, carcri(*)
+    real(kind=8) :: instam, instap
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     character(len=8) :: typmod(*)
     character(len=16) :: option
 ! =====================================================================
@@ -57,11 +58,10 @@ subroutine dpvplc(typmod, option, imate, carcri, instam, &
     parameter(nbmat=50)
     real(kind=8) :: materd(nbmat, 2), materf(nbmat, 2), deps(6)
     real(kind=8) :: td, tf, tr
-    character(len=3) :: matcst
 ! =====================================================================
     common/tdim/ndt, ndi
 ! =====================================================================
-    matcst = 'OUI'
+
 !
 ! - Get temperatures
 !
@@ -71,7 +71,7 @@ subroutine dpvplc(typmod, option, imate, carcri, instam, &
 ! --- RECUPERATION DU TYPE DE LOI DE COMPORTEMENT DP ------------------
 ! =====================================================================
     call dpvpma(typmod(1), imate, nbmat, td, materd, &
-                materf, matcst, ndt, ndi, nvi, &
+                materf, ndt, ndi, nvi, &
                 indal)
 ! =====================================================================
 ! --- RETRAIT DE LA DEFORMATION DUE A LA DILATATION THERMIQUE ---------

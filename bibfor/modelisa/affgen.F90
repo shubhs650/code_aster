@@ -39,6 +39,7 @@ subroutine affgen(tmp, nom, nel, napcis, foncis)
 !            NTEL(2) = NUMÉRO DU TYPE ÉLÉMENT MECA_POU_D_E
 !            NTEL(4) = NUMÉRO DU TYPE ÉLÉMENT MEFS_POU_D_T
 !            NTEL(5) = NUMÉRO DU TYPE ÉLÉMENT MECA_POU_D_TG
+!            NTEL(14) = NUMÉRO DU TYPE ÉLÉMENT MECA_S8P2
 !     ------------------------------------------------------------------
     real(kind=8) :: eps, pi, alpha, beta, ccis
     real(kind=8) :: hy, hz, epy, epz, hyi, hzi
@@ -144,6 +145,9 @@ subroutine affgen(tmp, nom, nel, napcis, foncis)
                     zr(jdge+igen+2) = 0.d0
                     zr(jdge+igen+3) = 0.d0
                 else if (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_POU_D_TGM)) then
+                    zr(jdge+igen+2) = 1.2d0
+                    zr(jdge+igen+3) = 1.2d0
+                else if (nel .eq. elem_supp%catanum(idx1poutre+ACE_MECA_S8P2)) then
                     zr(jdge+igen+2) = 1.2d0
                     zr(jdge+igen+3) = 1.2d0
                 end if

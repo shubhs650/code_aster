@@ -16,11 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine vetnth_nonl(model, caraElem, mateco, time, compor, &
-                       temp_iter, varc_prev, varc_curr, &
-                       vect_elem_l, vect_elem_nl, base, &
-                       hydr_prev_)
+subroutine vetnth_nonl(model, caraElem, materCode, time, comporTher, &
+                       tempIter, hydrPrev, &
+                       varcPrev, varcCurr, &
+                       jvBase, vectElemLine, vectElemNLin)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -28,25 +29,18 @@ subroutine vetnth_nonl(model, caraElem, mateco, time, compor, &
 #include "asterfort/corich.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/gcnco2.h"
-#include "asterfort/inical.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jeexin.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/reajre.h"
 #include "asterfort/vemare.h"
 !
     character(len=8), intent(in) :: model, caraElem
-    character(len=24), intent(in) :: mateco
-    character(len=24), intent(in) :: time
-    character(len=24), intent(in) :: compor
-    character(len=24), intent(in) :: temp_iter
-    character(len=19), intent(in) :: varc_prev
-    character(len=19), intent(in) :: varc_curr
-    character(len=24), intent(in) :: vect_elem_l
-    character(len=24), intent(in) :: vect_elem_nl
-    character(len=1), intent(in) :: base
-    character(len=24), optional, intent(in) :: hydr_prev_
+    character(len=24), intent(in) :: materCode, time, comporTher
+    character(len=24), intent(in) :: tempIter, hydrPrev
+    character(len=19), intent(in) :: varcPrev, varcCurr
+    character(len=1), intent(in) :: jvBase
+    character(len=24), intent(in) :: vectElemLine, vectElemNLin
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -59,126 +53,107 @@ subroutine vetnth_nonl(model, caraElem, mateco, time, compor, &
 ! In  model            : name of the model
 ! In  caraElem         : name of elementary characteristics (field)
 ! In  time             : time (<CARTE>)
-! In  compor           : name of <CARTE> COMPOR
-! In  temp_iter        : temperature field at current Newton iteration
-! In  varc_curr        : command variable for current time
-! In  varc_prev        : command variable for previous time
-! In  vect_elem_l      : name of vect_elem result (linear part)
-! In  vect_elem_nl     : name of vect_elem result (non linear part)
-! In  base             : JEVEUX base for object
-! In  hydr_prev        : previous hydration
+! In  comporTher       : name of <CARTE> COMPOR
+! In  tempIter         : temperature field at current Newton iteration
+! In  hydrPrev         : previous hydration
+! In  varcCurr         : command variable for current time
+! In  varcPrev         : command variable for previous time
+! In  vectElemLine     : name of vect_elem result (linear part)
+! In  vectElemNLin     : name of vect_elem result (non linear part)
+! In  jvBase           : JEVEUX jvBase for object
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nbin = 10, nbout = 2
-    character(len=8) :: lpain(nbin), lpaout(nbout)
-    character(len=19) :: lchin(nbin), lchout(nbout)
-    integer(kind=8) :: iret
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 2
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+    character(len=16), parameter :: option = 'CHAR_THER_EVOLNI'
+    integer(kind=8) :: iret, nbFieldIn
     character(len=8) :: newnom
-    character(len=16) :: option
-    character(len=24) :: ligrmo
-    character(len=19) :: resu_elem_l, resu_elem_nl
-    character(len=24) :: chgeom, chcara(18)
-    character(len=24) :: hydr_prev
+
+    character(len=24) :: modelLigrel
+    character(len=19) :: resuElemLine, resuElemNLin
+    character(len=24) :: chgeom
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    resu_elem_l = vect_elem_l(1:8)//'.0000000'
-    resu_elem_nl = vect_elem_nl(1:8)//'.0000000'
     newnom = '.0000000'
-    option = 'CHAR_THER_EVOLNI'
-    call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
-!
-! - Get fields
-!
-    hydr_prev = ' '
-    if (present(hydr_prev_)) then
-        hydr_prev = hydr_prev_
-    end if
-!
-! - Init fields
-!
-    call inical(nbin, lpain, lchin, nbout, lpaout, lchout)
-!
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
+
 ! - Prepare VECT_ELEM
-!
-    call jeexin(vect_elem_l(1:19)//'.RELR', iret)
+    call jeexin(vectElemLine(1:19)//'.RELR', iret)
     if (iret .eq. 0) then
-        call vemare(base, vect_elem_l, model)
+        call vemare(jvBase, vectElemLine, model)
     else
-        call jedetr(vect_elem_l(1:19)//'.RELR')
+        call jedetr(vectElemLine(1:19)//'.RELR')
     end if
-    call jeexin(vect_elem_nl(1:19)//'.RELR', iret)
+    call jeexin(vectElemNLin(1:19)//'.RELR', iret)
     if (iret .eq. 0) then
-        call vemare(base, vect_elem_nl, model)
+        call vemare(jvBase, vectElemNLin, model)
     else
-        call jedetr(vect_elem_nl(1:19)//'.RELR')
+        call jedetr(vectElemNLin(1:19)//'.RELR')
     end if
-!
-! - Geometry field
-!
+
+! - Get geometry field
     call megeom(model, chgeom)
-!
-! - Elementary characteristics field
-!
-    call mecara(caraElem, chcara)
-!
-! - Input fields
-!
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom(1:19)
     lpain(2) = 'PTEMPER'
-    lchin(2) = temp_iter(1:19)
+    lchin(2) = tempIter(1:19)
     lpain(3) = 'PMATERC'
-    lchin(3) = mateco(1:19)
+    lchin(3) = materCode(1:19)
     lpain(4) = 'PINSTR'
     lchin(4) = time(1:19)
-    lpain(5) = 'PCACOQU'
-    lchin(5) = chcara(7) (1:19)
-    lpain(6) = 'PVARCPR'
-    lchin(6) = varc_curr(1:19)
-    lpain(7) = 'PHYDRPM'
-    lchin(7) = hydr_prev(1:19)
-    lpain(8) = 'PCOMPOR'
-    lchin(8) = compor(1:19)
-    lpain(9) = 'PVARCMR'
-    lchin(9) = varc_prev(1:19)
-    lpain(10) = 'PCAMASS'
-    lchin(10) = chcara(12) (1:19)
-!
+    lpain(5) = 'PVARCPR'
+    lchin(5) = varcCurr(1:19)
+    lpain(6) = 'PHYDRPM'
+    lchin(6) = hydrPrev(1:19)
+    lpain(7) = 'PCOMPOR'
+    lchin(7) = comporTher(1:19)
+    lpain(8) = 'PVARCMR'
+    lchin(8) = varcPrev(1:19)
+    nbFieldIn = 8
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
 ! - Generate new RESU_ELEM name
-!
-    newnom = resu_elem_nl(10:16)
+    resuElemNLin = vectElemNLin(1:8)//'.0000000'
+    newnom = resuElemNLin(10:16)
     call gcnco2(newnom)
-    resu_elem_nl(10:16) = newnom(2:8)
-!
+    resuElemNLin(10:16) = newnom(2:8)
+
 ! - Output fields
-!
     lpaout(1) = 'PVECTTI'
-    lchout(1) = resu_elem_nl
+    lchout(1) = resuElemNLin
     call corich('E', lchout(1), ichin_=-1)
-!
+
 ! - Generate new RESU_ELEM name
-!
-    newnom = resu_elem_l(10:16)
+    resuElemLine = vectElemLine(1:8)//'.0000000'
+    newnom = resuElemLine(10:16)
     call gcnco2(newnom)
-    resu_elem_l(10:16) = newnom(2:8)
-!
-! - Output fields
-!
+    resuElemLine(10:16) = newnom(2:8)
+
+! - Set output fields
     lpaout(2) = 'PVECTTR'
-    lchout(2) = resu_elem_l
+    lchout(2) = resuElemLine
     call corich('E', lchout(2), ichin_=-1)
-!
+
 ! - Compute
-!
-    call calcul('S', option, ligrmo, nbin, lchin, &
-                lpain, nbout, lchout, lpaout, base, &
-                'OUI')
-!
+    call calcul('S', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
+
 ! - Add RESU_ELEM in VECT_ELEM
-!
-    call reajre(vect_elem_nl, lchout(1), base)
-    call reajre(vect_elem_l, lchout(2), base)
+    call reajre(vectElemNLin, lchout(1), jvBase)
+    call reajre(vectElemLine, lchout(2), jvBase)
 !
 end subroutine

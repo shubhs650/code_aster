@@ -23,8 +23,9 @@ subroutine te0243(option, nomte)
     use FE_basis_module
     use FE_stiffness_module
     use FE_eval_module
-!
+    use coorSyst_module, only: hasOrieField
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/ntcomp.h"
@@ -39,46 +40,55 @@ subroutine te0243(option, nomte)
 #include "asterfort/writeMatrix.h"
 #include "FE_module.h"
 !
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:   OPTION : 'RAPH_THER' , 'RIGI_THER_TANG'
+    character(len=16), intent(in) :: option, nomte
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
+! --------------------------------------------------------------------------------------------------
 !
-! ......................................................................
+! Elementary computation
+!
+! Elements: THER_*
+!
+! Options: RIGI_THER_TANG
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuadCell
     type(FE_basis) :: FEBasis
 !
-    integer(kind=8) :: icamas, nbres
-    parameter(nbres=3)
-    integer(kind=8) :: icodre(nbres)
-    character(len=32) :: phenom
+    integer(kind=8) :: jvCamass, nbProp
+    parameter(nbProp=3)
+    integer(kind=8) :: propCode(nbProp)
+    character(len=32) :: therKeyword
     real(kind=8) :: tpg, dtpg(3), diff, fluglo(3), Kglo(3, 3)
     real(kind=8) :: sechpg, dsechpg(3)
-    real(kind=8) :: resi(MAX_BS), rigi(MAX_BS, MAX_BS), dfluxglo(3), resi_p(MAX_BS)
-    real(kind=8) :: BGSEval(3, MAX_BS), BSEval(MAX_BS), eps, tempi_save, delta
+    real(kind=8) :: resi(MAX_BS_CG), rigi(MAX_BS_CG, MAX_BS_CG), dfluxglo(3), resi_p(MAX_BS_CG)
+    real(kind=8) :: BGSEval(3, MAX_BS_CG), BSEval(MAX_BS_CG), eps, tempSave, delta
     real(kind=8), pointer :: flux(:) => null()
-    real(kind=8), pointer :: tempi(:) => null()
+    real(kind=8), pointer :: temper(:) => null()
 
-    integer(kind=8) ::  kp, ifon(6)
-    integer(kind=8) ::  imate, j, i_dof, iret
-    character(len=16) :: rela_name
+    integer(kind=8) ::  kpg, ifon(6)
+    integer(kind=8) ::  jvMaterc, j, i_dof, iret
+    character(len=16) :: relaName
     character(len=16), pointer :: compor(:) => null()
     aster_logical :: aniso, l_rhs, l_diff
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     call FECell%init()
     call FEQuadCell%initCell(FECell, "RIGI")
     call FEBasis%initCell(FECell)
 !
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PTEMPEI', 'L', vr=tempi)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call jevech('PTEMPEI', 'L', vr=temper)
     call jevech('PCOMPOR', 'L', vk16=compor)
 
-    rela_name = compor(RELA_NAME)
+    relaName = compor(RELA_NAME)
     l_rhs = option == "RAPH_THER"
     l_diff = .false.
     eps = 1.e-8
@@ -87,39 +97,40 @@ subroutine te0243(option, nomte)
         call jevech('PFLUXPR', 'E', vr=flux)
     end if
 !
-    if (rela_name(1:5) .eq. 'THER_') then
-        call rccoma(zi(imate), 'THER', 1, phenom, icodre(1))
+    if (relaName(1:5) .eq. 'THER_') then
+        call rccoma(zi(jvMaterc), 'THER', 1, therKeyword, propCode(1))
         aniso = ASTER_FALSE
-        if (phenom(1:12) .eq. 'THER_NL_ORTH') then
+        if (therKeyword(1:12) .eq. 'THER_NL_ORTH') then
             aniso = ASTER_TRUE
         end if
-        call ntfcma(rela_name, zi(imate), aniso, ifon)
-!       pour stopper le calcul si PCAMASS n'est pas disponible
+        call ntfcma(relaName, zi(jvMaterc), aniso, ifon)
         if (aniso) then
-            call jevech('PCAMASS', 'L', icamas)
+            if (.not. hasOrieField(jvCamass)) then
+                call utmess('F', 'THERMIQUE1_3')
+            end if
         end if
     end if
 !
     resi = 0.d0
     rigi = 0.d0
-    do kp = 1, FEQuadCell%nbQuadPoints
-        BSEval = FEBasis%func(FEQuadCell%points_param(1:3, kp))
-        BGSEval = FEBasis%grad(FEQuadCell%points_param(1:3, kp), FEQuadCell%jacob(1:3, 1:3, kp))
+    do kpg = 1, FEQuadCell%nbQuadPoints
+        BSEval = FEBasis%func(FEQuadCell%points_param(1:3, kpg))
+        BGSEval = FEBasis%grad(FEQuadCell%points_param(1:3, kpg), FEQuadCell%jacob(1:3, 1:3, kpg))
 !
-        if (rela_name(1:5) .eq. 'THER_') then
-            tpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadCell%points_param(1:3, kp))
-            dtpg = FEEvalGradVec(FEBasis, tempi, FEQuadCell%points_param(1:3, kp), BGSEval)
-            call ntcomp(rela_name, FECell%ndim, tpg, dtpg, &
-                        FEQuadCell%points(1:3, kp), aniso, ifon, fluglo, Kglo, dfluxglo)
+        if (relaName(1:5) .eq. 'THER_') then
+            tpg = FEEvalFuncRScal(FEBasis, temper, FEQuadCell%points_param(1:3, kpg))
+            dtpg = FEEvalGradVec(FEBasis, temper, FEQuadCell%points_param(1:3, kpg), BGSEval)
+            call ntcomp(relaName, FECell%ndim, tpg, dtpg, &
+                        FEQuadCell%points(1:3, kpg), aniso, ifon, fluglo, Kglo, dfluxglo)
             if (l_rhs) then
-                flux(FECell%ndim*(kp-1)+1:FECell%ndim*(kp-1)+FECell%ndim) = -fluglo(1:FECell%ndim)
+                flux(FECell%ndim*(kpg-1)+1:FECell%ndim*(kpg-1)+FECell%ndim) = -fluglo(1:FECell%ndim)
             end if
-        else if (rela_name(1:5) .eq. 'SECH_') then
-            sechpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadCell%points_param(1:3, kp))
-            dsechpg = FEEvalGradVec(FEBasis, tempi, FEQuadCell%points_param(1:3, kp), BGSEval)
-            call rcvarc(' ', 'TEMP', '+', 'RIGI', kp, 1, tpg, iret)
+        else if (relaName(1:5) .eq. 'SECH_') then
+            sechpg = FEEvalFuncRScal(FEBasis, temper, FEQuadCell%points_param(1:3, kpg))
+            dsechpg = FEEvalGradVec(FEBasis, temper, FEQuadCell%points_param(1:3, kpg), BGSEval)
+            call rcvarc(' ', 'TEMP', '+', 'RIGI', kpg, 1, tpg, iret)
             if (iret .ne. 0) call utmess('F', 'THERMIQUE1_2')
-            call rcdiff(zi(imate), rela_name, tpg, sechpg, diff)
+            call rcdiff(zi(jvMaterc), relaName, tpg, sechpg, diff)
             fluglo = diff*dsechpg
             Kglo = 0.d0
             do j = 1, FECell%ndim
@@ -129,13 +140,13 @@ subroutine te0243(option, nomte)
             ASSERT(ASTER_FALSE)
         end if
         if (l_rhs .or. l_diff) then
-            call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kp), fluglo, resi)
+            call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kpg), fluglo, resi)
         end if
         ! if (.not. l_diff) then
         if (.not. l_rhs) then
-            call FEStiffJacoScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kp), Kglo, rigi)
-            if (rela_name(1:5) .eq. 'THER_') then
-                call FEMassStiffJacoScalAdd(BSEval, BGSEval, FEQuadCell%weights(kp), &
+            call FEStiffJacoScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kpg), Kglo, rigi)
+            if (relaName(1:5) .eq. 'THER_') then
+                call FEMassStiffJacoScalAdd(BSEval, BGSEval, FEQuadCell%weights(kpg), &
                                             dfluxglo, rigi)
             end if
         end if
@@ -145,39 +156,40 @@ subroutine te0243(option, nomte)
         rigi = 0.d0
         do i_dof = 1, FEBasis%size
             ! save value
-            tempi_save = tempi(i_dof)
-            if (abs(tempi(i_dof)) .lt. eps) then
-                tempi(i_dof) = tempi_save+eps
+            tempSave = temper(i_dof)
+            if (abs(temper(i_dof)) .lt. eps) then
+                temper(i_dof) = tempSave+eps
             else
-                tempi(i_dof) = (1.d0+eps)*tempi_save
+                temper(i_dof) = (1.d0+eps)*tempSave
             end if
-            delta = tempi(i_dof)-tempi_save
+            delta = temper(i_dof)-tempSave
             resi_p = 0.d0
-            do kp = 1, FEQuadCell%nbQuadPoints
-                BGSEval = FEBasis%grad(FEQuadCell%points_param(1:3, kp), &
-                                       FEQuadCell%jacob(1:3, 1:3, kp))
+            do kpg = 1, FEQuadCell%nbQuadPoints
+                BGSEval = FEBasis%grad(FEQuadCell%points_param(1:3, kpg), &
+                                       FEQuadCell%jacob(1:3, 1:3, kpg))
                 !
-                if (rela_name(1:5) .eq. 'THER_') then
-                    tpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadCell%points_param(1:3, kp))
-                    dtpg = FEEvalGradVec(FEBasis, tempi, FEQuadCell%points_param(1:3, kp), BGSEval)
-                    call ntcomp(rela_name, FECell%ndim, tpg, dtpg, &
-                                FEQuadCell%points(1:3, kp), aniso, ifon, fluglo, Kglo, dfluxglo)
-                else if (rela_name(1:5) .eq. 'SECH_') then
-                    sechpg = FEEvalFuncRScal(FEBasis, tempi, FEQuadCell%points_param(1:3, kp))
-                    dsechpg = FEEvalGradVec(FEBasis, tempi, &
-                                            FEQuadCell%points_param(1:3, kp), BGSEval)
-                    call rcvarc(' ', 'TEMP', '+', 'RIGI', kp, 1, tpg, iret)
+                if (relaName(1:5) .eq. 'THER_') then
+                    tpg = FEEvalFuncRScal(FEBasis, temper, FEQuadCell%points_param(1:3, kpg))
+                    dtpg = &
+                        FEEvalGradVec(FEBasis, temper, FEQuadCell%points_param(1:3, kpg), BGSEval)
+                    call ntcomp(relaName, FECell%ndim, tpg, dtpg, &
+                                FEQuadCell%points(1:3, kpg), aniso, ifon, fluglo, Kglo, dfluxglo)
+                else if (relaName(1:5) .eq. 'SECH_') then
+                    sechpg = FEEvalFuncRScal(FEBasis, temper, FEQuadCell%points_param(1:3, kpg))
+                    dsechpg = FEEvalGradVec(FEBasis, temper, &
+                                            FEQuadCell%points_param(1:3, kpg), BGSEval)
+                    call rcvarc(' ', 'TEMP', '+', 'RIGI', kpg, 1, tpg, iret)
                     if (iret .ne. 0) call utmess('F', 'THERMIQUE1_2')
-                    call rcdiff(zi(imate), rela_name, tpg, sechpg, diff)
+                    call rcdiff(zi(jvMaterc), relaName, tpg, sechpg, diff)
                     fluglo = diff*dsechpg
                 else
                     ASSERT(ASTER_FALSE)
                 end if
-                call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kp), fluglo, resi_p)
+                call FEStiffResiScalAdd(FEBasis, BGSEval, FEQuadCell%weights(kpg), fluglo, resi_p)
             end do
             rigi(:, i_dof) = (resi_p-resi)/delta
             ! restore value
-            tempi(i_dof) = tempi_save
+            temper(i_dof) = tempSave
         end do
         write (6, *) '--------------'
         do i_dof = 1, FEBasis%size

@@ -15,219 +15,171 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0413(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate, &
+                                isPlateTria, isPlateQuad
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/glrc_recup_mate.h"
 #include "asterfort/gquad4.h"
 #include "asterfort/gtria3.h"
 #include "asterfort/jevech.h"
 #include "asterfort/jquad4.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
 !
+! --------------------------------------------------------------------------------------------------
 !
-! FONCTIONS REALISEES:
+! Elementary computation
 !
-!      CALCUL DE LA DENSITE DE DISSIPATION
-!      A L'EQUILIBRE POUR LES ELEMENTS DKTG ET LA LOI GLRC_DM
-!      .SOIT AUX POINTS D'INTEGRATION : OPTION 'DISS_ELGA'
-!      .SOIT L INTEGRALE PAR ELEMENT  : OPTION 'DISS_ELEM'
+! Elements: DKTG
 !
-!      OPTIONS : 'DISS_ELGA'
-!                'DISS_ELEM'
+! Options: DISS_ELEM, DISS_ELGA
 !
-! ENTREES  ---> OPTION : OPTION DE CALCUL
-!          ---> NOMTE  : NOM DU TYPE ELEMENT
-!.......................................................................
 !
-    integer(kind=8) :: npgmx
-    parameter(npgmx=4)
+! --------------------------------------------------------------------------------------------------
 !
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: npgmx = 4
     real(kind=8) :: pgl(3, 3)
     real(kind=8) :: qsi, eta, xyzl(3, 4), jacob(5), poids, cara(25)
     real(kind=8) :: disse(npgmx), dse
     real(kind=8) :: ep, seuil
-!
-    integer(kind=8) :: ndim, nno, nnoel, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: jgeom, ipg, idener, imate
-    integer(kind=8) :: icacoq, jvari, nbvar
-!
+    integer(kind=8) :: ndim, nno, npg, ipoids, icoopg
+    integer(kind=8) :: jvGeom, kpg, jvDiss, jvMaterc
+    integer(kind=8) :: jvVari, nbvar
     character(len=16), pointer :: compor(:) => null()
     character(len=16) :: valk(2)
-    aster_logical :: dkq, lkit
+    aster_logical :: lkit
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    if (nomte .eq. 'MEDKQG4') then
-        dkq = .true.
-    else if (nomte .eq. 'MEDKTG3') then
-        dkq = .false.
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jcoopg=icoopg)
+    ASSERT(npg .le. npgmx)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! - Compute geometric parametrs of plate
+    if (isPlateQuad(plateCara)) then
+        call gquad4(xyzl, cara)
+    elseif (isPlateTria(plateCara)) then
+        call gtria3(xyzl, cara)
     else
-        call utmess('F', 'ELEMENTS_34', sk=nomte)
+        ASSERT(ASTER_FALSE)
     end if
-!
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnoel, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
-!
-    call jevech('PGEOMER', 'L', jgeom)
+
+! - Get plate parameters
+    ep = plateCara%thick
+
+! - Non-linear behaviour
     call jevech('PCOMPOR', 'L', vk16=compor)
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
     lkit = compor(RELA_NAME) (1:7) .eq. 'KIT_DDI'
+    read (compor(NVAR), '(I16)') nbvar
+
+! - Get internal state variables
+    if (option .eq. 'DISS_ELGA') then
+        call jevech('PVARIGR', 'L', jvVari)
+    else if (option .eq. 'DISS_ELEM') then
+        call jevech('PVARIPR', 'L', jvVari)
+    end if
+
+! - Get output field
+    if (option .eq. 'DISS_ELGA') then
+        call jevech('PDISSPG', 'E', jvDiss)
+    else if (option .eq. 'DISS_ELEM') then
+        call jevech('PDISSD1', 'E', jvDiss)
+    end if
 !
     if ((compor(RELA_NAME) (1:7) .eq. 'GLRC_DM') .or. &
         (lkit .and. (compor(CREEP_NAME) (1:7) .eq. 'GLRC_DM'))) then
-!
-        call jevech('PCACOQU', 'L', icacoq)
-!
-        call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-        if (dkq) then
-            call gquad4(xyzl, cara)
-        else
-            call gtria3(xyzl, cara)
-        end if
-!
-        read (compor(NVAR), '(I16)') nbvar
-        ep = zr(icacoq)
-!
-        if (option .eq. 'DISS_ELGA') then
-            call jevech('PVARIGR', 'L', jvari)
-        else if (option .eq. 'DISS_ELEM') then
-            call jevech('PVARIPR', 'L', jvari)
-        end if
-!
-        call r8inir(npgmx, 0.d0, disse, 1)
+
+        disse = 0.d0
         dse = 0.0d0
-!
-! ---- BOUCLE SUR LES POINTS D'INTEGRATION :
-!      ===================================
-        do ipg = 1, npg
-!
-            qsi = zr(icoopg-1+ndim*(ipg-1)+1)
-            eta = zr(icoopg-1+ndim*(ipg-1)+2)
-            if (dkq) then
+        do kpg = 1, npg
+            qsi = zr(icoopg-1+ndim*(kpg-1)+1)
+            eta = zr(icoopg-1+ndim*(kpg-1)+2)
+            if (isPlateQuad(plateCara)) then
                 call jquad4(xyzl, qsi, eta, jacob)
-                poids = zr(ipoids+ipg-1)*jacob(1)
+                poids = zr(ipoids+kpg-1)*jacob(1)
             else
-                poids = zr(ipoids+ipg-1)*cara(7)
+                poids = zr(ipoids+kpg-1)*cara(7)
             end if
-!
-            call jevech('PMATERC', 'L', imate)
-!
-            call glrc_recup_mate(zi(imate), compor(RELA_NAME), .false._1, ep, seuil=seuil)
-!
-!  --    CALCUL DE LA DENSITE D'ENERGIE POTENTIELLE ELASTIQUE :
-!        ==========================================================
+            call jevech('PMATERC', 'L', jvMaterc)
+            call glrc_recup_mate(zi(jvMaterc), compor(RELA_NAME), .false._1, ep, seuil=seuil)
             if ((option .eq. 'DISS_ELGA') .or. (option .eq. 'DISS_ELEM')) then
-!
-                disse(ipg) = (zr(jvari-1+(ipg-1)*nbvar+1)+zr(jvari-1+(ipg-1)*nbvar+2))*seuil
-                dse = dse+disse(ipg)*poids
-!
+                disse(kpg) = (zr(jvVari-1+(kpg-1)*nbvar+1)+ &
+                              zr(jvVari-1+(kpg-1)*nbvar+2))*seuil
+                dse = dse+disse(kpg)*poids
             end if
         end do
-!
-! ---- RECUPERATION DU CHAMP DES DENSITES D'ENERGIE DE DEFORMATION
-! ---- ELASTIQUE EN SORTIE
-!      -------------------
+
         if (option .eq. 'DISS_ELGA') then
-            call jevech('PDISSPG', 'E', idener)
-        else if (option .eq. 'DISS_ELEM') then
-            call jevech('PDISSD1', 'E', idener)
-        end if
-!
-! --- OPTIONS DISS_ELGA
-!     ==============================
-        if (option .eq. 'DISS_ELGA') then
-            do ipg = 1, npg
-                zr(idener-1+(ipg-1)*1+1) = disse(ipg)
+            do kpg = 1, npg
+                zr(jvDiss-1+(kpg-1)*1+1) = disse(kpg)
             end do
-!
-! --- OPTION DISS_ELEM
-!     ================
         else if (option .eq. 'DISS_ELEM') then
-            zr(idener-1+1) = dse
+            zr(jvDiss-1+1) = dse
         end if
+
     elseif (compor(RELA_NAME) (1:4) .eq. 'DHRC') then
-        call jevech('PCACOQU', 'L', icacoq)
-        call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-        if (dkq) then
-            call gquad4(xyzl, cara)
-        else
-            call gtria3(xyzl, cara)
-        end if
-!
-        read (compor(NVAR), '(I16)') nbvar
-!
-        if (option .eq. 'DISS_ELGA') then
-            call jevech('PVARIGR', 'L', jvari)
-        else if (option .eq. 'DISS_ELEM') then
-            call jevech('PVARIPR', 'L', jvari)
-        end if
-!
-        call r8inir(npgmx, 0.d0, disse, 1)
+        disse = 0.D0
         dse = 0.0d0
-!
-! ---- BOUCLE SUR LES POINTS D'INTEGRATION :
-!      ===================================
-        do ipg = 1, npg
-!
-            qsi = zr(icoopg-1+ndim*(ipg-1)+1)
-            eta = zr(icoopg-1+ndim*(ipg-1)+2)
-            if (dkq) then
+
+        do kpg = 1, npg
+            qsi = zr(icoopg-1+ndim*(kpg-1)+1)
+            eta = zr(icoopg-1+ndim*(kpg-1)+2)
+            if (isPlateQuad(plateCara)) then
                 call jquad4(xyzl, qsi, eta, jacob)
-                poids = zr(ipoids+ipg-1)*jacob(1)
+                poids = zr(ipoids+kpg-1)*jacob(1)
             else
-                poids = zr(ipoids+ipg-1)*cara(7)
+                poids = zr(ipoids+kpg-1)*cara(7)
             end if
-!
-!  --    CALCUL DE LA DENSITE D'ENERGIE POTENTIELLE ELASTIQUE :
-!        ==========================================================
+
             if ((option .eq. 'DISS_ELGA') .or. (option .eq. 'DISS_ELEM')) then
-!
-                disse(ipg) = zr(jvari-1+(ipg-1)*nbvar+9)
-                dse = dse+disse(ipg)*poids
-!
+                disse(kpg) = zr(jvVari-1+(kpg-1)*nbvar+9)
+                dse = dse+disse(kpg)*poids
             end if
         end do
-!
-! ---- RECUPERATION DU CHAMP DES DENSITES D'ENERGIE DE DEFORMATION
-! ---- ELASTIQUE EN SORTIE
-!      -------------------
+
         if (option .eq. 'DISS_ELGA') then
-            call jevech('PDISSPG', 'E', idener)
-        else if (option .eq. 'DISS_ELEM') then
-            call jevech('PDISSD1', 'E', idener)
-        end if
-!
-! --- OPTIONS DISS_ELGA
-!     ==============================
-        if (option .eq. 'DISS_ELGA') then
-            do ipg = 1, npg
-                zr(idener-1+(ipg-1)*1+1) = disse(ipg)
+            do kpg = 1, npg
+                zr(jvDiss-1+(kpg-1)*1+1) = disse(kpg)
             end do
-!
-! --- OPTION DISS_ELEM
-!     ================
         else if (option .eq. 'DISS_ELEM') then
-            zr(idener-1+1) = dse
+            zr(jvDiss-1+1) = dse
         end if
+
     else
-!      RELATION NON PROGRAMMEE
         valk(1) = option
         valk(2) = compor(RELA_NAME) (1:7)
         call utmess('A', 'ELEMENTS4_63', nk=2, valk=valk)

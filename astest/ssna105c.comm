@@ -1,0 +1,257 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# CONTACT
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="NON"))
+# SDVERI='NON' car la verification est trop couteuse en CPU
+
+
+L_INST = DEFI_LIST_REEL(
+    DEBUT=-1.0,
+    INTERVALLE=(
+        _F(PAS=0.1, JUSQU_A=0.0),
+        _F(PAS=1.0e-6, JUSQU_A=1.0e-6),
+        _F(PAS=0.999e-3, JUSQU_A=0.001),
+        _F(PAS=1.0e-3, JUSQU_A=0.01),
+        _F(PAS=2.0e-3, JUSQU_A=0.03),
+        _F(PAS=5.0e-3, JUSQU_A=0.1),
+        _F(PAS=1.0e-2, JUSQU_A=0.9),
+    ),
+)
+
+MA = LIRE_MAILLAGE(FORMAT="MED")
+
+MA = DEFI_GROUP(
+    reuse=MA,
+    MAILLAGE=MA,
+    CREA_GROUP_NO=(
+        _F(GROUP_MA="DABP"),
+        _F(GROUP_MA="DCDP"),
+        _F(GROUP_MA="DABG"),
+        _F(GROUP_MA="DCDG"),
+    ),
+)
+
+MO = AFFE_MODELE(MAILLAGE=MA, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="AXIS"))
+
+MATP = DEFI_MATERIAU(ELAS=_F(E=1.0, NU=0.3, ALPHA=0.0))
+
+MATG = DEFI_MATERIAU(
+    ELAS=_F(E=1.0, NU=0.3, ALPHA=0.0), LEMAITRE=_F(N=1.0, UN_SUR_K=1.0, UN_SUR_M=0.0)
+)
+CHMAT = AFFE_MATERIAU(
+    MAILLAGE=MA, AFFE=(_F(GROUP_MA="MAILP", MATER=MATP), _F(GROUP_MA="MAILG", MATER=MATG))
+)
+
+# PRESSION P1
+# L INSTANT DE REFERENCE EST T= -1
+
+
+R1 = 0.82
+R2 = 0.98
+R3 = 1.0
+R4 = 2.0
+P0 = 1.0e-3
+NU = 0.3
+E = 1.0
+K = 1.0
+coef = E / 100
+
+A = ((R2**2) - (R1**2)) / (2.0 * (R1**2) * (1.0 - NU))
+
+
+B = E / (R2 * (1.0 + NU))
+
+
+C = (P0 * (R3**3)) / ((R4**2) - (R3**2))
+
+
+D = (1 / E) * ((1 + NU) * ((R4**2) / (R3**2)) + (3.0 / 2.0) * (1.0 - (2.0 * NU)))
+
+G = (-1.0) * ((1.0 - (2.0 * NU)) ** 2) / (2 * E)
+
+
+H = (3.0 / 2.0) * K * (R4**2) / (R3**2)
+
+
+K1 = ((P0 * (R2**2)) / ((R2**2) - (R1**2))) * (1 - (2 * NU) + ((R1**2) / (R2**2)))
+
+
+F_PREP = FORMULE(
+    VALE="""
+          A*(B*(R3-R2+(C*(D +(G*exp(-E*K*INST))+(H*INST))))+K1) """,
+    A=A,
+    B=B,
+    R3=R3,
+    R2=R2,
+    C=C,
+    D=D,
+    G=G,
+    E=E,
+    K=K,
+    H=H,
+    K1=K1,
+    NOM_PARA="INST",
+)
+
+F_PREM = ((R3 / R2) - 1) * ((E * ((R2**2) - (R1**2))) / (2 * (R1**2) * (1 - (NU**2))))
+
+F1 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 1.0e-6)) + (H * 1.0e-6)))) + K1)
+F2 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 1.0e-3)) + (H * 1.0e-3)))) + K1)
+F3 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 1.0e-2)) + (H * 1.0e-2)))) + K1)
+F4 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 1.0e-1)) + (H * 1.0e-1)))) + K1)
+F5 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 2.0e-1)) + (H * 2.0e-1)))) + K1)
+F6 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 3.0e-1)) + (H * 3.0e-1)))) + K1)
+F7 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 4.0e-1)) + (H * 4.0e-1)))) + K1)
+F8 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 5.0e-1)) + (H * 5.0e-1)))) + K1)
+F9 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 6.0e-1)) + (H * 6.0e-1)))) + K1)
+F10 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 7.0e-1)) + (H * 7.0e-1)))) + K1)
+F11 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 8.0e-1)) + (H * 8.0e-1)))) + K1)
+F12 = A * (B * (R3 - R2 + (C * (D + (G * exp(-E * K * 9.0e-1)) + (H * 9.0e-1)))) + K1)
+
+PRES_F = DEFI_FONCTION(
+    NOM_PARA="INST",
+    PROL_DROITE="CONSTANT",
+    PROL_GAUCHE="EXCLU",
+    VALE=(
+        -1.0,
+        F_PREM,
+        0.0,
+        F_PREM,
+        1.0e-6,
+        F1,
+        1.0e-3,
+        F2,
+        1.0e-2,
+        F3,
+        1.0e-1,
+        F4,
+        2.0e-1,
+        F5,
+        3.0e-1,
+        F6,
+        4.0e-1,
+        F7,
+        5.0e-1,
+        F8,
+        6.0e-1,
+        F9,
+        7.0e-1,
+        F10,
+        8.0e-1,
+        F11,
+        9.0e-1,
+        F12,
+    ),
+)
+
+
+BLOC = AFFE_CHAR_MECA(MODELE=MO, DDL_IMPO=_F(GROUP_NO=("DABP", "DCDP", "DABG", "DCDG"), DY=0.0))
+PRES = AFFE_CHAR_MECA_F(MODELE=MO, PRES_REP=(_F(GROUP_MA="DDAP", PRES=PRES_F),))
+
+CONT = DEFI_CONT(
+    MODELE=MO,
+    INFO=1,
+    ZONE=(
+        _F(
+            GROUP_MA_MAIT="DDAG",
+            GROUP_MA_ESCL="DBCP",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="NON",
+            AIRE_TOLE=1e-15,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+    ),
+)
+
+
+RESU = MECA_NON_LINE(
+    MODELE=MO,
+    CHAM_MATER=CHMAT,
+    EXCIT=(_F(CHARGE=BLOC), _F(CHARGE=PRES)),
+    CONTACT=_F(DEFINITION=CONT, ALGO_RESO_GEOM="NEWTON"),
+    NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
+    COMPORTEMENT=(
+        _F(RELATION="LEMAITRE", PARM_THETA=0.5, GROUP_MA="MAILG", ITER_INTE_MAXI=1000),
+        _F(RELATION="ELAS", GROUP_MA="MAILP"),
+    ),
+    INCREMENT=_F(LIST_INST=L_INST),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=50),
+    INFO=1,
+)
+
+RESU = CALC_CHAMP(reuse=RESU, RESULTAT=RESU, CONTRAINTE=("SIGM_ELNO"))
+RESU = CALC_CHAMP(reuse=RESU, RESULTAT=RESU, CONTRAINTE="SIGM_NOEU")
+
+TEST_RESU(
+    RESU=(
+        _F(
+            NUME_ORDRE=125,
+            GROUP_NO="BG",
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=RESU,
+            NOM_CHAM="DEPL",
+            NOM_CMP="DX",
+            VALE_CALC=0.002119606368560573,
+            VALE_REFE=2.14e-3,
+            PRECISION=0.012,
+        ),
+        _F(
+            NUME_ORDRE=125,
+            GROUP_NO="BG",
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=RESU,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIXX",
+            VALE_CALC=-9.571147633901656e-06,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+        ),
+        _F(
+            NUME_ORDRE=125,
+            GROUP_NO="BG",
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=RESU,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIYY",
+            VALE_CALC=0.0002696630240118801,
+            VALE_REFE=2.7912e-4,
+            PRECISION=0.035000000000000003,
+        ),
+        _F(
+            NUME_ORDRE=125,
+            GROUP_NO="BG",
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=RESU,
+            NOM_CHAM="SIGM_NOEU",
+            NOM_CMP="SIZZ",
+            VALE_CALC=0.0006529925211959699,
+            VALE_REFE=6.6660000000000005e-4,
+            PRECISION=0.025000000000000001,
+        ),
+    )
+)
+
+
+FIN()

@@ -21,16 +21,16 @@
 interface
     subroutine lc9058(BEHinteg, &
                       fami, kpg, ksp, ndim, typmod, &
-                      imate, compor, carcri, instam, instap, &
+                      jvMaterCode, compor, carcri, instam, instap, &
                       neps, epsm, deps, nsig, sigm, &
-                      nvi, vim, option, angmas, &
+                      nvi, vim, option, &
                       sigp, vip, ndsde, dsidep, codret)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg, ksp, ndim
-        character(len=8), intent(in) :: typmod(*)
-        integer(kind=8), intent(in) :: imate
+        character(len=8), intent(in) :: typmod(2)
+        integer(kind=8), intent(in) :: jvMaterCode
         character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: instam, instap
@@ -41,7 +41,6 @@ interface
         integer(kind=8), intent(in) :: nvi
         real(kind=8), intent(in) :: vim(nvi)
         character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(*)
         real(kind=8), intent(out) :: sigp(nsig)
         real(kind=8), intent(out) :: vip(nvi)
         integer(kind=8), intent(in) :: ndsde

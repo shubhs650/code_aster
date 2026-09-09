@@ -26,17 +26,18 @@ interface
                       nb_node_mast, elem_mast_code, elem_mast_init, elem_mast_coor,&
                       nb_poin_inte, poin_inte_sl  , poin_inte_ma  ,&
                       matr)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: elem_dime
         aster_logical, intent(in) :: l_axis, l_upda_jaco, l_norm_smooth
         integer(kind=8), intent(in) :: nb_lagr, indi_lagc(10)
         character(len=8), intent(in) :: elem_slav_code, elem_mast_code
         integer(kind=8), intent(in) :: nb_node_slav, nb_node_mast
         integer(kind=8), intent(in) :: nb_poin_inte
-        real(kind=8), intent(in) :: poin_inte_sl(16), poin_inte_ma(16)
-        real(kind=8), intent(in) :: elem_mast_init(nb_node_mast, elem_dime)
-        real(kind=8), intent(in) :: elem_slav_init(nb_node_slav, elem_dime)
-        real(kind=8), intent(in) :: elem_mast_coor(nb_node_mast, elem_dime)
-        real(kind=8), intent(in) :: elem_slav_coor(nb_node_slav, elem_dime)
+        real(kind=8), intent(in) :: poin_inte_sl(2,8), poin_inte_ma(2,8)
+        real(kind=8), intent(in) :: elem_mast_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_slav_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
         character(len=8), intent(in) :: elga_fami
         real(kind=8), intent(inout) :: matr(55, 55)
     end subroutine lcmatr

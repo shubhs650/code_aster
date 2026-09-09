@@ -23,7 +23,7 @@ interface
         integer(kind=8), intent(in) :: elem_dime
         real(kind=8), intent(in) :: pair_tole
         integer(kind=8), intent(inout) :: nb_poin_inte
-        real(kind=8), intent(inout) :: poin_inte(elem_dime-1,nb_poin_inte)
-        real(kind=8),optional ,intent(inout) :: poin_inte2(elem_dime-1,nb_poin_inte)
+        real(kind=8), intent(inout) :: poin_inte(2,nb_poin_inte)
+        real(kind=8),optional ,intent(inout) :: poin_inte2(2,nb_poin_inte)
     end subroutine lcodrm
 end interface

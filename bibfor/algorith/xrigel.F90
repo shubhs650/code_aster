@@ -30,9 +30,10 @@ subroutine xrigel(nnop, ddlh, nfe, ddlc, igeom, &
 #include "asterfort/nbsigm.h"
 #include "asterfort/xrige2.h"
 #include "asterfort/xrige3.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: nnop, igeom
     integer(kind=8) :: ddlh, nfe, ddlc, cnset(4*32), heavt(36), lonch(10)
-    integer(kind=8) :: jpintt, jpmilt, heavn(27, 5), jstno, imate
+    integer(kind=8) :: jpintt, jpmilt, heavn(MT_NNOMAX, 5), jstno, imate
     real(kind=8) :: lsn(nnop)
     real(kind=8) :: lst(nnop), matuu(*), sig(*), basloc(*)
 !

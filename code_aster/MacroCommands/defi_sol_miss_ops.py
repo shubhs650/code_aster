@@ -75,7 +75,7 @@ def defi_sol_miss_ops(self, MATERIAU, COUCHE=None, COUCHE_AUTO=None, TITRE=None,
     # 1. Création des dictionnaires des MATERIAUX
     l_mate = []
     for Mi in MATERIAU:
-        dM = Mi.cree_dict_valeurs(Mi.mc_liste)
+        dM = Mi
         l_mate.append(dM)
     nb_mate = len(l_mate)
 
@@ -86,7 +86,7 @@ def defi_sol_miss_ops(self, MATERIAU, COUCHE=None, COUCHE_AUTO=None, TITRE=None,
     # Mode manuel :
     if COUCHE is not None:
         for Ci in COUCHE:
-            dC = Ci.cree_dict_valeurs(Ci.mc_liste)
+            dC = Ci
             if dC.get("SUBSTRATUM") == "OUI":
                 n_substr += 1
             if dC.get("EPAIS") is not None:

@@ -103,12 +103,10 @@ subroutine nmforc_step(list_func_acti, &
 ! - Active functionnalities
 !
     l_dyna = ndynlo(sddyna, 'DYNAMIQUE')
-!
+
 ! - Compute CHAR_MECA_*_R for PREDICTOR
-!
     call nmvcpr(model, cara_elem, hval_incr, &
-                ds_material, ds_constitutive, &
-                'V')
+                ds_material, ds_constitutive)
 !
 ! - Compute loads
 !

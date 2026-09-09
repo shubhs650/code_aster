@@ -1,0 +1,153 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI", IGNORE_ALARM=("QUALITY1_2"), DEBUG=_F(SDVERI="OUI"))
+
+E = 147.619e5
+Nu = 0.4762
+coef = E / 100
+
+mesh = LIRE_MAILLAGE(UNITE=20, FORMAT="MED")
+# mesh=mesh.refine(3)
+mesh = MODI_MAILLAGE(
+    reuse=mesh,
+    MAILLAGE=mesh,
+    ORIE_PEAU=_F(GROUP_MA_PEAU=("CASTR", "SURFMAIT", "SURFESCL", "TIRE1", "TIRE2")),
+)
+LINST = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=(_F(JUSQU_A=1.0, NOMBRE=1),))
+
+RAMPE = DEFI_FONCTION(
+    NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0), PROL_DROITE="CONSTANT", PROL_GAUCHE="CONSTANT"
+)
+
+mat = DEFI_MATERIAU(ELAS=_F(E=E, NU=Nu))
+
+model = AFFE_MODELE(
+    MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="D_PLAN")
+)
+
+AFFE = AFFE_MATERIAU(MAILLAGE=mesh, MODELE=model, AFFE=_F(TOUT="OUI", MATER=mat))
+
+"""CARA = AFFE_CARA_ELEM(
+    MODELE=model,
+    COQUE=_F(GROUP_MA=("CORDE","POULINT"), EPAIS=0.001),
+)"""
+
+CHAR1 = AFFE_CHAR_CINE(
+    MODELE=model,
+    MECA_IMPO=(_F(GROUP_MA=("CASTR"), DX=0, DY=0), _F(GROUP_MA=("TIRE1", "TIRE2"), DY=-1)),
+)
+
+DEFICO = DEFI_CONT(
+    MODELE=model,
+    INFO=1,
+    ZONE=(
+        _F(
+            GROUP_MA_MAIT="SURFMAIT",
+            GROUP_MA_ESCL="SURFESCL",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="OUI",
+            AIRE_TOLE=1e-8,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+    ),
+)
+
+EVOLNOLI = MECA_NON_LINE(
+    MODELE=model,
+    CHAM_MATER=AFFE,  # CARA_ELEM=CARA,
+    EXCIT=(_F(CHARGE=CHAR1, FONC_MULT=RAMPE),),
+    CONTACT=_F(DEFINITION=DEFICO, ALGO_RESO_GEOM="NEWTON"),
+    NEWTON=_F(MATRICE="ELASTIQUE", REAC_ITER=1),
+    COMPORTEMENT=_F(RELATION="ELAS", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=LINST),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=50),
+    INFO=1,
+)
+
+
+EVOLNOLI = CALC_CHAMP(reuse=EVOLNOLI, RESULTAT=EVOLNOLI, CONTRAINTE=("SIGM_ELNO"))
+EVOLNOLI = CALC_CHAMP(reuse=EVOLNOLI, RESULTAT=EVOLNOLI, CONTRAINTE="SIGM_NOEU")
+
+SIELNO = CREA_CHAMP(
+    OPERATION="EXTR", TYPE_CHAM="ELNO_SIEF_R", NOM_CHAM="SIGM_ELNO", RESULTAT=EVOLNOLI, NUME_ORDRE=1
+)
+
+
+TEST_RESU(
+    CHAM_ELEM=_F(
+        GROUP_NO="N37",
+        CRITERE="RELATIF",
+        REFERENCE="ANALYTIQUE",
+        NOM_CMP="SIYY",
+        PRECISION=0.02,
+        GROUP_MA="M96",
+        CHAM_GD=SIELNO,
+        VALE_CALC=-587977.8477266079,
+        VALE_REFE=-5.97000e5,
+    )
+)
+
+TEST_RESU(
+    RESU=(
+        _F(
+            NUME_ORDRE=1,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            GROUP_NO="N450",
+            NOM_CMP="DX",
+            VALE_CALC=-1.7176623586304375e-08,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+            PRECISION=9.9999999999999995e-08,
+        ),
+        _F(
+            NUME_ORDRE=1,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            GROUP_NO="N37",
+            NOM_CMP="DX",
+            VALE_CALC=8.666279827193282e-10,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+            PRECISION=9.9999999999999995e-08,
+        ),
+        _F(
+            NUME_ORDRE=1,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            GROUP_NO="N476",
+            NOM_CMP="DX",
+            VALE_CALC=-1.8724729851822465e-08,
+            VALE_REFE=0.0,
+            CRITERE="ABSOLU",
+            PRECISION=9.9999999999999995e-08,
+        ),
+    )
+)
+
+FIN()

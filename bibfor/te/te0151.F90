@@ -15,7 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine te0151(option, nomte)
 !
 !
@@ -71,7 +72,7 @@ subroutine te0151(option, nomte)
     real(kind=8) :: tvar, e, enerth, g, rho, valpar, xl, xnu
 ! --------------------------------------------------------------------------------------------------
     character(len=3) :: stopz
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar, famil, poum
     character(len=16) :: ch16
     real(kind=8) :: ul(14), ug(14), pgl(3, 3), klc(14, 14), klv(105)

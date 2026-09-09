@@ -17,8 +17,177 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0556(option, nomte)
+!
+    use Behaviour_module, only: behaviourOption
+    use c_interface_tria_mitc_f
+    use FE_basis_module
+    use FE_quadrature_module
+    use FE_topo_module
+    use iso_c_binding
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystNone
     implicit none
-#include "asterfort/utmess.h"
-    character(len=16) :: nomte, option
-    call utmess('F', 'FERMETUR_8')
+!
+#include "asterf_types.h"
+#include "asterfort/dxroep.h"
+#include "asterfort/elrefe_info.h"
+#include "asterfort/fointe.h"
+#include "asterfort/get_elas_id.h"
+#include "asterfort/get_elas_para.h"
+#include "asterfort/jevech.h"
+#include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+!     CALCUL DE PRESSION SUR LES ELEMENTS PLAQ_MITC
+!         OPTIONS TRAITEES   ==> CHAR_MECA_PRES_R
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbPara = 4
+    character(len=8), parameter :: paraName(4) = (/'X   ', 'Y   ', &
+                                                   'Z   ', 'INST'/)
+    real(c_double) :: paraVale(4)
+    integer(kind=8) :: ndim, nno, nnos, npg, jpoids, jvf, jdfde, jgano, jvGeom, jvMaterc
+    integer(kind=8) :: i, j, ier, jpres, itemps, ivectu, elas_id
+    real(c_double) :: e, nu, epais, rho, pres, pr
+    character(len=8), parameter :: fami = 'RIGI'
+    character(len=16) :: elas_keyword
+    real(c_double) :: cst(5), coor(18), cdofs_f(9)
+    ! NOTICE: see the size of the arrays in the C file: c_interface_plaq_mitc_f
+    integer(c_int) :: ncst, ncd, ne0, ne1, ne2
+    integer(c_int) :: entities0(1), entities1(1), entities2(1)
+    integer(kind=4), parameter :: size_init = 21, size_final = 15
+    real(c_double), dimension(size_init) :: F_elem, F0, F1, F2, F3, w_0
+    real(c_double) :: signs(size_final)
+    integer(kind=8) :: reorder(size_final)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+!
+! --------------------------------------------------------------------------------------------------
+!
+    w_0 = 0.d0
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Finite element informations
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
+                     jpoids=jpoids, jvf=jvf, jdfde=jdfde, jgano=jgano)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! ----- Get elastic parameters (only isotropic elasticity)
+! FIXME: for instance E and NU are supposed to be equal for all quadpoints
+!
+    call get_elas_id(zi(jvMaterc), elas_id, elas_keyword)
+    call get_elas_para(fami, zi(jvMaterc), '+', 1, 1, &
+                       elas_id, elas_keyword, &
+                       e_=e, nu_=nu)
+
+    call dxroep(plateCara, rho, epais)
+!
+    if (option .eq. 'CHAR_MECA_PRES_R') then
+        call jevech('PPRESSR', 'L', jpres)
+        pres = zr(jpres)
+
+    else if (option .eq. 'CHAR_MECA_PRES_F') then
+        call jevech('PPRESSF', 'L', jpres)
+        if (zk8(jpres) .eq. '&FOZERO') goto 999
+        call jevech('PINSTR', 'L', itemps)
+        paraVale(4) = zr(itemps)
+        pres = 0.d0
+        do j = 0, nno-1
+            paraVale(1) = zr(jvGeom+3*j)
+            paraVale(2) = zr(jvGeom+3*j+1)
+            paraVale(3) = zr(jvGeom+3*j+2)
+            call fointe('FM', zk8(jpres), nbPara, paraName, paraVale, pr, ier)
+            pres = pres+pr
+        end do
+        pres = pres/nno
+    end if
+
+! Fill material parameters vector
+    cst(1) = e
+    cst(2) = nu
+    cst(3) = 5.0/6.0
+    cst(4) = epais
+    cst(5) = pres
+    ncst = size(cst)
+
+! Remplissage du vecteur de coordonnées (3 coordonnées par nœud)
+    do i = 0, 5
+        coor(3*i+1) = zr(jvGeom+3*i)
+        coor(3*i+2) = zr(jvGeom+3*i+1)
+        coor(3*i+3) = zr(jvGeom+3*i+2)
+    end do
+
+! Remplissage des coordonées (pas de permut ici)
+    cdofs_f(1) = coor(1)
+    cdofs_f(2) = coor(2)
+    cdofs_f(3) = coor(3)
+    cdofs_f(4) = coor(4)
+    cdofs_f(5) = coor(5)
+    cdofs_f(6) = coor(6)
+    cdofs_f(7) = coor(7)
+    cdofs_f(8) = coor(8)
+    cdofs_f(9) = coor(9)
+    ncd = size(cdofs_f)
+!
+! On définit 3 entities car 3 arêtes dans le triangle
+    entities0(1) = 0
+    entities1(1) = 1
+    entities2(1) = 2
+    ne0 = 1
+    ne1 = 1
+    ne2 = 1
+!
+    call BP1_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities0, ne0, cst, ncst, F0)
+    call BP2_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities0, ne0, cst, ncst, F1)
+    call BP2_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities1, ne1, cst, ncst, F2)
+    call BP2_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities2, ne2, cst, ncst, F3)
+
+! Remplissage du vecteur
+    do i = 1, size_init
+        F_elem(i) = F0(i)+F1(i)+F2(i)+F3(i)
+    end do
+
+! Reorganisation du vecteur
+    ![w1, θ_y1, -θ_x1, w2, θ_y2, -θ_x2, w3, θ_y3, -θ_x3,
+    ! θ_y6, -θ_x6, θ_y4, -θ_x4, θ_y5, -θ_x5]
+    !
+    reorder = (/ &
+              13, 2, 1, &
+              14, 4, 3, &
+              15, 6, 5, &
+              12, 11, &
+              8, 7, &
+              10, 9 &
+              /)
+    signs = (/ &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, -1.d0, &
+            1.d0, -1.d0, &
+            1.d0, -1.d0 &
+            /)
+
+! - Set matrix in output field
+    call jevech('PVECTUR', 'E', ivectu)
+    do i = 1, size_final
+        zr(ivectu+i-1) = -signs(i)*F_elem(reorder(i))
+    end do
+999 continue
+!
 end subroutine

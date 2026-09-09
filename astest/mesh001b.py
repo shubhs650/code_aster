@@ -525,6 +525,16 @@ test.assertEqual(
     [3321, 3321, 3825][rank],
 )
 
+# check issue35697
+field_r = CREA_CHAMP(
+    TYPE_CHAM="NOEU_DEPL_R",
+    OPERATION="AFFE",
+    MAILLAGE=square2,
+    AFFE=_F(TOUT="OUI", NOM_CMP=("DX", "DY"), VALE=(1.0, 2.0)),
+)
+
+field_rs = field_r.toSimpleFieldOnNodes()
+field_r2 = field_rs.toFieldOnNodes()
 
 # test ghosts
 square = CA.ParallelMesh.buildSquare(refine=2, deterministic=True, ghost=2)
@@ -535,6 +545,51 @@ test.assertEqual(
         [2, 3, 6, 7, 10, 11, 13, 14, 15, 17, 18, 19],
         [2, 3, 4, 7, 8, 9, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23],
         [4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24],
+    ][rank],
+)
+
+test.assertEqual(
+    square.getCellsOwner(),
+    [
+        [0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 2, 2],
+        [1, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 2, 2, 2],
+        [0, 0, 2, 2, 2, 2, 0, 1, 0, 1, 1, 1, 0, 2, 2, 2, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+    ][rank],
+)
+
+test.assertEqual(
+    square.getLocalToGlobalCellIds(),
+    [
+        [0, 1, 2, 17, 3, 4, 5, 6, 25, 7, 8, 21, 9, 10, 19, 11, 12, 23, 13, 29, 30],
+        [14, 15, 16, 0, 2, 17, 18, 28, 10, 19, 20, 11, 12, 7, 8, 21, 22, 9, 23, 24, 29, 30, 31],
+        [
+            5,
+            6,
+            25,
+            26,
+            27,
+            28,
+            3,
+            15,
+            4,
+            16,
+            23,
+            24,
+            13,
+            29,
+            30,
+            31,
+            7,
+            8,
+            21,
+            22,
+            9,
+            10,
+            19,
+            20,
+            11,
+            12,
+        ],
     ][rank],
 )
 

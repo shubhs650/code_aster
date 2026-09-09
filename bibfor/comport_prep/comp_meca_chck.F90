@@ -20,15 +20,17 @@ subroutine comp_meca_chck(model, mesh, chmate, &
                           fullElemField, lInitialState, prepMapCompor)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/asmpi_comm.h"
 #include "asterc/lccree.h"
 #include "asterc/lcdiscard.h"
 #include "asterc/lctest.h"
+#include "asterf_types.h"
 #include "asterfort/asmpi_info.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/BehaviourMGIS_type.h"
+#include "asterfort/comp_meca_l.h"
 #include "asterfort/comp_read_mesh.h"
 #include "asterfort/compMecaChckModel.h"
 #include "asterfort/compMecaChckStrain.h"
@@ -66,12 +68,13 @@ subroutine comp_meca_chck(model, mesh, chmate, &
     integer(kind=8) :: nbCellAffe, iexi
     integer(kind=8) :: iFactorKeyword, nbFactorKeyword, exteDefo, lctestIret
     character(len=16) :: defoComp, relaComp, typeCpla, typeComp, reguVisc, postIncr
+    character(len=16) :: relaPlas, relaFlua, kitComp(4)
     character(len=16) :: relaCompPY, defoCompPY
     character(len=8) :: partit
     character(len=19) :: answer
     character(len=24) :: modelLigrel
     mpi_int :: nbCPU, mpiCurr
-    aster_logical :: lElasByDefault, lNeedDeborst, lMfront, lDistParallel
+    aster_logical :: lElasByDefault, lNeedDeborst, lMfront, lDistParallel, lKitDDI
     aster_logical :: lIncoUpo, lExistVarc, exis_temp, exis_sech, lTotalStrain
 !
 ! --------------------------------------------------------------------------------------------------
@@ -107,11 +110,14 @@ subroutine comp_meca_chck(model, mesh, chmate, &
         defoComp = prepMapCompor%prepPara(iFactorKeyword)%defo_comp
         typeComp = prepMapCompor%prepPara(iFactorKeyword)%type_comp
         reguVisc = prepMapCompor%prepPara(iFactorKeyword)%regu_visc
-        lMfront = prepMapCompor%prepExte(iFactorKeyword)%l_mfront_offi .or. &
-                  prepMapCompor%prepExte(iFactorKeyword)%l_mfront_proto
-        exteDefo = prepMapCompor%prepExte(iFactorKeyword)%strain_model
+        lMfront = &
+            prepMapCompor%prepExte(iFactorKeyword)%solvBehavType == SOLV_BEHAV_MGIS_OFFI .or. &
+            prepMapCompor%prepExte(iFactorKeyword)%solvBehavType == SOLV_BEHAV_MGIS_PROTO
+        exteDefo = prepMapCompor%prepExte(iFactorKeyword)%strainMGIS
         postIncr = prepMapCompor%prepPara(iFactorKeyword)%post_incr
         lTotalStrain = prepMapCompor%prepPara(iFactorKeyword)%lTotalStrain
+        kitComp = prepMapCompor%prepPara(iFactorKeyword)%kit_comp
+        call comp_meca_l(relaComp, 'KIT_DDI', lKitDDI)
 
 ! ----- Coding comportment (Python)
         call lccree(1, relaComp, relaCompPY)
@@ -147,7 +153,7 @@ subroutine comp_meca_chck(model, mesh, chmate, &
 
 ! ----- Check POST_INCR
         if (postIncr .eq. 'REST_ECRO') then
-            call lctest(relaCompPY, 'post_incr', 'REST_ECRO', lctestIret)
+            call lctest(relaCompPY, 'POST_INCR', 'REST_ECRO', lctestIret)
             if (lctestIret .eq. 0) then
                 call utmess('F', 'COMPOR1_90', nk=1, valk=relaComp)
             end if
@@ -188,6 +194,17 @@ subroutine comp_meca_chck(model, mesh, chmate, &
 ! ----- Warning if ELASTIC comportment and initial state
         if (lInitialState .and. typeComp .eq. 'COMP_ELAS') then
             call utmess('A', 'COMPOR1_61')
+        end if
+
+! ----- Specific for BETON_UMLV
+        if (lInitialState .and. lKitDDI) then
+            relaFlua = kitComp(1)
+            relaPlas = kitComp(2)
+            if (relaFlua .eq. 'BETON_UMLV') then
+                if (relaPlas .eq. 'ENDO_ISOT_BETON' .or. relaPlas .eq. 'MAZARS') then
+                    call utmess('A', 'COMPOR3_83')
+                end if
+            end if
         end if
 
 ! ----- Coding comportment (Python)

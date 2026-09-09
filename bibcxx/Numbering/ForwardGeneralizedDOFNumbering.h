@@ -58,6 +58,8 @@ class ForwardGeneralizedDOFNumberingPtr {
     bool isSet() const;
 
     void setPointer( const GeneralizedDOFNumberingPtr &ptr );
+
+    const std::string getName();
 };
 
 #endif /* FORWARDGENERALIZEDDOFNUMBERING_H_ */

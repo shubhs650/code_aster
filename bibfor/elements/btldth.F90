@@ -23,11 +23,7 @@ subroutine btldth(nb1, btild, wgt, &
 !
     implicit none
 !
-#include "asterc/r8nnem.h"
 #include "asterf_types.h"
-#include "asterfort/jevech.h"
-#include "asterfort/rcvarc.h"
-#include "asterfort/utmess.h"
 #include "jeveux.h"
 !
     integer(kind=8), intent(in) :: nb1

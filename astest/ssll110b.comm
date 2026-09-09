@@ -1,0 +1,157 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="OUI"))
+
+MAILLAGE = LIRE_MAILLAGE(FORMAT="ASTER")
+
+ACIER = DEFI_MATERIAU(ELAS=_F(NU=0.3, RHO=8000.0, E=2.0e11))
+
+PLUME = DEFI_MATERIAU(ELAS=_F(NU=0.3, RHO=0.0, E=2.0e11))
+
+CH_MATER = AFFE_MATERIAU(
+    AFFE=(_F(MATER=ACIER, GROUP_MA="PESA"), _F(MATER=PLUME, GROUP_MA="VERT")), MAILLAGE=MAILLAGE
+)
+
+MODELE = AFFE_MODELE(
+    AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="2D_BARRE"), MAILLAGE=MAILLAGE
+)
+
+CARA_ELE = AFFE_CARA_ELEM(
+    MODELE=MODELE, BARRE=_F(SECTION="GENERALE", GROUP_MA=("PESA", "VERT"), CARA="A", VALE=1.0)
+)
+
+CHARGE_1 = AFFE_CHAR_MECA(
+    DDL_IMPO=(
+        _F(TOUT="OUI", DX=0.0),
+        _F(DX=0.0, DY=0.0, GROUP_NO="A"),
+        _F(DX=0.0, DY=0.0, GROUP_NO="B"),
+    ),
+    MODELE=MODELE,
+    PESANTEUR=_F(GRAVITE=20.0, DIRECTION=(0.866, -0.5, 0.0)),
+)
+
+STATIQU1 = MECA_STATIQUE(
+    CHAM_MATER=CH_MATER, MODELE=MODELE, CARA_ELEM=CARA_ELE, EXCIT=_F(CHARGE=CHARGE_1)
+)
+
+
+STATIQU1 = CALC_CHAMP(
+    reuse=STATIQU1, RESULTAT=STATIQU1, CONTRAINTE=("EFGE_ELNO"), DEFORMATION=("EPSI_ELNO")
+)
+
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="EFGE_ELNO",
+        GROUP_NO="N1",
+        NOM_CMP="N",
+        VALE_CALC=4.00008800e05,
+        VALE_REFE=4.0e5,
+        GROUP_MA="M1",
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="EFGE_ELNO",
+        GROUP_NO="N4",
+        NOM_CMP="N",
+        VALE_CALC=4.00008800e05,
+        VALE_REFE=4.0e5,
+        GROUP_MA="M3",
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="EPSI_ELNO",
+        GROUP_NO="N1",
+        NOM_CMP="EPXX",
+        VALE_CALC=2.00004400e-06,
+        VALE_REFE=1.9999999999999999e-06,
+        GROUP_MA="M1",
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="EPSI_ELNO",
+        GROUP_NO="N4",
+        NOM_CMP="EPXX",
+        VALE_CALC=2.00004400e-06,
+        VALE_REFE=1.9999999999999999e-06,
+        GROUP_MA="M3",
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="DEPL",
+        GROUP_NO="N2",
+        NOM_CMP="DY",
+        VALE_CALC=-2.00004400e-05,
+        VALE_REFE=-2.0000000000000002e-05,
+    )
+)
+
+TEST_RESU(
+    RESU=_F(
+        NUME_ORDRE=1,
+        REFERENCE="ANALYTIQUE",
+        RESULTAT=STATIQU1,
+        NOM_CHAM="DEPL",
+        GROUP_NO="N3",
+        NOM_CMP="DY",
+        VALE_CALC=-2.00004400e-05,
+        VALE_REFE=-2.0000000000000002e-05,
+    )
+)
+
+# Validation de CREA_CHAMP / DISC : ELGA -> NOEU :
+# ---------------------------------------------------
+XX1 = CREA_CHAMP(
+    OPERATION="EXTR", TYPE_CHAM="ELGA_SIEF_R", NOM_CHAM="SIEF_ELGA", RESULTAT=STATIQU1, INST=0.0
+)
+
+XX2 = CREA_CHAMP(OPERATION="DISC", TYPE_CHAM="NOEU_SIEF_R", INFO=2, MODELE=MODELE, CHAM_GD=XX1)
+
+TEST_RESU(
+    CHAM_NO=(
+        _F(GROUP_NO="N3", NOM_CMP="N", CHAM_GD=XX2, VALE_CALC=2.0000440014521001e5),
+        _F(GROUP_NO="N4", NOM_CMP="N", CHAM_GD=XX2, VALE_CALC=4.0000880029041e5),
+    )
+)
+
+FIN()

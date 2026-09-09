@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
-                  ligrma, zjdlm, nbno, tabnoe, rignoe, rirot, ndim)
+                  ligrma, zjdlm, nbno, tabnoe, rignoe, rirot, ndim, jdme)
 !
 !
     implicit none
-    integer(kind=8) :: ioc, nbgr, nbno, ndim
+    integer(kind=8) :: ioc, nbgr, nbno, ndim, jdme
     integer(kind=8) :: zjdlm(*)
     character(len=8) :: noma, tabnoe(*), km
     character(len=24) :: ligrma(nbgr)
@@ -33,6 +33,9 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
 #include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/dismoi.h"
+#include "asterfort/elraga.h"
+#include "asterfort/elrfdf.h"
+#include "asterfort/elrfvf.h"
 #include "asterfort/fointe.h"
 #include "asterfort/getvid.h"
 #include "asterfort/getvr8.h"
@@ -64,22 +67,27 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     real(kind=8) :: a(3), b(3), c(3), u(3)
     real(kind=8) :: coef, dist, xyzc(3)
     real(kind=8) :: r1, r2, r3, r4, r5, r6, rig3, rig4, rig5, rig6
-    real(kind=8) :: surf, surtot
+    real(kind=8) :: surf_cell, surtot, surf
     real(kind=8) :: xx, yy, zz, xyzg(3)
 !
-    character(len=8) :: k8b, nomnoe, typm, nommai
+    character(len=8) :: k8b, nomnoe, typm, nommai, method
     character(len=24) :: nomgr, magrno, magrma, manoma, matyma
 !
-    aster_logical :: lfonc, trans
+    aster_logical :: lfonc, trans, is_uniform, is_quadratic, is_line_or_biquad
 !
+    integer(kind=8) :: npg, posi2, posit(9), ndim2, ipg
+    real(kind=8) :: xg(2, 9), wg(9), dff(3, 9), ff(9), ksi(2)
+    real(kind=8) :: tan_1(3), tan_2(3), jac
+    character(len=8) :: typelem, schema
+
     integer(kind=8), pointer :: parno(:) => null()
     integer(kind=8), pointer :: mailles_surf(:) => null()
     real(kind=8), pointer   :: coegro(:) => null()
     real(kind=8), pointer   :: coeno(:) => null()
-    real(kind=8), pointer   :: surmai(:) => null()
     real(kind=8), pointer   :: coord(:) => null()
 !
     character(len=8), pointer :: fongro(:) => null()
+    character(len=16) :: ktyelm
 !
     blas_int :: b_1, b_2, b_3
 !
@@ -91,6 +99,20 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     magrma = noma//'.GROUPEMA'
     manoma = noma//'.CONNEX'
     matyma = noma//'.TYPMAIL'
+
+!   Methode UNIFORME : répartition surfacique uniforme
+!           DIAG     : répartition par intégration via les fonctions de forme
+    call getvtx('RIGI_PARASOL', 'METHODE', iocc=ioc, nbval=1, vect=method)
+    if (method(1:8) .eq. 'UNIFORME') then
+        is_uniform = ASTER_TRUE
+    else if (method(1:4) .eq. 'DIAG') then
+        is_uniform = ASTER_FALSE
+    else
+        ASSERT(ASTER_FALSE)
+    end if
+
+    is_quadratic = ASTER_FALSE
+    is_line_or_biquad = ASTER_FALSE
 !
 !   Coordonnées des noeuds
     call jeveuo(noma//'.COORDO    .VALE', 'L', vr=coord)
@@ -99,6 +121,7 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     call getvr8('RIGI_PARASOL', 'COOR_CENTRE', iocc=ioc, nbval=0, nbret=ncg)
     call getvtx('RIGI_PARASOL', 'GROUP_NO_CENTRE', iocc=ioc, nbval=0, vect=k8b, nbret=ngn)
     xyzg(:) = 0.0
+    !xyzg sont les coordonnées du centre
     if (ncg .ne. 0) then
         ASSERT(ngn .eq. 0)
         call getvr8('RIGI_PARASOL', 'COOR_CENTRE', iocc=ioc, nbval=3, vect=xyzg, nbret=ncg)
@@ -136,6 +159,8 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     NbNoeud = 0
     call jeveuo(matyma, 'L', ltyp)
     do ii = 1, nbgr
+        ! nbgr est le nombre de group_ma dans RIGI_PARASOL qu'on peut affecter à
+        ! des coeff group différents
         call jelira(jexnom(magrma, ligrma(ii)), 'LONUTI', nb)
         call jeveuo(jexnom(magrma, ligrma(ii)), 'L', ldgm)
         do in = 0, nb-1
@@ -147,6 +172,11 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
                 nommai = int_to_char8(num_maille)
                 call utmess('F', 'AFFECARAELEM_25', si=ioc, nk=2, valk=[ligrma(ii), nommai])
             end if
+            call jenuno(jexnum('&CATA.TE.NOMTE', zi(jdme-1+num_maille)), ktyelm)
+            if ((ktyelm .eq. "MEC3TR7H") .or. (ktyelm .eq. "MEC3QU9H")) then
+                call utmess('F', 'MODELISA6_39', sk='RIGI_GRILLE')
+            end if
+
             NbMaille = NbMaille+1
             call jelira(jexnum(manoma, num_maille), 'LONMAX', nm)
             call jenuno(jexnum('&CATA.TM.NOMTM', zi(ltyp-1+num_maille)), typm)
@@ -163,10 +193,18 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
                 call utmess('F', 'MODELISA6_29')
             end if
             NbNoeud = NbNoeud+nm
+            if (nm .eq. 6 .or. nm .eq. 8) then
+                is_quadratic = .true.
+            else
+                is_line_or_biquad = .true.
+            end if
         end do
     end do
     ASSERT(appui .ne. -1)
     ASSERT(NbMaille .ne. 0)
+    if (is_quadratic .and. is_line_or_biquad) then
+        call utmess('F', 'MODELISA6_41', sk='RIGI_GRILLE')
+    end if
 !
     b_1 = to_blas_int(1)
     b_2 = to_blas_int(2)
@@ -176,8 +214,6 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     AS_ALLOCATE(vr=coeno, size=NbNoeud)
 !   Participation des noeuds de l interface
     AS_ALLOCATE(vi=parno, size=NbNoeud)
-!   Surfaces élémentaires de la maille
-    AS_ALLOCATE(vr=surmai, size=NbMaille)
 !   Numéro des mailles
     AS_ALLOCATE(vi=mailles_surf, size=NbMaille)
 !
@@ -186,6 +222,7 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     do ii = 1, nbgr
         call jelira(jexnom(magrma, ligrma(ii)), 'LONUTI', nb)
         call jeveuo(jexnom(magrma, ligrma(ii)), 'L', ldgm)
+        ! nb est le nombre de mailles dans GROUP_MA
         cymaille: do in = 0, nb-1
             num_maille = zi(ldgm+in)
             if (.not. in_liste_entier(num_maille, mailles_surf(1:nb_ma_surf), posi)) then
@@ -202,14 +239,18 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
             call jelira(jexnum(manoma, num_maille), 'LONMAX', nm)
             call jeveuo(jexnum(manoma, num_maille), 'L', ldnm)
             xyzc(:) = 0.0d0
+            ! nm est le numéro de noeuds par maille
             do nn = 1, nm
                 inoe = zi(ldnm+nn-1)
-!               On enregistre le numéro du noeud dans parno, s'il n'y est pas déjà
-                if (.not. in_liste_entier(inoe, parno(1:nbparno))) then
+                if (in_liste_entier(inoe, parno(1:nbparno), posi2)) then
+                    posit(nn) = posi2
+                else
                     nbparno = nbparno+1
                     ASSERT(nbparno .le. NbNoeud)
                     parno(nbparno) = inoe
+                    posit(nn) = nbparno
                 end if
+                ! Les x,y,z(nn) sont les coordonnées des noeuds
                 x(nn) = coord(3*(inoe-1)+1)
                 y(nn) = coord(3*(inoe-1)+2)
                 z(nn) = coord(3*(inoe-1)+3)
@@ -218,68 +259,130 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
                 xyzc(3) = xyzc(3)+z(nn)
             end do
             xyzc(:) = xyzc(:)/nm
-!
-            if (appui .eq. 1) then
-                a(1) = x(2)-x(1)
-                a(2) = y(2)-y(1)
-                a(3) = z(2)-z(1)
-                surf = ddot(b_2, a, b_1, a, b_1)
-                surmai(posi) = sqrt(surf)
-            else if (appui .eq. 2) then
-                a(1) = x(3)-x(1)
-                a(2) = y(3)-y(1)
-                a(3) = z(3)-z(1)
-                if (nm .eq. 3 .or. nm .eq. 6 .or. nm .eq. 7) then
-                    b(1) = x(2)-x(1)
-                    b(2) = y(2)-y(1)
-                    b(3) = z(2)-z(1)
-                else if (nm .eq. 4 .or. nm .eq. 8 .or. nm .eq. 9) then
-                    b(1) = x(4)-x(2)
-                    b(2) = y(4)-y(2)
-                    b(3) = z(4)-z(2)
-                else
-                    ASSERT(.false.)
-                end if
-                call provec(a, b, c)
-                surf = ddot(b_3, c, b_1, c, b_1)
-                surmai(posi) = sqrt(surf)*0.5d0
-            else
-                ASSERT(.false.)
-            end if
+            !xyzc sont les coordonnées du centre de gravité de l'élément
             if (lfonc) then
                 u(1:3) = xyzg(1:3)-xyzc(1:3)
                 dist = ddot(b_3, u, b_1, u, b_1)
                 dist = sqrt(dist)
                 call fointe('F ', fongro(ii), 1, ['X'], [dist], coef, iret)
-                surmai(posi) = surmai(posi)*coef
             else
-                surmai(posi) = surmai(posi)*coegro(ii)
+                coef = coegro(ii)
             end if
-            surtot = surtot+surmai(posi)
-!           Surface de la maille affectée à chacun des noeuds
-            surmai(posi) = surmai(posi)/nm
+!
+            if (appui .eq. 1) then
+                a(1) = x(2)-x(1)
+                a(2) = y(2)-y(1)
+                a(3) = z(2)-z(1)
+                surf = sqrt(ddot(b_2, a, b_1, a, b_1))
+                do nn = 1, nm
+                    coeno(posit(nn)) = coeno(posit(nn))+surf/nm
+                end do
+                surtot = surtot+surf
+            else if (appui .eq. 2) then
+                if (nm .eq. 3) then
+                    typelem = 'TR3'
+                else if (nm .eq. 4) then
+                    typelem = 'QU4'
+                else if (nm .eq. 6) then
+                    typelem = 'TR6'
+                else if (nm .eq. 8) then
+                    typelem = 'QU8'
+                else if (nm .eq. 9) then
+                    call jenuno(jexnum('&CATA.TE.NOMTE', zi(jdme-1+num_maille)), ktyelm)
+                    if (ktyelm .ne. "MECA_FACE9") then
+                        call utmess('F', 'MODELISA6_40', sk='RIGI_GRILLE')
+                    end if
+                    typelem = 'QU9'
+                else
+                    ASSERT(.false.)
+                end if
+                if (is_uniform) then
+                    a(1) = x(3)-x(1)
+                    a(2) = y(3)-y(1)
+                    a(3) = z(3)-z(1)
+                    if (nm .eq. 3 .or. nm .eq. 6) then
+                        b(1) = x(2)-x(1)
+                        b(2) = y(2)-y(1)
+                        b(3) = z(2)-z(1)
+                    else if (nm .eq. 4 .or. nm .eq. 8 .or. nm .eq. 9) then
+                        b(1) = x(4)-x(2)
+                        b(2) = y(4)-y(2)
+                        b(3) = z(4)-z(2)
+                    end if
+                    call provec(a, b, c)
+                    ! surf è la superficie dell'element finito
+                    ! Pourquoi le 0.5d0 aussi quand on a un élément quadrangulaire? Car pour
+                    ! l'élément quadrangulaire on utilise les diagonales et donc on a besoin
+                    ! d'un 0.5 correctif
+                    surf_cell = sqrt(ddot(b_3, c, b_1, c, b_1))*0.5d0
+                    schema = 'NOEU'
+                else
+                    if (nm .eq. 3) then
+                        schema = 'FPG3'
+                    else if (nm .eq. 4) then
+                        schema = 'FPG4'
+                    else if (nm .eq. 6) then
+                        schema = 'FPG6'
+                    else if (nm .eq. 8 .or. nm .eq. 9) then
+                        schema = 'FPG9'
+                    else
+                        ASSERT(.false.)
+                    end if
+                end if
+                call elraga(typelem, schema, ndim2, npg, xg, wg)
+
+                do ipg = 1, npg
+
+                    ksi = xg(:, ipg)
+                    if (is_uniform) then
+                        surf = coef*surf_cell/nm
+                    else
+                        call elrfdf(typelem, ksi, dff)
+                        ! calcul des tangentes au point de Gauss
+                        tan_1 = 0.d0
+                        tan_2 = 0.d0
+                        do nn = 1, nm
+                            tan_1(1) = tan_1(1)+dff(1, nn)*x(nn)
+                            tan_1(2) = tan_1(2)+dff(1, nn)*y(nn)
+                            tan_1(3) = tan_1(3)+dff(1, nn)*z(nn)
+                            tan_2(1) = tan_2(1)+dff(2, nn)*x(nn)
+                            tan_2(2) = tan_2(2)+dff(2, nn)*y(nn)
+                            tan_2(3) = tan_2(3)+dff(2, nn)*z(nn)
+                        end do
+
+                        ! calcul du jacobien
+                        jac = sqrt(abs(ddot(b_3, tan_1, b_1, tan_1, b_1)* &
+                                       ddot(b_3, tan_2, b_1, tan_2, b_1) &
+                                       -ddot(b_3, tan_1, b_1, tan_2, b_1)**2))
+
+                        surf = coef*wg(ipg)*jac
+                    end if
+
+                    call elrfvf(typelem, ksi, ff)
+                    ! ajout des contributions aux noeuds
+                    do nn = 1, nm
+                        if ((nm .eq. 3) .or. (nm .eq. 4) .or. (nm .eq. 9)) then
+                            coeno(posit(nn)) = coeno(posit(nn))+ff(nn)*surf
+                            surtot = surtot+ff(nn)*surf
+                        else
+                            ! pour TR6 et QU8
+                            ! on prend la fonction de forme au carré pour éviter des contributions
+                            ! négative ou nuls
+                            coeno(posit(nn)) = coeno(posit(nn))+ff(nn)*ff(nn)*surf
+                            surtot = surtot+ff(nn)*ff(nn)*surf
+                        end if
+                    end do
+                end do
+            else
+                ASSERT(.false.)
+            end if
         end do cymaille
     end do
 !   Ceinture et bretelle
     ASSERT(nbparno .le. nbno)
     nbno = nbparno
-!
-!   Calcul des pondérations élémentaires
-    do ii = 1, nb_ma_surf
-        num_maille = mailles_surf(ii)
-        call jelira(jexnum(manoma, num_maille), 'LONMAX', nm)
-        call jeveuo(jexnum(manoma, num_maille), 'L', ldnm)
-        do nn = 1, nm
-            inoe = zi(ldnm+nn-1)
-!           Le noeud doit être dans parno
-            if (in_liste_entier(inoe, parno(1:nbparno), posi)) then
-                coeno(posi) = coeno(posi)+surmai(ii)/surtot
-            else
-                ASSERT(.false.)
-            end if
-        end do
-    end do
-!
+    coeno = coeno/surtot
+
 !   Calcul des raideurs de rotation
     rig3 = 0.0d0
     rig4 = 0.0d0
@@ -334,6 +437,7 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
 !
     do ij = 1, nbparno
         inoe = parno(ij)
+        !print *, "coeno", ij, coeno(ij)
         r1 = rigiRep(1)*coeno(ij)
         r2 = rigiRep(2)*coeno(ij)
         if (ndim .eq. 3) then
@@ -361,7 +465,6 @@ subroutine rairep(noma, ioc, km, rigiRep, nbgr, &
     AS_DEALLOCATE(vk8=fongro)
     AS_DEALLOCATE(vr=coeno)
     AS_DEALLOCATE(vi=parno)
-    AS_DEALLOCATE(vr=surmai)
     AS_DEALLOCATE(vi=mailles_surf)
 !
     call jedema()

@@ -1,0 +1,347 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+import numpy as np
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="NON"))
+
+### Model parameters
+freq = 4.0  # [Hz]
+omega = 2 * np.pi * freq  # [rad/s]
+
+m = 1
+kdx = 100
+kdy = 150
+kdz = 200
+
+# Nonlinear behavior law parameters
+limy_dx = 30.0
+kcin_dx = 0.5 * kdx
+limu_dx = 10.0
+puis_dx = 2.7
+
+limy_dy = 25.0
+kcin_dy = 0.5 * kdy
+limu_dy = 15.0
+puis_dy = 1.5
+
+limy_dz = 20
+kcin_dz = 0.5 * kdz
+limu_dz = 9.0
+puis_dz = 4.0
+
+
+### Time integration parameters
+dt = 5e-3  # [s]
+t0 = 0.0  # [s]
+tf = 1.0  # [s]
+
+### Load parameters
+freq_load = 3.5  # [Hz]
+omega_load = 2 * np.pi * freq_load  # [rad/s]
+my0 = 70.0  # [N.m]
+phi0 = 0.0  # [rad]
+
+### Mesh
+MA0 = LIRE_MAILLAGE(FORMAT="ASTER")
+
+MA = CREA_MAILLAGE(MAILLAGE=MA0, CREA_POI1=(_F(NOM_GROUP_MA="MB", GROUP_NO="B"),))
+
+### Model
+MO = AFFE_MODELE(
+    MAILLAGE=MA,
+    AFFE=(
+        _F(GROUP_MA=("RESSORTS"), PHENOMENE="MECANIQUE", MODELISATION="DIS_T"),
+        _F(GROUP_MA=("MB"), PHENOMENE="MECANIQUE", MODELISATION="DIS_T"),
+    ),
+)
+
+### Elementary characteristics
+CARA_ELE = AFFE_CARA_ELEM(
+    MODELE=MO,
+    DISCRET=(
+        _F(CARA="K_T_D_L", GROUP_MA="K1", VALE=(kdx, kdy, kdz), REPERE="LOCAL"),
+        _F(CARA="M_T_D_N", GROUP_MA="MB", VALE=(m,), REPERE="LOCAL"),
+    ),
+)
+
+### Material
+
+MATERDNL = DEFI_MATERIAU(
+    DIS_ECRO_CINE=_F(
+        LIMY_DX=limy_dx,
+        KCIN_DX=kcin_dx,
+        PUIS_DX=puis_dx,
+        LIMU_DX=limu_dx,
+        LIMY_DY=limy_dy,
+        KCIN_DY=kcin_dy,
+        PUIS_DY=puis_dy,
+        LIMU_DY=limu_dy,
+        LIMY_DZ=limy_dz,
+        KCIN_DZ=kcin_dz,
+        PUIS_DZ=puis_dz,
+        LIMU_DZ=limu_dz,
+    )
+)
+
+CHMATDNL = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(GROUP_MA="RESSORTS", MATER=MATERDNL))
+
+### Boundary conditions
+LIAISON = AFFE_CHAR_MECA(MODELE=MO, DDL_IMPO=(_F(GROUP_NO="A", DX=0.0, DY=0.0, DZ=0.0)))
+
+### Imposed load
+LOAD = AFFE_CHAR_MECA(MODELE=MO, FORCE_NODALE=_F(GROUP_NO="B", FX=1.0, FY=1.0, FZ=1.0))
+
+F_MULT0 = FORMULE(
+    VALE="my0*sin(omega_load*INST+phi0)", my0=my0, phi0=phi0, omega_load=omega_load, NOM_PARA="INST"
+)
+
+
+### Time discretization
+L_INST = DEFI_LIST_REEL(DEBUT=t0, INTERVALLE=(_F(JUSQU_A=tf, PAS=dt),))
+
+### Load multiplicative function
+F_MULT = CALC_FONC_INTERP(FONCTION=F_MULT0, LIST_PARA=L_INST, NOM_PARA="INST")
+
+
+### Solve transient problem
+RESU = DYNA_NON_LINE(
+    MODELE=MO,
+    CARA_ELEM=CARA_ELE,
+    CHAM_MATER=CHMATDNL,
+    EXCIT=(_F(CHARGE=LIAISON), _F(CHARGE=LOAD, FONC_MULT=F_MULT)),
+    COMPORTEMENT=_F(RELATION="DIS_ECRO_CINE", GROUP_MA="RESSORTS"),
+    INCREMENT=_F(LIST_INST=L_INST, INST_INIT=t0, INST_FIN=tf),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    CONVERGENCE=_F(ARRET="OUI", RESI_GLOB_MAXI=1e-6, ITER_GLOB_MAXI=30),
+    SCHEMA_TEMPS=_F(SCHEMA="NEWMARK", FORMULATION="DEPLACEMENT"),
+    INFO=1,
+)
+
+## Post-processing
+
+TAB = POST_RELEVE_T(
+    ACTION=_F(
+        OPERATION="EXTRACTION",
+        INTITULE="DEPLACEMENT",
+        RESULTAT=RESU,
+        NOM_CHAM="DEPL",
+        TOUT_ORDRE="OUI",
+        GROUP_NO="B",
+        NOM_CMP=("DX", "DY", "DZ"),
+    )
+)
+
+# t = TAB.EXTR_TABLE().values()["INST"]
+# dx = TAB.EXTR_TABLE().values()["DX"]
+# dy = TAB.EXTR_TABLE().values()["DY"]
+# dz = TAB.EXTR_TABLE().values()["DZ"]
+
+# print("RESU")
+# for i, tt in enumerate(t):
+#     print(tt, dx[i], dy[i], dz[i])
+
+
+TEST_TABLE(
+    VALE_CALC=0.556819044423893, NOM_PARA="DX", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=0.2)
+)
+
+TEST_TABLE(
+    VALE_CALC=0.5165561278631956, NOM_PARA="DY", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=0.2)
+)
+
+TEST_TABLE(
+    VALE_CALC=0.5153116953705169, NOM_PARA="DZ", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=0.2)
+)
+
+TEST_TABLE(
+    VALE_CALC=0.04934168313635184, NOM_PARA="DX", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=1.0)
+)
+
+TEST_TABLE(
+    VALE_CALC=0.0390310512380003, NOM_PARA="DY", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=1.0)
+)
+
+TEST_TABLE(
+    VALE_CALC=0.09899721312409537, NOM_PARA="DZ", TABLE=TAB, FILTRE=_F(NOM_PARA="INST", VALE=1.0)
+)
+
+
+### Matrices assembly
+ASSEMBLAGE(
+    MODELE=MO,
+    CARA_ELEM=CARA_ELE,
+    CHARGE=LIAISON,
+    NUME_DDL=CO("NUMEDDL"),
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGI"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASS"), OPTION="MASS_MECA"),
+    ),
+)
+
+ASSEMBLAGE(
+    MODELE=MO,
+    CARA_ELEM=CARA_ELE,
+    CHARGE=LOAD,
+    NUME_DDL=NUMEDDL,
+    VECT_ASSE=(_F(VECTEUR=CO("FORC"), OPTION="CHAR_MECA")),
+)
+
+### Modal basis
+MODES = CALC_MODES(
+    MATR_RIGI=RIGI, OPTION="TOUT", CALC_FREQ=_F(), MATR_MASS=MASS, SOLVEUR_MODAL=_F(METHODE="QZ")
+)
+
+### Matrices and initial state projection
+PROJ_BASE(
+    BASE=MODES,
+    MATR_ASSE_GENE=(
+        _F(MATRICE=CO("MASS_GENE"), MATR_ASSE=MASS),
+        _F(MATRICE=CO("RIGI_GENE"), MATR_ASSE=RIGI),
+    ),
+    VECT_ASSE_GENE=(_F(VECTEUR=CO("FORC_GENE"), VECT_ASSE=FORC, TYPE_VECT="FORC"),),
+)
+
+
+### Time discretization
+L_INST = DEFI_LIST_REEL(DEBUT=t0, INTERVALLE=(_F(JUSQU_A=tf, PAS=dt),))
+
+### Load multiplicative function
+F_MULT = CALC_FONC_INTERP(FONCTION=F_MULT0, LIST_PARA=L_INST, NOM_PARA="INST")
+
+### Solve transient problem
+RESU_GENE = DYNA_VIBRA(
+    TYPE_CALCUL="TRAN",
+    BASE_CALCUL="GENE",
+    MATR_MASS=MASS_GENE,
+    MATR_RIGI=RIGI_GENE,
+    EXCIT=(_F(VECT_ASSE_GENE=FORC_GENE, FONC_MULT=F_MULT),),
+    SCHEMA_TEMPS=_F(SCHEMA="NEWMARK"),
+    INCREMENT=_F(INST_FIN=tf, PAS=dt),
+    ARCHIVAGE=_F(PAS_ARCH=1),
+    COMPORTEMENT=_F(
+        RELATION="DIS_ECRO_CINE",
+        GROUP_MA="K1",
+        KELA_DX=kdx,
+        KELA_DY=kdy,
+        KELA_DZ=kdz,
+        LIMY_DX=limy_dx,
+        KCIN_DX=kcin_dx,
+        PUIS_DX=puis_dx,
+        LIMU_DX=limu_dx,
+        LIMY_DY=limy_dy,
+        KCIN_DY=kcin_dy,
+        PUIS_DY=puis_dy,
+        LIMU_DY=limu_dy,
+        LIMY_DZ=limy_dz,
+        KCIN_DZ=kcin_dz,
+        PUIS_DZ=puis_dz,
+        LIMU_DZ=limu_dz,
+    ),
+)
+
+## Post-processing
+RESU = REST_GENE_PHYS(RESU_GENE=RESU_GENE, NOM_CHAM=("DEPL", "VITE", "ACCE"))
+
+TAB = POST_RELEVE_T(
+    ACTION=_F(
+        OPERATION="EXTRACTION",
+        INTITULE="DEPLACEMENT",
+        RESULTAT=RESU,
+        NOM_CHAM="DEPL",
+        TOUT_ORDRE="OUI",
+        GROUP_NO="B",
+        NOM_CMP=("DX", "DY", "DZ"),
+    )
+)
+
+# t = TAB.EXTR_TABLE().values()["INST"]
+# dx = TAB.EXTR_TABLE().values()["DX"]
+# dy = TAB.EXTR_TABLE().values()["DY"]
+# dz = TAB.EXTR_TABLE().values()["DZ"]
+
+# print("RESU")
+# for i, tt in enumerate(t):
+#     print(tt, dx[i], dy[i], dz[i])
+
+# Référence DYNA_NON_LINE
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.556819044423893,
+    VALE_CALC=0.5533313636189047,
+    PRECISION=0.007,
+    NOM_PARA="DX",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=0.2),
+)
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.5165561278631956,
+    VALE_CALC=0.5054525457601095,
+    PRECISION=0.03,
+    NOM_PARA="DY",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=0.2),
+)
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.5153116953705169,
+    VALE_CALC=0.4930940742107227,
+    PRECISION=0.05,
+    NOM_PARA="DZ",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=0.2),
+)
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.04934168313635184,
+    VALE_CALC=0.04860060953135912,
+    PRECISION=0.02,
+    NOM_PARA="DX",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=1.0),
+)
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.0390310512380003,
+    VALE_CALC=0.03407190011250781,
+    PRECISION=0.13,
+    NOM_PARA="DY",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=1.0),
+)
+
+TEST_TABLE(
+    REFERENCE="AUTRE_ASTER",
+    VALE_REFE=0.09899721312409537,
+    VALE_CALC=0.09250545861271207,
+    PRECISION=0.07,
+    NOM_PARA="DZ",
+    TABLE=TAB,
+    FILTRE=_F(NOM_PARA="INST", VALE=1.0),
+)
+
+# ------------------------------------------------------------------------------
+###
+FIN()

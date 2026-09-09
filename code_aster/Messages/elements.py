@@ -86,12 +86,7 @@ Il est impératif d'utiliser un champ de contrainte complet pour le calcul de FO
     ),
     12: _(
         """
- Le nombre de couche doit être obligatoirement supérieur à zéro.
-"""
-    ),
-    14: _(
-        """
- Le type d'élément %(k1)s n'est pas prévu.
+ Le nombre de couches doit être obligatoirement supérieur à zéro.
 """
     ),
     15: _(
@@ -263,11 +258,6 @@ Conseil :
  Seule la définition du comportement ELAS_ORTH est nécessaire.
 """
     ),
-    46: _(
-        """
- nombre de couches négatif ou nul
-"""
-    ),
     48: _(
         """
  impossibilité, la surface de l'élément est nulle.
@@ -364,11 +354,6 @@ Erreur utilisateur :
     87: _(
         """
  Mauvaise définition de MP1 et MP2
-"""
-    ),
-    88: _(
-        """
- Option %(k1)s n'est pas disponible pour l'élément %(k2)s et la loi de comportement %(k3)s
 """
     ),
     90: _(

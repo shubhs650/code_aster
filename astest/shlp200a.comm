@@ -1,0 +1,124 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI")
+
+MA = LIRE_MAILLAGE()
+
+MA = DEFI_GROUP(reuse=MA, MAILLAGE=MA, CREA_GROUP_NO=_F(TOUT_GROUP_MA="OUI"))
+
+MOD = AFFE_MODELE(MAILLAGE=MA, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="D_PLAN"))
+
+mate = DEFI_MATERIAU(ELAS=_F(E=1, NU=0, RHO=1, ALPHA=0.1))
+CHMAT = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=mate))
+
+MPC = AFFE_CHAR_MECA(
+    MODELE=MOD,
+    LIAISON_UNIF=(_F(GROUP_NO="Left", DDL="DX"), _F(GROUP_NO="Right", DDL="DX")),
+    LIAISON_DDL=_F(
+        GROUP_NO=("Left_node0", "Right_node0"),
+        DDL=("DX", "DX"),
+        COEF_MULT=(1.0, -1.0),
+        COEF_IMPO=0.1,
+    ),
+)
+
+BLOQ = AFFE_CHAR_CINE(MODELE=MOD, MECA_IMPO=_F(GROUP_MA="E0", DX=0, DY=0))
+
+# -----------------------------------------------------------------------------------
+#
+#  ASSEMBLAGES
+#
+# -----------------------------------------------------------------------------------
+
+ASSEMBLAGE(
+    CHAM_MATER=CHMAT,
+    CHAR_CINE=(BLOQ,),
+    CHARGE=(MPC,),
+    MATR_ASSE=(
+        _F(MATRICE=CO("RIGIDITE"), OPTION="RIGI_MECA"),
+        _F(MATRICE=CO("MASSE"), OPTION="MASS_MECA"),
+    ),
+    VECT_ASSE=_F(VECTEUR=CO("FASS"), OPTION="CHAR_MECA", CHARGE=MPC),
+    MODELE=MOD,
+    NUME_DDL=CO("NUME"),
+)
+
+# -----------------------------------------------------------------------------------
+#
+#  RESOLUTION
+#
+# -----------------------------------------------------------------------------------
+
+LIFREQ = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=5.0, NOMBRE=1000))
+
+DYNHASS = DYNA_VIBRA(
+    MODELE=MOD,
+    TYPE_CALCUL="HARM",
+    BASE_CALCUL="PHYS",
+    MATR_MASS=MASSE,
+    MATR_RIGI=RIGIDITE,
+    # MATR_AMOR=AMOR,
+    LIST_FREQ=LIFREQ,
+    EXCIT=(_F(VECT_ASSE=FASS, COEF_MULT=1.0), _F(CHARGE=BLOQ, COEF_MULT=1.0)),
+)
+
+# -----------------------------------------------------------------------------------
+#
+#  POST TRAITEMENT
+#
+# -----------------------------------------------------------------------------------
+
+l_cmp = ["DX", "DY"]
+rep = []
+
+for cmp in l_cmp:
+    REP = RECU_FONCTION(RESULTAT=DYNHASS, GROUP_NO="Ext", NOM_CHAM="ACCE", NOM_CMP=cmp)
+    ABS = CALC_FONCTION(EXTRACTION=_F(FONCTION=REP, PARTIE="MODULE"))
+    rep.append(ABS)
+
+for idx, cmp in enumerate(l_cmp):
+    IMPR_FONCTION(
+        FORMAT="XMGRACE",
+        COURBE=_F(FONCTION=rep[idx], MARQUEUR=0, LEGENDE="Acc " + cmp + " Point1"),
+        ECHELLE_Y="LOG",
+        LEGENDE_X="Freq (Hz)",
+        LEGENDE_Y="Amplitude",
+        UNITE=29 + idx,
+    )
+
+IMPR_RESU(FORMAT="MED", RESU=_F(RESULTAT=DYNHASS, NOM_CHAM="DEPL", PARTIE="REEL"))
+
+TEST_FONCTION(
+    VALEUR=(
+        _F(VALE_CALC=0.0, CRITERE="RELATIF", VALE_PARA=0.0, FONCTION=rep[0]),
+        _F(VALE_CALC=32.566697, CRITERE="RELATIF", VALE_PARA=0.2, FONCTION=rep[0]),
+        _F(VALE_CALC=6.6805503e-05, CRITERE="RELATIF", VALE_PARA=0.335, FONCTION=rep[0]),
+        _F(VALE_CALC=2122.3712, CRITERE="RELATIF", VALE_PARA=0.61, FONCTION=rep[0]),
+        _F(VALE_CALC=1775.726, CRITERE="RELATIF", VALE_PARA=1.525, FONCTION=rep[0]),
+        _F(VALE_CALC=0.0054144678, CRITERE="RELATIF", VALE_PARA=1.875, FONCTION=rep[0]),
+        _F(VALE_CALC=888.68153, CRITERE="RELATIF", VALE_PARA=2.06, FONCTION=rep[0]),
+        _F(VALE_CALC=6009.4043, CRITERE="RELATIF", VALE_PARA=2.62, FONCTION=rep[0]),
+        _F(VALE_CALC=0.21648241, CRITERE="RELATIF", VALE_PARA=2.8, FONCTION=rep[0]),
+        _F(VALE_CALC=6093.2863, CRITERE="RELATIF", VALE_PARA=3.105, FONCTION=rep[0]),
+        _F(VALE_CALC=6.1153706, CRITERE="RELATIF", VALE_PARA=5.0, FONCTION=rep[0]),
+    )
+)
+
+FIN()

@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-#include "MeshTypes_type.h"
+#include "FE_module.h"
 !
 !
 interface
@@ -23,6 +23,6 @@ interface
                       idfde, nno, nharm, jacob, b)
        integer(kind=8), intent(in) :: nbsig, igau, ipoids, ivf, idfde, nno
        real(kind=8), intent(in) :: nharm, xyz(1)
-       real(kind=8), intent(out) :: jacob, b(nbsig, 3*MT_NNOMAX3D)
+       real(kind=8), intent(out) :: jacob, b(nbsig, MAX_BV_CG)
     end subroutine bmatmc
 end interface

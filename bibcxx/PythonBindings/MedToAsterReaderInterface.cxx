@@ -21,8 +21,6 @@
  *   along with Code_Aster.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* person_in_charge: nicolas.sellenet at edf.fr */
-
 #include "PythonBindings/MedToAsterReaderInterface.h"
 
 #include "aster_pybind.h"
@@ -33,7 +31,7 @@
 void exportMedToAsterReaderToPython( py::module_ &mod ) {
 
     py::class_< MedToAsterReader, MedToAsterReader::MedToAsterReaderPtr > c1( mod,
-        "MedToAsterReader" );
+                                                                              "MedToAsterReader" );
     c1.def( py::init( &initFactoryPtr< MedToAsterReader > ) );
     c1.def( "__pickling_disabled__", disable_pickling< MedToAsterReader >() );
 

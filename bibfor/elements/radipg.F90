@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine radipg(sig1, sig2, npg, nbsig, radia, &
-                  cosang, ind, compor, imate, nvi, &
+                  cosang, ind, relaComp, imate, nvi, &
                   vari1, vari2)
     implicit none
 #include "asterc/r8prem.h"
@@ -30,7 +30,7 @@ subroutine radipg(sig1, sig2, npg, nbsig, radia, &
     integer(kind=8) :: npg, nbsig, ind, nvi, imate
     real(kind=8) :: sig1(*), sig2(*), radia(*), cosang(*)
     real(kind=8) :: vari1(*), vari2(*)
-    character(len=16) :: compor
+    character(len=16) :: relaComp
 !
 !     BUT:
 !       CALCUL DE L'INDICATEUR LOCAL DE PERTE DE RADIALITE RADIA
@@ -67,7 +67,7 @@ subroutine radipg(sig1, sig2, npg, nbsig, radia, &
     real(kind=8) :: dsigma(mxcmel), zero, deux, s1dsig, norm, dnorm, matel(20)
     real(kind=8) :: zernor, tensm(6), tensp(6), indm, indp, xm(6), xp(6)
     real(kind=8) :: coef, cinf, c2inf, mat(50)
-    character(len=16) :: compor2(3)
+    character(len=16) :: relaComp2
     blas_int :: b_incx, b_incy, b_n
 !
 ! ----------------------------------------------------------------------
@@ -146,16 +146,16 @@ subroutine radipg(sig1, sig2, npg, nbsig, radia, &
             call dscal(b_n, sqrt(2.d0), tensp(4), b_incx)
 !
 !           ISOTROPE : LA NORMALE NE DEPEND QUE DE SIG
-            if ((compor .eq. 'VMIS_ISOT_TRAC') .or. (compor .eq. 'VMIS_ISOT_LINE') .or. &
-                (compor .eq. 'VMIS_ISOT_PUIS')) then
+            if ((relaComp .eq. 'VMIS_ISOT_TRAC') .or. (relaComp .eq. 'VMIS_ISOT_LINE') .or. &
+                (relaComp .eq. 'VMIS_ISOT_PUIS')) then
                 indm = vari1((igau-1)*nvi+2)
                 indp = vari2((igau-1)*nvi+2)
                 icine = 0
                 iradi = 1
 !
 !           CINEMATIQUE : LA NORMALE DEPEND DE SIG ET X
-            elseif ((compor .eq. 'VMIS_ECMI_TRAC') .or. ( &
-                    compor .eq. 'VMIS_ECMI_LINE')) then
+            elseif ((relaComp .eq. 'VMIS_ECMI_TRAC') .or. ( &
+                    relaComp .eq. 'VMIS_ECMI_LINE')) then
                 b_n = to_blas_int(nbsig)
                 b_incx = to_blas_int(1)
                 b_incy = to_blas_int(1)
@@ -175,7 +175,7 @@ subroutine radipg(sig1, sig2, npg, nbsig, radia, &
                 b_incx = to_blas_int(1)
                 call dscal(b_n, sqrt(2.d0), xp(4), b_incx)
 !
-            else if ((compor .eq. 'VMIS_CINE_LINE')) then
+            else if ((relaComp .eq. 'VMIS_CINE_LINE')) then
                 b_n = to_blas_int(nbsig)
                 b_incx = to_blas_int(1)
                 b_incy = to_blas_int(1)
@@ -195,15 +195,14 @@ subroutine radipg(sig1, sig2, npg, nbsig, radia, &
                 b_incx = to_blas_int(1)
                 call dscal(b_n, sqrt(2.d0), xp(4), b_incx)
 !
-            elseif ((compor .eq. 'VMIS_CIN1_CHAB') .or. ( &
-                    compor .eq. 'VISC_CIN1_CHAB') .or. ( &
-                    compor .eq. 'VMIS_CIN2_CHAB') .or. ( &
-                    compor .eq. 'VMIS_CIN2_MEMO') .or. ( &
-                    compor .eq. 'VISC_CIN2_CHAB') .or. ( &
-                    compor .eq. 'VISC_CIN2_MEMO')) then
-                compor2 = ' '
-                compor2(1) = compor
-                call nmcham('RIGI', igau, 1, imate, compor2, &
+            elseif ((relaComp .eq. 'VMIS_CIN1_CHAB') .or. ( &
+                    relaComp .eq. 'VISC_CIN1_CHAB') .or. ( &
+                    relaComp .eq. 'VMIS_CIN2_CHAB') .or. ( &
+                    relaComp .eq. 'VMIS_CIN2_MEMO') .or. ( &
+                    relaComp .eq. 'VISC_CIN2_CHAB') .or. ( &
+                    relaComp .eq. 'VISC_CIN2_MEMO')) then
+                relaComp2 = relaComp
+                call nmcham('RIGI', igau, 1, imate, relaComp2, &
                             matel, mat, nbvar, memo, visc, &
                             idelta, coef)
 !              approximation : on supose C constant

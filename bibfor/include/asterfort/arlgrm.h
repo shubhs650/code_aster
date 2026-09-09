@@ -19,6 +19,7 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine arlgrm(mail  ,nomgrp,dime  ,ima  ,connex,loncum, &
                       nummai,nommai,itypm ,nbno , cxno)
         integer(kind=8) :: ima
@@ -28,7 +29,7 @@ interface
         integer(kind=8) :: nummai
         integer(kind=8) :: nbno
         integer(kind=8) :: itypm
-        integer(kind=8) :: cxno(27)
+        integer(kind=8) :: cxno(MT_NNOMAX3D)
         character(len=8) :: mail
         character(len=8) :: nommai
         character(len=19) :: nomgrp

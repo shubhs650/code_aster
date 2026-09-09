@@ -6,4 +6,4 @@ P mpi_nbnoeud 1
 P testlist submit verification sequential
 
 F comm sslv134k.comm D 1
-F mmed sslv134c.mmed D 20
+F mmed sslv134k.mmed D 20

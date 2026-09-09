@@ -20,7 +20,7 @@
 ! -------------------------------------------------------------------------
 !
 #include "asterfort/HHO_size_module.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 #include "MeshTypes_type.h"
 !
 ! - Offset for pairing - see CouplingPairing.cxx

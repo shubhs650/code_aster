@@ -15,16 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W0104
+! aslint: disable=W0104
 !
 subroutine lc0022(fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
+                  carcri, instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
 !
     implicit none
 !
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmccam.h"
 !
     character(len=*), intent(in) :: fami
@@ -32,21 +34,18 @@ subroutine lc0022(fami, kpg, ksp, ndim, imate, &
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam
     real(kind=8), intent(in) :: instap
     real(kind=8), intent(in) :: epsm(6)
     real(kind=8), intent(in) :: deps(6)
     real(kind=8), intent(in) :: sigm(6)
-    real(kind=8), intent(in) :: vim(*)
-    character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(3)
-    real(kind=8), intent(out) :: sigp(6)
-    real(kind=8), intent(out) :: vip(*)
-    character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: nvi
+    real(kind=8), intent(in) :: vim(nvi)
+    character(len=16), intent(in) :: option
+    real(kind=8), intent(out) :: sigp(6)
+    real(kind=8), intent(out) :: vip(nvi)
+    character(len=8), intent(in) :: typmod(*)
     real(kind=8), intent(out) :: dsidep(6, 6)
     integer(kind=8), intent(out) :: codret
 !
@@ -58,6 +57,8 @@ subroutine lc0022(fami, kpg, ksp, ndim, imate, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+
+    ASSERT(nvi .eq. 7)
     call nmccam(fami, kpg, ksp, ndim, typmod, imate, carcri, &
                 deps, sigm, vim, option, sigp, &
                 vip, dsidep, codret)

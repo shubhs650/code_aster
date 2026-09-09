@@ -16,23 +16,33 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine SetResiRefe(ds_conv, type_, &
-                       user_para_, cmp_name_, l_refe_test_)
+subroutine SetResiRefe(mesh, ds_conv)
 !
     use NonLin_Datastructure_type
 !
     implicit none
 !
 #include "asterf_types.h"
+#include "asterc/getfac.h"
+#include "asterc/r8vide.h"
+#include "asterfort/alcart.h"
 #include "asterfort/assert.h"
-!
-!
+#include "asterfort/detrsd.h"
+#include "asterfort/getelem.h"
+#include "asterfort/getvr8.h"
+#include "asterfort/getvtx.h"
+#include "asterfort/jelira.h"
+#include "asterfort/jenonu.h"
+#include "asterfort/jeveuo.h"
+#include "asterfort/jexnom.h"
+#include "asterfort/jexnum.h"
+#include "asterfort/nocart.h"
+#include "asterfort/jedema.h"
+#include "asterfort/jedetr.h"
+#include "asterfort/jemarq.h"
+
+    character(len=8), intent(in):: mesh
     type(NL_DS_Conv), intent(inout) :: ds_conv
-    character(len=*), optional, intent(in) :: type_
-    character(len=*), optional, intent(in) :: cmp_name_
-    real(kind=8), optional, intent(in) :: user_para_
-    aster_logical, optional, intent(in) :: l_refe_test_
-!
 ! --------------------------------------------------------------------------------------------------
 !
 ! MECA_NON_LINE - Convergence management
@@ -40,58 +50,96 @@ subroutine SetResiRefe(ds_conv, type_, &
 ! Set values for reference residual (by name)
 !
 ! --------------------------------------------------------------------------------------------------
-!
+! IN  mesh             : mesh name
 ! IO  ds_conv          : datastructure for convergence management
-! In  type             : type of residual
-!                        If .not. present => all residuals
-! In  user_para        : user parameter for residual
-! In  cmp_name         : name of component
-! In  l_refe_test      : .true. to test this residual to evaluate convergence
-!
 ! --------------------------------------------------------------------------------------------------
-!
-    integer(kind=8) :: i_refe, nb_refe, i_type
-!
+    character(len=16), parameter :: motclf = 'CONVERGENCE_REFE'
+    character(len=24), parameter :: lst_mail = '&&SRR.MAIL'
+    character(len=19), parameter :: cresicmp = '&&SRR.CRESICMP'
+    character(len=19), parameter :: cresiref = '&&SRR.CRESIREF'
 ! --------------------------------------------------------------------------------------------------
-!
-    i_type = 0
-    nb_refe = ds_conv%nb_refe
-!
-! - On all residuals
-!
-    if (.not. present(type_)) then
-        do i_refe = 1, nb_refe
-            if (present(user_para_)) then
-                ds_conv%list_refe(i_refe)%user_para = user_para_
-            end if
-            if (present(cmp_name_)) then
-                ds_conv%list_refe(i_refe)%cmp_name = cmp_name_
-            end if
-            if (present(l_refe_test_)) then
-                ds_conv%l_refe_test(i_refe) = l_refe_test_
-            end if
+    character(len=8):: k8b
+    integer(kind=8):: gd, nocc, iocc, mc, nb_refe, nb_neut, nbma, nb
+    real(kind=8) :: ref
+    character(len=8), pointer:: cmp_names(:) => null()
+    character(len=8), pointer:: neut_names(:) => null()
+    character(len=8), pointer:: cresicmp_names(:) => null()
+    character(len=8), pointer:: cresicmp_values(:) => null()
+    character(len=8), pointer:: cresiref_names(:) => null()
+    real(kind=8), pointer:: cresiref_values(:) => null()
+    integer(kind=8), pointer:: numa(:) => null()
+! --------------------------------------------------------------------------------------------------
+
+    call jemarq()
+
+    ASSERT(mesh .ne. ' ')
+
+    ! Noms des cartes
+    ds_conv%cresicmp = cresicmp
+    ds_conv%cresiref = cresiref
+
+    ! Noms des grandeurs de référence
+    call jenonu(jexnom('&CATA.GD.NOMGD', 'RESIREF'), gd)
+    call jelira(jexnum('&CATA.GD.NOMCMP', gd), 'LONMAX', nb_refe)
+    call jeveuo(jexnum('&CATA.GD.NOMCMP', gd), 'L', vk8=cmp_names)
+
+    ! Carte des noms des grandeurs de référence
+    call jenonu(jexnom('&CATA.GD.NOMGD', 'RESICMP'), gd)
+    call jelira(jexnum('&CATA.GD.NOMCMP', gd), 'LONMAX', nb_neut)
+    call jeveuo(jexnum('&CATA.GD.NOMCMP', gd), 'L', vk8=neut_names)
+    ASSERT(nb_neut .eq. nb_refe)
+
+    call detrsd('CARTE', cresicmp)
+    call alcart('V', cresicmp, mesh, 'RESICMP')
+    call jeveuo(cresicmp//'.NCMP', 'E', vk8=cresicmp_names)
+    call jeveuo(cresicmp//'.VALV', 'E', vk8=cresicmp_values)
+
+    cresicmp_names = neut_names
+    cresicmp_values = cmp_names
+    call nocart(cresicmp, 1, nb_refe)
+    call jedetr(cresicmp//'.NCMP')
+    call jedetr(cresicmp//'.VALV')
+
+    ! Carte des valeurs de référence par défaut
+    call detrsd('CARTE', cresiref)
+    call alcart('V', cresiref, mesh, 'RESIREF')
+    call jeveuo(cresiref//'.NCMP', 'E', vk8=cresiref_names)
+    call jeveuo(cresiref//'.VALV', 'E', vr=cresiref_values)
+
+    cresiref_names = cmp_names
+    cresiref_values = r8vide()
+    call nocart(cresiref, 1, nb_refe)
+
+    ! Carte des valeurs de référence fournies par l'utilisateur
+    call getfac(motclf, nocc)
+    if (nocc .le. 0) goto 800
+    do iocc = 1, nocc
+
+        ! Lecture des valeurs de référence présentes
+        do mc = 1, nb_refe
+            call getvr8(motclf, cmp_names(mc), iocc=iocc, scal=ref, nbret=nb)
+            cresiref_values(mc) = merge(r8vide(), ref, nb .eq. 0)
         end do
-    end if
+
+        ! Lieu d'affectation
+        call getvtx(motclf, 'TOUT', iocc=iocc, scal=k8b, nbret=nb)
+        if (nb .ne. 0) then
+            call nocart(cresiref, 1, nb_refe)
 !
-! - On one residual
-!
-    if (present(type_)) then
-        do i_refe = 1, nb_refe
-            if (ds_conv%list_refe(i_refe)%type .eq. type_) then
-                ASSERT(i_type .eq. 0)
-                i_type = i_refe
+        else
+            call getelem(mesh, motclf, iocc, ' ', lst_mail, nbma)
+            if (nbma .ne. 0) then
+                call jeveuo(lst_mail, 'L', vi=numa)
+                call nocart(cresiref, 3, nb_refe, mode='NUM', nma=nbma, &
+                            limanu=numa)
+                call jedetr(lst_mail)
             end if
-        end do
-        ASSERT(i_type .ne. 0)
-        if (present(user_para_)) then
-            ds_conv%list_refe(i_type)%user_para = user_para_
         end if
-        if (present(cmp_name_)) then
-            ds_conv%list_refe(i_type)%cmp_name = cmp_name_
-        end if
-        if (present(l_refe_test_)) then
-            ds_conv%l_refe_test(i_type) = l_refe_test_
-        end if
-    end if
+    end do
+800 continue
+
+    call jedetr(cresiref//'.NCMP')
+    call jedetr(cresiref//'.VALV')
 !
+    call jedema()
 end subroutine

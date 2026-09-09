@@ -18,17 +18,17 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine xxnmel(elrefp, elrese, ndim, coorse,&
-                      igeom, he, nfh, ddlc, ddlm,&
-                      nnops, nfe, basloc, nnop, npg,&
-                      typmod, option, imate, compor, lgpg,&
-                      carcri, instam, instap, idepl, lsn, lst, idecpg,&
-                      sig, vi, matuu, ivectu, codret,&
-                      nfiss, heavn, jstno,&
-                      l_line, l_nonlin, lMatr, lVect, lSigm)
-        aster_logical, intent(in) :: l_line, l_nonlin, lMatr, lVect, lSigm
+    subroutine xxnmel(typmod, materPara, &
+                      elrefp, elrese, ndim, coorse, &
+                      jvGeom, he, nfh, ddlc, ddlm, &
+                      nnops, nfe, basloc, nnop, npg, &
+                      lsn, lst, idecpg, &
+                      matuu, &
+                      nfiss, heavn, jstno)
+        use MaterialPara_type
+        character(len=8), intent(in) :: typmod(2)
+        type(Material_Para), intent(inout) :: materPara
         integer(kind=8) :: nfiss
-        integer(kind=8) :: lgpg
         integer(kind=8) :: npg
         integer(kind=8) :: nnop
         integer(kind=8) :: nfe
@@ -37,28 +37,16 @@ interface
         character(len=8) :: elrefp
         character(len=8) :: elrese
         real(kind=8) :: coorse(*)
-        integer(kind=8) :: igeom
+        integer(kind=8) :: jvGeom
         real(kind=8) :: he(nfiss)
         integer(kind=8) :: ddlc
         integer(kind=8) :: ddlm
         integer(kind=8) :: nnops
         real(kind=8) :: basloc(3*ndim*nnop)
-        character(len=8) :: typmod(*)
-        character(len=16) :: option
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
-        integer(kind=8) :: idepl
         real(kind=8) :: lsn(nnop)
         real(kind=8) :: lst(nnop)
         integer(kind=8) :: idecpg
-        real(kind=8) :: sig(2*ndim, npg)
-        real(kind=8) :: vi(lgpg, npg)
         real(kind=8) :: matuu(*)
-        integer(kind=8) :: ivectu
-        integer(kind=8) :: codret
         integer(kind=8) :: heavn(nnop, 5)
         integer(kind=8) :: jstno
     end subroutine xxnmel

@@ -44,6 +44,7 @@ PILO_PRED_ELAS = Option(
     para_in=(
         SP.PBORNPI,
         SP.PCAMASS,
+        SP.PCAGNBA,
         SP.PCDTAU,
         PCOMPOR,
         SP.PCARCRI,

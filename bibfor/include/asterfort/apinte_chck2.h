@@ -22,16 +22,17 @@ interface
                             elem_pside_nbnode, elem_pside_coor, elem_pside_code,&
                             norm_pside       , norm_sside     ,&
                             proj_coor        , l_inter)
+#include "MeshTypes_type.h"
         real(kind=8), intent(in) :: proj_tole
         integer(kind=8), intent(in) :: elem_dime
         integer(kind=8), intent(in) :: elem_sside_nbnode
-        real(kind=8), intent(in) :: elem_sside_coor(3,9)
+        real(kind=8), intent(in) :: elem_sside_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_pside_nbnode
-        real(kind=8), intent(in) :: elem_pside_coor(3,9)
+        real(kind=8), intent(in) :: elem_pside_coor(3,MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_pside_code
         real(kind=8), intent(in) :: norm_pside(3)
         real(kind=8), intent(in) :: norm_sside(3)
-        real(kind=8), intent(in) :: proj_coor(elem_dime-1,4)
+        real(kind=8), intent(in) :: proj_coor(2,4)
         aster_logical, intent(out) :: l_inter
     end subroutine apinte_chck2
 end interface

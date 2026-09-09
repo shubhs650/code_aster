@@ -16,18 +16,19 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine aseihm(ds_thm, option,&
-                      lSigm, lVari, lMatr, lVect,&
-                      l_axi, ndim, nno1, nno2,&
-                      npi, npg, dimuel, dimdef, dimcon,&
-                      nbvari, j_mater, iu, ip, ipf,&
-                      iq, mecani, press1, press2, tempe,&
-                      vff1, vff2, dffr2, time_prev, time_curr,&
-                      deplm, deplp, sigm, sigp, varim,&
-                      varip, nomail, wref, geom, ang,&
-                      compor, vectu, matuu,&
+    subroutine aseihm(ds_thm, option, &
+                      lSigm, lVari, lMatr, lVect, &
+                      l_axi, ndim, nno1, nno2, &
+                      npi, npg, dimuel, dimdef, dimcon, &
+                      nbvari, iu, ip, ipf, &
+                      iq, mecani, press1, press2, tempe, &
+                      vff1, vff2, dffr2, time_prev, time_curr, &
+                      deplm, deplp, sigm, sigp, varim, &
+                      varip, wref, geom, &
+                      compor, vectu, matuu, &
                       retcom)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
@@ -43,7 +44,6 @@ interface
         character(len=16) :: option
         aster_logical :: l_axi
         integer(kind=8) :: npg
-        integer(kind=8) :: j_mater
         integer(kind=8) :: iu(3, 18)
         integer(kind=8) :: ip(2, 9)
         integer(kind=8) :: ipf(2, 2, 9)
@@ -63,11 +63,9 @@ interface
         real(kind=8) :: sigp(dimcon, npi)
         real(kind=8) :: varim(nbvari, npi)
         real(kind=8) :: varip(nbvari, npi)
-        character(len=8) :: nomail
         real(kind=8) :: wref(npi)
         real(kind=8) :: geom(ndim, nno2)
-        real(kind=8) :: ang(24)
-        character(len=16), intent(in) :: compor(*)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8) :: vectu(dimuel)
         real(kind=8) :: matuu(dimuel*dimuel)
         integer(kind=8) :: retcom

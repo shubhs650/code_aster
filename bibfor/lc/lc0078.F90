@@ -15,31 +15,30 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W0104,W1306,C1509
+! aslint: disable=W1504,W0104,W1306,C1505
 !
-subroutine lc0078(BEHinteg, fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, neps, epsm, &
-                  deps, nsig, sigm, nvi, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
+subroutine lc0078(BEHInteg, &
+                  fami, kpg, ksp, ndim, imate, &
+                  compor, carcri, instam, instap, neps, epsm, &
+                  deps, nsig, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
                   ndsde, dsidep, codret)
-! aslint: disable=W1504,W0104
-
+!
     use Behaviour_type
     implicit none
-
+!
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/lcelnl.h"
-
-    type(Behaviour_Integ)        :: BEHinteg
+!
+    type(Behaviour_Integ)  :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
-    integer(kind=8), intent(in) :: ksp
+    integer(kind=8), intent(in) :: ksp, imate
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: crit(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam
     real(kind=8), intent(in) :: instap
     integer(kind=8), intent(in) :: neps
@@ -49,25 +48,25 @@ subroutine lc0078(BEHinteg, fami, kpg, ksp, ndim, imate, &
     real(kind=8), intent(in) :: sigm(nsig)
     integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(in) :: vim(nvi)
-    character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8)                 :: sigp(nsig)
     real(kind=8)                 :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: ndsde
-    real(kind=8)                 :: dsidep(merge(nsig,6,nsig*neps.eq.ndsde), merge(neps,6,nsig*neps.eq.ndsde))
+    real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
+                           merge(neps, 6, nsig*neps .eq. ndsde))
     integer(kind=8), intent(out):: codret
 ! --------------------------------------------------------------------------------------------------
 !  RELATION DE COMPORTEMENT ELAS_HYPER
 ! --------------------------------------------------------------------------------------------------
-    aster_logical     :: lMatr, lSigm, lVari
-    integer(kind=8)           :: ndimsi
-    real(kind=8)      :: eps(2*ndim), sig(2*ndim), dsde(2*ndim, 2*ndim), vi(nvi)
+    aster_logical :: lMatr, lSigm, lVari
+    integer(kind=8) :: ndimsi
+    real(kind=8) :: eps(2*ndim), sig(2*ndim), dsde(2*ndim, 2*ndim), vi(nvi)
+    character(len=16) :: relaComp
 ! --------------------------------------------------------------------------------------------------
 !
     ASSERT(neps .ge. 2*ndim)
     ASSERT(nsig .ge. 2*ndim)
+    ASSERT(nvi .eq. 1)
 
     lSigm = L_SIGM(option)
     lVari = L_VARI(option)
@@ -78,11 +77,12 @@ subroutine lc0078(BEHinteg, fami, kpg, ksp, ndim, imate, &
     sig = 0
     vi = 0
     dsde = 0
-    eps = epsm(1:ndimsi)+deps(1:ndimsi)
 
-    call lcelnl(BEHinteg, &
+    eps = epsm(1:ndimsi)+deps(1:ndimsi)
+    relaComp = compor(RELA_NAME)
+    call lcelnl(BEHInteg, &
                 fami, kpg, ksp, &
-                ndim, typmod, imate, compor, crit, &
+                ndim, typmod, imate, relaComp, carcri, &
                 option, eps, sig, vi, dsde, codret)
     if (codret .ne. 0) goto 999
 

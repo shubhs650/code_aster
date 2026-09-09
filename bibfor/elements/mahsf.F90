@@ -16,16 +16,29 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine mahsf(ind1, nb1, xi, ksi3s2, intsn, &
-                 xr, epais, vectn, vectg, vectt, &
+subroutine mahsf(plateOrie, &
+                 ind1, nb1, &
+                 nodeCoor, ksi3s2, intsn, &
+                 desr, epais, &
+                 vectBaseKpg, vectTangKpg, &
                  hsf)
+!
+    use plate_type
     implicit none
+!
 #include "asterfort/hfmss.h"
 #include "asterfort/vectgt.h"
-    integer(kind=8) :: nb1, intsn
-    real(kind=8) :: xi(3, *), xr(*), vectn(9, 3), ksi3s2
-    real(kind=8) :: vectg(2, 3), vectt(3, 3), hsf(3, 9), hss(2, 9)
 !
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: ind1, nb1
+    real(kind=8), intent(in) :: nodeCoor(3, *)
+    real(kind=8), intent(in) ::  ksi3s2
+    integer(kind=8), intent(in) :: intsn
+    real(kind=8), intent(in) :: desr(*), epais
+    real(kind=8), intent(out) :: vectBaseKpg(3, 3), vectTangKpg(2, 3)
+    real(kind=8), intent(out) :: hsf(3, 9)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     CONSTRUCTION DU VECTEUR N AUX PTS D'INTEGRATION NORMAL
 !     (POUR CHAQUE INTSN, STOCKAGE DANS VECTT)
@@ -42,19 +55,19 @@ subroutine mahsf(ind1, nb1, xi, ksi3s2, intsn, &
 !
 !     IND1= 1      1 : CALCULS AUX PTS D'INTEGRATION NORMAL
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: ind1, ind2
-    real(kind=8) :: epais
-!-----------------------------------------------------------------------
-    call vectgt(ind1, nb1, xi, ksi3s2, intsn, &
-                xr, epais, vectn, vectg, vectt)
+! --------------------------------------------------------------------------------------------------
 !
-!     CONSTRUCTION DE HSM = HFM * S :(3,9) AUX PTS D'INTEGRATION NORMAL
+    integer(kind=8), parameter :: ind2 = 0
+    real(kind=8) :: hss(2, 9)
 !
-!     IND2= 0  --->  PAS DE CALCUL DE HSS
+! --------------------------------------------------------------------------------------------------
 !
-    ind2 = 0
-!
-    call hfmss(ind2, vectt, hsf, hss)
+    call vectgt(plateOrie, ind1, nb1, &
+                nodeCoor, ksi3s2, intsn, &
+                epais, desr, &
+                vectBaseKpg, vectTangKpg)
+
+!   CONSTRUCTION DE HSM = HFM * S :(3,9) AUX PTS D'INTEGRATION NORMAL
+    call hfmss(ind2, vectBaseKpg, hsf, hss)
 !
 end subroutine

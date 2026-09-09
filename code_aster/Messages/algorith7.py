@@ -50,6 +50,11 @@ cata_msg = {
  loi de comportement avec irradiation, le paramètre phi/K.PHI_ZERO+L vaut 0. Dans ces conditions le paramètre BETA doit être positif ou nul
 """
     ),
+    83: _(
+        """
+Loi de comportement avec grandissement, le repère d'anisotropie doit être défini.
+"""
+    ),
     97: _(
         """
  il faut fournir le mot-clé BETON_DESORP à DEFI_MATERIAU pour le fluage de dessiccation

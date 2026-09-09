@@ -15,21 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vectgt(ind, nb1, xi, ksi3s2, intsx,&
-                      zr, epais, vectn, vectg, vectt)
-        integer(kind=8) :: ind
-        integer(kind=8) :: nb1
-        real(kind=8) :: xi(3, *)
-        real(kind=8) :: ksi3s2
-        integer(kind=8) :: intsx
-        real(kind=8) :: zr(*)
-        real(kind=8) :: epais
-        real(kind=8) :: vectn(9, 3)
-        real(kind=8) :: vectg(2, 3)
-        real(kind=8) :: vectt(3, 3)
+    subroutine vectgt(plateOrie, ptType, nb1, &
+                      nodeCoor, ksi3s2, kpg, &
+                      epais, desr, &
+                      vectBaseKpg, &
+                      vectTangKpg_)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: ptType, nb1
+        real(kind=8), intent(in) :: nodeCoor(3, *), ksi3s2
+        integer(kind=8), intent(in) :: kpg
+        real(kind=8), intent(in) :: epais
+        real(kind=8), intent(in) :: desr(*)
+        real(kind=8), intent(out) :: vectBaseKpg(3, 3)
+        real(kind=8), optional, intent(out) :: vectTangKpg_(2, 3)
     end subroutine vectgt
 end interface

@@ -33,6 +33,10 @@
 #define THRES_STICK 10.d300
 
 ! See ContactEnum.h
+! Reso Geom 
+#define RESO_GEOM_NEWT 0
+#define RESO_GEOM_FIXP 1
+
 ! Contact
 #define CONT_ALGO_LAGR 0
 #define CONT_ALGO_NITS 1

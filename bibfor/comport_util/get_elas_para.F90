@@ -17,14 +17,14 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
+subroutine get_elas_para(fami, jvMaterCode, poum, ipg, ispg, &
                          elas_id, elas_keyword, &
                          time, temp, &
                          e_, nu_, g_, &
                          e1_, e2_, e3_, &
                          nu12_, nu13_, nu23_, &
                          g1_, g2_, g3_, &
-                         BEHinteg, &
+                         BEHInteg, &
                          ei_, nui_, gi_, &
                          e1i_, e2i_, e3i_, &
                          nu12i_, nu13i_, nu23i_, &
@@ -42,7 +42,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
 #include "asterfort/rcvalc.h"
 !
     character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: j_mater
+    integer(kind=8), intent(in) :: jvMaterCode
     character(len=*), intent(in) :: poum
     integer(kind=8), intent(in) :: ipg, ispg
     integer(kind=8), intent(in) :: elas_id
@@ -57,7 +57,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
     real(kind=8), optional, intent(out) :: nu12i_, nu13i_, nu23i_
     real(kind=8), optional, intent(out) :: g1_, g2_, g3_
     real(kind=8), optional, intent(out) :: g1i_, g2i_, g3i_
-    type(Behaviour_Integ), optional, intent(in) :: BEHinteg
+    type(Behaviour_Integ), optional, intent(in) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -68,7 +68,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  fami             : Gauss family for integration point rule
-! In  j_mater          : coded material address
+! In  jvMaterCode      : coded material address
 ! In  time             : current time
 ! In  time             : current temperature
 ! In  poum             : '-' or '+' for parameters evaluation (previous or current temperature)
@@ -107,7 +107,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
 ! Out g3i              : imaginary shear ratio (Orthotropic)
 ! Out g                : real shear ratio (isotropic/Transverse isotropic)
 ! Out gi               : imaginary shear ratio (isotropic)
-! In  BEHinteg         : parameters for integration of behaviour
+! In  BEHInteg         : parameters for integration of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -168,18 +168,18 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         para_name(nb_para) = 'TEMP'
         para_vale(nb_para) = temp
     end if
-    if (present(BEHinteg)) then
-        if (.not. BEHinteg%behavESVA%lGeomInESVA .and. (fami .ne. "XFEM")) then
+    if (present(BEHInteg)) then
+        if (.not. BEHInteg%behavESVA%lGeomInESVA .and. (fami .ne. "XFEM")) then
             ASSERT(ipg <= VARC_GEOM_NBMAXI)
             nb_para = nb_para+1
             para_name(nb_para) = 'X'
-            para_vale(nb_para) = BEHinteg%behavESVA%behavESVAGeom%coorElga(ipg, 1)
+            para_vale(nb_para) = BEHInteg%behavESVA%behavESVAGeom%coorElga(ipg, 1)
             nb_para = nb_para+1
             para_name(nb_para) = 'Y'
-            para_vale(nb_para) = BEHinteg%behavESVA%behavESVAGeom%coorElga(ipg, 2)
+            para_vale(nb_para) = BEHInteg%behavESVA%behavESVAGeom%coorElga(ipg, 2)
             nb_para = nb_para+1
             para_name(nb_para) = 'Z'
-            para_vale(nb_para) = BEHinteg%behavESVA%behavESVAGeom%coorElga(ipg, 3)
+            para_vale(nb_para) = BEHInteg%behavESVA%behavESVAGeom%coorElga(ipg, 3)
         end if
     end if
 !
@@ -187,7 +187,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
 !
     if (elas_id .eq. 1) then
         if (elas_keyword .eq. 'ELAS_HYPER' .or. elas_keyword .eq. 'ELAS_HYPER_VISC') then
-            call hypmat(fami, ipg, ispg, poum, j_mater, &
+            call hypmat(fami, ipg, ispg, poum, jvMaterCode, &
                         c10, c01, c20, k)
             nur = (3.d0*k-4.0d0*(c10+c01))/(6.d0*k+4.0d0*(c10+c01))
             er = 4.d0*(c10+c01)*(un+nur)
@@ -196,7 +196,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
             nomres(1) = 'E'
             nomres(2) = 'NU'
             nbres = 2
-            call rcvalb(fami, ipg, ispg, poum, j_mater, &
+            call rcvalb(fami, ipg, ispg, poum, jvMaterCode, &
                         ' ', elas_keyword, nb_para, para_name, [para_vale], &
                         nbres, nomres, valres, icodre, 1)
             er = valres(1)
@@ -215,7 +215,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         nomres(8) = 'G_LN'
         nomres(9) = 'G_TN'
         nbres = 9
-        call rcvalb(fami, ipg, ispg, poum, j_mater, &
+        call rcvalb(fami, ipg, ispg, poum, jvMaterCode, &
                     ' ', elas_keyword, nb_para, para_name, [para_vale], &
                     nbres, nomres, valres, icodre, 1)
         e1r = valres(1)
@@ -234,7 +234,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         nomres(4) = 'NU_LN'
         nomres(5) = 'G_LN'
         nbres = 5
-        call rcvalb(fami, ipg, ispg, poum, j_mater, &
+        call rcvalb(fami, ipg, ispg, poum, jvMaterCode, &
                     ' ', elas_keyword, nb_para, para_name, [para_vale], &
                     nbres, nomres, valres, icodre, 1)
         e1r = valres(1)
@@ -246,7 +246,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         nomres(1) = 'G'
         nomres(2) = 'NU'
         nbres = 2
-        call rcvalc(j_mater, elas_keyword, nbres, nomres, valresc, icodre, 1)
+        call rcvalc(jvMaterCode, elas_keyword, nbres, nomres, valresc, icodre, 1)
         Gc = valresc(1)
         nuc = valresc(2)
         nur = real(nuc)
@@ -266,7 +266,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         nomres(8) = 'G_LN'
         nomres(9) = 'G_TN'
         nbres = 9
-        call rcvalc(j_mater, elas_keyword, nbres, nomres, valresc, icodre, 1)
+        call rcvalc(jvMaterCode, elas_keyword, nbres, nomres, valresc, icodre, 1)
         e1r = real(valresc(1))
         e2r = real(valresc(2))
         e3r = real(valresc(3))
@@ -292,7 +292,7 @@ subroutine get_elas_para(fami, j_mater, poum, ipg, ispg, &
         nomres(4) = 'NU_LN'
         nomres(5) = 'G_LN'
         nbres = 5
-        call rcvalc(j_mater, elas_keyword, nbres, nomres, valresc, icodre, 1)
+        call rcvalc(jvMaterCode, elas_keyword, nbres, nomres, valresc, icodre, 1)
         e1r = real(valresc(1))
         e3r = real(valresc(2))
         nu12r = real(valresc(3))

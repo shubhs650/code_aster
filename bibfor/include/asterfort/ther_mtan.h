@@ -19,12 +19,12 @@
 !
 interface
     subroutine ther_mtan(l_stat, &
-                         modelZ, caraElemZ, matecoZ, &
+                         modelZ, caraElemZ, materCodeZ, &
                          timePara, varcCurrZ, &
                          comporTherZ, tempIterZ, resuElemZ, &
                          matrElemZ, jvBase)
         aster_logical, intent(in) :: l_stat
-        character(len=*), intent(in) :: modelZ, caraElemZ, matecoZ
+        character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
         real(kind=8), intent(in) :: timePara(2)
         character(len=*), intent(in) :: tempIterZ, comporTherZ, varcCurrZ
         character(len=*), intent(inout) :: resuElemZ

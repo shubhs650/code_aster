@@ -15,22 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
+#include "asterfort/Behaviour_type.h"
 #include "asterf_types.h"
 !
 interface
-    subroutine tgverm(option, carcri, compor, nno1, nno2,&
-                      nno3, geom, ndim, nddl, deplp,&
-                      sdepl, vu, vg, vp, vectu,&
-                      svect, ncont, contp, scont, nvari,&
-                      varip, svari, matuu, smatr, matsym,&
+    subroutine tgverm(option, carcri, compor, nno1, nno2, &
+                      nno3, geom, ndim, nddl, deplp, &
+                      sdepl, vu, vg, vp, vectu, &
+                      svect, ncont, contp, scont, nvari, &
+                      varip, svari, matuu, smatr, matsym, &
                       epsilo, epsilp, epsilg, varia, iret)
         integer(kind=8) :: nddl
         character(len=16) :: option
-        real(kind=8) :: carcri(*)
-        character(len=16) :: compor(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
         integer(kind=8) :: nno1
         integer(kind=8) :: nno2
         integer(kind=8) :: nno3

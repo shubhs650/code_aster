@@ -25,12 +25,12 @@
                         v_connex_lcum)
         integer(kind=8), intent(in) :: jv_geom
         character(len=8), intent(in) :: elem_slav_type
-        real(kind=8),intent(in) :: elem_mast_coor(27)
+        real(kind=8),intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
         character(len=8),intent(in) :: elem_mast_code
         integer(kind=8),intent(in) :: elem_slav_nume
         real(kind=8),intent(in) :: pair_tole
         real(kind=8),intent(out) :: inte_weight
         integer(kind=8), pointer :: v_mesh_connex(:)
-        integer(kind=8), pointer :: v_connex_lcum(:)      
+        integer(kind=8), pointer :: v_connex_lcum(:)
    end subroutine testvois
 end interface

@@ -16,13 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine mecham(optionZ, modelZ, cara, nh, chgeoz, &
-                  chcara, chharz, iret)
+subroutine mecham(optionZ, modelZ, numeHarm, &
+                  chgeomZ, chharmZ, iret)
 !
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/checkSuperElement.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
@@ -30,12 +30,12 @@ subroutine mecham(optionZ, modelZ, cara, nh, chgeoz, &
 #include "asterfort/megeom.h"
 #include "asterfort/meharm.h"
 #include "asterfort/utmess.h"
-#include "asterfort/checkSuperElement.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: iret, nh
     character(len=*), intent(in) :: optionZ, modelZ
-    character(len=*) :: cara
-    character(len=*) :: chgeoz, chcara(*), chharz
+    integer(kind=8), intent(in) :: numeHarm
+    character(len=*), intent(out) :: chgeomZ, chharmZ
+    integer(kind=8), intent(out) :: iret
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -47,7 +47,6 @@ subroutine mecham(optionZ, modelZ, cara, nh, chgeoz, &
 !
 ! IN  : OPTION : OPTION DE CALCUL
 ! IN  : MODELE : MODELE
-! IN  : CARA   : CHAMP DE CARA_ELEM
 ! IN  : NH     : NUMERO D'HARMONIQUE DE FOURIER
 ! OUT : CHGEOZ : NOM DE CHAMP DE GEOMETRIE TROUVE
 ! OUT : CHCARA : NOMS DES CHAMPS DE CARACTERISTIQUES TROUVES
@@ -58,7 +57,7 @@ subroutine mecham(optionZ, modelZ, cara, nh, chgeoz, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=8) :: model, exiele
+    character(len=8) :: model, answer
     character(len=24) :: chgeom, chharm
     character(len=16) :: option
     integer(kind=8) :: nbSuperElement
@@ -66,36 +65,38 @@ subroutine mecham(optionZ, modelZ, cara, nh, chgeoz, &
 ! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
+
+! - Inititailizations
     chgeom = ' '
     chharm = ' '
     option = optionZ
-!
     ASSERT(modelZ(1:1) .ne. ' ')
     model = modelZ
 
 ! - Check if super-elements have been computed
     call checkSuperElement(option, model)
-!
-!
-!     --- ON REGARDE S'IL Y A 1 LIGREL DANS LE MODELE ---
-    call dismoi('EXI_ELEM', model, 'MODELE', repk=exiele)
-    call dismoi('NB_SS_ACTI', model, 'MODELE', repi=nbSuperElement)
-    if (exiele(1:3) .eq. 'OUI') then
+
+! - Has finite elements ?
+    call dismoi('EXI_ELEM', model, 'MODELE', repk=answer)
+    if (answer(1:3) .eq. 'OUI') then
         iret = 0
     else
         iret = 1
     end if
+
+! - Has super elements ?
+    call dismoi('NB_SS_ACTI', model, 'MODELE', repi=nbSuperElement)
     if (iret .eq. 1 .and. nbSuperElement .eq. 0) then
         call utmess('F', 'CALCULEL3_35')
     end if
-!
+
+! - Create fields
     if (iret .ne. 1) then
         call megeom(model, chgeom)
-        call mecara(cara, chcara)
-        call meharm(model, nh, chharm)
+        call meharm(model, numeHarm, chharm)
     end if
+    chgeomZ = chgeom
+    chharmZ = chharm
 !
-    chgeoz = chgeom
-    chharz = chharm
     call jedema()
 end subroutine

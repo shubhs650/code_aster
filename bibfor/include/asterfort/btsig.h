@@ -16,13 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-#include "MeshTypes_type.h"
+#include "FE_module.h"
 !
 interface
     subroutine btsig(lonlig, loncol, jacgau, bmat, sigma,&
                      bsigma)
         integer(kind=8), intent(in) :: loncol, lonlig
-        real(kind=8), intent(in) :: jacgau, bmat(loncol, 3*MT_NNOMAX3D), sigma(loncol)
+        real(kind=8), intent(in) :: jacgau, bmat(loncol, MAX_BV_CG), sigma(loncol)
         real(kind=8), intent(out) :: bsigma(*)
     end subroutine btsig
 end interface

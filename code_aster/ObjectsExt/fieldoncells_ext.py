@@ -31,43 +31,13 @@ import os.path as osp
 import subprocess
 
 from libaster import FieldOnCellsReal, FieldOnCellsLong, FieldOnCellsChar8, FieldOnCellsComplex
-from ..Objects.Serialization import InternalStateBuilder
 from ..Utilities import injector, force_list
 from ..Utilities import MPI, ExecutionParameter, SharedTmpdir
-
-
-class FieldOnCellsStateBuilder(InternalStateBuilder):
-    """Class that returns the internal state of a *FieldOnCells*."""
-
-    def save(self, field):
-        """Return the internal state of a *Result* to be pickled.
-
-        Arguments:
-            field (*FieldOnCells*): The *FieldOnCells* object to be pickled.
-
-        Returns:
-            *InternalStateBuilder*: The internal state itself.
-        """
-        super().save(field)
-        self._st["fed"] = field.getDescription()
-        return self
-
-    def restore(self, field):
-        """Restore the *DataStructure* content from the previously saved internal
-        state.
-
-        Arguments:
-            field (*DataStructure*): The *DataStructure* object to be restored.
-        """
-        super().restore(field)
-        if self._st["fed"]:
-            field.setDescription(self._st["fed"])
 
 
 @injector(FieldOnCellsReal)
 class ExtendedFieldOnCellsReal:
     cata_sdj = "SD.sd_champ.sd_cham_elem_class"
-    internalStateBuilder = FieldOnCellsStateBuilder
 
     def getValuesWithDescription(self, components=[], groups=[]):
         """Return the values of a component of the field.
@@ -85,7 +55,7 @@ class ExtendedFieldOnCellsReal:
 
         return self.toSimpleFieldOnCells().getValuesWithDescription(force_list(components), groups)
 
-    def plot(self, command="gmsh", local=False, split=False):
+    def plot(self, command="gmsh", local=True, split=False):
         """Plot the field.
 
         Arguments:
@@ -158,16 +128,13 @@ class ExtendedFieldOnCellsReal:
 @injector(FieldOnCellsLong)
 class ExtendedFieldOnCellsLong:
     cata_sdj = "SD.sd_champ.sd_cham_elem_class"
-    internalStateBuilder = FieldOnCellsStateBuilder
 
 
 @injector(FieldOnCellsChar8)
 class ExtendedFieldOnCellsChar8:
     cata_sdj = "SD.sd_champ.sd_cham_elem_class"
-    internalStateBuilder = FieldOnCellsStateBuilder
 
 
 @injector(FieldOnCellsComplex)
 class ExtendedFieldOnCellsComplex:
     cata_sdj = "SD.sd_champ.sd_cham_elem_class"
-    internalStateBuilder = FieldOnCellsStateBuilder

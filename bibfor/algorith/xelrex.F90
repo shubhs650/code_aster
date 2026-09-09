@@ -20,11 +20,12 @@ subroutine xelrex(elrefp, nno, xref, ndime)
     implicit none
 #include "asterf_types.h"
 #include "asterfort/elraca.h"
+#include "MeshTypes_type.h"
 #include "asterfort/elrfno.h"
     character(len=8):: elrefp
     integer(kind=8) :: nno
     integer(kind=8), optional :: ndime
-    real(kind=8) :: xref(81)
+    real(kind=8) :: xref(3*MT_NNOMAX3D)
 !   BUT: INTERFACE VERS ELRACA :
 !         RETOURNE LES COORDONNEES DE REFERENCE DE
 !             L ELEMENT PARENT COMPLET

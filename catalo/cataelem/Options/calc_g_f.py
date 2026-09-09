@@ -49,6 +49,9 @@ PCER = InputParameter(phys=PHY.NEUT_R)
 
 PELI = InputParameter(phys=PHY.NEUT_R)
 
+
+ISCPLAN = InputParameter(phys=PHY.NEUT_I)
+
 CALC_G_F = Option(
     para_in=(
         SP.PACCELE,
@@ -76,6 +79,7 @@ CALC_G_F = Option(
         PLAG,
         PCER,
         PELI,
+        ISCPLAN,
     ),
     para_out=(SP.PGTHETA,),
     condition=(

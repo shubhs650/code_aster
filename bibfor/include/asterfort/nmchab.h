@@ -15,28 +15,25 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmchab(fami, kpg, ksp, ndim, typmod,&
-                      imate, compor, crit, instam, instap,&
-                      deps, sigm, vim, option, sigp,&
+    subroutine nmchab(fami, kpg, ksp, ndim, &
+                      imate, relaComp, carcri, instam, instap, &
+                      deps, sigm, vim, option, sigp, &
                       vip, dsidep, iret)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
         integer(kind=8) :: imate
-        character(len=16) :: compor(3)
-        real(kind=8) :: crit(10)
+        character(len=16), intent(in) :: relaComp, option
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: deps(6)
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(*)
-        character(len=16) :: option
         real(kind=8) :: sigp(6)
         real(kind=8) :: vip(*)
         real(kind=8) :: dsidep(6, 6)

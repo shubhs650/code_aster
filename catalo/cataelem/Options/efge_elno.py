@@ -63,7 +63,7 @@ PVARCPR = InputParameter(
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  CAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
 )
 

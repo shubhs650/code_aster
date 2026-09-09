@@ -17,106 +17,111 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0439(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystMemb
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/mbcine.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DE L'OPTION MASS_MECA
-!                          POUR LES MEMBRANES EN DYNAMIQUE
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
+#include "jeveux.h"
 !
-    integer(kind=8) :: codres(2)
-    character(len=4) :: fami
-    integer(kind=8) :: nno, npg, i, imatuu, ndim, nnos, jgano, iret_cmp
-    integer(kind=8) :: ipoids, ivf, idfde, igeom, imate, icacoq, icompo
+    character(len=16) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: MEMBRANE
+!
+! Options: MASS_MECA*
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = 'MASS'
+    integer(kind=8), parameter :: nddl = 3
+    integer(kind=8), parameter :: nbProp = 1
+    character(len=8), parameter :: propName(nbProp) = (/'RHO'/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    integer(kind=8) :: nno, npg, i, jvMatr, iret_cmp
+    integer(kind=8) :: ipoids, ivf, idfde, jvGeom, jvMaterc, jvCompor
     integer(kind=8) :: kpg, n, j, kkd, k
-    integer(kind=8) :: kk, nddl, l
+    integer(kind=8) :: kk, l
     real(kind=8) :: dff(2, 9)
-    real(kind=8) :: vff(9), b(3, 3, 9), jac, rho(1)
-    real(kind=8) :: alpha, beta, h
+    real(kind=8) :: vff(9), b(3, 3, 9), jac, rho
+    real(kind=8) :: h, preten
     real(kind=8) :: a(3, 3, 9, 9), coef
     real(kind=8) :: diag(3, 9), wgt, alfam(3), somme(3)
     aster_logical :: ldiag, grdef
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
-    call tecach('ONO', 'PCOMPOR', 'L', iret_cmp, iad=icompo)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystMemb(plateOrie)
+
 !
+    call tecach('ONO', 'PCOMPOR', 'L', iret_cmp, iad=jvCompor)
     grdef = ASTER_FALSE
-!
     if (iret_cmp == 0) then
-        grdef = (zk16(icompo+2) (1:9) .eq. 'GROT_GDEP')
+        grdef = (zk16(jvCompor+2) (1:9) .eq. 'GROT_GDEP')
     end if
-!
     ldiag = (option(1:10) .eq. 'MASS_MECA_')
-!
-!
+
 ! - FONCTIONS DE FORMES ET POINTS DE GAUSS
-    fami = 'MASS'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-    call r8inir(9*9*3*3, 0.d0, a, 1)
-!
-! - PARAMETRES EN ENTREE
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PCACOQU', 'L', icacoq)
-!
-! - PARAMETRES EN SORTIE
-!
-    call jevech('PMATUUR', 'E', imatuu)
-!
-    nddl = 3
-!
-! - DIRECTION DE REFERENCE POUR UN COMPORTEMENT ANISOTROPE
-!
-    alpha = zr(icacoq+1)*r8dgrd()
-    beta = zr(icacoq+2)*r8dgrd()
-!
-! - EPAISSEUR (VALABLE UNIQUEMENT POUR GROT_GDEP)
-!
+    call elrefe_info(fami=fami, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
+    a = 0.d0
+
+! - Input fields
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Output field
+    call jevech('PMATUUR', 'E', jvMatr)
+
+! - EPAISSEUR ET PRETCONTRAINTES
+    h = plateCara%thick
+    if (h .lt. r8prem()) then
+        call utmess('F', 'MEMBRANE_1')
+    end if
+    preten = plateCara%tension/h
+
     if (grdef) then
-! - LES MEMBRANES EN GROT_GDEP EN DYNAMIQUE SONT CODEES MAIS PAS TESTEES
-! - ON INTERDIT MASS_MECA POUR LE MOMENT
         call utmess('F', 'MEMBRANE_9')
-! - il suffit d'enlever ce message d'erreur pour rendre l'option fonctionnelle
-!
-        h = zr(icacoq)
+
     else
         if (iret_cmp .ne. 0) then
-! - La carte COMPOR n'est pas présente, c'est probablement que l'on est dans CALC_MATR_ELEM
-!  On vérifie que l'épaisseur soit bien de 1
-            if (abs(zr(icacoq)-1.d0) .gt. r8prem()) then
+            if (abs(h-1.d0) .gt. r8prem()) then
                 call utmess('F', 'MEMBRANE_11')
             end if
         end if
 !
         h = 1.d0
     end if
-!
-! - CALCUL POUR CHAQUE POINT DE GAUSS : ON CALCULE D'ABORD LA
-!      CONTRAINTE ET/OU LA RIGIDITE SI NECESSAIRE PUIS
-!      ON JOUE AVEC B
-!
+
     wgt = 0.d0
     do kpg = 1, npg
-!
-! - MISE SOUS FORME DE TABLEAU DES VALEURS DES FONCTIONS DE FORME
-!   ET DES DERIVEES DE FONCTION DE FORME
-!
         do n = 1, nno
             vff(n) = zr(ivf+(kpg-1)*nno+n-1)
             dff(1, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2)
@@ -126,25 +131,29 @@ subroutine te0439(option, nomte)
 ! - MASS_MECA
 !
         if (grdef) then
-            call rcvalb(fami, kpg, 1, '+', zi(imate), &
-                        ' ', 'ELAS', 0, ' ', [0.d0], &
-                        1, 'RHO', rho, codres, 1)
+            call rcvalb(fami, kpg, 1, '+', &
+                        zi(jvMaterc), ' ', 'ELAS', &
+                        0, ' ', [0.d0], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
         else
-            call rcvalb(fami, kpg, 1, '+', zi(imate), &
-                        ' ', 'ELAS_MEMBRANE', 0, ' ', [0.d0], &
-                        1, 'RHO', rho, codres, 1)
+            call rcvalb(fami, kpg, 1, '+', &
+                        zi(jvMaterc), ' ', 'ELAS_MEMBRANE', &
+                        0, ' ', [0.d0], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
         end if
-!
-! - CALCUL DE LA MATRICE "B" : DEPL NODAL -> EPS11 ET DU JACOBIEN
-!
-        call mbcine(nno, zr(igeom), dff, alpha, beta, &
+        rho = propVale(1)
+
+! ----- CALCUL DE LA MATRICE "B" :
+        call mbcine(plateOrie, &
+                    nno, zr(jvGeom), dff, &
                     b, jac)
 !
-        wgt = wgt+rho(1)*zr(ipoids+kpg-1)*jac*h
-!
+        wgt = wgt+rho*zr(ipoids+kpg-1)*jac*h
         do n = 1, nno
             do i = 1, n
-                coef = rho(1)*zr(ipoids+kpg-1)*jac*vff(n)*vff(i)*h
+                coef = rho*zr(ipoids+kpg-1)*jac*vff(n)*vff(i)*h
                 a(1, 1, n, i) = a(1, 1, n, i)+coef
                 a(2, 2, n, i) = a(2, 2, n, i)+coef
                 a(3, 3, n, i) = a(3, 3, n, i)+coef
@@ -152,35 +161,22 @@ subroutine te0439(option, nomte)
         end do
 !
     end do
-!
-! - RANGEMENT DES RESULTATS
-! -------------------------
+
     if (ldiag) then
-!
-! ---   CALCUL DE LA TRACE EN TRANSLATION SUIVANT X
-!
-        call r8inir(3*9, 0.d0, diag, 1)
-        call r8inir(3, 0.d0, somme, 1)
+        diag = 0.d0
+        somme = 0.d0
         do i = 1, 3
             do j = 1, nno
                 somme(i) = somme(i)+a(i, i, j, j)
             end do
             alfam(i) = wgt/somme(i)
         end do
-!
-! ---   CALCUL DU FACTEUR DE DIAGONALISATION
-!
-!        ALFA = WGT/TRACE
-!
-! ---   PASSAGE DU STOCKAGE RECTANGULAIRE (A) AU STOCKAGE TRIANGULAIRE (ZR)
-!
         do j = 1, nno
             do i = 1, 3
                 diag(i, j) = a(i, i, j, j)*alfam(i)
             end do
         end do
-!
-        a(:, :, :, :) = 0.d0
+        a = 0.d0
         do k = 1, 3
             do i = 1, nno
                 a(k, k, i, i) = diag(k, i)
@@ -188,14 +184,13 @@ subroutine te0439(option, nomte)
         end do
     end if
 !
-!
     do k = 1, nddl
         do l = 1, nddl
             do i = 1, nno
                 kkd = ((nddl*(i-1)+k-1)*(nddl*(i-1)+k))/2
                 do j = 1, i
                     kk = kkd+nddl*(j-1)+l
-                    zr(imatuu+kk-1) = a(k, l, i, j)
+                    zr(jvMatr+kk-1) = a(k, l, i, j)
                 end do
             end do
         end do

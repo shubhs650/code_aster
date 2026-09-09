@@ -38,7 +38,8 @@ void exportAsterToMedWriterToPython( py::module_ &mod ) {
 #ifdef ASTER_HAVE_MED
     c1.def( "printMesh",
             py::overload_cast< const MeshPtr &, const std::filesystem::path &, bool,
-                               const std::string & >( &AsterToMedWriter::printMesh ),
+                               const std::string &, const std::string & >(
+                &AsterToMedWriter::printMesh ),
             R"(
 Print mesh to med file
 
@@ -47,13 +48,15 @@ Arguments:
     path (Path|str): path to med file
     parallelPrint (bool): false by default. If true print in one parallel file (optional)
     mesh_name (str): mesh name (optional)
+    mode (str): 'a' or 'w' ('w' to overwrite file) (optional)
             )",
             py::arg( "mesh" ), py::arg( "path" ), py::arg( "parallelPrint" ) = false,
-            py::arg( "mesh_name" ) = "" );
+            py::arg( "mesh_name" ) = "", py::arg( "mode" ) = 'a' );
 #ifdef ASTER_HAVE_MPI
     c1.def( "printMesh",
             py::overload_cast< const ParallelMeshPtr &, const std::filesystem::path &, bool,
-                               const std::string & >( &AsterToMedWriter::printMesh ),
+                               const std::string &, const std::string & >(
+                &AsterToMedWriter::printMesh ),
             R"(
 Print mesh to med file
 
@@ -62,13 +65,15 @@ Arguments:
     path (Path|str): path to med file
     parallelPrint (bool): false by default. If true print in one parallel file (optional)
     mesh_name (str): mesh name (optional)
+    mode (str): 'a' or 'w' ('w' to overwrite file) (optional)
             )",
             py::arg( "mesh" ), py::arg( "path" ), py::arg( "parallelPrint" ) = false,
-            py::arg( "mesh_name" ) = "" );
+            py::arg( "mesh_name" ) = "", py::arg( "mode" ) = 'a' );
 
     c1.def( "printMesh",
             py::overload_cast< const ConnectionMeshPtr &, const std::filesystem::path &, bool,
-                               const std::string & >( &AsterToMedWriter::printMesh ),
+                               const std::string &, const std::string & >(
+                &AsterToMedWriter::printMesh ),
             R"(
 Print mesh to med file
 
@@ -77,9 +82,10 @@ Arguments:
     path (Path|str): path to med file
     parallelPrint (bool): false by default. If true print in one parallel file (optional)
     mesh_name (str): mesh name (optional)
+    mode (str): 'a' or 'w' ('w' to overwrite file) (optional)
             )",
             py::arg( "mesh" ), py::arg( "path" ), py::arg( "parallelPrint" ) = false,
-            py::arg( "mesh_name" ) = "" );
+            py::arg( "mesh_name" ) = "", py::arg( "mode" ) = 'a' );
 #endif
     c1.def( "printResult", &AsterToMedWriter::printResult,
             R"(
@@ -89,7 +95,9 @@ Arguments:
     result: result to print
     path (Path|str): path to med file
     parallelPrint (bool): false by default. If true print in one parallel file (optional)
+    mode (str): 'a' or 'w' ('w' to overwrite file) (optional)
             )",
-            py::arg( "result" ), py::arg( "path" ), py::arg( "parallelPrint" ) = false );
+            py::arg( "result" ), py::arg( "path" ), py::arg( "parallelPrint" ) = false,
+            py::arg( "mode" ) = 'a' );
 #endif
 };

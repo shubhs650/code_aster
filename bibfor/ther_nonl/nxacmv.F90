@@ -17,9 +17,9 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
-                  solver, l_stat, timeMap, timeParaIn, temp_iter, &
-                  vhydr, varc_prev, varc_curr, cn2mbr_stat, &
+subroutine nxacmv(model, materField, materCode, caraElem, listLoad, nume_dof, &
+                  solver, l_stat, timeMap, timeParaIn, tempIter, &
+                  vhydr, varcPrev, varcCurr, cn2mbr_stat, &
                   cn2mbr_tran, matass, maprec, cndiri, cncine, &
                   mediri, comporTher, ds_algorom_)
 !
@@ -53,15 +53,15 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
 #include "asterfort/vtzero.h"
 !
     character(len=8), intent(in) :: model, materField, caraElem
-    character(len=24), intent(in) :: mateco, listLoad
+    character(len=24), intent(in) :: materCode, listLoad
     character(len=24), intent(in) :: nume_dof
     character(len=19), intent(in) :: solver
     character(len=24), intent(in) :: timeMap
-    character(len=19), intent(in) :: varc_prev
-    character(len=19), intent(in) :: varc_curr
+    character(len=19), intent(in) :: varcPrev
+    character(len=19), intent(in) :: varcCurr
     aster_logical, intent(in) :: l_stat
     real(kind=8), intent(in) :: timeParaIn(6)
-    character(len=24), intent(in) :: temp_iter
+    character(len=24), intent(in) :: tempIter
     character(len=24), intent(in) :: vhydr
     character(len=24), intent(in) :: cn2mbr_stat
     character(len=24), intent(in) :: cn2mbr_tran
@@ -146,8 +146,8 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
     loadFuncJv = listLoad(1:19)//'.FCHA'
 
 ! - Construct command variables fields
-    call vrcins(model, materField, caraElem, timeCurr, varc_curr, codret)
-    call vrcins(model, materField, caraElem, timePrev, varc_prev, codret)
+    call vrcins(model, materField, caraElem, timeCurr, varcCurr, codret)
+    call vrcins(model, materField, caraElem, timePrev, varcPrev, codret)
 
 ! - Create <CARTE> for time
     timePara = timeParaIn
@@ -173,9 +173,10 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
 ! - Compute CHAR_THER_EVOLNI
 !
     if (.not. l_stat) then
-        call vetnth_nonl(model, caraElem, mateco, timeMap, comporTher, &
-                         temp_iter, varc_prev, varc_curr, &
-                         vetntp, vetnti, 'V', vhydr)
+        call vetnth_nonl(model, caraElem, materCode, timeMap, comporTher, &
+                         tempIter, vhydr, &
+                         varcPrev, varcCurr, &
+                         'V', vetntp, vetnti)
         call asasve(vetnti, nume_dof, 'R', 'D', vatnti)
         call jeveuo(vatnti, 'L', jtn)
         cntnti = zk24(jtn)
@@ -186,11 +187,11 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
 
 ! - Compute Neumann loads (second member) - Linear part
     call vechth('STAT', &
-                model, mateco, &
+                model, materCode, &
                 loadNameJv, loadInfoJv, &
                 timeCurr, &
                 vechtp, &
-                varcCurrZ_=varc_curr, timeMapZ_=timeMap, tempPrevZ_=temp_iter)
+                varcCurrZ_=varcCurr, timeMapZ_=timeMap, tempPrevZ_=tempIter)
 
     call asasve(vechtp, nume_dof, 'R', 'D', vachtp)
     call ascova('D', vachtp, loadFuncJv, 'INST', timeCurr, &
@@ -202,7 +203,7 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
 ! - Compute Neumann loads (second member) - Nonlinear part
 !
     call vechnl(model, loadNameJv, loadInfoJv, timeMap, &
-                temp_iter, vechtn, 'V')
+                tempIter, vechtn, 'V')
     call asasve(vechtn, nume_dof, 'R', 'D', vachtn)
     call ascova('D', vachtn, ' ', 'INST', timeCurr, &
                 'R', cnchnl)
@@ -250,10 +251,10 @@ subroutine nxacmv(model, materField, mateco, caraElem, listLoad, nume_dof, &
 
 ! - Tangent matrix (non-linear) - Material and loads
     call merxth(l_stat, &
-                model, caraElem, mateco, &
+                model, caraElem, materCode, &
                 loadNameJv, loadInfoJv, &
                 timePara, timeMap, &
-                temp_iter, comporTher, varc_curr, &
+                tempIter, comporTher, varcCurr, &
                 merigi, 'V')
     nb_matr = 0
     call jeexin(merigi(1:8)//'           .RELR', iret)

@@ -16,22 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
+subroutine thmGetParaElas(temp, ndim, ds_thm)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/get_elas_id.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/get_elas_para.h"
 #include "asterfort/get_elasth_para.h"
-#include "asterfort/utmess.h"
 #include "asterfort/THM_type.h"
+#include "asterfort/utmess.h"
 !
-    integer(kind=8), intent(in) :: j_mater
-    integer(kind=8), intent(in) :: kpi
     real(kind=8), intent(in) :: temp
     integer(kind=8), intent(in) :: ndim
     type(THM_DS), intent(inout) :: ds_thm
@@ -44,8 +42,6 @@ subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  j_mater          : coded material address
-! In  kpi              : current Gauss point
 ! In  temp             : current temperature
 ! In  ndim             : dimension of element (2 ou 3)
 ! IO  ds_thm           : datastructure for THM
@@ -53,20 +49,18 @@ subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: g, alpha(2)
-    character(len=8) :: fami
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    fami = 'RIGI'
-!
-! - Get type of elasticity
-!
-    call get_elas_id(j_mater, ds_thm%ds_material%elas%id, ds_thm%ds_material%elas%keyword)
-!
-! - Read parameters
-!
-    call get_elas_para(fami, j_mater, '+', kpi, 1, &
-                       ds_thm%ds_material%elas%id, ds_thm%ds_material%elas%keyword, &
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
+
+! - Read elastic parameters
+    call get_elas_para(materPara%schemePara%fami, &
+                       materPara%jvMaterCode, '+', &
+                       materPara%schemePara%kpg, &
+                       materPara%schemePara%ksp, &
+                       materPara%elasID, materPara%elasKeyword, &
                        temp=temp, &
                        e_=ds_thm%ds_material%elas%e, &
                        nu_=ds_thm%ds_material%elas%nu, &
@@ -80,16 +74,18 @@ subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
                        g2_=ds_thm%ds_material%elas%g_ln, &
                        g3_=ds_thm%ds_material%elas%g_tn, &
                        g_=g)
-    if (ds_thm%ds_material%elas%id .eq. 3) then
+    if (materPara%elasID .eq. ELAS_ISTR) then
         ds_thm%ds_material%elas%g_ln = g
         ds_thm%ds_material%elas%g = g
     end if
-!
+
 ! - Read parameters (dilatation)
-!
     if (ds_thm%ds_elem%l_dof_ther) then
-        call get_elasth_para(fami, j_mater, '+', kpi, 1, &
-                             ds_thm%ds_material%elas%id, ds_thm%ds_material%elas%keyword, &
+        call get_elasth_para(materPara%schemePara%fami, &
+                             materPara%jvMaterCode, '+', &
+                             materPara%schemePara%kpg, &
+                             materPara%schemePara%ksp, &
+                             materPara%elasID, materPara%elasKeyword, &
                              temp_vale_=temp, &
                              alpha=alpha, &
                              alpha_l=ds_thm%ds_material%ther%alpha_l, &
@@ -99,33 +95,31 @@ subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
     else
         ds_thm%ds_material%ther%alpha = 0.d0
     end if
-!
+
 ! - Some checks: compatibility of elasticity with diffusion
-!
     if (ds_thm%ds_material%biot%type .eq. BIOT_TYPE_ISOT) then
-        if (ds_thm%ds_material%elas%id .ne. 1) then
+        if (materPara%elasID .ne. ELAS_ISOT) then
             call utmess('F', 'THM1_2', sk=ds_thm%ds_material%elas%keyword)
         end if
     elseif (ds_thm%ds_material%biot%type .eq. BIOT_TYPE_ISTR) then
-        if (ds_thm%ds_material%elas%id .ne. 3) then
+        if (materPara%elasID .ne. ELAS_ISTR) then
             call utmess('F', 'THM1_2', sk=ds_thm%ds_material%elas%keyword)
         end if
     elseif (ds_thm%ds_material%biot%type .eq. BIOT_TYPE_ORTH) then
-        if (ds_thm%ds_material%elas%id .ne. 2) then
+        if (materPara%elasID .ne. ELAS_ORTH) then
             call utmess('F', 'THM1_2', sk=ds_thm%ds_material%elas%keyword)
         end if
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - Some checks: anisotropy
-!
-    if (ds_thm%ds_material%elas%id .eq. 3) then
+    if (materPara%elasID .eq. ELAS_ISTR) then
         if (ndim .ne. 3) then
             call utmess('F', 'THM1_4')
         end if
     end if
-    if (ds_thm%ds_material%elas%id .eq. 2) then
+    if (materPara%elasID .eq. ELAS_ORTH) then
         if (ndim .ne. 2) then
             call utmess('F', 'THM1_3')
         end if

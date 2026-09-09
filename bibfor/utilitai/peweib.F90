@@ -15,7 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine peweib(resu, modele, mate, mateco, cara, chmat, &
                   nh, nbocc, iresu, nomcmd)
     implicit none
@@ -87,7 +88,7 @@ subroutine peweib(resu, modele, mate, mateco, cara, chmat, &
     character(len=16) :: typres, option, optio2, optcal(2), toptca(2), nomrc, noparr(nbparr)
     character(len=16) :: nopard(nbpard), motcl1, motcl2, motcl3
     character(len=19) :: chelem, knum, kins, tabtyp(3), chvarc
-    character(len=24) :: chgeom, chcara(18), chharm
+    character(len=24) :: chgeom, chharm
     character(len=24) :: valk(2), nomgrm
     character(len=24) :: mlggma, ligrel, lchin(9), compor
     character(len=24) :: lchout(2), contg, defog, varig, ssoup
@@ -168,8 +169,8 @@ subroutine peweib(resu, modele, mate, mateco, cara, chmat, &
     end if
 !
     option = 'WEIBULL'
-    call mecham(option, modele, cara, nh, chgeom, &
-                chcara, chharm, iret)
+    call mecham(option, modele, nh, &
+                chgeom, chharm, iret)
     if (iret .ne. 0) goto 100
     noma = chgeom(1:8)
     mlggma = noma//'.GROUPEMA'

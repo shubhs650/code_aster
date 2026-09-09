@@ -19,12 +19,13 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmtang(ndim, nno, coorma, dff, tau1,&
                       tau2)
         integer(kind=8) :: ndim
         integer(kind=8) :: nno
-        real(kind=8) :: coorma(27)
-        real(kind=8) :: dff(2, 9)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
+        real(kind=8) :: dff(2, MT_NNOMAX2D)
         real(kind=8) :: tau1(3)
         real(kind=8) :: tau2(3)
     end subroutine mmtang

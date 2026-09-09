@@ -15,20 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine ddi_kit_read(keywordfact, iocc     , l_etat_init,&
-                            rela_flua  , rela_plas, rela_cpla  , rela_coup)
-        character(len=16), intent(in) :: keywordfact
-        integer(kind=8), intent(in) :: iocc
-        aster_logical, intent(in) :: l_etat_init
-        character(len=16), intent(out) :: rela_flua
-        character(len=16), intent(out) :: rela_plas
-        character(len=16), intent(out) :: rela_cpla
-        character(len=16), intent(out) :: rela_coup
+    subroutine ddi_kit_read(factorKeyword, iFactorKeyword, &
+                            rela_flua, rela_plas, rela_cpla, rela_coup)
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
+        character(len=16), intent(out) :: rela_flua, rela_plas, rela_cpla, rela_coup
     end subroutine ddi_kit_read
 end interface

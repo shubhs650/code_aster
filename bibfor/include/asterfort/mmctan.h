@@ -19,13 +19,14 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmctan(numema, alias, nno, ndim, coorma,&
                       coorno, epsmax, tau1, tau2, err_appa)
         integer(kind=8) :: numema
         character(len=8) :: alias
         integer(kind=8) :: nno
         integer(kind=8) :: ndim
-        real(kind=8) :: coorma(27)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
         real(kind=8) :: coorno(3)
         real(kind=8) :: epsmax
         real(kind=8) :: tau1(3)

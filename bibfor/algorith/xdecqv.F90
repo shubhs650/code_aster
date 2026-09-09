@@ -37,6 +37,7 @@ subroutine xdecqv(nnose, it, cnset, heavt, lsn, &
 #include "asterfort/xpente.h"
 #include "asterfort/xxmmvd.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: nnose, it, cnset(*), igeom, ninter, npts, nse, cnse(6, 10)
     integer(kind=8) :: nsemax, heavt(*), nfisc, nfiss, ncomp, fisco(*), ifiss, ndim
     real(kind=8) :: lsn(*), ainter(*), heav(*), pinter(*), pintt(*), pmitt(*), lonref
@@ -69,7 +70,7 @@ subroutine xdecqv(nnose, it, cnset, heavt, lsn, &
 !     ----------------------------------------------------------------
 !
     real(kind=8) :: xyz(4, 3), ab(3), ac(3), ad(3), vn(3), ps, somlsn(nfisc+1)
-    real(kind=8) :: geom(3), rbid2(3), ff(27), bary(3), lsno(nnose), abslsn
+    real(kind=8) :: geom(3), rbid2(3), ff(MT_NNOMAX), bary(3), lsno(nnose), abslsn
     integer(kind=8) :: in, inh, i, j, ar(12, 3), nbar, ise
     integer(kind=8) :: a1, a2, a3, a4, a, b, c, iadzi, iazk24, ndime, n(18)
     integer(kind=8) :: d, e, f, g, h, l, ip1

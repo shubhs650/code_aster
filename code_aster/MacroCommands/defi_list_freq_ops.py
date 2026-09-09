@@ -261,6 +261,7 @@ class FrequencyBandOptimizationAlgorithm(object):
         bins_info = bins.copy()  # inputs bins of INFO_MODE operator
 
         ### Frequency band optimization procedure
+        idx = []
         for n in range(self.iter_maxi):
             # Call INFO_MODE operator (on new bins only)
             counts_info = self._countFrequencies(bins_info)  # counts obtained with INFO_MODE

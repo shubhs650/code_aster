@@ -30,8 +30,7 @@ void exportMechanicalLoadDescriptionToPython( py::module_ &mod ) {
     py::class_< MechanicalLoadDescriptionReal,
                 MechanicalLoadDescriptionPtr< ConstantFieldOnCellsReal >, DataStructure >(
         mod, "MechanicalLoadDescriptionReal" )
-        .def(
-            py::init( &initFactoryPtr< MechanicalLoadDescriptionReal, std::string, ModelPtr & > ) )
+        // fake initFactoryPtr: not directly created by user
         // fake initFactoryPtr: not directly created by user
         .def( "getConstantLoadField", &MechanicalLoadDescriptionReal::getConstantLoadField );
 };

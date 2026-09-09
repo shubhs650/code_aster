@@ -15,45 +15,41 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=C1505
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
     subroutine nmcomp(BEHinteg, &
-                      fami,  kpg,    ksp,    ndim,       typmod,       &
-                      imate, compor, carcri, instam,     instap,       &
-                      neps,  epsm_inp,   deps_inp,   nsig,       sigm,         &
-                      vim,   option, angmas, sigp,       vip,          &
-                      ndsde, dsidep, codret, mult_comp_, l_epsi_varc_, &
-                      materi_ )
-!
+                      ndim, option, typmod, &
+                      instam, instap, &
+                      compor, carcri, multComp, &
+                      neps, epsm_inp, deps_inp, &
+                      nsig, sigm, &
+                      vim, &
+                      sigp, vip, &
+                      ndsde, dsidep, codret, &
+                      l_epsi_varc_)
         use Behaviour_type
-!
-        type(Behaviour_Integ) :: BEHinteg
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
-        integer(kind=8) :: neps
-        real(kind=8) :: epsm_inp(neps)
-        real(kind=8) :: deps_inp(neps)
-        integer(kind=8) :: nsig
-        real(kind=8) :: sigm(nsig)
-        real(kind=8) :: vim(*)
-        character(len=16) :: option
-        real(kind=8) :: angmas(*)
-        real(kind=8) :: sigp(nsig)
-        real(kind=8) :: vip(*)
-        integer(kind=8) :: ndsde
-        real(kind=8) :: dsidep(merge(nsig,6,nsig*neps.eq.ndsde),merge(neps,6,nsig*neps.eq.ndsde))
-        integer(kind=8) :: codret
-        character(len=16), optional, intent(in) :: mult_comp_
-        aster_logical, optional, intent(in)     :: l_epsi_varc_
-        character(len=8), optional, intent(in)  :: materi_
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
+        integer(kind=8), intent(in) :: ndim
+        character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: typmod(2)
+        real(kind=8), intent(in) :: instam, instap
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: multComp
+        integer(kind=8), intent(in) :: neps
+        real(kind=8), intent(in) :: epsm_inp(neps), deps_inp(neps)
+        integer(kind=8), intent(in) :: nsig
+        real(kind=8), intent(in) :: sigm(nsig)
+        real(kind=8), intent(in) :: vim(*)
+
+        real(kind=8), intent(inout) :: sigp(nsig), vip(*)
+        integer(kind=8), intent(in) :: ndsde
+        real(kind=8), intent(inout) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
+                                              merge(neps, 6, nsig*neps .eq. ndsde))
+        integer(kind=8), intent(inout) :: codret
+        aster_logical, optional, intent(in) :: l_epsi_varc_
     end subroutine nmcomp
 end interface

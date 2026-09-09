@@ -15,18 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mmcoor(alias, nno, ndim, coorma, ksi1,&
-                      ksi2, coorpt)
-        character(len=8) :: alias
-        integer(kind=8) :: nno
-        integer(kind=8) :: ndim
-        real(kind=8) :: coorma(27)
-        real(kind=8) :: ksi1
-        real(kind=8) :: ksi2
-        real(kind=8) :: coorpt(3)
+#include "MeshTypes_type.h"
+    subroutine mmcoor(cellCode, cellNbNode, cellCoor, &
+                      ksi1, ksi2, coorpt)
+        character(len=8), intent(in) :: cellCode
+        integer(kind=8), intent(in)::  cellNbNode
+        real(kind=8), intent(in) :: ksi1, ksi2
+        real(kind=8), intent(in) :: cellCoor(3,MT_NNOMAX2D)
+        real(kind=8), intent(out) :: coorpt(3)
     end subroutine mmcoor
 end interface

@@ -18,9 +18,9 @@
 ! aslint: disable=W1504,W1306
 !
 subroutine xfnohm(ds_thm, &
-                  fnoevo, deltat, nno, npg, ipoids, &
+                  nno, npg, ipoids, &
                   ivf, idfde, geom, congem, b, &
-                  dfdi, dfdi2, r, vectu, imate, &
+                  dfdi, dfdi2, r, vectu, &
                   mecani, press1, dimcon, nddls, nddlm, &
                   dimuel, nmec, np1, ndim, axi, &
                   dimenr, nnop, nnops, nnopm, igeom, &
@@ -28,25 +28,24 @@ subroutine xfnohm(ds_thm, &
                   enrmec, enrhyd, nfiss, nfh, jfisno)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/tecach.h"
 #include "asterfort/reeref.h"
+#include "asterfort/tecach.h"
 #include "asterfort/xcabhm.h"
 #include "asterfort/xfnoda.h"
 #include "asterfort/xlinhm.h"
 #include "jeveux.h"
 
     type(THM_DS), intent(inout) :: ds_thm
-    aster_logical :: fnoevo, axi
-    integer(kind=8) :: nno, npg, imate, dimenr, dimcon, nddls, nddlm
+    aster_logical :: axi
+    integer(kind=8) :: nno, npg, dimenr, dimcon, nddls, nddlm
     integer(kind=8) :: dimuel, nmec, np1, ndim, ipoids, ivf, kpi, i, n
     integer(kind=8) :: idfde, mecani(5), press1(7)
     integer(kind=8) :: addeme, addep1, nfiss, nfh, jfisno
-    real(kind=8) :: poids, dt, deltat
+    real(kind=8) :: poids
     real(kind=8) :: vectu(dimuel), b(dimenr, dimuel), r(1:dimenr)
 !
 ! DECLARATIONS POUR XFEM
@@ -96,8 +95,7 @@ subroutine xfnohm(ds_thm, &
     call xlinhm(elrefp, elref2)
 !
 !     NOMBRE DE COMPOSANTES DE PHEAVTO (DANS LE CATALOGUE)
-    call tecach('OOO', 'PHEAVTO', 'L', iret, nval=2, &
-                itab=jtab)
+    call tecach('OOO', 'PHEAVTO', 'L', iret, nval=2, itab=jtab)
     ncomp = jtab(2)
 !
 !     RECUPERATION DE LA CONNECTIVITÃ~I FISSURE - DDL HEAVISIDES
@@ -124,7 +122,7 @@ subroutine xfnohm(ds_thm, &
     adenme = enrmec(2)
     yaenrh = enrhyd(1)
     adenhy = enrhyd(2)
-    dt = deltat
+
 ! ======================================================================
 ! --- INITIALISATION DE VECTU ------------------------------------------
 ! ======================================================================
@@ -185,8 +183,7 @@ subroutine xfnohm(ds_thm, &
             xg(:) = 0.d0
             do j = 1, ndim
                 do in = 1, nno
-                    xg(j) = xg(j)+zr(ivf-1+nno*(kpi-1)+in)*coorse(ndim* &
-                                                                  (in-1)+j)
+                    xg(j) = xg(j)+zr(ivf-1+nno*(kpi-1)+in)*coorse(ndim*(in-1)+j)
                 end do
             end do
 !
@@ -214,8 +211,9 @@ subroutine xfnohm(ds_thm, &
                         nno, geom, yaenrm, adenme, dimenr, &
                         he, heavn, yaenrh, adenhy, nfiss, nfh)
 ! ======================================================================
-            call xfnoda(ds_thm, imate, mecani, press1, enrmec, dimenr, &
-                        dimcon, ndim, dt, fnoevo, congem(npg*(ise-1)*dimcon+(kpi-1)*dimcon+1), &
+            call xfnoda(ds_thm, &
+                        mecani, press1, enrmec, dimenr, &
+                        dimcon, ndim, congem(npg*(ise-1)*dimcon+(kpi-1)*dimcon+1), &
                         r, enrhyd, nfh)
 ! ======================================================================
 ! --- CONTRIBUTION DU POINT D'INTEGRATION KPI AU RESIDU ----------------

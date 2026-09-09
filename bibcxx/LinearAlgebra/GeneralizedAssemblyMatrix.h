@@ -41,16 +41,18 @@
  */
 class GenericGeneralizedAssemblyMatrix : public DataStructure {
   private:
-    /** @brief Objet Jeveux '.DESC' */
-    JeveuxVectorLong _desc;
     /** @brief Objet Jeveux '.REFE' */
     JeveuxVectorChar24 _refe;
-    /** @brief GeneralizedDOFNumbering */
-    ForwardGeneralizedDOFNumberingPtr _dofNum;
-    /** @brief ModeResult */
-    ForwardModeResultPtr _mecaModeC;
     /** @brief GeneralizedModeResult */
     ForwardGeneralizedModeResultPtr _geneModeC;
+
+  protected:
+    /** @brief Objet Jeveux '.DESC' */
+    JeveuxVectorLong _desc;
+    /** @brief ModeResult */
+    ForwardModeResultPtr _mecaModeC;
+    /** @brief GeneralizedDOFNumbering */
+    ForwardGeneralizedDOFNumberingPtr _dofNum;
     /** @brief V K24 '.REFA' */
     JeveuxVectorChar24 _refa;
 
@@ -207,6 +209,38 @@ class GeneralizedAssemblyMatrix : public GenericGeneralizedAssemblyMatrix {
     };
 
     JeveuxCollection< ValueType > getValues() const { return _matrixValues; };
+
+    /**
+     * @brief Allocate the matrix
+     */
+    void allocate( bool isSymmetric ) {
+        if ( _mecaModeC.getPointer() == nullptr )
+            throw std::runtime_error( "Unable to allocate, ModalBasis is not set" );
+        if ( _dofNum.getPointer() == nullptr )
+            throw std::runtime_error( "Unable to allocate, GeneralizedDOFNumbering is not set" );
+        ASTERINTEGER size = _mecaModeC.getNumberOfIndexes();
+        _desc->allocate( 3 );
+        ( *_desc )[0] = 2;
+        ( *_desc )[1] = size;
+        ( *_desc )[2] = 2;
+        //_desc->updateValuePointer();
+        if ( isSymmetric )
+            _matrixValues->allocate( 1 );
+        else
+            _matrixValues->allocate( 2 );
+        _matrixValues->allocateObject( 1, size * ( size + 1 ) / 2 );
+        if ( !isSymmetric )
+            _matrixValues->allocateObject( 2, size * ( size + 1 ) / 2 );
+        //_matrixValues->build();
+        _refa->allocate( 20 );
+        ( *_refa )[0] = _mecaModeC.getName();
+        ( *_refa )[1] = _dofNum.getName();
+        if ( isSymmetric )
+            ( *_refa )[8] = "MS";
+        else
+            ( *_refa )[8] = "MR";
+        ( *_refa )[10] = "MPI_COMPLET";
+    };
 
     std::vector< ValueType > getUpperValues() const {
         _matrixValues->build();

@@ -42,7 +42,7 @@ module coupling_nitsche_module
 #include "asterfort/coupling_type.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/jevech.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 #include "MeshTypes_type.h"
 !
 ! --------------------------------------------------------------------------------------------------
@@ -285,15 +285,17 @@ contains
             end do
         end do
 !
-!      Term: (stress(u^S).n^S, v^S-v^M) + (stress(v^S).n^S, u^S-u^M)
+!      Term: - [(stress(u^S).n^S, v^S-v^M) + (stress(v^S).n^S, u^S-u^M)]
+!      Rmq: This is a minus since in the paper they used n_I = n_hho = -n_cG
+!          and by convention we used the outward normal for all intermediate computation
         ASSERT(lhs_stress%nrows == cplMap%nbDoFsFECellSl)
         ASSERT(lhs_stress%ncols == cplMap%nbDoFsFEFace)
         do jFE = 1, cplMap%nbDoFsFEFace
             jcol = cplMap%mapDoFsFEFace(jFE)
             do iFE = 1, cplMap%nbDoFsFECellSl
                 irow = cplMap%mapDoFsFECellSl(iFE)
-                lhs%m(irow, jcol) = lhs%m(irow, jcol)+lhs_stress%m(iFE, jFE)
-                lhs%m(jcol, irow) = lhs%m(jcol, irow)+lhs_stress%m(iFE, jFE)
+                lhs%m(irow, jcol) = lhs%m(irow, jcol)-lhs_stress%m(iFE, jFE)
+                lhs%m(jcol, irow) = lhs%m(jcol, irow)-lhs_stress%m(iFE, jFE)
             end do
         end do
 !

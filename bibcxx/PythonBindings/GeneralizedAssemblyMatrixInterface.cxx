@@ -72,6 +72,10 @@ Returns:
                 GenericGeneralizedAssemblyMatrix >( mod, "GeneralizedAssemblyMatrixReal" )
         .def( py::init( &initFactoryPtr< GeneralizedAssemblyMatrixReal > ) )
         .def( py::init( &initFactoryPtr< GeneralizedAssemblyMatrixReal, std::string > ) )
+        .def( "allocate", &GeneralizedAssemblyMatrixReal::allocate, R"(
+Allocate the matrix
+        )",
+              py::arg( "isSymmetric" ) = true )
         .def( "isSymmetric", &GeneralizedAssemblyMatrixReal::isSymmetric, R"(
 Return True if the matrix is symmetric
 

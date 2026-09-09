@@ -15,139 +15,148 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine metnth(model, loadNameJv, caraElem, mateco, time, &
-                  chtni, metrnl)
 !
+subroutine metnth(model, loadNameJv, loadInfoJv, &
+                  caraElem, materCodeZ, &
+                  timeMap, tempPrev, matrElem)
 !
-!
-!     ARGUMENTS:
-!     ----------
+    use coorSyst_module, only: setOrieFields
+    use loadTherCompute_module
+    use loadTherCompute_type
     implicit none
-#include "jeveux.h"
+!
+#include "asterc/r8vide.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/codent.h"
 #include "asterfort/dismoi.h"
+#include "asterfort/exisd.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jeexin.h"
 #include "asterfort/jelira.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
-#include "asterfort/mecara.h"
+#include "asterfort/load_list_info.h"
 #include "asterfort/megeom.h"
 #include "asterfort/memare.h"
 #include "asterfort/reajre.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/utmess.h"
-    character(len=*) :: loadNameJv, mateco
-    character(len=8) :: model, caraElem
-    character(len=24) :: metrnl, time, chtni
-! ----------------------------------------------------------------------
+#include "jeveux.h"
 !
-!     CALCUL DES MATRICES ELEMENTAIRES DE CONVECTION NATURELLE
+    character(len=8), intent(in) :: model
+    character(len=24), intent(in) :: loadNameJv, loadInfoJv
+    character(len=8), intent(in) :: caraElem
+    character(len=*), intent(in) :: materCodeZ
+    character(len=24), intent(in) :: timeMap
+    character(len=24), intent(in) :: tempPrev
+    character(len=24), intent(in) :: matrElem
 !
-!     ENTREES:
+! --------------------------------------------------------------------------------------------------
 !
-!     LES NOMS QUI SUIVENT SONT LES PREFIXES UTILISATEUR K8:
-!        MODELE : NOM DU MODELE
-!        LCHAR  : OBJET CONTENANT LA LISTE DES CHARGES
-!        MATE   : CHAMP DE MATERIAUX
-!        CARA   : CHAMP DE CARAC_ELEM
-!        TIME   : CHAMPS DE TEMPSR
-!        CHTNI  : IEME ITEREE DU CHAMP DE TEMPERATURE
-!        METRNL : NOM DU MATR_ELEM (N RESUELEM) PRODUIT
+! Thermic - Matrix
 !
-!     SORTIES:
-!        METRNL  : EST REMPLI.
+! Elementary matrix for convection (volumic and surfacic terms)
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-!     VARIABLES LOCALES:
-!     ------------------
-!
-!
-    character(len=8) :: nomcha, lpain(6), lpaout(1)
-    character(len=8) :: vitess
+    aster_logical, parameter :: l_stat = ASTER_TRUE
+    real(kind=8) :: theta
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
     character(len=16), parameter :: option = 'RIGI_THER_CONV'
-    character(len=24) :: lchin(6), lchout(1), chgeom, chcara(18)
-    character(len=24) :: chvite, ligrmo, convch
-    integer(kind=8) :: iret, ilires
-    integer(kind=8) :: nchar, jchar
+    character(len=24) :: chgeom
+    character(len=24) :: chvite, modelLigrel, loadField, resuElem
+    integer(kind=8) :: iret, iconv
+    integer(kind=8) :: nbLoad, iLoad, nbFieldIn
+    aster_logical :: noLoadInList
+    character(len=8) :: loadName
+    character(len=24), pointer :: listLoadName(:) => null()
+    integer(kind=8), pointer :: listLoadInfo(:) => null()
+    character(len=8), pointer :: loadFieldVale(:) => null()
 !
-! DEB-------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: ichar, iconv, jvites
-!-----------------------------------------------------------------------
     call jemarq()
-!     -- ON VERIFIE LA PRESENCE PARFOIS NECESSAIRE DE CARA_ELEM
-    if (model(1:1) .eq. ' ') then
-        call utmess('F', 'CALCULEL3_50')
-    end if
-!
-    call jeexin(loadNameJv, iret)
-    if (iret .ne. 0) then
-        call jelira(loadNameJv, 'LONMAX', nchar)
-        call jeveuo(loadNameJv, 'L', jchar)
-    else
-        nchar = 0
-    end if
-!
+
+! - Initializations
+    ASSERT(model .ne. ' ')
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+
+! - Stationnary !
+    ASSERT(l_stat)
+    theta = r8vide()
+
+! - Get loads
+    call load_list_info(noLoadInList, nbLoad, listLoadName, listLoadInfo, &
+                        loadNameJv, loadInfoJv)
+
+! - Geometry field
     call megeom(model, chgeom)
-    call mecara(caraElem, chcara)
-!
-    call jeexin(metrnl, iret)
-    if (iret .eq. 0) then
-        metrnl = '&&METNTH           .RELR'
-        call memare('V', metrnl, model(1:8), 'RIGI_THER')
-    else
-        call jedetr(metrnl)
-    end if
+
+! - Add input fields
+    lpain(1) = 'PGEOMER'
+    lchin(1) = chgeom(1:19)
+    lpain(2) = 'PMATERC'
+    lchin(2) = materCodeZ
+    lpain(3) = 'PINSTR'
+    lchin(3) = timeMap(1:19)
+    lpain(4) = 'PTEMPEI'
+    lchin(4) = tempPrev(1:19)
+    nbFieldIn = 4
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Generate new RESU_ELEM name
+    call jedetr(matrElem(1:19)//'.RELR')
+    call memare('V', matrElem, model, option)
+    resuElem = matrElem(1:8)//'.ME000'
+
+! - Set output field
+    lpaout(1) = 'PMATTTR'
+    lchout(1) = resuElem(1:19)
+
 !
     chvite = '????'
-!
     iconv = 0
-!
-    lpaout(1) = 'PMATTTR'
-    lchout(1) = metrnl(1:8)//'.ME000'
-    do ichar = 1, nchar
-        nomcha = zk24(jchar+ichar-1) (1:8)
-        convch = nomcha//'.CHTH'//'.CONVE'//'.VALE'
-        call jeexin(convch, iret)
-        if (iret .gt. 0) then
+    do iLoad = 1, nbLoad
+        loadName = listLoadName(iLoad) (1:8)
+        loadField = loadName(1:8)//'.CHTH.CONVE'
+        call exisd('CHAMP_GD', loadField, iret)
+        if (iret .ne. 0) then
             iconv = iconv+1
             if (iconv .gt. 1) then
-                call utmess('F', 'CALCULEL3_72')
+                call utmess('F', 'CHARGES8_5')
             end if
-!
 
-            call memare('V', metrnl, model(1:8), option)
-!
-            call jeveuo(convch, 'L', jvites)
-            vitess = zk8(jvites)
-            chvite = vitess
-            lpain(1) = 'PGEOMER'
-            lchin(1) = chgeom
-            lpain(2) = 'PMATERC'
-            lchin(2) = mateco
-            lpain(3) = 'PCACOQU'
-            lchin(3) = chcara(7)
-            lpain(4) = 'PINSTR'
-            lchin(4) = time
+            call memare('V', matrElem, model, option)
+
+! --------- Get speed field
+            call jeveuo(loadField(1:19)//'.VALE', 'L', vk8=loadFieldVale)
+            chvite = loadFieldVale(1)
             lpain(5) = 'PVITESR'
-            lchin(5) = chvite
-            lpain(6) = 'PTEMPEI'
-            lchin(6) = chtni
-!
-!
-            call dismoi('NOM_LIGREL', model, 'MODELE', repk=ligrmo)
-            ilires = 0
-            ilires = ilires+1
-            call codent(ilires, 'D0', lchout(1) (12:14))
-            call calcul('S', option, ligrmo, 6, lchin, &
-                        lpain, 1, lchout, lpaout, 'V', &
-                        'OUI')
-            call reajre(metrnl, lchout(1), 'V')
+            lchin(5) = chvite(1:19)
+            nbFieldIn = 5
+
+! --------- Compute
+            call codent(iLoad, 'D0', lchout(1) (12:14))
+            call calcul('S', option, modelLigrel, &
+                        6, lchin, lpain, &
+                        1, lchout, lpaout, &
+                        'V', 'OUI')
+            call reajre(matrElem, lchout(1), 'V')
 !
         end if
     end do

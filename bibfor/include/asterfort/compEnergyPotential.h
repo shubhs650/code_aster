@@ -18,17 +18,20 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine compEnergyPotential(option , modelz , ligrel, compor, l_temp,&
-                                   chdispz, chtempz,&
-                                   chharm , chgeom , chmate, chcara, chtime,&
-                                   chvarc , chvref , &
-                                   basez  , chelemz, codret)
-        character(len=*), intent(in) :: option, modelz, ligrel, compor
+    subroutine compEnergyPotential(optionZ, &
+                                   modelZ, materCodeZ, caraElemZ, comporZ, &
+                                   chdispZ, chharmZ, chgeomZ, &
+                                   chtimeZ, chvarcZ, chvrefZ, &
+                                   l_temp, chtempZ, &
+                                   ligrelZ, jvBaseZ, epotElemZ, &
+                                   codret)
+        character(len=*), intent(in) :: optionZ
+        character(len=*), intent(in) :: modelZ, materCodeZ, caraElemZ, comporZ
+        character(len=*), intent(in) :: chdispZ, chharmZ, chgeomZ, chtimeZ
+        character(len=*), intent(in) :: chvarcZ, chvrefZ
         aster_logical, intent(in) :: l_temp
-        character(len=*), intent(in) :: chdispz, chtempz
-        character(len=*), intent(in) :: chharm, chgeom, chmate, chcara(*), chtime
-        character(len=*), intent(in) :: chvarc, chvref
-        character(len=*), intent(in) :: chelemz, basez
+        character(len=*), intent(in) :: chtempZ
+        character(len=*), intent(in) :: ligrelZ, jvBaseZ, epotElemZ
         integer(kind=8), intent(out) :: codret
     end subroutine compEnergyPotential
 end interface

@@ -17,105 +17,87 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,C1505,W1306,W0413
 !
-subroutine nmcomp(BEHinteg, &
-                  fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, carcri, instam, instap, &
-                  neps, epsm_inp, deps_inp, nsig, sigm, &
-                  vim, option, angmas, sigp, vip, &
-                  ndsde, dsidep, codret, mult_comp_, l_epsi_varc_, &
-                  materi_)
+subroutine nmcomp(BEHInteg, &
+                  ndim, option, typmod, &
+                  instam, instap, &
+                  compor, carcri, multComp, &
+                  neps, epsm_inp, deps_inp, &
+                  nsig, sigm, &
+                  vim, &
+                  sigp, vip, &
+                  ndsde, dsidep, &
+                  codret, &
+                  l_epsi_varc_)
 !
     use Behaviour_type
     use Behaviour_module
     implicit none
 !
-#include "asterc/r8vide.h"
 #include "asterc/r8prem.h"
+#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/lcvali.h"
 #include "asterfort/redece.h"
 !
-    type(Behaviour_Integ) :: BEHinteg
-    integer(kind=8) :: kpg, ksp, ndim, imate, codret, neps, nsig, ndsde
-    character(len=*)    :: fami
-    character(len=8)    :: typmod(*)
-    character(len=16)   :: compor(*), option
-    real(kind=8) :: instam, instap
-    real(kind=8) :: epsm_inp(neps), deps_inp(neps)
-    real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
-                           merge(neps, 6, nsig*neps .eq. ndsde))
-    real(kind=8) :: carcri(*), sigm(nsig), vim(*), sigp(nsig), vip(*), angmas(*)
-    character(len=8), optional, intent(in) :: materi_
-    character(len=16), optional, intent(in) :: mult_comp_
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8), intent(in) :: ndim
+    character(len=8), intent(in) :: typmod(2)
+    real(kind=8), intent(in) :: instam, instap
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: multComp
+    integer(kind=8), intent(in) :: neps
+    real(kind=8), intent(in) :: epsm_inp(neps), deps_inp(neps)
+    integer(kind=8), intent(in) :: nsig
+    real(kind=8), intent(in) :: sigm(nsig)
+    real(kind=8), intent(in) :: vim(*)
+    character(len=16), intent(in) :: option
+    real(kind=8), intent(inout) :: sigp(nsig), vip(*)
+    integer(kind=8), intent(in) :: ndsde
+    real(kind=8), intent(inout) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
+                                          merge(neps, 6, nsig*neps .eq. ndsde))
+    integer(kind=8), intent(inout) :: codret
     aster_logical, optional, intent(in) :: l_epsi_varc_
+!
 ! --------------------------------------------------------------------------------------------------
-!     INTEGRATION DES LOIS DE COMPORTEMENT NON LINEAIRE
+!
+! Mechanical non-linear behaviours
+!
+! Main factory for integration
+!
 ! --------------------------------------------------------------------------------------------------
 !
-! in  behinteg       : parameters for integration of behaviour
-! in  fami,kpg,ksp  : famille et numero du (sous)point de gauss
-!     ndim    : dimension de l'espace
-!               3 : 3d , 2 : d_plan ,axis ou  c_plan
-!     typmod(2): modelisation ex: 1:3d, 2:inco
-!     imate   : adresse du materiau code
-!     compor  : comportement :  (1) = type de relation comportement
-!                               (2) = nb variables internes / pg
-!                               (3) = hypothese sur les deformations
-!                               (4) etc... (voir grandeur compor)
-!     crit    : criteres de convergence locaux (voir grandeur carcri)
-!     instam  : instant du calcul precedent
-!     instap  : instant du calcul
-!     neps    : nombre de cmp de epsm et deps (suivant modelisation)
-!     epsm    : deformations a l'instant du calcul precedent
-!     deps    : increment de deformation totale :
-!                deps(t) = deps(mecanique(t)) + deps(dilatation(t))
-!     nsig    : nombre de cmp de sigm et sigp (suivant modelisation)
-!     sigm    : contraintes a l'instant du calcul precedent
-!     vim     : variables internes a l'instant du calcul precedent
-!     option  : option demandee : rigi_meca_tang , full_meca , raph_meca
-!     angmas  : les trois angles du mot_clef massif (affe_cara_elem),
-!               + un reel qui vaut 0 si nautiquies ou 2 si euler
-!               + les 3 angles d'euler
-!
-! out sigp    : contraintes a l'instant actuel
-! var vip     : variables internes
-!                in  : estimation (iteration precedente ou lag. augm.)
-!                out : en t+
-!     ndsde   : dimension de dsidep
-!     dsidep  : operateur tangent dsig/deps ou dsig/df
-! Out codret           : code for error
-!                   1 : echec fatal dans l'integration de la loi (resultats non utilisables)
-!                   3 : contraintes planes deborst non convergees (interdit la convergence)
-!                   2 : criteres de qualite de la loi non respectes (decoupage si convergence)
-!                   4 : domaine de validite de la loi non respecte (emission d'une alarme)
-!                   0 : tout va bien
-!
-! precisions :
-! -----------
-!  les tenseurs et matrices sont ranges dans l'ordre :
-!         xx yy zz sqrt(2)*xy sqrt(2)*xz sqrt(2)*yz
-!
-! -si deformation = simo_miehe
-!   epsm(3,3)    gradient de la transformation en t-
-!   deps(3,3)    gradient de la transformation de t- a t+
-!
-!  output si resi (raph_meca, full_meca_*)
-!   vip      variables internes en t+
-!   sigp(6)  contrainte de kirchhoff en t+ ranges dans l'ordre
-!         xx yy zz sqrt(2)*xy sqrt(2)*xz sqrt(2)*yz
-!
-!  output si rigi (rigi_meca_*, full_meca_*)
-!   dsidep(6,3,3) matrice tangente d(tau)/d(fd) * (fd)t
-!                 (avec les racines de 2)
-!
-! -sinon (deformation = petit ou petit_reac ou gdef_...)
-!   epsm(6), deps(6)  sont les deformations (linearisees ou green ou ..)
+! IO  BEHInteg         : parameters for integration of behaviour
+! In  option           : option to compute
+! In  typmod           : type of modeling (3D, 2D, etc.)
+! In  instam           : time at beginning of current time step
+! In  instap           : time at end of current time step
+! In  compor           : description of behaviour
+! In  carcri           : parameters for integration of behaviour
+! In  multComp         : name of JEVEUX object for multi-behaviour (DEFI_COMPOR)
+! In  neps             : size of strain tensor
+! In  epsm_inp         : strain tensor at beginning of current time step
+! In  deps_inp         : increment of strain tensor from beginning of current time step
+! In  nsig             : size of stress tensor
+! In  sigm             : stress tensor at beginning of current time step
+! In  vim              : internal state variables at beginning of current time step
+! IO  sigp             : stress tensor at end of current time step
+! IO  vip              : internal state variables at end of current time step
+! In  ndsde            : size of jacobian matrix (dSig/dEps)
+! IO  dsidep           : jacobian matrix (dSig/dEps)
+! IO  codret           : return code from integration of behaviour
+!     LDC_ERROR_NONE => No problem
+!     LDC_ERROR_NCVG => convergence default
+!     LDC_ERROR_QUAL => quality problem
+!     LDC_ERROR_CPLA => stress plane algorithm not converged
+!     LDC_ERROR_DVAL => out of bound for validity
+! In  l_epsi_varc      : flag to compute non-mechanical strains (from external state variables)
 !
 ! --------------------------------------------------------------------------------------------------
     aster_logical :: conv_cp, l_epsi_varc, lMatr, lVari, lSigm, lMatrPred, lPred, invert
-    aster_logical :: lStrainMeca, l_czm, l_deborst
+    aster_logical :: lStrainMeca, l_deborst
     integer(kind=8) :: icp, numlc, nvi_all, nvi, k, l, ndimsi
     integer(kind=8) :: codret_vali, codret_ldc, codret_cp
     real(kind=8):: prec
@@ -123,53 +105,60 @@ subroutine nmcomp(BEHinteg, &
     real(kind=8) :: dsidep_cp(merge(nsig, 6, nsig*neps .eq. ndsde), &
                               merge(neps, 6, nsig*neps .eq. ndsde))
     real(kind=8), allocatable:: vip_cp(:), ka3_min, k3a_min, c_min
-    character(len=8)  :: materi
     character(len=8)  :: typmod_cp(2), typ_crit
-    character(len=16) :: option_cp, mult_comp
+    character(len=16) :: option_cp, defoComp
     type(Behaviour_Integ) :: BEHintegCP
 !
 ! --------------------------------------------------------------------------------------------------
-
-    ! Controles
-    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 9 .and. nsig .le. 6))
-
-!   Les paramètres optionnels
-    mult_comp = ' '
-    materi = ' '
+!
     l_epsi_varc = ASTER_TRUE
-    if (present(mult_comp_)) mult_comp = mult_comp_
-    if (present(materi_)) materi = materi_
-    if (present(l_epsi_varc_)) l_epsi_varc = l_epsi_varc_
+    if (present(l_epsi_varc_)) then
+        l_epsi_varc = l_epsi_varc_
+    end if
+
+! - Initialisations
+    codret_ldc = LDC_ERROR_NONE
+    codret_cp = 0
+    codret_vali = 0
 
 ! - Variables protegees (in)
     epsm = epsm_inp
     deps = deps_inp
 
-! - Initialisations
+    ! Size controls
+    ndimsi = BEHInteg%behavPara%ndimsi
+    if (BEHInteg%behavPara%lNdimsiEnabled) then
+        ASSERT(ndimsi .le. 6)
+        ASSERT(ndimsi .le. neps)
+        ASSERT(ndimsi .le. nsig)
+    end if
+    ASSERT(neps*nsig .eq. ndsde .or. (ndsde .eq. 36 .and. neps .le. 9 .and. nsig .le. 6))
+
+! - Parameters of behaviour of the current integration point
+    numlc = BEHInteg%behavPara%numlc
     l_deborst = compor(PLANESTRESS) (1:7) .eq. 'DEBORST'
-    codret_ldc = LDC_ERROR_NONE
-    codret_cp = 0
-    codret_vali = 0
-    numlc = BEHinteg%behavPara%numlc
+    ASSERT(.not. l_deborst .or. BEHInteg%behavPara%lDeborstEnabled)
     if (l_deborst) then
         read (compor(NVAR), '(I16)') nvi_all
     else
-        nvi_all = BEHinteg%behavPara%nvi
+        nvi_all = BEHInteg%behavPara%nvi
     end if
+    lStrainMeca = BEHInteg%behavPara%lStrainMeca
+    defoComp = compor(DEFO)
+
+! - Option (operators) to compute
     lVari = L_VARI(option)
     lSigm = L_SIGM(option)
     lMatr = L_MATR(option)
     lMatrPred = L_MATR_PRED(option)
     lPred = L_PRED(option)
-    lStrainMeca = BEHinteg%behavPara%lStrainMeca
-    l_czm = typmod(2) .eq. 'ELEMJOIN' .or. typmod(2) .eq. 'INTERFAC'
 
 ! --------------------------------------------------------------------------------------------------
 !   Modification des parametres en entree
 ! --------------------------------------------------------------------------------------------------
 
-    ! En contraintes planes, EPZZ est stocke dans les variables internes
-    ! a noter que le mecanisme vip_k contient vip_(k-1) est utilise en cours d'iterations
+! En contraintes planes, EPZZ est stocke dans les variables internes
+! a noter que le mecanisme vip_k contient vip_(k-1) est utilise en cours d'iterations
     if (l_deborst) then
         epsm(3) = vim(nvi_all)
         if (.not. lVari) then
@@ -182,15 +171,15 @@ subroutine nmcomp(BEHinteg, &
 ! En phase de prediction / defo_meca, deps est tel que deps_meca = 0 (structure additive defos)
     if (lStrainMeca .and. lPred) then
 ! ----- Detect external state variables
-        call detectVarc(BEHinteg)
+        call detectVarc(BEHInteg)
 
 ! ----- Prepare external state variables at Gauss point
-        call behaviourPrepESVAPoin(BEHinteg)
+        call behaviourPrepESVAPoin(BEHInteg)
 
 ! ----- Prepare input strains for the behaviour law
         epsm_meca = epsm
         deps_meca = 0
-        call behaviourPrepStrain(neps, epsm_meca, deps_meca, BEHinteg)
+        call behaviourPrepStrain(BEHInteg, epsm_meca, deps_meca)
         deps = -deps_meca
     end if
 
@@ -199,14 +188,16 @@ subroutine nmcomp(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 
     if (.not. l_deborst) then
-
-        call redece(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    l_epsi_varc, imate, materi, compor, mult_comp, &
-                    carcri, instam, instap, neps, epsm, &
-                    deps, nsig, sigm, nvi_all, vim, option, &
-                    angmas, numlc, sigp, vip, &
-                    ndsde, dsidep, codret_ldc)
+        call redece(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    nvi_all, vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, codret_ldc, &
+                    l_epsi_varc, numlc)
 
         if (codret_ldc .eq. LDC_ERROR_NCVG) goto 900
 
@@ -214,21 +205,17 @@ subroutine nmcomp(BEHinteg, &
 !  Resolution des contraintes planes sizz=0 par une methode de Newton pour les lois non equipees
 ! --------------------------------------------------------------------------------------------------
     else
-
-        ! Controles
         ASSERT(ndim .eq. 2)
-        ASSERT(nsig .ge. 2*ndim)
-        ASSERT(neps .ge. 2*ndim)
         ASSERT(compor(DEFO) .eq. 'PETIT')
 
-        ! Modification des parametres
-        BEHintegCP = BEHinteg
+!------ Modification des parametres
+        BEHintegCP = BEHInteg
         typmod_cp(1) = 'AXIS'
         typmod_cp(2) = typmod(2)
         call behaviourPrepModel(typmod_cp, BEHintegCP)
         nvi = nvi_all-1
 
-        ! Definition du critere de convergence
+! ----- Definition du critere de convergence
         prec = carcri(RESI_DEBORST_MAX)
         ASSERT(prec .ne. r8vide())
         if (prec .ge. 0.d0) then
@@ -238,10 +225,9 @@ subroutine nmcomp(BEHinteg, &
             prec = -prec
         end if
 
-        ! S'il faut calculer les contraintes, determination de epzz par methode de Newton
+! ----- S'il faut calculer les contraintes, determination de epzz par methode de Newton
         if (lSigm) then
-
-            ! Creation de l'espace des variables internes si necessaire
+! --------- Creation de l'espace des variables internes si necessaire
             allocate (vip_cp(nvi))
             if (lVari) then
                 vip_cp(1:nvi) = vip(1:nvi)
@@ -249,38 +235,42 @@ subroutine nmcomp(BEHinteg, &
                 vip_cp(1:nvi) = vim(1:nvi)
             end if
             BEHintegCP%behavPara%nvi = nvi
+
             do icp = 1, nint(carcri(ITER_DEBORST_MAX))
 
-                ! Choix de l'option pour accéder à la matrice tangente pour methode de Newton
+! ------------- Choix de l'option pour accéder à la matrice tangente pour methode de Newton
                 if (icp .eq. 1 .and. lMatrPred) then
                     option_cp = 'RIGI_MECA_TANG'
                 else
                     option_cp = 'FULL_MECA'
                 end if
 
-                ! Integration du comportement
+! ------------- Integration du comportement
                 call redece(BEHintegCP, &
-                            fami, kpg, ksp, ndim, typmod_cp, &
-                            l_epsi_varc, imate, materi, compor, mult_comp, &
-                            carcri, instam, instap, neps, epsm, &
-                            deps, nsig, sigm, nvi, vim, option_cp, &
-                            angmas, numlc, sigp, vip_cp, &
-                            ndsde, dsidep_cp, codret_ldc)
+                            ndim, option_cp, typmod_cp, &
+                            instam, instap, &
+                            compor, carcri, multComp, &
+                            neps, epsm, deps, &
+                            nsig, sigm, &
+                            nvi, vim, &
+                            sigp, vip_cp, &
+                            ndsde, dsidep_cp, codret_ldc, &
+                            l_epsi_varc, numlc)
 
                 if (codret_ldc .eq. LDC_ERROR_NCVG) then
                     deallocate (vip_cp)
                     goto 900
                 end if
 
-                ! Test de convergence
+! ------------- Test de convergence
                 if (typ_crit .eq. 'ABSOLU') then
                     conv_cp = abs(sigp(3)) .le. prec
                 else
-                    conv_cp = abs(sigp(3)) .le. prec*maxval(abs(sigp(1:2*ndim)))
+                    conv_cp = abs(sigp(3)) .le. prec*maxval(abs(sigp(1:ndimsi)))
                 end if
                 if (conv_cp) exit
 
-                ! Reactualisation de la deformation EPZZ en verifiant l'inversibilite
+! ------------- Reactualisation de la deformation EPZZ en verifiant l'inversibilite
                 if (abs(dsidep_cp(3, 3)) .eq. 0 .and. abs(sigp(3)) .eq. 0) then
                     invert = ASTER_FALSE
                 else if (abs(dsidep_cp(3, 3)) .gt. abs(sigp(3))) then
@@ -299,30 +289,32 @@ subroutine nmcomp(BEHinteg, &
             deallocate (vip_cp)
         end if
 
-        ! Integration du comportement avec le bon epzz et l'option reelle
-        BEHinteg%behavPara%nvi = nvi
-        call redece(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod_cp, &
-                    l_epsi_varc, imate, materi, compor, mult_comp, &
-                    carcri, instam, instap, neps, epsm, &
-                    deps, nsig, sigm, nvi, vim, option, &
-                    angmas, numlc, sigp, vip, &
-                    ndsde, dsidep, codret_ldc)
+! ----- Integration du comportement avec le bon epzz et l'option reelle
+        BEHInteg%behavPara%nvi = nvi
+        call redece(BEHInteg, &
+                    ndim, option, typmod_cp, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    neps, epsm, deps, &
+                    nsig, sigm, &
+                    nvi, vim, &
+                    sigp, vip, &
+                    ndsde, dsidep, codret_ldc, &
+                    l_epsi_varc, numlc)
 
         if (codret_ldc .eq. LDC_ERROR_NCVG) goto 900
 
-        ! Test de convergence des contraintes planes pour le code retour (0=OK, 1=NON CVG)
+! ----- Test de convergence des contraintes planes pour le code retour (0=OK, 1=NON CVG)
         if (lSigm) then
             if (typ_crit .eq. 'ABSOLU') then
                 codret_cp = merge(0, 1, abs(sigp(3)) .le. prec)
             else
-                codret_cp = merge(0, 1, abs(sigp(3)) .le. prec*maxval(abs(sigp(1:2*ndim))))
+                codret_cp = merge(0, 1, abs(sigp(3)) .le. prec*maxval(abs(sigp(1:ndimsi))))
             end if
         end if
 
-        ! Correction de la matrice tangente pour tenir compte des contraintes planes
+! ----- Correction de la matrice tangente pour tenir compte des contraintes planes
         if (lMatr) then
-
             ! pivot nul -> on ne corrige pas la matrice
             ka3_min = min(minval(abs(dsidep(1:2, 3))), abs(dsidep(4, 3)))
             k3a_min = min(minval(abs(dsidep(3, 1:2))), abs(dsidep(3, 4)))
@@ -337,20 +329,18 @@ subroutine nmcomp(BEHinteg, &
 
             if (invert) then
                 do k = 1, 4
-                    if (k .eq. 3) goto 136
+                    if (k .eq. 3) cycle
                     do l = 1, 4
-                        if (l .eq. 3) goto 137
+                        if (l .eq. 3) cycle
                         dsidep(k, l) = dsidep(k, l)-dsidep(k, 3)*dsidep(3, l)/dsidep(3, 3)
-137                     continue
                     end do
-136                 continue
                 end do
                 dsidep(:, 3) = 0
                 dsidep(3, :) = 0
             end if
         end if
 
-        ! Actualisation de la deformation epzz dans les variables internes
+! -----  Actualisation de la deformation epzz dans les variables internes
         if (lVari) then
             vip(nvi_all) = epsm(3)+deps(3)
         end if
@@ -359,22 +349,16 @@ subroutine nmcomp(BEHinteg, &
 
 ! - Prediction: contribution of the thermal stress to the Taylor expansion if needed
     if (lStrainMeca .and. lPred) then
-        if (.not. l_czm) then
-            ndimsi = 2*ndim
-            ASSERT(typmod(2) .eq. ' ' .or. typmod(2) .eq. 'GRADVARI' .or. typmod(2) .eq. 'HHO')
-            ASSERT(nsig .ge. ndimsi)
-            ASSERT(size(dsidep, 1) .ge. ndimsi)
-            ASSERT(size(dsidep, 2) .ge. ndimsi)
-            ASSERT(lSigm .and. lMatr)
-            call behaviourPredictionStress(BEHinteg%behavESVA, dsidep, sigp(1:ndimsi))
-        end if
+        ASSERT(lSigm .and. lMatr)
+        call behaviourPredictionStress(BEHInteg%behavESVA, dsidep(1:ndimsi, 1:ndimsi), &
+                                       sigp(1:ndimsi))
     end if
 
 ! - Examen du domaine de validité
-    if (BEHinteg%behavPara%lChckBounds) then
-        call lcvali(fami, kpg, ksp, imate, materi, &
-                    compor, ndim, epsm, deps, instam, &
-                    instap, codret_vali)
+    if (BEHInteg%behavPara%lCtrlEpsEnabled) then
+        call lcvali(BEHInteg%materPara, &
+                    defoComp, epsm(1:ndimsi), deps(1:ndimsi), &
+                    instam, instap, codret_vali)
     end if
 
 900 continue
@@ -400,7 +384,6 @@ subroutine nmcomp(BEHinteg, &
 ! Tout est satisfaisant
     else if (codret_ldc .eq. LDC_ERROR_NONE .and. codret_cp .eq. 0 .and. codret_vali .eq. 0) then
         codret = LDC_ERROR_NONE
-
     else
         ASSERT(ASTER_FALSE)
     end if

@@ -15,33 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc0031(fami, kpg, ksp, ndim, imate,&
-                      compor, carcri, instam, instap, neps,&
-                      epsm, deps, sigm, vim, option,&
-                      angmas, sigp, vip, typmod,&
-                      nvi, dsidep, codret)
+    subroutine lc0031(BEHinteg, &
+                      fami, kpg, ksp, ndim, imate, &
+                      compor, carcri, instam, instap, neps, &
+                      epsm, deps, sigm, nvi, vim, option, &
+                      sigp, vip, typmod, &
+                      dsidep, codret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: ndim
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: instam
         real(kind=8) :: instap
-        integer(kind=8) :: neps
+        integer(kind=8) :: neps, nvi
         real(kind=8) :: epsm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(*)
         character(len=16) :: option
-        real(kind=8) :: angmas(*)
         real(kind=8) :: sigp(6)
         real(kind=8) :: vip(*)
         character(len=8) :: typmod(*)
-        integer(kind=8) :: nvi
         real(kind=8) :: dsidep(6, 6)
         integer(kind=8) :: codret
     end subroutine lc0031

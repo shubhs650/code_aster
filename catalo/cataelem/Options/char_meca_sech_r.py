@@ -27,7 +27,7 @@ PVARCPR = InputParameter(phys=PHY.VARI_R, comment="""  PVARCPR : VARIABLES DE CO
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE, TUYAU ...  """,
 )
 

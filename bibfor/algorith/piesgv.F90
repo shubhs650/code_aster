@@ -51,7 +51,7 @@ subroutine piesgv(neps, tau, mat, lccrma, vim, &
     character(len=8), intent(in) :: typmod(*)
     integer(kind=8), intent(in) :: neps, mat
     real(kind=8), intent(in) :: tau, epsm(neps), epsd(neps), epsp(neps), etamin, etamax, vim(3)
-    real(kind=8), intent(out) :: copilo(2, *)
+    real(kind=8) :: copilo(2, *)
 ! --------------------------------------------------------------------------------------------------
 !     PILOTAGE PRED_ELAS POUR ENDO_SCALAIRE (EN GRAD_VARI)
 ! --------------------------------------------------------------------------------------------------

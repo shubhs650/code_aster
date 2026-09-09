@@ -1,0 +1,290 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"), IMPR_MACRO="OUI")
+
+
+# Test de CALC_ENDO avec chargement de type DIDI
+# Similaire à zzzz515b, mais limité à une modélisation 3D
+# On utilise la définition par défaut des observations et du paramétrage de DEFI_LIST_INST
+# Fonctionnalités examinées :
+#  1) Vérification analytique des chargements imposés au cours du transitoire
+
+# ----------------------------------------------------------------------
+# Paramètres. Unités : mm, MPa, s
+# ----------------------------------------------------------------------
+
+UIMP = 2.0e-3  # déplacement d'allongement imposé (comme L=1 mm, la déformation vaut aussi uimp)
+
+##Materiau béton
+b_young = 40.2e3
+b_nu = 0.19
+b_rho = 2.410e-9
+b_ft = 4.65
+b_fc = 63.7
+b_gf = 73 * b_fc**0.18 / 1000
+b_p = 1.5
+b_dist_fiss = 225.0
+
+alpha = 1.0e-5
+kdessic = 3.6e-6
+
+##Viscosité et paramétrage de la stabilisation
+b_tau_reguvisc = 1.0
+b_coeff_rigi_regu_visc = 0.001
+prec_dam = 0.1
+
+duree_rampe = 1
+duree_equil = 10
+nbr_sequ_equil = 50  ##Nombre max de sequences d'equilibrage
+
+##Convergence
+r_conv = 1e-2
+r_stab = r_conv
+
+ma_me = LIRE_MAILLAGE(INFO=2)
+
+mo_me = AFFE_MODELE(
+    MAILLAGE=ma_me, AFFE=(_F(PHENOMENE="MECANIQUE", MODELISATION="3D", GROUP_MA="massif"),)
+)
+
+prop_eltc = DEFI_MATER_GC(
+    ENDO_LOCA_TC=_F(
+        E=b_young,
+        NU=b_nu,
+        FT=b_ft,
+        FC=b_fc,
+        SIGM_COMP_SEUIL=b_fc * 0.4,
+        GF=b_gf,
+        COEF_ECRO_TRAC=b_p,
+        DIST_FISSURE=b_dist_fiss,
+    )
+)
+
+beton = DEFI_MATERIAU(
+    ELAS=_F(E=b_young, NU=b_nu, RHO=b_rho, ALPHA=alpha, K_DESSIC=kdessic),
+    VISC_ELAS=_F(TAU=b_tau_reguvisc, K=b_coeff_rigi_regu_visc * b_young),
+    ENDO_LOCA_TC=_F(
+        FC=prop_eltc.getValueReal("ENDO_LOCA_TC", "FC"),
+        SIGM_COMP_SEUIL=prop_eltc.getValueReal("ENDO_LOCA_TC", "SIGM_COMP_SEUIL"),
+        FT=prop_eltc.getValueReal("ENDO_LOCA_TC", "FT"),
+        ENER_TRAC_RUPT_N=prop_eltc.getValueReal("ENDO_LOCA_TC", "ENER_TRAC_RUPT_N"),
+        COEF_ECRO_TRAC=prop_eltc.getValueReal("ENDO_LOCA_TC", "COEF_ECRO_TRAC"),
+        TAU_REGU_VISC=b_tau_reguvisc,
+    ),
+)
+
+liaison_me = AFFE_CHAR_MECA(
+    MODELE=mo_me,
+    DDL_IMPO=(
+        _F(GROUP_MA="massif_s", DY=0),
+        _F(GROUP_MA="massif_o", DX=0),
+        _F(GROUP_MA="massif_b", DZ=0),
+    ),
+    DOUBLE_LAGRANGE="NON",
+)
+
+
+mate_me = AFFE_MATERIAU(MODELE=mo_me, AFFE=(_F(TOUT="OUI", MATER=beton),))
+
+
+inst_me = DEFI_LIST_REEL(VALE=[i / 10 for i in range(0, 11)])
+
+##Chargement appliqué de 0 à 0.2
+charge_me = AFFE_CHAR_MECA(
+    MODELE=mo_me, DDL_IMPO=_F(GROUP_MA="massif_n", DY=UIMP), DOUBLE_LAGRANGE="NON"
+)
+
+fonction_charge = DEFI_FONCTION(NOM_PARA="INST", ABSCISSE=[0, 1], ORDONNEE=[0, 1])
+
+evol_me = CALC_ENDO(
+    MODELE=mo_me,
+    CHAM_MATER=mate_me,
+    EXCIT=(_F(CHARGE=charge_me, FONC_MULT=fonction_charge), _F(CHARGE=liaison_me)),
+    COMPORTEMENT=(_F(TOUT="OUI", RELATION="ENDO_LOCA_TC", REGU_VISC="OUI"),),
+    INCREMENT=_F(LIST_INST=inst_me, INST_FIN=0.2),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    SOLVEUR=_F(ELIM_LAGR="NON"),
+    CONVERGENCE=_F(
+        RESI_REFE_RELA=r_conv,
+        EPSI_REFE=1.0e-3,
+        SIGM_REFE=b_ft,
+        EFFORT_REFE=700,
+        MOMENT_REFE=4900,
+        ITER_GLOB_MAXI=10,
+    ),
+    ENDO_VISC=_F(LIST_INST=DEFI_LIST_REEL(VALE=(50, 100, 2150))),
+)
+
+##Incrément de chargement appliqué de 0.2 à 0.3 via DIDI, puis constant jusqu'à 0.4
+charge_me_2 = AFFE_CHAR_MECA(
+    MODELE=mo_me, DDL_IMPO=_F(GROUP_MA="massif_n", DY=UIMP * (0.4 - 0.2)), DOUBLE_LAGRANGE="NON"
+)
+
+evol_me = CALC_ENDO(
+    reuse=evol_me,
+    MODELE=mo_me,
+    CHAM_MATER=mate_me,
+    ETAT_INIT=_F(EVOL_NOLI=evol_me),
+    EXCIT=(_F(CHARGE=charge_me_2, TYPE_CHARGE="DIDI"), _F(CHARGE=liaison_me)),
+    COMPORTEMENT=(_F(TOUT="OUI", RELATION="ENDO_LOCA_TC", REGU_VISC="OUI"),),
+    INCREMENT=_F(LIST_INST=inst_me, INST_FIN=0.4),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    SOLVEUR=_F(ELIM_LAGR="NON"),
+    CONVERGENCE=_F(
+        RESI_REFE_RELA=r_conv,
+        EPSI_REFE=1.0e-3,
+        SIGM_REFE=b_ft,
+        EFFORT_REFE=700,
+        MOMENT_REFE=4900,
+        ITER_GLOB_MAXI=10,
+    ),
+    ENDO_VISC=_F(LIST_INST=DEFI_LIST_REEL(VALE=(50, 150, 2050))),
+)
+
+##Incrément de chargement appliqué de 0.4 à 1.0 via DIDI fonction du temps
+charge_me_3 = AFFE_CHAR_MECA(
+    MODELE=mo_me, DDL_IMPO=_F(GROUP_MA="massif_n", DY=UIMP * (1.0 - 0.4)), DOUBLE_LAGRANGE="NON"
+)
+
+fonction_charge_3 = DEFI_FONCTION(NOM_PARA="INST", ABSCISSE=[0.4, 1], ORDONNEE=[0, 1])
+
+evol_me = CALC_ENDO(
+    reuse=evol_me,
+    MODELE=mo_me,
+    CHAM_MATER=mate_me,
+    ETAT_INIT=_F(EVOL_NOLI=evol_me),
+    EXCIT=(
+        _F(CHARGE=charge_me_3, TYPE_CHARGE="DIDI", FONC_MULT=fonction_charge_3),
+        _F(CHARGE=liaison_me),
+    ),
+    COMPORTEMENT=(_F(TOUT="OUI", RELATION="ENDO_LOCA_TC", REGU_VISC="OUI"),),
+    INCREMENT=_F(LIST_INST=inst_me),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    SOLVEUR=_F(ELIM_LAGR="NON"),
+    CONVERGENCE=_F(
+        RESI_REFE_RELA=r_conv,
+        EPSI_REFE=1.0e-3,
+        SIGM_REFE=b_ft,
+        EFFORT_REFE=700,
+        MOMENT_REFE=4900,
+        ITER_GLOB_MAXI=10,
+    ),
+    ENDO_VISC=_F(LIST_INST=DEFI_LIST_REEL(VALE=(50, 150, 2050))),
+)
+
+# -----------------------------------------
+CALC_CHAMP(reuse=evol_me, RESULTAT=evol_me, DEFORMATION=("EPSI_ELGA"), GROUP_MA=("massif"))
+
+IMPR_RESU(UNITE=6, FORMAT="RESULTAT", RESU=(_F(RESULTAT=evol_me, NOM_CHAM="EPSI_ELGA"),))
+
+
+##################################################################################
+##                  Tests analytiques de la déformation imposée
+##################################################################################
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.1,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.1 * UIMP,
+            VALE_CALC=0.1 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.2,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.2 * UIMP,
+            VALE_CALC=0.2 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.3,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.4 * UIMP,
+            VALE_CALC=0.4 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.4,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.4 * UIMP,
+            VALE_CALC=0.4 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.5,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.5 * UIMP,
+            VALE_CALC=0.5 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=0.7,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.7 * UIMP,
+            VALE_CALC=0.7 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=1.0,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=UIMP,
+            VALE_CALC=UIMP,
+            CRITERE="RELATIF",
+        ),
+    )
+)
+
+FIN()

@@ -15,20 +15,32 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nm1dci(fami, kpg, ksp, imate, em, &
-                  ep, sigm, deps, vim, option, &
-                  materi, sigp, vip, dsde)
 !
+subroutine nm1dci(materPara, &
+                  option, materPoin, &
+                  em, ep, sigm, deps, vim, &
+                  sigp, vip, dsde)
+!
+    use MaterialPara_type
     implicit none
-! ----------------------------------------------------------------------
+!
+#include "asterfort/rcvalb.h"
+#include "asterfort/utmess.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16) :: option
+    character(len=*) :: materPoin
+    real(kind=8) :: ep, em
+    real(kind=8) :: sigm, deps, vim(2)
+    real(kind=8) :: sigp, vip(2), dsde, sieleq
+!
+! --------------------------------------------------------------------------------------------------
+!
 !          PLASTICITE VON MISES CINEMATIQUE BILINEAIRE MONODIM
 !          ON PEUT AVOIR T0 DIFF TREF
 !
-! IN FAMI   : FAMILLE DU POINT DE GAUSS
-! IN KPG    :  NUMERO DU POINT DE GAUSS
-! IN KSP    :  NUMERO DU SOUS-POINT DE GAUSS
-! IN IMATE  : POINTEUR MATERIAU
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  EM        : MODULE D YOUNG MOINS
 ! IN  EP        : MODULE D YOUNG PLUS
 !
@@ -41,53 +53,48 @@ subroutine nm1dci(fami, kpg, ksp, imate, em, &
 ! OUT SIG     : CONTRAINTES PLUS
 ! OUT VIP     : VARIABLE INTERNES PLUS
 ! OUT DSDE    : DSIG/DEPS
-!     ------------------------------------------------------------------
-!     ARGUMENTS
-!     ------------------------------------------------------------------
 !
-#include "asterfort/rcvalb.h"
-#include "asterfort/utmess.h"
+! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: ep, em, sigy
-    real(kind=8) :: sigm, deps, vim(2)
-    real(kind=8) :: sigp, vip(2), dsde, sieleq
-    character(len=16) :: option
-    character(len=*) :: fami, materi
-    integer(kind=8) :: kpg, ksp, imate
-!     ------------------------------------------------------------------
-!     VARIABLES LOCALES
-!     ------------------------------------------------------------------
-    real(kind=8) :: sige, dp, valres(2), etm, etp, xp, xm, hm, hp
-    real(kind=8) :: valrm(2)
+    integer(kind=8), parameter :: nbProp = 2
+    character(len=16), parameter :: propName(nbProp) = (/'D_SIGM_EPSI', &
+                                                         'SY         '/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: sige, dp, etm, etp, xp, xm, hm, hp, sigy
 !
-    integer(kind=8) :: icodre(2)
-    character(len=16) :: nomecl(2)
+! --------------------------------------------------------------------------------------------------
 !
-    data nomecl/'D_SIGM_EPSI', 'SY'/
-!     ------------------------------------------------------------------
-    call rcvalb(fami, kpg, ksp, '-', imate, &
-                materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                1, nomecl, valres, icodre, 1)
-    etm = valres(1)
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '-', materPara%jvMaterCode, &
+                materPoin, 'ECRO_LINE', &
+                0, ' ', [0.d0], &
+                1, propName, propVale, &
+                propCode, 1)
+    etm = propVale(1)
 !
     if (etm .le. 0.) then
-        valrm(1) = etm
-        valrm(2) = em
-        call utmess('F', 'COMPOR1_53', nr=2, valr=valrm)
+        call utmess('F', 'COMPOR1_53', nr=2, valr=[etm, em])
     end if
 !
     hm = em*etm/(em-etm)
 !
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                2, nomecl, valres, icodre, 1)
-    etp = valres(1)
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', materPara%jvMaterCode, &
+                materPoin, 'ECRO_LINE', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    etp = propVale(1)
     hp = ep*etp/(ep-etp)
-    sigy = valres(2)
+    sigy = propVale(2)
     xm = vim(1)
 !     ------------------------------------------------------------------
     sige = ep*(sigm/em+deps)-hp/hm*xm
-!
     sieleq = abs(sige)
 !     ------------------------------------------------------------------
 !     CALCUL EPSP, P , SIG

@@ -55,14 +55,14 @@ MBETRAG = DEFI_MATERIAU(
         ENDO_SIGUT=-3.18e06,  # [Pa] si < 0 plus d'endommagement
         ENDO_DRUPRA=0.15,
         # Fluage
-        FLUA_SPH_KR=89000.0e06,  # [Pa]
-        FLUA_SPH_KI=22000.0e06,  # [Pa]
-        FLUA_SPH_NR=-156000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_SPH_NI=-410000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_DEV_KR=42000.0e06,  # [Pa]
-        FLUA_DEV_KI=22000.0e06,  # [Pa]
-        FLUA_DEV_NR=-117000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_DEV_NI=-840000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
+        FLUA_SPH_KR=-89000.0e06,  # [Pa] si NR et NI et KR < 0 plus de fluage
+        # FLUA_SPH_KI=22000.0e06,  # [Pa]
+        FLUA_SPH_NR=-156000.0e06,  # [Pa.J] si NR et NI et KR < 0 plus de fluage
+        FLUA_SPH_NI=-410000.0e06,  # [Pa.J] si NR et NI et KR < 0 plus de fluage
+        FLUA_DEV_KR=-42000.0e06,  # [Pa] si NR et NI et KR < 0 plus de fluage
+        # FLUA_DEV_KI=22000.0e06,  # [Pa]
+        FLUA_DEV_NR=-117000.0e06,  # [Pa.J] si NR et NI et KR < 0 plus de fluage
+        FLUA_DEV_NI=-840000.0e06,  # [Pa.J] si NR et NI et KR < 0 plus de fluage
         # Avancement de la RAG
         GEL_ALPHA0=1.0e-04,  # si 0 plus d'avancement
         GEL_TREF=25.0,  # [°C]
@@ -568,6 +568,5 @@ TEST_FONCTION(
         ),
     )
 )
-
 
 FIN()

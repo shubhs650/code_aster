@@ -56,7 +56,7 @@ subroutine op0166()
     aster_logical :: isole, lnoeu, lelno, lelem, lelga, lxfem
     character(len=4) :: tychv, typcal
     character(len=8) :: k8b, noma1, noma2, noma3, resuin, projon, norein
-    character(len=8) :: nomo1, nomo2, moa1, moa2, cnref, nomare, noca
+    character(len=8) :: nomo1, nomo2, moa1, moa2, cnref, nomare, caraElem
     character(len=16) :: typres, nomcmd, lcorre(2), corru, nomgd
     character(len=19) :: resuou, cham1, method, rtyp, ligre1, ligre2
     character(len=24) :: valk(4)
@@ -134,7 +134,7 @@ subroutine op0166()
     end if
 !
 ! --------------------------------------------------------------------------------------------------
-!   calcul de noma1, noma2, moa1, moa2, cnref, noca :
+!   calcul de noma1, noma2, moa1, moa2, cnref, caraElem :
 !       noma1 : nom du maillage "1"
 !       noma2 : nom du maillage "2"
 !       nomo1 : nom du modèle "1"  (ou ' ')
@@ -203,7 +203,7 @@ subroutine op0166()
             call utmess('F', 'CALCULEL5_41')
         end if
 !       récupération du CARA_ELEM
-        call getvid(' ', 'CARA_ELEM', scal=noca, nbret=n1)
+        call getvid(' ', 'CARA_ELEM', scal=caraElem, nbret=n1)
         if (n1 .eq. 0) then
             valk = 'CARA_ELEM'
             call utmess('F', 'CALCULEL5_40', nk=1, valk=valk)
@@ -247,7 +247,7 @@ subroutine op0166()
             method = 'SOUS_POINT_MATER'
         end if
     else
-        noca = ' '
+        caraElem = ' '
     end if
 !
 ! --------------------------------------------------------------------------------------------------
@@ -260,7 +260,7 @@ subroutine op0166()
         lcorre(2) = '&&OP0166.CORRE2'
         call pjxxco(typcal, method, lcorre, isole, resuin, &
                     cham1, moa1, moa2, noma1, noma2, &
-                    cnref, noca)
+                    cnref, caraElem)
     end if
 !   si typcal='1', il faut s'arrêter la
     if (typcal .eq. '1') goto 999
@@ -333,7 +333,7 @@ subroutine op0166()
                 !
                 if (method(1:10) .eq. 'SOUS_POINT') then
                     call dismoi('NOM_LIGREL', nomo2, 'MODELE', repk=ligre2)
-                    call pjspma(lcorre(1), cham1, resuou, prolong, ligre2, noca, 'G', iret)
+                    call pjspma(lcorre(1), cham1, resuou, prolong, ligre2, caraElem, 'G', iret)
                 else
                     tychv = ' '
                     call pjxxch(lcorre(1), cham1, resuou, tychv, ' ', prolong, ' ', 'G', iret)
@@ -357,7 +357,7 @@ subroutine op0166()
                 call prolongation_get(prolong)
                 !
                 if (method(1:10) .eq. 'SOUS_POINT') then
-                    call pjspma(lcorre(1), cham1, resuou, prolong, ligre2, noca, 'G', iret)
+                    call pjspma(lcorre(1), cham1, resuou, prolong, ligre2, caraElem, 'G', iret)
                 else
                     tychv = ' '
                     call pjxxch(lcorre(1), cham1, resuou, tychv, ' ', prolong, ligre2, 'G', iret)
@@ -414,7 +414,7 @@ subroutine op0166()
 ! --------------------------------------------------------------------------------------------------
 !   cas SD_RESULTAT :
     else
-        call pjxxpr(resuin, resuou(1:8), moa1, moa2, lcorre(1), 'G', noca, method, xfem=lxfem)
+        call pjxxpr(resuin, resuou(1:8), moa1, moa2, lcorre(1), 'G', caraElem, method, xfem=lxfem)
     end if
 !
 999 continue

@@ -15,17 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dsqb(caraq4, xyzl, pgl, igau, jacgau,&
+    subroutine dsqb(plateCara, plateOrie, &
+                    caraq4, xyzl, igau, jacgau, &
                     bmat)
-        real(kind=8) :: caraq4(*)
-        real(kind=8) :: xyzl(3, 1)
-        real(kind=8) :: pgl(3, 3)
-        integer(kind=8) :: igau
-        real(kind=8) :: jacgau
-        real(kind=8) :: bmat(8, 1)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8), intent(in) :: caraq4(*), xyzl(3, 1)
+        integer(kind=8), intent(in) :: igau
+        real(kind=8), intent(out) :: bmat(8, 1), jacgau
     end subroutine dsqb
 end interface

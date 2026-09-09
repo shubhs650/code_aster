@@ -26,13 +26,14 @@ subroutine apinte_norm(elem_dime, &
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/apelem_getcenter.h"
+#include "MeshTypes_type.h"
 #include "asterfort/apnorm.h"
 !
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_slav_code
     real(kind=8), intent(out) :: mast_norm(3), slav_norm(3)
 !

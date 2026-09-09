@@ -17,9 +17,10 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
+subroutine nmfihm(BEHInteg, &
+                  ndim, nddl, nno1, nno2, npg, &
                   lgpg, ipg, wref, vff1, vff2, &
-                  idf2, dffr2, mate, option, geom, &
+                  idf2, dffr2, option, geom, &
                   ddlm, ddld, iu, ip, sigm, &
                   sigp, vect, matr, vim, vip, &
                   tm, tp, carcri, compor, typmod, &
@@ -27,10 +28,9 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
 !
     use Behaviour_type
     use Behaviour_module
-!
+    use MaterialPara_type
     implicit none
 !
-#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
@@ -39,7 +39,8 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
 #include "asterfort/gedisc.h"
 #include "asterfort/nmcomp.h"
 !
-    integer(kind=8) :: ndim, mate, npg, ipg, idf2, lgpg, nno1, nno2, nddl, iu(3, 16)
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    integer(kind=8) :: ndim, npg, ipg, idf2, lgpg, nno1, nno2, nddl, iu(3, 16)
     integer(kind=8) :: ip(8)
     real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg), dffr2(ndim-1, nno2, npg)
     real(kind=8) :: wref(npg), geom(ndim, nno2), ddlm(nddl), ddld(nddl), tm, tp
@@ -95,26 +96,21 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    aster_logical :: axi, ifhyme
+    aster_logical, parameter :: axi = ASTER_FALSE
+    aster_logical :: ifhyme
     integer(kind=8) :: i, j, kk, m, n, os, p, q, kpg, cod(npg)
     real(kind=8) :: dsidep(6, 6), b(2*ndim-1, ndim+1, 2*nno1+nno2)
     real(kind=8) :: sigmo(6), sigma(6), epsm(6), deps(6), wg
     real(kind=8) :: coopg(ndim+1, npg), rot(ndim*ndim)
-    real(kind=8) :: angmas(3), presgm, presgd, temp
-    type(Behaviour_Integ) :: BEHinteg
+    real(kind=8) :: presgm, presgd, temp
 !
 ! --------------------------------------------------------------------------------------------------
 !
     codret = 0
     cod = 0
-    axi = .false.
 
-! - Don't use orientation (not to enter the anisotropic case in lc7058)
-    angmas = r8vide()
-!
-!
 ! IFHYME = TRUE  : CALCUL COUPLE HYDRO-MECA
 ! IFHYME = FALSE : CALCUL MECA SANS HYDRO ET ELIMINATION DES DDL DE PRES
 ! (FINT_P=0, KTAN_PP=IDENTITE, KTAN_UP=0)
@@ -126,16 +122,6 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
     else
         ASSERT(ASTER_FALSE)
     end if
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              tm, tp, &
-                              fami, mate, &
-                              BEHinteg)
 
 ! - CALCUL DES COORDONNEES DES POINTS DE GAUSS
     call gedisc(ndim, nno2, npg, vff2, geom, coopg)
@@ -184,10 +170,10 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
 !       COOROT : COORDONNEES DU PG + MATRICE DE ROTATION
 !       (MATRICE UTILE POUR LES VI DE POST-TRAITEMENT DANS LA LDC)
         do j = 1, ndim
-            BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, j) = coopg(j, kpg)
+            BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, j) = coopg(j, kpg)
         end do
         do j = 1, ndim*ndim
-            BEHinteg%behavESVA%behavESVAOther%rotpg(j) = rot(j)
+            BEHInteg%behavESVA%behavESVAOther%rotpg(j) = rot(j)
         end do
 !
 !       CONTRAINTES -
@@ -197,25 +183,30 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
         end do
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         sigma = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, tm, tp, &
-                    6, epsm, deps, 6, sigmo, &
-                    vim(1, kpg), option, angmas, &
-                    sigma, vip(1, kpg), 36, dsidep, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    tm, tp, &
+                    compor, carcri, multComp, &
+                    6, epsm, deps, &
+                    6, sigmo, &
+                    vim(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    36, dsidep, cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
+
 ! ----- Stresses
         if (lSigm) then
             do n = 1, 2*ndim-1
                 sigp(n, kpg) = sigma(n)
             end do
         end if
+
 ! ----- Vector
         if (lVect) then
 ! --------- Vector (DOF: U)
@@ -323,9 +314,8 @@ subroutine nmfihm(ndim, nddl, nno1, nno2, npg, &
             end do
         end if
     end do
-!
+
 ! - Final flag
-!
 999 continue
     if (lSigm) then
         call codere(cod, npg, codret)

@@ -20,17 +20,14 @@ subroutine dfllac(factorKeyword, i_fail, dtmin, &
                   action_typek, &
                   subd_methode, subd_pas_mini, &
                   subd_niveau, subd_pas, &
-                  subd_auto, subd_inst, subd_duree, &
-                  pcent_iter_plus, coef_maxi)
+                  subd_auto, subd_inst, subd_duree)
 !
     implicit none
 !
 #include "asterf_types.h"
 #include "event_def.h"
 #include "asterfort/assert.h"
-#include "asterfort/dfllae.h"
 #include "asterfort/dflldc.h"
-#include "asterfort/dfllin.h"
 #include "asterfort/getvtx.h"
 !
     character(len=16), intent(in) :: factorKeyword
@@ -44,8 +41,6 @@ subroutine dfllac(factorKeyword, i_fail, dtmin, &
     character(len=16), intent(out) :: subd_auto
     real(kind=8), intent(out) :: subd_inst
     real(kind=8), intent(out) :: subd_duree
-    real(kind=8), intent(out) :: pcent_iter_plus
-    real(kind=8), intent(out) :: coef_maxi
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -66,8 +61,6 @@ subroutine dfllac(factorKeyword, i_fail, dtmin, &
 ! Out subd_auto        : value of SUBD_AUTO for ACTION=DECOUPE
 ! Out subd_inst        : value of SUBD_INST for ACTION=DECOUPE
 ! Out subd_duree       : value of SUBD_DUREE for ACTION=DECOUPE
-! Out pcent_iter_plus  : value of PCENT_ITER_PLUS for ACTION=ITER_SUPPL
-! Out coef_maxi        : value of COEF_MAXI for ACTION=ADAPT_COEF_PENA
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -87,15 +80,9 @@ subroutine dfllac(factorKeyword, i_fail, dtmin, &
                     subd_methode, subd_pas_mini, &
                     subd_niveau, subd_pas, &
                     subd_auto, subd_inst, subd_duree)
-    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ITER)) then
-        call dfllae(factorKeyword, i_fail, pcent_iter_plus)
-        call dflldc(factorKeyword, i_fail, dtmin, &
-                    subd_methode, subd_pas_mini, &
-                    subd_niveau, subd_pas, &
-                    subd_auto, subd_inst, subd_duree)
-    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ADAPT_COEF)) then
-        call dfllin(factorKeyword, i_fail, coef_maxi)
     else if (action_typek .eq. failActionKeyword(FAIL_ACT_CONTINUE)) then
+!
+    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ARCHI)) then
 !
     else
         ASSERT(ASTER_FALSE)

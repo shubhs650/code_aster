@@ -35,7 +35,6 @@ subroutine te0445(nomopt, nomte)
 #include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/lteatt.h"
 #include "asterfort/writeVector.h"
 #include "jeveux.h"
 #include "blas/daxpy.h"

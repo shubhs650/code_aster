@@ -27,6 +27,7 @@ module loadMecaCompute_module
 ! ==================================================================================================
     use HHO_precalc_module, only: hhoAddInputField
     use loadMecaCompute_type
+    use coorSyst_module, only: setOrieFields
 ! ==================================================================================================
     implicit none
 ! ==================================================================================================
@@ -64,7 +65,7 @@ module loadMecaCompute_module
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnum.h"
 #include "asterfort/mecact.h"
-#include "asterfort/mecara.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/megeom.h"
 #include "asterfort/meharm.h"
 #include "asterfort/nuachp.h"
@@ -531,14 +532,14 @@ contains
         character(len=19), parameter :: field_no_refe = '&&MNVGME.RESU_PROJE'
         character(len=19), parameter :: nuage1 = '&&NUAGE1', nuage2 = '&&NUAGE2'
         character(len=19), parameter :: method = 'NUAGE_DEG_1'
-        integer(kind=8), parameter :: nbFieldIn = 8, nbFieldOut = 1
-        character(len=8) :: lpain(nbFieldIn), lpaout(nbFieldOut)
-        character(len=24) :: lchin(nbFieldIn)
-        integer(kind=8) :: nbEqua, ndim, nbno, dime, ibid, ier
+        integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+        character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+        character(len=24) :: lchin(nbFieldInMax)
+        integer(kind=8) :: nbEqua, ndim, nbno, dime, ibid, ier, nbFieldIn
         character(len=8) :: mesh_1, mesh_2, mesh_defo, answer, newnom
         integer(kind=8), pointer :: mesh1Dime(:) => null()
         character(len=19) :: nume_equa, field_no_refe1
-        character(len=24) :: chgeom, chcara(18)
+        character(len=24) :: chgeom
         character(len=24), pointer :: fieldRefe(:) => null()
 !   ------------------------------------------------------------------------------------------------
 !
@@ -600,25 +601,26 @@ contains
                         field_no_refe, jvBaseTemporary)
         end if
 
-! ----- Input fields
+! ----- Add input fields
         call megeom(model, chgeom)
-        call mecara(caraElem, chcara)
         lpain(1) = 'PGEOMER'
         lchin(1) = chgeom
         lpain(2) = 'PVITER'
         lchin(2) = field_no_refe
-        lpain(3) = 'PVENTCX'
-        lchin(3) = chcara(14)
-        lpain(4) = 'PDEPLMR'
-        lchin(4) = dispPrev
-        lpain(5) = 'PDEPLPR'
-        lchin(5) = dispCumuInst
-        lpain(6) = 'PCAGNPO'
-        lchin(6) = chcara(6)
-        lpain(7) = 'PCAORIE'
-        lchin(7) = chcara(1)
-        lpain(8) = 'PSTRXMR'
-        lchin(8) = strxPrev
+        lpain(3) = 'PDEPLMR'
+        lchin(3) = dispPrev
+        lpain(4) = 'PDEPLPR'
+        lchin(4) = dispCumuInst
+        lpain(5) = 'PSTRXMR'
+        lchin(5) = strxPrev
+        nbFieldIn = 5
+
+! ----- Add fields for structural elements
+        call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! ----- Add fields for orientation
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElem)
 
 ! ----- Output fields
         lpaout(1) = 'PVECTUR'
@@ -630,9 +632,10 @@ contains
         call corich('E', resuElem, ichin_=iLoad)
 
 ! ----- Compute
-        call calcul('S', option, ligrelCalc, nbFieldIn, lchin, &
-                    lpain, nbFieldOut, resuElem, lpaout, jvBaseTemporary, &
-                    'OUI')
+        call calcul('S', option, ligrelCalc, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, resuElem, lpaout, &
+                    jvBaseTemporary, 'OUI')
         call reajre(vectElem, resuElem, jvBaseTemporary)
 
 ! ----- Clean
@@ -652,7 +655,7 @@ contains
 ! In  model             : name of model
 ! In  mateco            : mane of coded material
 ! In  caraElem          : name of elementary characteristics (field)
-! In  nharm             : Fourier mode
+! In  numeHarm             : Fourier mode
 ! In  varcCurr          : command variable for current time
 ! In  dispPrev          : displacement at beginning of current time
 ! In  dispCumuInst      : displacement increment from beginning of current time
@@ -661,15 +664,15 @@ contains
 ! Out lchin             : list of input fields
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine prepGeneralFields(modelZ, caraElemZ, matecoZ, &
-                                 nharm, &
+    subroutine prepGeneralFields(modelZ, caraElemZ, materCodeZ, &
+                                 numeHarm, &
                                  varcCurr, dispPrev, dispCumuInst, &
                                  nbFieldInGene, lpain, lchin)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=*), intent(in) :: modelZ, caraElemZ
-        character(len=*), intent(in) ::  matecoZ
-        integer(kind=8), intent(in) :: nharm
+        character(len=*), intent(in) ::  materCodeZ
+        integer(kind=8), intent(in) :: numeHarm
         character(len=24), intent(in) :: varcCurr, dispPrev, dispCumuInst
         integer(kind=8), intent(out) :: nbFieldInGene
         character(len=*), intent(out) :: lpain(LOAD_NEUM_NBMAXIN), lchin(LOAD_NEUM_NBMAXIN)
@@ -677,7 +680,7 @@ contains
         integer(kind=8) :: ier
         aster_logical :: lXfem
         character(len=8) :: mesh
-        character(len=24) :: chgeom, chcara(18), chharm
+        character(len=24) :: chgeom, chharm
 !   ------------------------------------------------------------------------------------------------
 !
         nbFieldInGene = 0
@@ -689,55 +692,35 @@ contains
         lXfem = ier .ne. 0
         call dismoi('NOM_MAILLA', modelZ, 'MODELE', repk=mesh)
 
-! ----- Prepare field for geometry
+! ----- Get field for geometry
         call megeom(modelZ, chgeom)
 
-! ----- Prepare field for elementary characteristics
-        call mecara(caraElemZ, chcara)
-
-! ----- Prepare field for Fourier
-        call meharm(modelZ, nharm, chharm)
+! ----- Create field for Fourier
+        call meharm(modelZ, numeHarm, chharm)
 
 ! ----- Standard fields
         lpain(1) = 'PGEOMER'
         lchin(1) = chgeom
         lpain(2) = 'PMATERC'
-        lchin(2) = matecoZ
-        lpain(3) = 'PCACOQU'
-        lchin(3) = chcara(7)
-        lpain(4) = 'PCAGNPO'
-        lchin(4) = chcara(6)
-        lpain(5) = 'PCADISM'
-        lchin(5) = chcara(3)
-        lpain(6) = 'PCAORIE'
-        lchin(6) = chcara(1)
-        lpain(7) = 'PCACABL'
-        lchin(7) = chcara(10)
-        lpain(8) = 'PCAARPO'
-        lchin(8) = chcara(9)
-        lpain(9) = 'PCAGNBA'
-        lchin(9) = chcara(11)
-        lpain(10) = 'PCAMASS'
-        lchin(10) = chcara(12)
-        lpain(11) = 'PCAGEPO'
-        lchin(11) = chcara(5)
-        lpain(12) = 'PNBSP_I'
-        lchin(12) = chcara(16)
-        lpain(13) = 'PFIBRES'
-        lchin(13) = chcara(17)
-        lpain(14) = 'PCINFDI'
-        lchin(14) = chcara(15)
-        lpain(15) = 'PHARMON'
-        lchin(15) = chharm
-        lpain(16) = 'PVARCPR'
-        lchin(16) = varcCurr
-        lpain(17) = 'PDEPLMR'
-        lchin(17) = dispPrev
-        lpain(18) = 'PDEPLPR'
-        lchin(18) = dispCumuInst
-        lpain(19) = 'PABSCUR'
-        lchin(19) = mesh(1:8)//'.ABSC_CURV'
-        nbFieldInGene = 19
+        lchin(2) = materCodeZ
+        lpain(3) = 'PHARMON'
+        lchin(3) = chharm
+        lpain(4) = 'PVARCPR'
+        lchin(4) = varcCurr
+        lpain(5) = 'PDEPLMR'
+        lchin(5) = dispPrev
+        lpain(6) = 'PDEPLPR'
+        lchin(6) = dispCumuInst
+        lpain(7) = 'PABSCUR'
+        lchin(7) = mesh(1:8)//'.ABSC_CURV'
+        nbFieldInGene = 7
+
+! ----- Add fields for structural elements
+        call setStructFields(caraElemZ, LOAD_NEUM_NBMAXIN, lchin, lpain, nbFieldInGene)
+
+! ----- Add fields for orientation
+        call setOrieFields(LOAD_NEUM_NBMAXIN, lpain, lchin, &
+                           nbFieldInGene, caraElemZ)
 
 ! ----- Specific fields for HHO
         call hhoAddInputField(modelZ, LOAD_NEUM_NBMAXIN, lchin, lpain, nbFieldInGene)

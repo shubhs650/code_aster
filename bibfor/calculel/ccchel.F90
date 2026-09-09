@@ -35,9 +35,7 @@ subroutine ccchel(option, &
 #include "asterfort/ccpara.h"
 #include "asterfort/ccpoux.h"
 #include "asterfort/detrsd.h"
-#include "asterfort/getvr8.h"
 #include "asterfort/meceuc.h"
-#include "asterfort/utmess.h"
 !
     character(len=16), intent(in) :: option
     character(len=*), intent(in) :: modelZ, materFieldZ, materCodeZ, caraElemZ, listLoadZ

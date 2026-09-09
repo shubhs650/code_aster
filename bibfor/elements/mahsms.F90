@@ -16,17 +16,28 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine mahsms(ind1, nb1, xi, ksi3s2, intsr, &
-                  xr, epais, vectn, vectg, vectt, &
+subroutine mahsms(plateOrie, &
+                  ind1, nb1, &
+                  nodeCoor, ksi3s2, intsr, &
+                  desr, epais, &
+                  vectBaseKpg, vectTangKpg, &
                   hsfm, hss)
+!
+    use plate_type
     implicit none
+!
 #include "asterfort/hfmss.h"
 #include "asterfort/vectgt.h"
-    integer(kind=8) :: nb1, intsr
-    real(kind=8) :: xi(3, *), xr(*), vectn(9, 3)
-    real(kind=8) :: epais, ksi3s2
-    real(kind=8) :: vectg(2, 3), vectt(3, 3), hsfm(3, 9), hss(2, 9)
 !
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: ind1, nb1
+    real(kind=8), intent(in) :: nodeCoor(3, *), ksi3s2
+    integer(kind=8), intent(in) :: intsr
+    real(kind=8), intent(in) :: desr(*), epais
+    real(kind=8), intent(out) :: vectBaseKpg(3, 3), vectTangKpg(2, 3)
+    real(kind=8), intent(out) :: hsfm(3, 9), hss(2, 9)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     CONSTRUCTION DU VECTEUR N AUX PTS D'INTEGRATION REDUIT
 !     (POUR CHAQUE INTSR, STOCKAGE DANS VECTT)
@@ -43,11 +54,16 @@ subroutine mahsms(ind1, nb1, xi, ksi3s2, intsr, &
 !
 !     IND1= 0     0 : CALCULS AUX PTS D'INTEGRATION REDUIT
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: ind1, ind2
-!-----------------------------------------------------------------------
-    call vectgt(ind1, nb1, xi, ksi3s2, intsr, &
-                xr, epais, vectn, vectg, vectt)
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ind2
+!
+! --------------------------------------------------------------------------------------------------
+!
+    call vectgt(plateOrie, ind1, nb1, &
+                nodeCoor, ksi3s2, intsr, &
+                epais, desr, &
+                vectBaseKpg, vectTangKpg)
 !
 !     CONSTRUCTION DE HSM = HFM * S:(3,9) AUX PTS D'INTEGRATION REDUITS
 !
@@ -59,6 +75,6 @@ subroutine mahsms(ind1, nb1, xi, ksi3s2, intsr, &
 !
     ind2 = 1
 !
-    call hfmss(ind2, vectt, hsfm, hss)
+    call hfmss(ind2, vectBaseKpg, hsfm, hss)
 !
 end subroutine

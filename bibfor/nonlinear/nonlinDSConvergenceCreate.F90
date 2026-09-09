@@ -27,7 +27,6 @@ subroutine nonlinDSConvergenceCreate(ds_conv)
 #include "asterc/r8vide.h"
 #include "asterfort/assert.h"
 #include "asterfort/SetResi.h"
-#include "asterfort/SetResiRefe.h"
 !
     type(NL_DS_Conv), intent(out) :: ds_conv
 !
@@ -43,7 +42,7 @@ subroutine nonlinDSConvergenceCreate(ds_conv)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nb_resi, nb_refe
+    integer(kind=8) :: nb_resi
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -54,9 +53,6 @@ subroutine nonlinDSConvergenceCreate(ds_conv)
     nb_resi = 7
     ds_conv%nb_resi = nb_resi
     ASSERT(nb_resi .le. ds_conv%nb_resi_maxi)
-    nb_refe = 11
-    ds_conv%nb_refe = nb_refe
-    ASSERT(nb_refe .le. ds_conv%nb_refe_maxi)
 !
 ! - Set type of residuals
 !
@@ -104,37 +100,10 @@ subroutine nonlinDSConvergenceCreate(ds_conv)
                  vale_calc_=r8vide(), locus_calc_=' ', user_para_=r8vide(), &
                  l_conv_=ASTER_FALSE, l_resi_test_=ASTER_FALSE)
 !
-! - Set name of reference residuals
+! - Initializations for reference residual
 !
-    ds_conv%list_refe(1)%type = 'SIGM_REFE'
-    ds_conv%list_refe(2)%type = 'EPSI_REFE'
-    ds_conv%list_refe(3)%type = 'FLUX_THER_REFE'
-    ds_conv%list_refe(4)%type = 'FLUX_HYD1_REFE'
-    ds_conv%list_refe(5)%type = 'FLUX_HYD2_REFE'
-    ds_conv%list_refe(6)%type = 'VARI_REFE'
-    ds_conv%list_refe(7)%type = 'EFFORT_REFE'
-    ds_conv%list_refe(8)%type = 'MOMENT_REFE'
-    ds_conv%list_refe(9)%type = 'DEPL_REFE'
-    ds_conv%list_refe(10)%type = 'LAGR_REFE'
-    ds_conv%list_refe(11)%type = 'PI_REFE'
-!
-! - Set name of component for reference residuals
-!
-    ds_conv%list_refe(1)%cmp_name = 'SIGM'
-    ds_conv%list_refe(2)%cmp_name = 'EPSI'
-    ds_conv%list_refe(3)%cmp_name = 'FTHERM'
-    ds_conv%list_refe(4)%cmp_name = 'FHYDR1'
-    ds_conv%list_refe(5)%cmp_name = 'FHYDR2'
-    ds_conv%list_refe(6)%cmp_name = 'VARI'
-    ds_conv%list_refe(7)%cmp_name = 'EFFORT'
-    ds_conv%list_refe(8)%cmp_name = 'MOMENT'
-    ds_conv%list_refe(9)%cmp_name = 'DEPL'
-    ds_conv%list_refe(10)%cmp_name = 'LAG_GV'
-    ds_conv%list_refe(11)%cmp_name = 'PI'
-!
-! - Initializations for all reference residuals
-!
-    call SetResiRefe(ds_conv, user_para_=r8nnem(), l_refe_test_=ASTER_FALSE)
+    ds_conv%cresiref = ' '
+    ds_conv%cresicmp = ' '
 !
 ! - Other convergence parameters
 !

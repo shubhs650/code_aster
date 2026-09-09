@@ -327,17 +327,13 @@ Contactez le support technique.
     ),
     83: _(
         """
- plusieurs champs correspondant à l'accès demandé
- résultat     : %(k1)s
- accès "INST" : %(r1)f
- nombre       : %(i1)d
+Plusieurs champs correspondent à l'accès demandé dans le résultat.
+Pour l'instant %(r1)f, on trouve %(i1)d champs.
 """
     ),
     84: _(
         """
- pas de champ correspondant à un accès demandé
- résultat     :  %(k1)s
- accès "INST" :  %(r1)f
+Plusieurs champs correspondent à l'accès demandé dans le résultat pour l'instant %(r1)f.
 """
     ),
 }

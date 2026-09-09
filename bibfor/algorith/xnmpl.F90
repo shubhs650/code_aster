@@ -17,35 +17,47 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
-                 igeom, instam, instap, ideplp, sigm, &
-                 vip, typmod, option, imate, compor, &
-                 lgpg, carcri, jpintt, cnset, heavt, &
+subroutine xnmpl(BEHInteg, &
+                 option, typmod, &
+                 compor, carcri, &
+                 nnop, nfh, nfe, &
+                 ddlc, ddlm, jvGeom, &
+                 instam, instap, &
+                 ideplp, &
+                 sigm, vip, &
+                 lgpg, jpintt, cnset, heavt, &
                  lonch, basloc, idepl, lsn, lst, &
                  sig, vi, matuu, ivectu, codret, &
                  jpmilt, nfiss, jheavn, jstno, &
                  lMatr, lVect, lSigm)
 !
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/iselli.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/tecach.h"
 #include "asterfort/xxnmpl.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: nnop, imate, lgpg, codret, igeom, nfiss, jheavn
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    integer(kind=8) :: nnop, lgpg, codret, jvGeom, nfiss, jheavn
     integer(kind=8) :: cnset(4*32), heavt(*), lonch(10), ndim
     integer(kind=8) :: nfh, nfe, ddlc, ddlm, idepl, ivectu, ideplp
     integer(kind=8) :: jpintt, jpmilt
     integer(kind=8) :: jstno
-    character(len=8) :: typmod(*)
-    character(len=16) :: option, compor(*)
-    real(kind=8) :: carcri(*), vi(*)
+    real(kind=8) :: vi(*)
     real(kind=8) :: lsn(nnop)
     real(kind=8) :: lst(nnop), matuu(*), sig(*), basloc(*)
     real(kind=8) :: instam, instap, sigm(*), vip(*)
@@ -66,10 +78,6 @@ subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
 ! IN  DDLC    : NOMBRE DE DDL DE CONTACT (PAR NOEUD)
 ! IN  DDLM    : NOMBRE DE DDL PAR NOEUD MILIEU
 ! IN  IGEOM   : COORDONEES DES NOEUDS
-! IN  TYPMOD  : TYPE DE MODELISATION
-! IN  OPTION  : OPTION DE CALCUL
-! IN  IMATE   : MATERIAU CODE
-! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG  : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !              CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
 ! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
@@ -84,7 +92,6 @@ subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
 ! IN  PMILT   : COORDONNEES DES POINTS MILIEUX
 ! IN  NFISS   : NOMBRE DE FISSURES "VUES" PAR L'ÉLÉMENT
 ! IN  JHEAVN  : POINTEUR VERS LA DEFINITION HEAVISIDE
-!
 ! OUT SIG     : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
 ! OUT VI      : VARIABLES INTERNES    (RAPH_MECA ET FULL_MECA)
 ! OUT MATUU   : MATRICE DE RIGIDITE PROFIL (RIGI_MECA_TANG ET FULL_MECA)
@@ -123,14 +130,14 @@ subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
     else
         irese = 0
     end if
-!
+
 ! - Get element parameters
-!
     fami_se = fami(ndim+irese)
     call elrefe_info(elrefe=elrese(ndim+irese), fami=fami_se, nno=nno, npg=npg)
-!
-!     NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
+
+!   NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
     nbsig = nbsigm()
+
 !    RECUPERATION DE LA DEFINITION DES DDL HEAVISIDES
     if (nfh .gt. 0) then
         call tecach('OOO', 'PHEA_NO', 'L', iret, nval=7, itab=jtab)
@@ -153,16 +160,13 @@ subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
             ino = cnset(nno*(ise-1)+in)
             do j = 1, ndim
                 if (ino .lt. 1000) then
-                    coorse(ndim*(in-1)+j) = zr(igeom-1+ndim*(ino-1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jvGeom-1+ndim*(ino-1)+j)
                 else if (ino .gt. 1000 .and. ino .lt. 2000) then
-                    coorse(ndim*(in-1)+j) = zr(jpintt-1+ndim*(ino-1000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpintt-1+ndim*(ino-1000-1)+j)
                 else if (ino .gt. 2000 .and. ino .lt. 3000) then
-                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-2000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-2000-1)+j)
                 else if (ino .gt. 3000) then
-                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-3000- &
-                                                              1)+j)
+                    coorse(ndim*(in-1)+j) = zr(jpmilt-1+ndim*(ino-3000-1)+j)
                 end if
             end do
         end do
@@ -184,11 +188,14 @@ subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm, &
         else
             ASSERT(ASTER_FALSE)
         end if
-        call xxnmpl(elrefp, elrese(ndim+irese), ndim, coorse, igeom, &
+        call xxnmpl(BEHInteg, &
+                    option, typmod, &
+                    compor, carcri, &
+                    elrefp, elrese(ndim+irese), ndim, coorse, jvGeom, &
                     he, nfh, ddlc, ddlm, nfe, &
                     instam, instap, ideplp, sigm(idebs+1), vip(idebv+1), &
-                    basloc, nnop, npg, typmod, option, &
-                    imate, compor, lgpg, carcri, idepl, &
+                    basloc, nnop, npg, &
+                    lgpg, idepl, &
                     lsn, lst, idecpg, sig(idebs+1), vi(idebv+1), &
                     matuu, ivectu, codret, nfiss, heavn, jstno, &
                     lMatr, lVect, lSigm)

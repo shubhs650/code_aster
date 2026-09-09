@@ -15,24 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine memam2(option, modele,  mate, mateco,&
-                      cara, compor,  time, chacce,&
-                      vecel, basez, ligrez)
-        character(len=*) :: option
-        character(len=*) :: modele
-        character(len=*) :: mate, mateco
-        character(len=*) :: cara
-        character(len=24) :: compor
-        real(kind=8) :: time
-        character(len=*) :: chacce
-        character(len=*) :: vecel
-        character(len=*) :: basez
-        character(len=*) :: ligrez
+    subroutine memam2(optionZ, &
+                      modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                      compor, time, chacceZ, &
+                      vectElemZ, jvBaseZ, ligrelZ)
+        character(len=*), intent(in) :: optionZ, modelZ, materFieldZ, materCodeZ, caraElemZ
+        character(len=24), intent(in) :: compor
+        real(kind=8), intent(in) :: time
+        character(len=*), intent(in) :: chacceZ, vectElemZ, jvBaseZ, ligrelZ
     end subroutine memam2
 end interface

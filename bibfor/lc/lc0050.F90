@@ -17,16 +17,17 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W0104
 !
-subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
+subroutine lc0050(BEHInteg, &
+                  fami, kpg, ksp, ndim, &
                   typmod, jvMaterCode, compor, carcri, instam, &
                   instap, neps, epsm, deps, nsig, &
-                  sigm, nvi, vim, option, angmas, &
+                  sigm, nvi, vim, option, &
                   stress, statev, dsidep, codret)
 !
     use calcul_module, only: ca_iactif_
     use Behaviour_type
     use BehaviourStrain_type
-!
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/umatwp.h"
@@ -40,20 +41,18 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
 #include "blas/dscal.h"
 #include "jeveux.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg, ksp, ndim
-    character(len=8), intent(in) :: typmod(*)
+    character(len=8), intent(in) :: typmod(2)
     integer(kind=8), intent(in) :: jvMaterCode
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam, instap
     integer(kind=8), intent(in) :: neps, nsig, nvi
     real(kind=8), intent(in) :: epsm(6), deps(6)
     real(kind=8), intent(in) :: sigm(6)
-    real(kind=8), intent(in) :: vim(*)
-    character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
+    real(kind=8), intent(in) :: vim(nvi)
     real(kind=8), intent(out) :: stress(6)
     real(kind=8), intent(out) :: statev(nvi)
     real(kind=8), intent(out) :: dsidep(6, 6)
@@ -67,7 +66,7 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  BEHinteg         : parameters for integration of behaviour
+! In  BEHInteg         : parameters for integration of behaviour
 ! In  fami             : Gauss family for integration point rule
 ! In  kpg              : current point gauss
 ! In  ksp              : current "sous-point" gauss
@@ -93,7 +92,6 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
 !                          'RAPH_MECA'     > SIG(T+DT)
 !            ANGMAS  ANGLES DE ROTATION DU REPERE LOCAL, CF. MASSIF
 !            TYPMOD  TYPE DE MODELISATION (3D, AXIS, D_PLAN)
-!            ICOMP   NUMERO DU SOUS-PAS DE TEMPS (CF. REDECE.F)
 !            NVI     NOMBRE TOTAL DE VARIABLES INTERNES (+9 SI GDEF_HYP)
 !            TEMP    TEMPERATURE A T
 !            DTEMP   INCREMENT DE TEMPERATURE
@@ -133,9 +131,11 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
     integer(kind=8) :: ntens, ndi
     blas_int :: b_incx, b_incy, b_n
     common/tdim/ntens, ndi
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    materPara = BEHInteg%materPara
     ntens = 2*ndim
     ndi = 3
     nshr = ntens-ndi
@@ -147,8 +147,8 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
     pfumat = int(carcri(EXTE_PTR))
 
 ! - Get temperature
-    temp = BEHinteg%allVarcStrain%list(VARC_STRAIN_TEMP)%varcPrev(1)
-    dtemp = BEHinteg%allVarcStrain%list(VARC_STRAIN_TEMP)%varcIncr(1)
+    temp = BEHInteg%allVarcStrain%list(VARC_STRAIN_TEMP)%varcPrev(1)
+    dtemp = BEHInteg%allVarcStrain%list(VARC_STRAIN_TEMP)%varcIncr(1)
     ! temp = BEHInteg%behavESVA%behavESVAField(ESVA_FIELD_TEMP)%valeScalPrev
     ! dtemp = BEHInteg%behavESVA%behavESVAField(ESVA_FIELD_TEMP)%valeScalIncr
 !
@@ -168,10 +168,10 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
     end if
 
 ! - Coordinates of current Gauss point
-    coords(1:3) = BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:3)
+    coords(1:3) = BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 1:3)
 
 ! - Get material properties
-    call mat_proto(BEHinteg, fami, kpg, ksp, '+', &
+    call mat_proto(BEHInteg, fami, kpg, ksp, '+', &
                    jvMaterCode, relaComp, nprops, props)
 
 ! - Prepare strains
@@ -187,10 +187,9 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
     time(1) = instap-instam
     time(2) = instam
     dtime = instap-instam
-!
-! - Anisotropic case
-!
-    call matrot(angmas, drott)
+
+! - Anisotropic case: compute matrix to change coordinate system
+    call matrot(materPara%lcsPara%lcsAngle, drott)
     do i = 1, 3
         do j = 1, 3
             drot(j, i) = drott(i, j)
@@ -233,8 +232,8 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
                     sse, spd, scd, rpl, ddsddt, &
                     drplde, drpldt, stran, dstran, time, &
                     dtime, temp, dtemp, &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev, &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr, &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev, &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr, &
                     cmname, ndi, nshr, ntens, nstatv, &
                     props, nprops, coords, drot, pnewdt, &
                     celent, dfgrd0, dfgrd1, noel, npt, &
@@ -246,8 +245,8 @@ subroutine lc0050(BEHinteg, fami, kpg, ksp, ndim, &
                     sse, spd, scd, rpl, ddsddt, &
                     drplde, drpldt, stran, dstran, time, &
                     dtime, temp, dtemp, &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAPrev, &
-                    BEHinteg%behavESVA%behavESVAExte%scalESVAIncr, &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAPrev, &
+                    BEHInteg%behavESVA%behavESVAExte%scalESVAIncr, &
                     cmname, ndi, nshr, ntens, nstatv, &
                     props, nprops, coords, drot, pnewdt, &
                     celent, dfgrd0, dfgrd1, noel, npt, &

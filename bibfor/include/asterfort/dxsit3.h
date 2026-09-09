@@ -15,14 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxsit3(nomte, mater, pgl, sigma)
-        character(len=16) :: nomte
-        integer(kind=8) :: mater
-        real(kind=8) :: pgl(3, *)
-        real(kind=8) :: sigma(*)
+    subroutine dxsit3(plateCara, plateOrie, &
+                      jvMaterCode, sigma)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: jvMaterCode
+        real(kind=8), intent(out) :: sigma(*)
     end subroutine dxsit3
 end interface

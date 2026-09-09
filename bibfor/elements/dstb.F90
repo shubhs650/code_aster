@@ -16,10 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dstb(carat3, pgl, igau, jacgau, bmat)
+subroutine dstb(plateCara, plateOrie, &
+                carat3, igau, jacgau, bmat)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/bcoqaf.h"
 #include "asterfort/dstbfa.h"
 #include "asterfort/dstbfb.h"
@@ -28,8 +31,13 @@ subroutine dstb(carat3, pgl, igau, jacgau, bmat)
 #include "asterfort/dxmate.h"
 #include "asterfort/dxtbm.h"
 #include "asterfort/elrefe_info.h"
-    integer(kind=8) :: igau
-    real(kind=8) :: pgl(3, 3), bmat(8, 1), carat3(*), jacgau
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(in) :: carat3(*)
+    integer(kind=8), intent(in) :: igau
+    real(kind=8), intent(out) :: bmat(8, 1), jacgau
 ! --- CALCUL DE LA MATRICE (B) RELIANT LES DEFORMATIONS DU PREMIER
 ! --- ORDRE AUX DEPLACEMENTS AU POINT D'INTEGRATION D'INDICE IGAU
 ! --- POUR UN ELEMENT DE TYPE DST
@@ -49,9 +57,10 @@ subroutine dstb(carat3, pgl, igau, jacgau, bmat)
     real(kind=8) :: bfb(3, 9), bfa(3, 3), bfn(3, 9), bm(3, 6), bf(3, 9)
     real(kind=8) :: bca(2, 3), bcn(2, 9), bc(2, 9)
     real(kind=8) :: hft2(2, 6), an(3, 9)
-    real(kind=8) :: qsi, eta, t2iu(4), t2ui(4), t1ve(9)
+    real(kind=8) :: qsi, eta
     aster_logical :: coupmf
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
@@ -69,9 +78,10 @@ subroutine dstb(carat3, pgl, igau, jacgau, bmat)
 ! --- CALCUL DES MATRICES DE HOOKE DE FLEXION, MEMBRANE,
 ! --- MEMBRANE-FLEXION, CISAILLEMENT, CISAILLEMENT INVERSE
 !     ----------------------------------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !
 ! --- CALCUL DE LA MATRICE NOTEE (HF.T2) PAR BATOZ RELIANT LES
 ! --- EFFORTS TRANCHANTS (T) AU VECTEUR DES DERIVEES DES COURBURES

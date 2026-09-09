@@ -48,6 +48,7 @@ subroutine arlchi(iocc, mail, nomo, nom1, nom2, &
 #include "asterfort/jexnum.h"
 #include "asterfort/rcvale.h"
 #include "asterfort/utmess.h"
+#include "MeshTypes_type.h"
 !
     aster_logical :: proj
     character(len=8) :: mailar, mail, nomo
@@ -67,7 +68,7 @@ subroutine arlchi(iocc, mail, nomo, nom1, nom2, &
 !
 !
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX)
     integer(kind=8) :: iad, noc, iop
     character(len=19) :: ngrm1, ngrm2
     integer(kind=8) :: jgrp1, jgrp2, nbma1, nbma2

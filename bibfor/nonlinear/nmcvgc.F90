@@ -72,6 +72,8 @@ subroutine nmcvgc(sddisc, sderro, numins, fonact)
             call nmeceb(sderro, 'CALC', 'STOP')
         else if (etinst .eq. 'ERRE') then
             call nmeceb(sderro, 'CALC', 'ERRE')
+        else if (etinst .eq. 'ARCH') then
+            call nmeceb(sderro, 'CALC', 'CONV')
         else
             ASSERT(.false.)
         end if

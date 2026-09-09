@@ -20,7 +20,6 @@ subroutine nmfinp(sddisc, numeInst, lastTimeStep)
 !
     implicit none
 !
-#include "asterc/r8vide.h"
 #include "asterf_types.h"
 #include "asterfort/didern.h"
 #include "asterfort/diinst.h"

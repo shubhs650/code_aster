@@ -34,12 +34,13 @@ subroutine mmcalg(ndim, l_large_slip, &
     implicit none
 !
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 #include "asterfort/matinv.h"
 !
     integer(kind=8), intent(in) :: ndim, nnm
     aster_logical, intent(in) :: l_large_slip
-    real(kind=8), intent(in) :: dffm(2, 9), ddffm(3, 9)
-    real(kind=8), intent(in) :: elem_mast_coor(9, 3), ddepmam(9, 3)
+    real(kind=8), intent(in) :: dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D), ddepmam(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: tau1(3), tau2(3), norm(3)
     real(kind=8), intent(in) :: jeu, djeu(3)
     real(kind=8), intent(out) :: gene11(3, 3), gene21(3, 3), gene22(3, 3)
@@ -143,8 +144,8 @@ subroutine mmcalg(ndim, l_large_slip, &
         ! we then to shut it down until further investigations:  ".and. .false." in the if
         do idim = 1, ndim
             do inom = 1, nnm
-                ddepmait1(idim) = ddepmait1(idim)+dffm(1, inom)*ddepmam(inom, idim)
-                ddepmait2(idim) = ddepmait2(idim)+dffm(2, inom)*ddepmam(inom, idim)
+                ddepmait1(idim) = ddepmait1(idim)+dffm(1, inom)*ddepmam(idim, inom)
+                ddepmait2(idim) = ddepmait2(idim)+dffm(2, inom)*ddepmam(idim, inom)
             end do
         end do
 !
@@ -152,30 +153,30 @@ subroutine mmcalg(ndim, l_large_slip, &
         ! distance du Noeud I=2,9 par rapport à au noeud 1
         ! Puis on calcule la moyenne
         !       write (6,*) "elem_mast_coor",elem_mast_coor(1,1)
-        long_mmait(1) = sqrt(abs(elem_mast_coor(1, 1)-elem_mast_coor(2, 1)))**2
-        long_mmait(2) = sqrt(abs(elem_mast_coor(1, 2)-elem_mast_coor(2, 2)))**2
-        long_mmait(3) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(2, 3)))**2
-        long_mmait(4) = sqrt(abs(elem_mast_coor(1, 1)-elem_mast_coor(3, 1)))**2
-        long_mmait(5) = sqrt(abs(elem_mast_coor(1, 2)-elem_mast_coor(3, 2)))**2
-        long_mmait(6) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(3, 3)))**2
-        long_mmait(7) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(4, 1)))**2
-        long_mmait(8) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(4, 2)))**2
-        long_mmait(9) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(4, 3)))**2
-        long_mmait(10) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(5, 1)))**2
-        long_mmait(11) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(5, 2)))**2
-        long_mmait(12) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(5, 3)))**2
-        long_mmait(13) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(6, 1)))**2
-        long_mmait(14) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(6, 2)))**2
-        long_mmait(15) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(6, 3)))**2
-        long_mmait(16) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(7, 1)))**2
-        long_mmait(17) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(7, 2)))**2
-        long_mmait(18) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(7, 3)))**2
-        long_mmait(19) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(8, 1)))**2
-        long_mmait(20) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(8, 2)))**2
-        long_mmait(21) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(8, 3)))**2
-        long_mmait(22) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(9, 1)))**2
-        long_mmait(23) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(9, 2)))**2
-        long_mmait(24) = sqrt(abs(elem_mast_coor(1, 3)-elem_mast_coor(9, 3)))**2
+        long_mmait(1) = abs(elem_mast_coor(1, 1)-elem_mast_coor(1, 2))
+        long_mmait(2) = abs(elem_mast_coor(2, 1)-elem_mast_coor(2, 2))
+        long_mmait(3) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 2))
+        long_mmait(4) = abs(elem_mast_coor(1, 1)-elem_mast_coor(1, 3))
+        long_mmait(5) = abs(elem_mast_coor(2, 1)-elem_mast_coor(2, 3))
+        long_mmait(6) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 3))
+        long_mmait(7) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 4))
+        long_mmait(8) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 4))
+        long_mmait(9) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 4))
+        long_mmait(10) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 5))
+        long_mmait(11) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 5))
+        long_mmait(12) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 5))
+        long_mmait(13) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 6))
+        long_mmait(14) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 6))
+        long_mmait(15) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 6))
+        long_mmait(16) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 7))
+        long_mmait(17) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 7))
+        long_mmait(18) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 7))
+        long_mmait(19) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 8))
+        long_mmait(20) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 8))
+        long_mmait(21) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 8))
+        long_mmait(22) = abs(elem_mast_coor(3, 1)-elem_mast_coor(1, 9))
+        long_mmait(23) = abs(elem_mast_coor(3, 1)-elem_mast_coor(2, 9))
+        long_mmait(24) = abs(elem_mast_coor(3, 1)-elem_mast_coor(3, 9))
         valmoy = 0.
         do i = 1, 24
             valmoy = valmoy+long_mmait(i)
@@ -204,9 +205,9 @@ subroutine mmcalg(ndim, l_large_slip, &
 !
     do idim = 1, ndim
         do inom = 1, nnm
-            ddgeo1(idim) = ddgeo1(idim)+ddffm(1, inom)*elem_mast_coor(inom, idim)
-            ddgeo2(idim) = ddgeo2(idim)+ddffm(2, inom)*elem_mast_coor(inom, idim)
-            ddgeo3(idim) = ddgeo3(idim)+ddffm(3, inom)*elem_mast_coor(inom, idim)
+            ddgeo1(idim) = ddgeo1(idim)+ddffm(1, inom)*elem_mast_coor(idim, inom)
+            ddgeo2(idim) = ddgeo2(idim)+ddffm(2, inom)*elem_mast_coor(idim, inom)
+            ddgeo3(idim) = ddgeo3(idim)+ddffm(3, inom)*elem_mast_coor(idim, inom)
         end do
     end do
 !
@@ -287,9 +288,9 @@ subroutine mmcalg(ndim, l_large_slip, &
     do i = 1, ndim
         do j = 1, ndim
             do inom = 1, nnm
-                gene11(i, j) = gene11(i, j)+ddffm(1, inom)*elem_mast_coor(inom, i)*norm(j)
-                gene22(i, j) = gene11(i, j)+ddffm(2, inom)*elem_mast_coor(inom, i)*norm(j)
-                gene21(i, j) = gene21(i, j)+ddffm(3, inom)*elem_mast_coor(inom, i)*norm(j)
+                gene11(i, j) = gene11(i, j)+ddffm(1, inom)*elem_mast_coor(i, inom)*norm(j)
+                gene22(i, j) = gene11(i, j)+ddffm(2, inom)*elem_mast_coor(i, inom)*norm(j)
+                gene21(i, j) = gene21(i, j)+ddffm(3, inom)*elem_mast_coor(i, inom)*norm(j)
             end do
         end do
     end do

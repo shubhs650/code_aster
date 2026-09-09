@@ -1,0 +1,198 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="OUI"))
+
+import numpy as np
+from numpy import sqrt
+
+test = CA.TestCase()
+
+
+def w_(x, y, t, nu, **kwargs):
+    # a = (1 / 3) * x**3 * y**3 * (x - 1) ** 3 * (y - 1) ** 3
+    a = (
+        (-x / 2 + sqrt(3) * y / 2) ** 3
+        * (sqrt(3) * x / 2 + y / 2) ** 3
+        * (-x / 2 + sqrt(3) * y / 2 - 1) ** 3
+        * (sqrt(3) * x / 2 + y / 2 - 1) ** 3
+        / 3
+    )
+    # b1 = y**3 * (y - 1) ** 3 * x * (x - 1) * (5 * x**2 - 5 * x + 1)
+    b1 = (
+        (-x / 2 + sqrt(3) * y / 2) ** 3
+        * (sqrt(3) * x / 2 + y / 2)
+        * (-x / 2 + sqrt(3) * y / 2 - 1) ** 3
+        * (sqrt(3) * x / 2 + y / 2 - 1)
+        * (-5 * sqrt(3) * x / 2 - 5 * y / 2 + 5 * (sqrt(3) * x / 2 + y / 2) ** 2 + 1)
+    )
+    # b2 = x**3 * (x - 1) ** 3 * y * (y - 1) * (5 * y**2 - 5 * y + 1)
+    b2 = (
+        (-x / 2 + sqrt(3) * y / 2)
+        * (sqrt(3) * x / 2 + y / 2) ** 3
+        * (-x / 2 + sqrt(3) * y / 2 - 1)
+        * (sqrt(3) * x / 2 + y / 2 - 1) ** 3
+        * (5 * x / 2 - 5 * sqrt(3) * y / 2 + 5 * (-x / 2 + sqrt(3) * y / 2) ** 2 + 1)
+    )
+    #
+    b = (2 * t**2) / (5 * (1 - nu)) * (b1 + b2)
+    return a - b
+
+
+def drx_du_(x, y, **kwargs):
+    # return x**3 * (x - 1) ** 3 * y**2 * (y - 1) ** 2 * (2 * y - 1)
+    return (
+        (-x / 2 + sqrt(3) * y / 2) ** 2
+        * (sqrt(3) * x / 2 + y / 2) ** 3
+        * (-x + sqrt(3) * y - 1)
+        * (-x / 2 + sqrt(3) * y / 2 - 1) ** 2
+        * (sqrt(3) * x / 2 + y / 2 - 1) ** 3
+    )
+
+
+def dry_du_(x, y, **kwargs):
+    # return -(y**3 * (y - 1) ** 3 * x**2 * (x - 1) ** 2 * (2 * x - 1))
+    return (
+        -((-x / 2 + sqrt(3) * y / 2) ** 3)
+        * (sqrt(3) * x / 2 + y / 2) ** 2
+        * (-x / 2 + sqrt(3) * y / 2 - 1) ** 3
+        * (sqrt(3) * x / 2 + y / 2 - 1) ** 2
+        * (sqrt(3) * x + y - 1)
+    )
+
+
+def drx_(x, y, **kwargs):
+    rot = np.pi / 6
+    return np.cos(rot) * drx_du_(x, y) - np.sin(rot) * dry_du_(x, y)
+
+
+def dry_(x, y, **kwargs):
+    rot = np.pi / 6
+    return np.sin(rot) * drx_du_(x, y) + np.cos(rot) * dry_du_(x, y)
+
+
+# Global parameters
+TOLERANCE = 1e-2
+COARSE_REFINEMENT = 3
+FINE_REFINEMENT = 6
+
+YOUNG = 10920.0
+POISSON = 0.3
+THICKNESS = 1e-3
+
+# Funtions
+CTE = YOUNG / (12.0 * (1.0 - POISSON**2))
+
+FORM1 = FORMULE(
+    VALE="CTE * 12*(-X/2 + sqrt(3)*Y/2)*(2*(-X/2 + sqrt(3)*Y/2)**2*(-X/2 + sqrt(3)*Y/2 - 1)**2 + (sqrt(3)*X/2 + Y/2)*(sqrt(3)*X/2 + Y/2 - 1)*(5*X/2 - 5*sqrt(3)*Y/2 + 5*(-X/2 + sqrt(3)*Y/2)**2 + 1))*(-X/2 + sqrt(3)*Y/2 - 1)*(-5*sqrt(3)*X/2 - 5*Y/2 + 5*(sqrt(3)*X/2 + Y/2)**2 + 1)",
+    NOM_PARA=["X", "Y"],
+    CTE=CTE,
+)
+
+FORM2 = FORMULE(
+    VALE="CTE *12*(sqrt(3)*X/2 + Y/2)*((-X/2 + sqrt(3)*Y/2)*(-X/2 + sqrt(3)*Y/2 - 1)*(-5*sqrt(3)*X/2 - 5*Y/2 + 5*(sqrt(3)*X/2 + Y/2)**2 + 1) + 2*(sqrt(3)*X/2 + Y/2)**2*(sqrt(3)*X/2 + Y/2 - 1)**2)*(sqrt(3)*X/2 + Y/2 - 1)*(5*X/2 - 5*sqrt(3)*Y/2 + 5*(-X/2 + sqrt(3)*Y/2)**2 + 1)",
+    NOM_PARA=["X", "Y"],
+    CTE=CTE,
+)
+
+PRES = FORMULE(VALE="FORM1(X,Y) + FORM2(X,Y)", NOM_PARA=["X", "Y"], FORM1=FORM1, FORM2=FORM2)
+
+variable_list = ["DZ", "DRX", "DRY"]
+
+for thickness, tolerance in zip([0.1, 0.001], [TOLERANCE, TOLERANCE]):
+
+    # NUMERICAL COMPUTATION
+
+    mesh_line = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+
+    mesh_line_to_quad = mesh_line.convertToQuadratic()
+
+    mesh_quad = CREA_MAILLAGE(
+        MAILLAGE=mesh_line_to_quad, MODI_MAILLE=(_F(TOUT="OUI", OPTION="QUAD8_9"),)
+    )
+
+    model = AFFE_MODELE(
+        AFFE=_F(MODELISATION=("PLAQ_MITC",), PHENOMENE="MECANIQUE", TOUT="OUI"), MAILLAGE=mesh_quad
+    )
+
+    cara_elem = AFFE_CARA_ELEM(MODELE=model, COQUE=_F(GROUP_MA="SURFACE", EPAIS=thickness))
+
+    mater = DEFI_MATERIAU(ELAS=_F(E=YOUNG, NU=POISSON, RHO=10))
+
+    cham_mater = AFFE_MATERIAU(AFFE=_F(MATER=(mater,), TOUT="OUI"), MODELE=model)
+
+    meca_bcs = AFFE_CHAR_CINE(
+        MECA_IMPO=_F(DZ=0, DRX=0, DRY=0, GROUP_MA=("LEFT", "RIGHT", "TOP", "BOTTOM")), MODELE=model
+    )
+
+    meca_chr = AFFE_CHAR_MECA_F(MODELE=model, PRES_REP=_F(GROUP_MA="SURFACE", PRES=PRES))
+
+    result = MECA_STATIQUE(
+        MODELE=model,
+        CHAM_MATER=cham_mater,
+        EXCIT=(_F(CHARGE=meca_bcs), _F(CHARGE=meca_chr)),
+        OPTION="SANS",
+        CARA_ELEM=cara_elem,
+    )
+
+    displacement = result.getField("DEPL", para="INST", value=0.0)
+    w_numeric = PROJ_CHAMP(
+        CHAM_GD=displacement.restrict(["DZ"]), MAILLAGE_1=mesh_quad, MAILLAGE_2=mesh_line
+    )
+    drx_numeric = displacement.restrict(["DRX"])
+    dry_numeric = displacement.restrict(["DRY"])
+    numerical_values = [w_numeric, drx_numeric, dry_numeric]
+
+    # ANALYTICAL COMPUTATION
+
+    analytical_values = []
+    for mesh, func, variable in zip(
+        [mesh_line, mesh_quad, mesh_quad], [w_, drx_, dry_], variable_list
+    ):
+        coords = mesh.getCoordinatesAsSimpleFieldOnNodes()
+        field = func(coords.X, coords.Y, t=thickness, nu=POISSON)
+        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [variable], prol_zero=True)
+        temp.setComponentValues(variable, field)
+        value = temp.toFieldOnNodes()
+        analytical_values.append(value)
+
+    for i, (variable, ana_val, num_val) in enumerate(
+        zip(variable_list, analytical_values, numerical_values)
+    ):
+        diff = ana_val - num_val
+        error = diff.norm("NORM_2") / ana_val.norm("NORM_2")
+        if not (error <= tolerance):
+            test.assertTrue(
+                False,
+                msg=f"{error:.3e} >> {tolerance} for {variable}. The thickness of the fine mesh is {thickness}.",
+            )
+        else:
+            test.assertTrue(True, msg=f"{error:.3e} << {tolerance} for {variable}.")
+
+    # Compare deflection
+    deflection_num = np.max(numerical_values[0].getValues())
+    deflection_ana = w_(
+        np.sqrt(2) / 2 * np.cos(5 / 12 * np.pi),
+        np.sqrt(2) / 2 * np.sin(5 / 12 * np.pi),
+        thickness,
+        POISSON,
+    )
+    test.assertAlmostEqual(deflection_ana, deflection_num, delta=tolerance * deflection_num)
+
+FIN()

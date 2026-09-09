@@ -113,4 +113,89 @@ TEST_RESU(
     )
 )
 
+# --------------------------------------------------------------------------------------------------
+# On refait le test avec les barres BARRE_3D_NL
+# --------------------------------------------------------------------------------------------------
+
+MOD_NL = AFFE_MODELE(
+    MAILLAGE=MAIL, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="BARRE_3D_NL")
+)
+
+CARBA_NL = AFFE_CARA_ELEM(
+    MODELE=MOD_NL, BARRE=_F(GROUP_MA="TOUT", SECTION="GENERALE", CARA=("A",), VALE=(1.0,))
+)
+
+
+CHAR_NL = AFFE_CHAR_MECA(
+    MODELE=MOD_NL,
+    DDL_IMPO=(_F(GROUP_NO="A", DX=0.0, DZ=0.0, DY=0.0), _F(GROUP_NO="B", DX=0.0, DZ=0.0, DY=1.0)),
+)
+
+# TRACTION-COMPRESSION PLASTIQUE PARFAIT PARFAIT
+
+
+U5_NL = STAT_NON_LINE(
+    MODELE=MOD_NL,
+    CHAM_MATER=CHMAT2,
+    CARA_ELEM=CARBA_NL,
+    EXCIT=_F(CHARGE=CHAR_NL, FONC_MULT=FONC5),
+    COMPORTEMENT=_F(RELATION="VMIS_ASYM_LINE"),
+    INCREMENT=_F(LIST_INST=LINST4),
+    NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6),
+    RECH_LINEAIRE=_F(ITER_LINE_MAXI=3),
+)
+
+CALC_CHAMP(reuse=U5_NL, CONTRAINTE=("SIEF_ELNO"), RESULTAT=U5_NL)
+
+TEST_RESU(
+    RESU=(
+        _F(
+            NUME_ORDRE=1,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=U5_NL,
+            NOM_CHAM="SIEF_ELNO",
+            GROUP_NO="N1",
+            NOM_CMP="N",
+            VALE_CALC=5.00000000e07,
+            VALE_REFE=5.0e7,
+            GROUP_MA="M1",
+        ),
+        _F(
+            NUME_ORDRE=10,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=U5_NL,
+            NOM_CHAM="SIEF_ELNO",
+            GROUP_NO="N1",
+            NOM_CMP="N",
+            VALE_CALC=5.00000000e07,
+            VALE_REFE=5.0e7,
+            GROUP_MA="M1",
+        ),
+        _F(
+            NUME_ORDRE=12,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=U5_NL,
+            NOM_CHAM="SIEF_ELNO",
+            GROUP_NO="N1",
+            NOM_CMP="N",
+            VALE_CALC=-2.00000000e08,
+            VALE_REFE=-2.0e8,
+            GROUP_MA="M1",
+        ),
+        _F(
+            NUME_ORDRE=20,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=U5_NL,
+            NOM_CHAM="SIEF_ELNO",
+            GROUP_NO="N1",
+            NOM_CMP="N",
+            VALE_CALC=-2.00000000e08,
+            VALE_REFE=-2.0e8,
+            GROUP_MA="M1",
+        ),
+    )
+)
+
+
 FIN()

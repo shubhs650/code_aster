@@ -38,8 +38,9 @@ PINST_R = OutputParameter(phys=PHY.INST_R, type="ELGA")
 
 PNEUT_F = OutputParameter(phys=PHY.NEUT_F, type="ELGA")
 
-
 PNEUT_R = OutputParameter(phys=PHY.NEUT_R, type="ELGA")
+
+PNEUT_I = OutputParameter(phys=PHY.NEUT_I, type="ELGA")
 
 
 PPRES_R = OutputParameter(phys=PHY.PRES_R, type="ELGA")
@@ -75,6 +76,7 @@ TOU_INI_ELGA = Option(
         PINST_R,
         PNEUT_F,
         PNEUT_R,
+        PNEUT_I,
         PPRES_R,
         PSIEF_R,
         PSOUR_R,

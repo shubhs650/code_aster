@@ -15,146 +15,161 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine maglrc(zimat, matr, delas, ecr)
+! aslint: disable=W0413
+subroutine maglrc(plateCara, plateOrie, jvMaterc, &
+                  matr, matrElas, ecr)
+!
+    use plate_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterc/r8dgrd.h"
-#include "asterfort/jevech.h"
-#include "asterfort/r8inir.h"
+#include "asterfort/assert.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/utmess.h"
 !
-    integer(kind=8) :: i, jcoqu, icacoq, zimat
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: jvMaterc
+    real(kind=8), intent(out) :: matr(50), matrElas(6, 6)
+    real(kind=8), intent(inout) :: ecr(*)
 !
-    real(kind=8) :: matr(*), delas(6, 6), r8b
-    real(kind=8) :: valres(15), vglob(3), epais
-    real(kind=8) :: ecr(*), alph, beta, vel
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: codres(15)
-    character(len=16) :: nomres(15)
-    character(len=32) :: phenom
+    integer(kind=8), parameter :: nbPropMaxi = 15
+    character(len=16) :: propName(nbPropMaxi)
+    integer(kind=8) :: propCode(nbPropMaxi)
+    real(kind=8) :: propVale(nbPropMaxi)
+    integer(kind=8) :: nbProp, i
+    real(kind=8) :: vglob(3)
+    real(kind=8) :: alpha, beta, vel
+    character(len=16), parameter :: nonLinKeyword = ('GLRC_DAMAGE')
+    character(len=16), parameter :: elasKeyword = ('ELAS_GLRC')
+    real(kind=8) :: epais
 !
-    r8b = 0.d0
-    call r8inir(6*6, 0.0d0, delas, 1)
-    phenom = 'GLRC_DAMAGE'
+! --------------------------------------------------------------------------------------------------
+!
+    matr = 0.D0
+    matrElas = 0.d0
 
-!     EPAISSEUR
-    call jevech('PCACOQU', 'L', jcoqu)
-    epais = zr(jcoqu)
-    nomres(1) = 'EPAIS'
-    call rcvala(zimat, ' ', phenom, 0, ' ', [r8b], 1, nomres, valres, codres, 1)
-    if (valres(1) .ne. epais) then
-        valres(2) = epais
-        call utmess('F', 'ELEMENTS5_42', nr=2, valr=valres)
+! - Check consistency of thickness
+    epais = plateCara%thick
+    propName(1) = 'EPAIS'
+    call rcvala(jvMaterc, ' ', nonLinKeyword, &
+                0, ' ', [0.d0], &
+                1, propName, propVale, &
+                propCode, 1)
+    if (propVale(1) .ne. epais) then
+        propVale(2) = epais
+        call utmess('F', 'ELEMENTS5_42', nr=2, valr=propVale)
     end if
-!
-!     ELAS
-!     ATTENTION PARAMETRES EQUIVALENTS EN FLEXION
-!     EF ET NUEF
-!
-    nomres(1) = 'E_F'
-    nomres(2) = 'NU_F'
-!
-    call rcvala(zimat, ' ', 'ELAS_GLRC       ', 0, ' ', [r8b], 2, nomres, valres, codres, 1)
-    matr(6) = valres(1)
-    matr(7) = valres(2)
-!
-!     GLRC_DAMAGE
-!
-!     MATRICE ELASTIQUE MEMBRANE/CISAILLEMENT
-!
-    nomres(1) = 'BN11'
-    nomres(2) = 'BN12'
-    nomres(3) = 'BN22'
-    nomres(4) = 'BN33'
-    nomres(5) = 'BT1'
-    nomres(6) = 'BT2'
-    nomres(7) = 'BM11'
-    nomres(8) = 'BM12'
-    nomres(9) = 'BM22'
-    nomres(10) = 'BM33'
-!
-    call rcvala(zimat, ' ', phenom, 0, ' ', [r8b], 10, nomres, valres, codres, 1)
-!
+
+! - Elasticity (bending)
+    propName(1) = 'E_F'
+    propName(2) = 'NU_F'
+    call rcvala(jvMaterc, ' ', elasKeyword, &
+                0, ' ', [0.d0], &
+                2, propName, propVale, &
+                propCode, 1)
+    matr(6) = propVale(1)
+    matr(7) = propVale(2)
+
+! - MATRICE ELASTIQUE MEMBRANE/CISAILLEMENT
+    propName(1) = 'BN11'
+    propName(2) = 'BN12'
+    propName(3) = 'BN22'
+    propName(4) = 'BN33'
+    propName(5) = 'BT1'
+    propName(6) = 'BT2'
+    propName(7) = 'BM11'
+    propName(8) = 'BM12'
+    propName(9) = 'BM22'
+    propName(10) = 'BM33'
+    nbProp = 10
+    call rcvala(jvMaterc, ' ', nonLinKeyword, &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
     matr(1) = 1.0d0
-    matr(2) = valres(1)
-    matr(3) = valres(2)
-    matr(4) = valres(3)
-    matr(5) = valres(4)
-    delas(4, 4) = valres(7)
-    delas(4, 5) = valres(8)
-    delas(5, 4) = delas(4, 5)
-    delas(5, 5) = valres(9)
-    delas(6, 6) = valres(10)
-    matr(14) = valres(5)
-    matr(15) = valres(6)
+    matr(2) = propVale(1)
+    matr(3) = propVale(2)
+    matr(4) = propVale(3)
+    matr(5) = propVale(4)
+    matrElas(4, 4) = propVale(7)
+    matrElas(4, 5) = propVale(8)
+    matrElas(5, 4) = matrElas(4, 5)
+    matrElas(5, 5) = propVale(9)
+    matrElas(6, 6) = propVale(10)
+    matr(14) = propVale(5)
+    matr(15) = propVale(6)
+
+! - SEUILS ET PENTES
+    propName(1) = 'MF1'
+    propName(2) = 'MF2'
+    propName(3) = 'QP1'
+    propName(4) = 'QP2'
+    propName(5) = 'GAMMA'
+    nbProp = 5
+    call rcvala(jvMaterc, ' ', nonLinKeyword, &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    matr(8) = propVale(1)
+    matr(9) = propVale(2)
+    matr(10) = propVale(3)
+    matr(11) = propVale(4)
+    matr(12) = propVale(5)
+
+! - PARAMETRES TENSEUR DE PRAGER/MEMBRANE
+    propName(1) = 'C1N1'
+    propName(2) = 'C1N2'
+    propName(3) = 'C1N3'
+    propName(4) = 'C2N1'
+    propName(5) = 'C2N2'
+    propName(6) = 'C2N3'
+    nbProp = 6
+    call rcvala(jvMaterc, ' ', nonLinKeyword, &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    matr(16) = propVale(1)
+    matr(17) = propVale(2)
+    matr(18) = propVale(3)
+    matr(22) = propVale(4)
+    matr(23) = propVale(5)
+    matr(24) = propVale(6)
+
+! - PARAMETRES TENSEUR DE PRAGER/FLEXION
+    propName(1) = 'C1M1'
+    propName(2) = 'C1M2'
+    propName(3) = 'C1M3'
+    propName(4) = 'C2M1'
+    propName(5) = 'C2M2'
+    propName(6) = 'C2M3'
+    nbProp = 6
+    call rcvala(jvMaterc, ' ', nonLinKeyword, &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    matr(19) = propVale(1)
+    matr(20) = propVale(2)
+    matr(21) = propVale(3)
+    matr(25) = propVale(4)
+    matr(26) = propVale(5)
+    matr(27) = propVale(6)
+
+! - Elastic matrix
+    matrElas(1, 1) = matr(2)
+    matrElas(1, 2) = matr(3)
+    matrElas(2, 1) = matrElas(1, 2)
+    matrElas(2, 2) = matr(4)
+    matrElas(3, 3) = matr(5)
 !
-!     SEUILS ET PENTES
+    ASSERT(plateOrie%lRead)
+    alpha = plateOrie%alpha
+    beta = plateOrie%beta
 !
-    nomres(1) = 'MF1'
-    nomres(2) = 'MF2'
-    nomres(3) = 'QP1'
-    nomres(4) = 'QP2'
-    nomres(5) = 'GAMMA'
-!
-    call rcvala(zimat, ' ', phenom, 0, ' ', [r8b], 5, nomres, valres, codres, 1)
-!
-    matr(8) = valres(1)
-    matr(9) = valres(2)
-    matr(10) = valres(3)
-    matr(11) = valres(4)
-    matr(12) = valres(5)
-!
-!     PARAMETRES TENSEUR DE PRAGER
-!     MEMBRANE
-    nomres(1) = 'C1N1'
-    nomres(2) = 'C1N2'
-    nomres(3) = 'C1N3'
-    nomres(4) = 'C2N1'
-    nomres(5) = 'C2N2'
-    nomres(6) = 'C2N3'
-!
-    call rcvala(zimat, ' ', phenom, 0, ' ', [r8b], 6, nomres, valres, codres, 1)
-!
-    matr(16) = valres(1)
-    matr(17) = valres(2)
-    matr(18) = valres(3)
-    matr(22) = valres(4)
-    matr(23) = valres(5)
-    matr(24) = valres(6)
-!
-!     FLEXION
-!
-    nomres(1) = 'C1M1'
-    nomres(2) = 'C1M2'
-    nomres(3) = 'C1M3'
-    nomres(4) = 'C2M1'
-    nomres(5) = 'C2M2'
-    nomres(6) = 'C2M3'
-!
-    call rcvala(zimat, ' ', phenom, 0, ' ', [r8b], 6, nomres, valres, codres, 1)
-!
-    matr(19) = valres(1)
-    matr(20) = valres(2)
-    matr(21) = valres(3)
-    matr(25) = valres(4)
-    matr(26) = valres(5)
-    matr(27) = valres(6)
-!
-    delas(1, 1) = matr(2)
-    delas(1, 2) = matr(3)
-    delas(2, 1) = delas(1, 2)
-    delas(2, 2) = matr(4)
-    delas(3, 3) = matr(5)
-!
-    call jevech('PCACOQU', 'L', icacoq)
-    alph = zr(icacoq+1)*r8dgrd()
-    beta = zr(icacoq+2)*r8dgrd()
-!
-    vglob(1) = cos(beta)*cos(alph)
-    vglob(2) = cos(beta)*sin(alph)
+    vglob(1) = cos(beta)*cos(alpha)
+    vglob(2) = cos(beta)*sin(alpha)
     vglob(3) = -sin(beta)
     vel = vglob(1)*vglob(1)+vglob(2)*vglob(2)
     vel = vel+vglob(3)*vglob(3)

@@ -17,8 +17,9 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W1306
 !
-subroutine coeime(ds_thm, j_mater, nomail, option, &
+subroutine coeime(ds_thm, &
                   lSigm, lVari, lMatr, &
+                  option, &
                   ndim, dimdef, dimcon, &
                   addeme, addep1, &
                   nbvari, npg, npi, &
@@ -26,8 +27,9 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
                   varip, ouvh, tlint, drde, kpi, &
                   retcom)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -37,8 +39,6 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
 #include "asterfort/rcvalb.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
-    character(len=8), intent(in) :: nomail
     character(len=16), intent(in) :: option
     aster_logical, intent(in) :: lSigm, lVari, lMatr
     integer(kind=8), intent(in) :: ndim, dimcon, dimdef
@@ -87,39 +87,43 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i, j, kpg, spt
-    real(kind=8) :: da(ndim), dsidep(6, 6), para(2), ouvfic, unsurn
-    character(len=8) :: fami, poum
-    integer(kind=8) :: icodre(2)
-    character(len=16) :: meca
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
+    character(len=8), parameter :: poum = "+"
+    integer(kind=8), parameter :: nbProp = 2
+    character(len=16), parameter :: propName(nbProp) = (/'OUV_FICT', 'UN_SUR_N'/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    integer(kind=8) :: i, j
+    real(kind=8) :: da(ndim), dsidep(6, 6), ouvfic, unsurn
+    character(len=16) :: relaMeca
     integer(kind=8) :: advime, advico, vicphi
-    character(len=16), parameter :: ncra(2) = (/'OUV_FICT', 'UN_SUR_N'/)
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
     ouvh = 0.d0
     tlint = 0.d0
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-    meca = ds_thm%ds_behaviour%rela_meca
+
+! - Copy material parameters with other scheme parameters
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
+    call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                       materParaFPG1)
+
+    relaMeca = ds_thm%ds_behaviour%rela_meca
     advime = ds_thm%ds_behaviour%advime
     advico = ds_thm%ds_behaviour%advico
     vicphi = ds_thm%ds_behaviour%vicphi
-!
-! ====================================================================
-! LOI DE COMPORTEMENT JOINT_BANDIS
-! ====================================================================
-!
-    if (meca .eq. 'JOINT_BANDIS') then
-!
-        call lcjohm(j_mater, lSigm, lMatr, lVari, kpi, npg, &
-                    nomail, addeme, advico, ndim, dimdef, &
+
+    if (relaMeca .eq. 'JOINT_BANDIS') then
+        call lcjohm(materParaFPG1, &
+                    lSigm, lMatr, lVari, &
+                    kpi, npg, &
+                    addeme, advico, ndim, dimdef, &
                     dimcon, nbvari, defgem, defgep, varim, &
                     varip, sigm, sigp, drde, ouvh, &
                     retcom)
-!
         tlint = ouvh**2/12.d0
         if (lVari) then
             varip(advime) = tlint
@@ -135,36 +139,34 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
             end if
         end if
     end if
-!
-! ====================================================================
-! LOI DE COMPORTEMENT CZM_LIN_REG
-! ====================================================================
-    if (meca .eq. 'CZM_LIN_REG') then
-!
+
+    if (relaMeca .eq. 'CZM_LIN_REG') then
         do i = 1, ndim
             da(i) = defgep(i)-defgem(i)
         end do
-!
-! - INTEGRATION DE LA LOI DE COMPORTEMENT MECANIQUE
-!
-        call lcejli('RIGI', kpi, 1, ndim, j_mater, &
+        call lcejli(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    ndim, &
+                    materPara%jvMaterCode, &
                     option, defgem, da, sigp, dsidep, &
                     varim(advime), varip(advime))
-!
-! - RECUPERATION DES PARAMETRES DE COUPLAGE POUR LA POINTE DE FISSURE
-!
+
         if (nint(varip(advime)) .eq. 2) then
             unsurn = 0.d0
         else
-            call rcvalb(fami, kpg, spt, poum, j_mater, &
-                        ' ', 'THM_RUPT', 0, ' ', [0.d0], &
-                        2, ncra, para(1), icodre, 1)
-            ouvfic = para(1)
-            unsurn = para(2)
+            call rcvalb(materParaFPG1%schemePara%fami, &
+                        materParaFPG1%schemePara%kpg, &
+                        materParaFPG1%schemePara%ksp, &
+                        poum, &
+                        materParaFPG1%jvMaterCode, &
+                        ' ', 'THM_RUPT', &
+                        0, ' ', [0.d0], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
+            ouvfic = propVale(1)
+            unsurn = propVale(2)
         end if
-!
-! - CALCUL DES TERMES MECA ET DE COUPLAGE DE L'OPERATEUR TANGENT
-!
         if (lMatr) then
             if (kpi .le. npg) then
                 do i = 1, ndim
@@ -180,16 +182,13 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
             if ((kpi .gt. npg) .or. (npi .eq. npg)) then
                 drde(addep1, addep1) = drde(addep1, addep1)-unsurn
             end if
-! - CALCUL DE L'OUVERTURE HYDRO ET DE LA PERMEABILITE
+
             ouvh = varim(advico+vicphi)
             if (nint(varim(3)) .eq. 0) then
                 ouvh = ouvfic
             end if
             tlint = ouvh**2/12
         end if
-!
-! - CALCUL DES TERMES MECA ET DE COUPLAGE DU VECTEUR FORCES INTERNES
-!
         if (lSigm) then
             if ((ds_thm%ds_elem%l_dof_pre1) .and. &
                 ((nint(varip(advime+2)) .eq. 1) .or. (nint(varip(advime+2)) .eq. 2))) then
@@ -197,10 +196,8 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
             end if
         end if
         if (lVari) then
-! - CALCUL DE L'OUVERTURE HYDRO ET DE LA PERMEABILITE
             varip(advico+vicphi) = defgep(1)
             ouvh = varip(advico+vicphi)
-! - SI FISSURE FERMEE ALORS ON DONNE UNE OUVERTURE HYDRO FICTIVE
             if ((nint(varip(3)) .eq. 0)) then
                 ouvh = ouvfic
             end if
@@ -208,32 +205,30 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
             varip(advico+vicphi) = defgep(1)+defgep(addep1)*unsurn
         end if
     end if
-!
-! ====================================================================
-! LOI DE COMPORTEMENT CZM_EXP_REG
-! ====================================================================
-!
-    if (meca .eq. 'CZM_EXP_REG') then
+
+    if (relaMeca .eq. 'CZM_EXP_REG') then
         do i = 1, ndim
             da(i) = defgep(i)-defgem(i)
         end do
-!
-! - INTEGRATION DE LA LOI DE COMPORTEMENT MECANIQUE
-!
-        call lcejex('RIGI', kpi, 1, ndim, j_mater, &
+        call lcejex(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    ndim, &
+                    materPara%jvMaterCode, &
                     option, defgem, da, sigp, dsidep, &
                     varim(advime), varip(advime))
-!
-! - RECUPERATION DES PARAMETRES DE COUPLAGE POUR LA POINTE DE FISSURE
-!
-        call rcvalb(fami, kpg, spt, poum, j_mater, &
-                    ' ', 'THM_RUPT', 0, ' ', [0.d0], &
-                    2, ncra, para(1), icodre, 1)
-        ouvfic = para(1)
-        unsurn = para(2)
-!
-! - CALCUL DES TERMES MECA ET DE COUPLAGE DE L'OPERATEUR TANGENT
-!
+
+        call rcvalb(materParaFPG1%schemePara%fami, &
+                    materParaFPG1%schemePara%kpg, &
+                    materParaFPG1%schemePara%ksp, &
+                    poum, &
+                    materParaFPG1%jvMaterCode, &
+                    ' ', 'THM_RUPT', &
+                    0, ' ', [0.d0], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        ouvfic = propVale(1)
+        unsurn = propVale(2)
         if (lMatr) then
             if (kpi .le. npg) then
                 do i = 1, ndim
@@ -248,27 +243,21 @@ subroutine coeime(ds_thm, j_mater, nomail, option, &
             if ((kpi .gt. npg) .or. (npi .eq. npg)) then
                 drde(addep1, addep1) = drde(addep1, addep1)-unsurn
             end if
-! - CALCUL DE L'OUVERTURE HYDRO ET DE LA PERMEABILITE
             ouvh = varim(advico+vicphi)
             if (nint(varim(3)) .eq. 0) then
                 ouvh = ouvfic
             end if
             tlint = ouvh**2/12
         end if
-!
-! - CALCUL DES TERMES MECA ET DE COUPLAGE DU VECTEUR FORCES INTERNES
-!
         if (lSigm) then
             if ((ds_thm%ds_elem%l_dof_pre1) .and. (nint(varip(advime+2)) .eq. 1)) then
                 sigp(1+ndim) = -defgep(addep1)
             end if
         end if
         if (lVari) then
-! - CALCUL DE L'OUVERTURE HYDRO ET DE LA PERMEABILITE
             varip(advico+vicphi) = defgep(1)
             ouvh = varip(advico+vicphi)
             if (nint(varip(3)) .eq. 0) then
-! - SI FISSURE FERMEE ALORS ON DONNE UNE OUVERTURE HYDRO FICTIVE
                 ouvh = ouvfic
             end if
             tlint = ouvh**2/12

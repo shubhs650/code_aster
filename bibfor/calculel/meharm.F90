@@ -15,22 +15,30 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine meharm(modele, nh, chharm)
+!
+subroutine meharm(modelZ, numeHarm, chharm)
+!
     implicit none
+!
 #include "asterfort/dismoi.h"
 #include "asterfort/mecact.h"
-    character(len=*) :: modele
-    character(len=24) :: chharm
-    character(len=8) :: mailla
 !
-!    CETTE ROUTINE GENERE UN CHAMP D'HARMONIQUE (CARTE CONSTANTE)
+    character(len=*), intent(in) :: modelZ
+    integer(kind=8), intent(in) :: numeHarm
+    character(len=24), intent(out) :: chharm
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: nh
-!-----------------------------------------------------------------------
-    call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mailla)
+! --------------------------------------------------------------------------------------------------
+!
+!  Create field for Fourier
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8) :: mesh
+!
+! --------------------------------------------------------------------------------------------------
+!
     chharm = '&&MEHARM.NUME_HARM'
-    call mecact('V', chharm, 'MAILLA', mailla, 'HARMON', &
-                ncmp=1, nomcmp='NH', si=nh)
+    call dismoi('NOM_MAILLA', modelZ, 'MODELE', repk=mesh)
+    call mecact('V', chharm, 'MAILLA', mesh, 'HARMON', &
+                ncmp=1, nomcmp='NH', si=numeHarm)
 end subroutine

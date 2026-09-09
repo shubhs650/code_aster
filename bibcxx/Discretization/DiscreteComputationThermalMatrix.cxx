@@ -80,6 +80,7 @@ ElementaryMatrixTemperatureRealPtr DiscreteComputation::getLinearConductivityMat
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addFourierModeField( modeFourier );
@@ -155,6 +156,7 @@ ElementaryMatrixTemperatureRealPtr DiscreteComputation::getTangentConductivityMa
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addXFEMField( currModel );
@@ -230,6 +232,7 @@ DiscreteComputation::getLinearCapacityMatrix( const ASTERDOUBLE time_curr,
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addXFEMField( currModel );
@@ -296,6 +299,7 @@ ElementaryMatrixTemperatureRealPtr DiscreteComputation::getTangentCapacityMatrix
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addXFEMField( currModel );

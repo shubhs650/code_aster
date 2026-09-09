@@ -87,9 +87,4 @@ cata_msg = {
  Problème lors du pilotage.
 """
     ),
-    88: _(
-        """
- La loi de comportement <%(k1)s> n'est pas disponible pour le pilotage de type PRED_ELAS.
-"""
-    ),
 }

@@ -15,52 +15,61 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine coqgth(imate, compor, fami, ipg, ep, epsm, deps)
+!
+subroutine coqgth(materPara, ep, epsm, deps)
+!
+    use MaterialPara_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
-#include "asterfort/rccoma.h"
+#include "asterfort/assert.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/rcvarc.h"
-#include "asterfort/assert.h"
-
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: ipg
+#include "jeveux.h"
+!
+    type(Material_Para), intent(in) :: materPara
     real(kind=8), intent(in) :: ep
     real(kind=8), intent(inout) :: epsm(6)
     real(kind=8), intent(inout) :: deps(6)
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
 ! but : Prise en compte de la dilatation thermique pour les coques "globales"
 !
-! in:
-!       imate   : adresse du materiau
-!       compor  : comportment
-!       fami    : famille de points de Gauss
-!       ipg     : numero du point de Gauss
+! --------------------------------------------------------------------------------------------------
+!
 !       ep      : epaisseur de la coque
 !       epsm    : deformation "-"
 !       deps    : increment de deformation
 ! out:
 !       epsm,deps : deformation - dilatation thermique
-! ----------------------------------------------------------------------
-    integer(kind=8) :: icodre(1), iret, iret1, iret2, i
-    real(kind=8) :: valres(1)
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbProp = 1
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter  :: propName(nbProp) = 'ALPHA'
+    integer(kind=8) :: iret, iret1, iret2, i
     real(kind=8) :: t1m, t2m, t3m, t1p, t2p, t3p
     real(kind=8) :: epsth, khith, depsth, dkhith
     real(kind=8) :: tref, dtmoy, dtgra, tmoyp, tmoym, tgrap, tgram, alphat
-    character(len=16) :: nomres(1), phenom
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 
 !   -- Y-a-t-il un chargement thermique ?
 !   --------------------------------------
-    call rcvarc(' ', 'TEMP_INF', '+', fami, ipg, &
-                1, t2p, iret1)
-    call rcvarc(' ', 'TEMP_SUP', '+', fami, ipg, &
-                1, t3p, iret2)
+    call rcvarc(' ', 'TEMP_INF', '+', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t2p, iret1)
+    call rcvarc(' ', 'TEMP_SUP', '+', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t3p, iret2)
     if (iret1 .eq. 0) then
         ASSERT(iret2 .eq. 0)
     else
@@ -69,13 +78,19 @@ subroutine coqgth(imate, compor, fami, ipg, ep, epsm, deps)
 
 !   -- temperature de reference :
 !   ------------------------------
-    call rcvarc('F', 'TEMP', 'REF', fami, 1, &
-                1, tref, iret)
+    call rcvarc('F', 'TEMP', 'REF', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                tref, iret)
 
 !   -- temperatures a t+ :
 !   -----------------------
-    call rcvarc(' ', 'TEMP', '+', fami, ipg, &
-                1, t1p, iret)
+    call rcvarc(' ', 'TEMP', '+', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t1p, iret)
 !   -- si temp n'est pas fourni on met la moyenne de tsup et tinf
     if (iret .ne. 0) then
         t1p = (t2p+t3p)/2.d0
@@ -83,15 +98,24 @@ subroutine coqgth(imate, compor, fami, ipg, ep, epsm, deps)
 
 !   -- temperatures a t- :
 !   ----------------------
-    call rcvarc(' ', 'TEMP_INF', '-', fami, ipg, &
-                1, t2m, iret)
+    call rcvarc(' ', 'TEMP_INF', '-', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t2m, iret)
     ASSERT(iret .eq. 0)
-    call rcvarc(' ', 'TEMP_SUP', '-', fami, ipg, &
-                1, t3m, iret)
+    call rcvarc(' ', 'TEMP_SUP', '-', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t3m, iret)
     ASSERT(iret .eq. 0)
 
-    call rcvarc(' ', 'TEMP', '-', fami, ipg, &
-                1, t1m, iret)
+    call rcvarc(' ', 'TEMP', '-', &
+                materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                t1m, iret)
     if (iret .ne. 0) then
         t1m = (t2m+t3m)/2.d0
     end if
@@ -107,14 +131,13 @@ subroutine coqgth(imate, compor, fami, ipg, ep, epsm, deps)
 
 !   -- recuperation de ALPHA :
 !   --------------------------
-    call rccoma(imate, 'ELAS', 1, phenom, icodre(1))
-    ASSERT(icodre(1) .eq. 0)
-    nomres(1) = 'ALPHA'
-    call rcvala(imate, ' ', phenom, 1, 'TEMP', &
-                [tmoyp], 1, nomres, valres, icodre, &
+    call rcvala(materPara%jvMaterCode, &
+                ' ', materPara%elasKeyword, &
+                1, 'TEMP', [tmoyp], &
+                nbProp, propName, propVale, propCode, &
                 1)
-    ASSERT(icodre(1) .eq. 0)
-    alphat = valres(1)
+    ASSERT(propCode(1) .eq. 0)
+    alphat = propVale(1)
 
 !
 !   --  calcul de la deformation thermique :

@@ -74,3 +74,28 @@ TablePtr ListOfTables::getTable( const std::string id ) {
         return TablePtr( nullptr );
     return curIter->second;
 }
+
+void ListOfTables::setTable( const std::string id, const TablePtr table ) {
+    this->update_tables();
+    const auto id_ = strip( id );
+    const auto curIter = _mapTables.find( id_ );
+    if ( curIter != _mapTables.end() ) {
+#ifdef ASTER_DEBUG_CXX
+        std::cout << "Override existing table" << std::endl << std::flush;
+#endif
+        _mapTables[id_] = table;
+        _dsId->updateValuePointer();
+        const int size = _dsId->size();
+        for ( int i = 0; i < size; i++ ) {
+            if ( id_ == strip( ( *_dsId )[i].toString() ) )
+                ( *_dsName )[i] = table->getName();
+        }
+    } else {
+        const int i = _dsId->size();
+        _dsId->resize( i + 1 );
+        _dsName->resize( i + 1 );
+        ( *_dsId )[i] = id_;
+        ( *_dsName )[i] = table->getName();
+    }
+    _mapTables[id_] = table;
+}

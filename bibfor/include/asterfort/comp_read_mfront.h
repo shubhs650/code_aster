@@ -17,9 +17,9 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine comp_read_mfront(keywf, i_comp, extern_addr)
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
-        character(len=16), intent(out) :: extern_addr
+    subroutine comp_read_mfront(factorKeyword, iFactorKeyword, adrsMGIS)
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
+        character(len=16), intent(out) :: adrsMGIS
     end subroutine comp_read_mfront
 end interface

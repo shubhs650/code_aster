@@ -18,9 +18,9 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine nmisot(fami, kpg, ksp, ndim, typmod, l_epsi_varc,&
-                      imate, compor, crit, deps, sigm,&
-                      vim, option, sigp, vip, dsidep,&
+    subroutine nmisot(fami, kpg, ksp, ndim, typmod, l_epsi_varc, &
+                      imate, relaComp, carcri, deps, sigm, &
+                      vim, option, sigp, vip, dsidep, &
                       iret)
         aster_logical, intent(in) :: l_epsi_varc
         character(len=*) :: fami
@@ -29,12 +29,11 @@ interface
         integer(kind=8) :: ndim
         character(len=8) :: typmod(*)
         integer(kind=8) :: imate
-        character(len=16) :: compor
-        real(kind=8) :: crit(*)
+        character(len=16), intent(in) :: relaComp, option
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: deps(6)
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(*)
-        character(len=16) :: option
         real(kind=8) :: sigp(6)
         real(kind=8) :: vip(*)
         real(kind=8) :: dsidep(6, 6)

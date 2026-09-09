@@ -18,6 +18,8 @@
 !
 subroutine te0013(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -26,7 +28,6 @@ subroutine te0013(option, nomte)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/metau1.h"
 #include "asterfort/metau2.h"
@@ -48,15 +49,16 @@ subroutine te0013(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     real(kind=8), parameter :: nharm = 0.d0
     real(kind=8) :: forcVarc(3*MT_NNOMAX), sigmVarc(162)
-    real(kind=8) :: anglNaut(3), time
+    real(kind=8) :: time
     integer(kind=8) :: jvTime, jvVect, iret
     aster_logical :: l_meta
     integer(kind=8) :: ndim, nno, npg, nbsig, i, indxVarcStrain
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
-    integer(kind=8) :: jvGeom, jvMater
+    integer(kind=8) :: jvGeom, jvMaterc
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -94,10 +96,13 @@ subroutine te0013(option, nomte)
         call jevech('PGEOMER', 'L', jvGeom)
 
 ! ----- Material parameters
-        call jevech('PMATERC', 'L', jvMater)
+        call jevech('PMATERC', 'L', jvMaterc)
 
-! ----- Orthotropic parameters
-        call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! ----- Initializations of material parameters on current cell
+        call initParaCell(fami, zi(jvMaterc), materPara)
+
+! ----- Set local coordinate system from user
+        call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! ----- Get time
         time = r8vide()
@@ -107,8 +112,8 @@ subroutine te0013(option, nomte)
         end if
 
 ! ----- Calcul des contraintes anélastiques
-        call sigtmc(fami, nbsig, npg, ndim, &
-                    time, zi(jvMater), anglNaut, &
+        call sigtmc(materPara, time, &
+                    nbsig, npg, ndim, &
                     indxVarcStrain, sigmVarc)
 
 ! ----- Compute [B]Tx{SIGMVARC}

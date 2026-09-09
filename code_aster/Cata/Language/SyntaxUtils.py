@@ -54,18 +54,6 @@ class _F(dict):
             return self
         return self.get(keyword)
 
-    def cree_dict_valeurs(self, *args, **kwargs):
-        """Return a dict-like object to access to keywords."""
-        return self
-
-    def cree_dict_toutes_valeurs(self):
-        """Same as `cree_dict_valeurs()`, for compatibility."""
-        return self.cree_dict_valeurs()
-
-    @property
-    def mc_liste(self):
-        return list(self.keys())
-
     def List_F(self):
         """Return the object itself, for backward compatibility."""
         return self

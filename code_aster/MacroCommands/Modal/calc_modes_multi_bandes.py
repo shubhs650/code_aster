@@ -69,7 +69,7 @@ def calc_modes_multi_bandes(self, stop_erreur, sturm, INFO, **args):
     dbg = False  # True si on souhaite faire un IMPR_CO intermediaire, False sinon
 
     # Recuperation parametres solveur lineaire
-    dSolveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+    dSolveur = SOLVEUR[0]
     for i in list(dSolveur.keys()):
         if dSolveur[i] is None:
             del dSolveur[i]

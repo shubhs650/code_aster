@@ -25,7 +25,7 @@ subroutine apinte_weight(elem_dime, nb_poin_inte, poin_inte, &
 !
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: nb_poin_inte
-    real(kind=8), intent(in) :: poin_inte(elem_dime-1, 16)
+    real(kind=8), intent(in) :: poin_inte(2, 16)
     real(kind=8), intent(out) :: inte_weight
 !
 ! --------------------------------------------------------------------------------------------------

@@ -21,33 +21,52 @@ subroutine aseihm(ds_thm, option, &
                   lSigm, lVari, lMatr, lVect, &
                   l_axi, ndim, nno1, nno2, &
                   npi, npg, dimuel, dimdef, dimcon, &
-                  nbvari, j_mater, iu, ip, ipf, &
+                  nbvari, iu, ip, ipf, &
                   iq, mecani, press1, press2, tempe, &
                   vff1, vff2, dffr2, time_prev, time_curr, &
                   deplm, deplp, sigm, sigp, varim, &
-                  varip, nomail, wref, geom, ang, &
+                  varip, wref, geom, &
                   compor, vectu, matuu, &
                   retcom)
 !
+    use Behaviour_module
+    use Behaviour_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/coeihm.h"
 #include "asterfort/matthm.h"
-#include "asterfort/thmGetParaInit.h"
 #include "asterfort/thmGetBehaviour.h"
-#include "asterfort/thmGetBehaviourVari.h"
 #include "asterfort/thmGetBehaviourChck.h"
+#include "asterfort/thmGetBehaviourVari.h"
+#include "asterfort/thmGetParaInit.h"
 !
+    type(THM_DS), intent(inout) :: ds_thm
     aster_logical, intent(in) :: lSigm, lVari, lMatr, lVect
-!......................................................................
+    integer(kind=8) :: ndim, nno1, nno2, npi, npg, dimuel, dimdef, dimcon, nbvari
+    integer(kind=8) :: mecani(8), press1(9), press2(9), tempe(5)
+    integer(kind=8) :: iu(3, 18), ip(2, 9), ipf(2, 2, 9), iq(2, 2, 9)
+    real(kind=8) :: vff1(nno1, npi), vff2(nno2, npi), dffr2(ndim-1, nno2, npi)
+    real(kind=8) :: wref(npi)
+    real(kind=8) :: time_prev, time_curr, deplm(dimuel), deplp(dimuel)
+    real(kind=8) :: geom(ndim, nno2)
+    real(kind=8) :: sigm(dimcon, npi), varim(nbvari, npi)
+    character(len=16) :: option
+    aster_logical :: l_axi
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    integer(kind=8) :: retcom
+    real(kind=8) :: vectu(dimuel), varip(nbvari, npi), sigp(dimcon, npi)
+    real(kind=8) :: matuu(dimuel*dimuel)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     BUT:  CALCUL DU VECTEUR FORCES INTERNES ELEMENTAIRE, DES
 !           CONTRAINTES GENERALISEES, DES VARIABLES INTERNES
 !           ET/OU DE L'OPERATEUR TANGENT ELEMENTAIRE
-!......................................................................
+!
+! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
 ! IN OPTION  : OPTION DE CALCUL
@@ -98,55 +117,32 @@ subroutine aseihm(ds_thm, option, &
 !                        : VAR. INT. 4 : OUVH
 ! --- POUR LA MECANIQUE  : VAR. INT. 1 : TLINT
 !
-!......................................................................
+! --------------------------------------------------------------------------------------------------
 !
-    type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8) :: ndim, nno1, nno2, npi, npg, dimuel, dimdef, dimcon, nbvari
-    integer(kind=8) :: mecani(8), press1(9), press2(9), tempe(5)
-    integer(kind=8) :: j_mater
-    integer(kind=8) :: iu(3, 18), ip(2, 9), ipf(2, 2, 9), iq(2, 2, 9)
-    real(kind=8) :: vff1(nno1, npi), vff2(nno2, npi), dffr2(ndim-1, nno2, npi)
-    real(kind=8) :: wref(npi), ang(24)
-    real(kind=8) :: time_prev, time_curr, deplm(dimuel), deplp(dimuel)
-    real(kind=8) :: geom(ndim, nno2)
-    real(kind=8) :: sigm(dimcon, npi), varim(nbvari, npi)
-    character(len=8) :: nomail
-    character(len=16) :: option
-    aster_logical :: l_axi
-    character(len=16), intent(in) :: compor(*)
-!
-! - VARIABLES SORTIE
-    integer(kind=8) :: retcom
-    real(kind=8) :: vectu(dimuel), varip(nbvari, npi), sigp(dimcon, npi)
-    real(kind=8) :: matuu(dimuel*dimuel)
-!
-! - VARIABLES LOCALES
+    integer(kind=8), parameter :: ksp = 1
     integer(kind=8) :: addeme, adcome, addep1, addep2, addete
     integer(kind=8) :: adcp11, adcp12, adcp21, adcp22, adcote, adcop1
     integer(kind=8) :: i, j, m, k, km, kpi, addlh1
     real(kind=8) :: q(dimdef, dimuel), res(dimdef), drde(dimdef, dimdef), wi
     real(kind=8) :: defgem(dimdef), defgep(dimdef), matri
 !
-
+! --------------------------------------------------------------------------------------------------
+!
     if (lSigm) then
         sigp = sigm
     end if
-!
+
 ! - Get parameters for behaviour
-!
     call thmGetBehaviour(compor, ds_thm)
-!
+
 ! - Get parameters for internal variables
-!
     call thmGetBehaviourVari(ds_thm)
-!
+
 ! - Some checks between behaviour and model
-!
     call thmGetBehaviourChck(ds_thm)
-!
+
 ! - Get initial parameters (THM_INIT)
-!
-    call thmGetParaInit(j_mater, ds_thm, l_check_=ASTER_TRUE)
+    call thmGetParaInit(ds_thm, l_check_=ASTER_TRUE)
 !
 ! =====================================================================
 ! --- DETERMINATION DES VARIABLES CARACTERISANT LE MILIEU ET OPTION ---
@@ -170,30 +166,22 @@ subroutine aseihm(ds_thm, option, &
     if (lVect) then
         vectu(:) = 0.d0
     end if
-!
     if (lMatr) then
         matuu(:) = 0.d0
     end if
-!
-! =====================================================================
-! --- BOUCLE SUR LES POINTS D'INTEGRATION -----------------------------
-! =====================================================================
-!
+
+! - Loop on integration points
     do kpi = 1, npi
-!
-! =====================================================================
-! --- CALCUL DE LA MATRICE DE PASSAGE DDL -> DEFORMATIONS GENERALISEES
-! =====================================================================
-!
-        call matthm(ds_thm, ndim, l_axi, nno1, nno2, dimuel, &
+
+! ----- Compute [B] matrix for generalized strains
+        call matthm(ds_thm, &
+                    ndim, l_axi, nno1, nno2, dimuel, &
                     dimdef, iu, ip, ipf, iq, &
                     addep1, &
                     addlh1, vff1(1, kpi), vff2(1, kpi), dffr2(1, 1, kpi), wref(kpi), &
-                    geom, ang, wi, q)
-!
-! =====================================================================
-! --- CALCUL DES DEFORMATIONS GENERALISEES E=QU -----------------------
-! =====================================================================
+                    geom, wi, q)
+
+! ----- Compute generalized strains
         do i = 1, dimdef
             defgem(i) = 0.d0
             defgep(i) = 0.d0
@@ -202,16 +190,15 @@ subroutine aseihm(ds_thm, option, &
                 defgep(i) = defgep(i)+q(i, j)*deplp(j)
             end do
         end do
-!
-!
-! =====================================================================
-! --- INTEGRATION DES LOIS DE COMPORTEMENT ----------------------------
-! =====================================================================
-!
-        call coeihm(ds_thm, option, &
+
+! ----- Set main parameters for behaviour (on point)
+        call behaviourSetParaPoin(kpi, ksp, ds_thm%ds_behaviour%BEHInteg)
+
+! ----- Integration of behaviour
+        call coeihm(ds_thm, &
                     lSigm, lVari, lMatr, lVect, &
-                    j_mater, &
-                    time_prev, time_curr, nomail, &
+                    option, &
+                    time_prev, time_curr, &
                     ndim, dimdef, dimcon, nbvari, &
                     addeme, adcome, &
                     addep1, adcp11, adcp12, addlh1, adcop1, &
@@ -247,7 +234,6 @@ subroutine aseihm(ds_thm, option, &
                 end do
             end do
         end if
-!
     end do
 !
 end subroutine

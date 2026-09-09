@@ -33,17 +33,17 @@ subroutine utpplg(nn, nc, p, sl, sg)
     real(kind=8), dimension(nn*nc, nn*nc) :: matsy1, matsy2, matas2
     real(kind=8), dimension(nn*nc, nn*nc) :: matsym, matasy
     real(kind=8), dimension(nn*nc, nn*nc) :: parsmg, parayg, matril, matrig
-    real(kind=8), dimension(78) :: parsym, parasy, vecsym, vecasy
+    real(kind=8), dimension(nn*nc*(nn*nc+1)/2) :: parsym, parasy, vecsym, vecasy
 !     ------------------------------------------------------------------
-!     PASSAGE D'UNE MATRICE TRIANGULAIRE ANTISYMETRIQUE DE NN*NC LIGNES
+!     PASSAGE D'UNE MATRICE PLEINE NONSYMETRIQUE DE NN*NC LIGNES
 !     DU REPERE LOCAL AU REPERE GLOBAL (3D)
 !     ------------------------------------------------------------------
 !IN   I   NN   NOMBRE DE NOEUDS
 !IN   I   N    NOMBRE DE NOEUDS
 !IN   I   NC   NOMBRE DE COMPOSANTES
 !IN   R   P    MATRICE DE PASSAGE 3D DE GLOBAL A LOCAL
-!IN   R   SL   NN*NC COMPOSANTES DE LA TRIANGULAIRE SL DANS LOCAL
-!OUT  R   SG   NN*NC COMPOSANTES DE LA TRIANGULAIRE SG DANS GLOBAL
+!IN   R   SL   NN*NC COMPOSANTES DE LA MATRICE PLEINE SL DANS LOCAL
+!OUT  R   SG   NN*NC COMPOSANTES DE LA MATRICE PLEINE SG DANS GLOBAL
 !     ------------------------------------------------------------------
 !
     nddl = nn*nc

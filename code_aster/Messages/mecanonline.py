@@ -102,11 +102,6 @@ Le champ %(k1)s fourni comme état initial a un modèle sous-jacent qui est diff
  Le pilotage de type PRED_ELAS nécessite ETA_PILO_R_MIN et ETA_PILO_R_MAX pour la loi %(k1)s
 """
     ),
-    61: _(
-        """
- Le pilotage de type DEFORMATION n'est pas disponible pour la modélisation %(k1)s
-"""
-    ),
     69: _(
         """
  Problème rencontré :

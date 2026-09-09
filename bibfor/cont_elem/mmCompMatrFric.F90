@@ -41,6 +41,8 @@ subroutine mmCompMatrFric(phase, l_large_slip, &
 #include "asterfort/mmPrepMatrFric.h"
 #include "asterfort/mmgtuu.h"
 #include "asterfort/mmmtex.h"
+#include "MeshTypes_type.h"
+#include "MeshTypes_type.h"
 #include "Contact_type.h"
 !
     character(len=4), intent(in) :: phase
@@ -49,7 +51,7 @@ subroutine mmCompMatrFric(phase, l_large_slip, &
     integer(kind=8), intent(in) :: nbdm, nbcps, ndexfr
     integer(kind=8), intent(in) :: ndim, nne, nnm, nnl
     real(kind=8), intent(in) :: wpg, jacobi, coefac, coefaf
-    real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2, 9), ddffm(3, 9)
+    real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: tau1(3), tau2(3), mprojt(3, 3)
     real(kind=8), intent(in) :: rese(3), nrese, lambda, coefff
     real(kind=8), intent(in) :: jeu, dlagrc

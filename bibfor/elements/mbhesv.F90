@@ -26,7 +26,7 @@ subroutine mbhesv(imate, kpg, fami, aini, metrini, metrdef, sigpk2, dsigpk2)
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     integer(kind=8) :: kpg, imate
     real(kind=8) :: aini(2, 2), metrini(2, 2)
     real(kind=8) :: metrdef(2, 2)

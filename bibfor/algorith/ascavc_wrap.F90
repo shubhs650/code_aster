@@ -25,7 +25,6 @@ subroutine ascavc_wrap(model, list_load, numedd, inst, vci, base)
     implicit none
 #include "asterfort/as_deallocate.h"
 #include "asterfort/ascavc.h"
-#include "asterfort/assert.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/dismoi.h"
 

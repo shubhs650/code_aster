@@ -24,6 +24,7 @@ subroutine xstjon(elrefp, ndim, joncno, jlsn, igeom, &
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
 #include "asterfort/conare.h"
 #include "asterfort/confac.h"
 #include "asterfort/provec.h"
@@ -31,6 +32,7 @@ subroutine xstjon(elrefp, ndim, joncno, jlsn, igeom, &
 #include "asterfort/tecael.h"
 #include "asterfort/xelrex.h"
 #include "asterfort/xnormv.h"
+#include "MeshTypes_type.h"
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, joncno, jlsn, nfiss, nfisc, nnops, fisco(*), igeom
     real(kind=8) :: txlsn(28)
@@ -51,8 +53,8 @@ subroutine xstjon(elrefp, ndim, joncno, jlsn, igeom, &
 !
     integer(kind=8) :: i, iadzi, iazk24, ft(12, 3), nbft, f(6, 8), nbf
     integer(kind=8) :: ar(12, 3), nbar, iar, nno, ino
-    real(kind=8) :: xref(81), u(3), v(3), w(3), norme, normal(3), cridist
-    real(kind=8) :: cref(ndim), ff(27), val
+    real(kind=8) :: xref(3*MT_NNOMAX3D), u(3), v(3), w(3), norme, normal(3), cridist
+    real(kind=8) :: cref(ndim), ff(MT_NNOMAX), val
     character(len=8) :: typma
     aster_logical :: jonc, arete, face
     blas_int :: b_incx, b_incy, b_n

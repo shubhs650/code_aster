@@ -24,7 +24,6 @@ subroutine cpysol(nomat, numddl, rsolu, debglo, vecpet)
 #include "asterf.h"
 #include "asterf_petsc.h"
 #include "asterfort/asmpi_info.h"
-#include "asterfort/assert.h"
 #include "asterfort/crnustd.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jeexin.h"

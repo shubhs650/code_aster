@@ -267,9 +267,9 @@ Ne renseignez pas le mot-clé COMPORTEMENT/%(k2)s, afin de sélectionner l'algor
         """La modélisation HHO n'est pas compatible ni avec DEFORMATION='SIMO_MIEHE' ni avec DEFORMATION='PETIT_REAC'."""
     ),
     50: _(
-        """La réactualisation de la géométrie (DEFORMATION='PETIT_REAC') est déconseillée pour les éléments de type DKT et DST.
+        """La réactualisation de la géométrie (DEFORMATION='PETIT_REAC') n'est pas disponible pour les éléments de type DKT et DST.
 Les grandes rotations ne sont pas modélisées correctement.
-En présence de grands déplacements et grandes rotations, il est préférable d'utiliser pour les modélisations type COQUE_3D ou COQUE_SOLIDE.
+En présence de grands déplacements et grandes rotations, il faut utiliser les modélisations COQUE_3D ou COQUE_SOLIDE.
 """
     ),
     51: _(
@@ -360,6 +360,11 @@ Il faut supprimer cette occurrence pour que le calcul fonctionne.
         """
 Vous utilisez un comportement non-incrémental (élasticité non-linéaire par exemple) avec un état initial.
 Cet état initial ne sera pas pris en compte.
+"""
+    ),
+    62: _(
+        """DEFORMATION='PETIT_REAC' n'est pas disponible pour les éléments de type COQUE_3D.
+Il faut utiliser DEFORMATION='GROT_GDEP'.
 """
     ),
     67: _(

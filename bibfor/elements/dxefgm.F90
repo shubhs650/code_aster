@@ -15,23 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxefgm(nomte, option, xyzl, pgl, depl, &
+!
+subroutine dxefgm(plateCara, plateOrie, &
+                  nomte, option, xyzl, depl, &
                   effg)
+!
+    use plate_type
     implicit none
+!
+#include "asterfort/assert.h"
 #include "asterfort/dkqedg.h"
 #include "asterfort/dktedg.h"
 #include "asterfort/dsqedg.h"
 #include "asterfort/dstedg.h"
 #include "asterfort/q4gedg.h"
 #include "asterfort/t3gedg.h"
-#include "asterfort/utmess.h"
-    real(kind=8) :: xyzl(3, 1), pgl(3, 1), depl(1), effg(1)
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8) :: xyzl(3, 1), depl(1), effg(1)
     character(len=16) :: nomte, option
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! --- EFFORTS GENERALISES D'ORIGINE MECANIQUE AUX POINTS DE CALCUL
 ! --- POUR LES ELEMENTS COQUES A FACETTES PLANES :
 ! --- DST, DKT, DSQ, DKQ, Q4G
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN  NOMTE        : NOM DU TYPE D'ELEMENT
 !     IN  OPTION       : NOM DE L'OPTION
 !     IN  XYZL(3,NNO)  : COORDONNEES DES CONNECTIVITES DE L'ELEMENT
@@ -41,31 +53,34 @@ subroutine dxefgm(nomte, option, xyzl, pgl, depl, &
 !     IN  DEPL(1)      : VECTEUR DES DEPLACEMENTS AUX NOEUDS
 !     OUT EFFG(1)      : EFFORTS  GENERALISES D'ORIGINE MECANIQUE
 !                        AUX POINTS DE CALCUL
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8) :: multic
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     if (nomte .eq. 'MEDKTR3 ' .or. nomte .eq. 'MEDKTG3 ') then
-        call dktedg(xyzl, option, pgl, depl, effg, &
+        call dktedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg, &
                     multic)
-!
     else if (nomte .eq. 'MEDSTR3 ') then
-        call dstedg(xyzl, option, pgl, depl, effg)
-!
+        call dstedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg)
     else if (nomte .eq. 'MEDKQU4 ' .or. nomte .eq. 'MEDKQG4 ') then
-        call dkqedg(xyzl, option, pgl, depl, effg)
-!
+        call dkqedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg)
     else if (nomte .eq. 'MEDSQU4 ') then
-        call dsqedg(xyzl, option, pgl, depl, effg)
-!
+        call dsqedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg)
     else if (nomte .eq. 'MEQ4QU4 ' .or. nomte .eq. 'MEQ4GG4') then
-        call q4gedg(xyzl, option, pgl, depl, effg)
-!
+        call q4gedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg)
     else if (nomte .eq. 'MET3TR3 ' .or. nomte .eq. 'MET3GG3') then
-        call t3gedg(xyzl, option, pgl, depl, effg)
-!
+        call t3gedg(plateCara, plateOrie, &
+                    xyzl, option, depl, effg)
     else
-        call utmess('F', 'ELEMENTS_14', sk=nomte)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end subroutine

@@ -34,7 +34,8 @@ subroutine xrige3(elrefp, ndim, coorse, igeom, he, &
 #include "asterfort/xkamat.h"
 #include "asterfort/xnbddl.h"
 #include "asterfort/iimatu.h"
-    integer(kind=8) :: ndim, igeom, nnop, npg, ddlh, ddlc, nfe, heavn(27, 5)
+#include "MeshTypes_type.h"
+    integer(kind=8) :: ndim, igeom, nnop, npg, ddlh, ddlc, nfe, heavn(MT_NNOMAX, 5)
     integer(kind=8) :: jstno, imate
     character(len=8) :: elrefp
     real(kind=8) :: basloc(9*nnop), he, coorse(*)
@@ -81,7 +82,7 @@ subroutine xrige3(elrefp, ndim, coorse, igeom, he, &
     real(kind=8) :: xg(ndim), xe(ndim), ff(nnop), jac
     real(kind=8) :: dfdi(nnop, ndim), pff(1+ddlh+nfe*ndim**2, nnop, ndim)
     real(kind=8) :: rac2
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX, 3, 3), dkdgl(MT_NNOMAX, 3, 3, 3), ka, mu
     data rac2/1.4142135623731d0/
 !--------------------------------------------------------------------
 !

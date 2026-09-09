@@ -16,44 +16,47 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
-                  cdg, inerti)
+subroutine dxiner(plateCara, &
+                  xyzGlob, rho, epais, &
+                  mass, cdg, inerti)
+!
+    use plate_type
+    use plateGeom_module, only: compCoorSystPara
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8prem.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
-    integer(kind=8) :: nnoe
-    real(kind=8) :: xyzg1(3, *), rho, epais, mass, cdg(*), inerti(*)
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    real(kind=8), intent(in) :: xyzGlob(3, *), rho, epais
+    real(kind=8), intent(out) :: mass, cdg(*), inerti(*)
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCULE LE CDG ET LA MASSE D'UNE MAILLE TRIA ET QUAD
 !
-!     ------------------------------------------------------------------
-    real(kind=8) :: jac, nx, ny, nz, sx(9, 9), sy(9, 9), sz(9, 9), zero
-    real(kind=8) :: pgl(3, 3), xyzl1(3, 4)
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: zero = 0.d0, undemi = 0.5d0, un = 1.d0, douze = 12.d0
+    real(kind=8) :: jac, nx, ny, nz, sx(9, 9), sy(9, 9), sz(9, 9)
+    real(kind=8) :: pgl(3, 3), xyzLoca(3, 4)
     real(kind=8) :: xyzg(3, 8), xyzl(3, 8)
     real(kind=8) :: igxx, igyy, igxy, matine(6), igzz
     real(kind=8) :: inert0(6)
-!
-! --- INITIALISATIONS :
-!     ---------------
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, idec, idfdx, idfdy, ino, ipg, ipoids
-    integer(kind=8) :: ivf, j, jdec, jgano, jno, k, kdec
-    integer(kind=8) :: ldec, ndim, nno, nnos, npg1
+    integer(kind=8) :: i, idec, idfdx, idfdy, ino, kpg, ipoids
+    integer(kind=8) :: ivf, j, jdec, jno, k, kdec
+    integer(kind=8) :: ldec, ndim, nno, npg
     real(kind=8) :: aire, axg, axggau, axl, axlgau, axx, axxgau
     real(kind=8) :: axy, axygau, ayg, ayggau, ayl, aylgau, ayy
-    real(kind=8) :: ayygau, azg, azggau, douze, roep, s1
-    real(kind=8) :: sigau, un, undemi, xg, xgau, xl, yg
+    real(kind=8) :: ayygau, azg, azggau, roep, s1
+    real(kind=8) :: sigau, xg, xgau, xl, yg
     real(kind=8) :: ygau, yl, zg
-!-----------------------------------------------------------------------
-    zero = 0.0d0
-    undemi = 0.5d0
-    un = 1.0d0
-    douze = 12.0d0
+!
+! --------------------------------------------------------------------------------------------------
 !
     aire = zero
     axg = zero
@@ -64,29 +67,20 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
     axx = zero
     ayy = zero
     axy = zero
-!
-! --- RECUPERATION DES DONNEES RELATIVES A L'INTEGRATION DES ELEMENTS
-! --- DE TYPE 'FACE6' ET 'FACE8' :
-!     -------------------------
-    call elrefe_info(fami='MASS', ndim=ndim, nno=nno, nnos=nnos, npg=npg1, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
+
+! - RECUPERATION DES DONNEES RELATIVES A L'INTEGRATION DES ELEMENTS
+    call elrefe_info(fami='MASS', ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfdx)
     idfdy = idfdx+1
 !
     roep = rho*epais
-!
-! --- DETERMINATION DE LA MATRICE DE PASSAGE DU REPERE GLOBAL
-! --- AU REPERE LOCAL :
-!     ---------------
-    if (nnoe .eq. 3) then
-        call dxtpgl(xyzg1, pgl)
-    else if (nnoe .eq. 4) then
-        call dxqpgl(xyzg1, pgl)
-    end if
-!
-! --- DETERMINATION DES COORDONNEES DES NOEUDS DANS LE REPERE LOCAL :
-!     -------------------------------------------------------------
-    call utpvgl(nnoe, 3, pgl, xyzg1, xyzl1)
-!
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, xyzGlob, pgl)
+
+! - Change coordinates of geometry
+    call utpvgl(nno, 3, pgl, xyzGlob, xyzLoca)
+
 ! --- AFFECTATION DES COORDONNEES DES NOEUDS DE L'ELEMENT FACE6
 ! --- OU FACE8 CORRESPONDANT A L'ELEMENT DE PLAQUE COURANT,
 ! --- XYZG DESIGNENT LES COORDONNNEES DES CONNECTIVITES DANS
@@ -96,10 +90,10 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
 !
 ! --- NOEUDS SOMMETS :
 !     --------------
-    do ino = 1, nnoe
+    do ino = 1, nno
         do k = 1, 3
-            xyzl(k, ino) = xyzl1(k, ino)
-            xyzg(k, ino) = xyzg1(k, ino)
+            xyzl(k, ino) = xyzLoca(k, ino)
+            xyzg(k, ino) = xyzGlob(k, ino)
         end do
     end do
 !
@@ -107,16 +101,16 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
 ! --- LA DEMI-SOMME DES COORDONNEES DES NOEUDS SOMMETS PUISQU'IL
 ! --- S'AGIT D'ELEMENTS DE PLAQUE :
 !     ---------------------------
-    do ino = 1, nnoe-1
+    do ino = 1, nno-1
         do k = 1, 3
-            xyzl(k, nnoe+ino) = undemi*(xyzl1(k, ino)+xyzl1(k, ino+1))
-            xyzg(k, nnoe+ino) = undemi*(xyzg1(k, ino)+xyzg1(k, ino+1))
+            xyzl(k, nno+ino) = undemi*(xyzLoca(k, ino)+xyzLoca(k, ino+1))
+            xyzg(k, nno+ino) = undemi*(xyzGlob(k, ino)+xyzGlob(k, ino+1))
         end do
     end do
 !
     do k = 1, 3
-        xyzl(k, nnoe+nnoe) = undemi*(xyzl1(k, 1)+xyzl1(k, nnoe))
-        xyzg(k, nnoe+nnoe) = undemi*(xyzg1(k, 1)+xyzg1(k, nnoe))
+        xyzl(k, nno+nno) = undemi*(xyzLoca(k, 1)+xyzLoca(k, nno))
+        xyzg(k, nno+nno) = undemi*(xyzGlob(k, 1)+xyzGlob(k, nno))
     end do
 !
 ! --- CALCUL DES PRODUITS VECTORIELS OMI X OMJ :
@@ -128,19 +122,16 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
             sz(ino, jno) = xyzg(1, ino)*xyzg(2, jno)-xyzg(2, ino)*xyzg(1, jno)
         end do
     end do
-!
-! --- BOUCLE SUR LES POINTS DE GAUSS :
-!     ------------------------------
-    do ipg = 1, npg1
-        kdec = (ipg-1)*nno*ndim
-        ldec = (ipg-1)*nno
+
+    do kpg = 1, npg
+        kdec = (kpg-1)*nno*ndim
+        ldec = (kpg-1)*nno
 !
         nx = zero
         ny = zero
         nz = zero
 !
-! ---   CALCUL DE LA NORMALE AU POINT DE GAUSS IPG :
-!       ------------------------------------------
+! ---   CALCUL DE LA NORMALE AU POINT DE GAUSS
         do i = 1, nno
             idec = (i-1)*ndim
             do j = 1, nno
@@ -152,16 +143,14 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
 !
             end do
         end do
-!
-! ---   LE JACOBIEN EST EGAL A LA NORME DE LA NORMALE :
-!       ---------------------------------------------
+
+! ---   LE JACOBIEN EST EGAL A LA NORME DE LA NORMALE
         jac = sqrt(nx*nx+ny*ny+nz*nz)
 !
-        sigau = zr(ipoids+ipg-1)*jac
+        sigau = zr(ipoids+kpg-1)*jac
 !
 ! ---   CALCUL DE AX, AY, AZ = SOMME(X.DS, Y.DS, Z.DS)
-! ---   DANS LE REPERE GLOBAL ET DANS LE REPERE LOCAL :
-!       ---------------------------------------------
+! ---   DANS LE REPERE GLOBAL ET DANS LE REPERE LOCAL
         axggau = zero
         ayggau = zero
         azggau = zero
@@ -170,24 +159,19 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
         aylgau = zero
 !
         do ino = 1, nno
-!
             axggau = axggau+zr(ivf+ldec+ino-1)*xyzg(1, ino)
             ayggau = ayggau+zr(ivf+ldec+ino-1)*xyzg(2, ino)
             azggau = azggau+zr(ivf+ldec+ino-1)*xyzg(3, ino)
-!
             axlgau = axlgau+zr(ivf+ldec+ino-1)*xyzl(1, ino)
             aylgau = aylgau+zr(ivf+ldec+ino-1)*xyzl(2, ino)
-!
+
         end do
-!
-! ---     CALCUL DE  AXX, AYY, AZZ, AXY
-! ---     = SOMME(X*X.DS, Y*Y.DS, Z*Z.DS, X*Y.DS) DANS LE REPERE LOCAL:
-!         ------------------------------------------------------------
+
+! ---   CALCUL DE  AXX, AYY, AZZ, AXY
+! ---     = SOMME(X*X.DS, Y*Y.DS, Z*Z.DS, X*Y.DS) DANS LE REPERE LOCAL
         xgau = zero
         ygau = zero
-!
         do ino = 1, nno
-!
             xgau = xgau+zr(ivf+ldec+ino-1)*xyzl(1, ino)
             ygau = ygau+zr(ivf+ldec+ino-1)*xyzl(2, ino)
         end do
@@ -220,17 +204,12 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
 !
     s1 = un/aire
 !
-! --- COORDONNEES DU CENTRE GEOMETRIQUE G DE L'ELEMENT
-! --- DANS LE REPERE GLOBAL.
-! --- XG = AX/S, YG = AY/S, ZG = AZ/S :
-!     -------------------------------
+! - COORDONNEES DU CENTRE GEOMETRIQUE G DE L'ELEMENT DANS LE REPERE GLOBAL.
     xg = s1*axg
     yg = s1*ayg
     zg = s1*azg
-!
-! --- COORDONNEES DU CENTRE GEOMETRIQUE G DE L'ELEMENT
-! --- DANS LE REPERE LOCAL :
-!     --------------------
+
+! - COORDONNEES DU CENTRE GEOMETRIQUE G DE L'ELEMENT DANS LE REPERE LOCAL
     xl = s1*axl
     yl = s1*ayl
 !
@@ -266,9 +245,8 @@ subroutine dxiner(nnoe, xyzg1, rho, epais, mass, &
     matine(4) = zero
     matine(5) = zero
     matine(6) = roep*igzz
-!
-! --- PASSAGE DU TENSEUR D'INERTIE DANS LE REPERE GLOBAL :
-!     --------------------------------------------------
+
+! - PASSAGE DU TENSEUR D'INERTIE DANS LE REPERE GLOBAL
     call utpslg(1, 3, pgl, matine, inert0)
 !
 !     REMULTIPLICATION PAR MOINS DES TERMES EXTRA_DIAGONAUX

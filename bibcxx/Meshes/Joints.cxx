@@ -31,6 +31,22 @@
 #include "Supervis/Exceptions.h"
 
 #include <algorithm>
+#include <chrono>
+
+struct HashStruct {
+    std::string nameRank;
+    std::string timeString;
+    bool operator==( const HashStruct & ) const = default;
+};
+
+template <>
+struct std::hash< HashStruct > {
+    std::size_t operator()( const HashStruct &s ) const noexcept {
+        std::size_t h1 = std::hash< std::string > {}( s.nameRank );
+        std::size_t h2 = std::hash< std::string > {}( s.timeString );
+        return h1 ^ ( h2 << 1 );
+    }
+};
 
 Joints::Joints() : Joints( DataStructureNaming::getNewName() ) {};
 
@@ -41,13 +57,15 @@ Joints::Joints( const std::string name )
       _send( JeveuxCollectionLong( getName() + ".SEND" ) ),
       _recv( JeveuxCollectionLong( getName() + ".RECV" ) ),
       _procGroupIds( JeveuxVectorShort( getName() + ".PGID" ) ),
-      _groupComm( JeveuxVectorLong( getName() + ".GCOM" ) ) {
+      _groupComm( JeveuxVectorLong( getName() + ".GCOM" ) ),
+      _hashContainer( JeveuxVectorChar24( getName() + ".HASH" ) ) {
     buildGroup();
 };
 
 void Joints::buildGroup() {
     _procGroupIds->deallocate();
     _groupComm->deallocate();
+    _hashContainer->deallocate();
     const auto aster_comm = aster_get_comm_world();
     const MPI_Comm comm = aster_comm->id;
     int rank, size;
@@ -70,10 +88,35 @@ void Joints::buildGroup() {
     }
     *_procGroupIds = idsInParent;
 
+    if ( groupProcIds.size() == 0 ) {
+        groupProcIds.push_back( rank );
+    }
     if ( _procGroupIds->exists() ) {
         _jointsMPIGroup = MPIGroupPtr( new MPIGroup() );
         _jointsMPIGroup->buildFromProcsVector( comm, groupProcIds );
         _groupComm->allocate( 1 );
+        std::string uniqueHash( 24, ' ' );
+        const auto grpSize = groupProcIds.size();
+        const auto minRank = *std::min_element( groupProcIds.begin(), groupProcIds.end() );
+
+        const auto now = std::chrono::system_clock::now().time_since_epoch();
+        const auto milliseconds =
+            std::chrono::duration_cast< std::chrono::milliseconds >( now ).count();
+        const auto timeStr( std::to_string( milliseconds ) );
+        HashStruct obj { getName() + std::to_string( rank ), timeStr };
+        // build unique identifier
+        uniqueHash = std::to_string( std::hash< HashStruct > {}( obj ) ) + std::string( 24, ' ' );
+        uniqueHash = uniqueHash.substr( 0, 24 );
+
+        const auto rankSearch = std::find( groupProcIds.begin(), groupProcIds.end(), rank );
+        bool rankFind = ( rankSearch != groupProcIds.end() ) ? true : false;
+        if ( grpSize > 1 && rankFind ) {
+            const aster_comm_t *curACommT = _jointsMPIGroup->getAsterCommunicator();
+            aster_comm_t *curAComm = const_cast< aster_comm_t * >( curACommT );
+            AsterMPI::bcast( uniqueHash, 0, curAComm );
+        }
+        _hashContainer->allocate( 1 );
+        ( *_hashContainer )[0] = uniqueHash;
         const auto tmp = MPI_Comm_c2f( _jointsMPIGroup->getCommunicator() );
         ( *_groupComm )[0] = tmp;
     }
@@ -96,6 +139,7 @@ const JeveuxVectorLong &Joints::getOppositeDomains() const {
 bool Joints::build() {
     _send->build();
     _recv->build();
+    buildGroup();
 
     return true;
 }

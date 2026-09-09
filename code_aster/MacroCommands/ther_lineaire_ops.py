@@ -187,7 +187,7 @@ def _createTimeStepper(stationary, args):
     logger.debug("<THER_LINEAIRE><TIMESTEPPER>: initial = %s", stepper.getInitial())
     logger.debug("<THER_LINEAIRE><TIMESTEPPER>: final = %s", stepper.getFinal())
     logger.debug("<THER_LINEAIRE><TIMESTEPPER>: size = %s", stepper.size())
-    logger.debug("<THER_LINEAIRE><TIMESTEPPER>: times = %s", stepper._times)
+    logger.debug("<THER_LINEAIRE><TIMESTEPPER>: times = %s", repr(stepper))
     return stepper
 
 
@@ -408,7 +408,7 @@ def ther_lineaire_ops(self, **args):
     logger.debug("<THER_LINEAIRE>: Start computation")
 
     phys_state.zeroInitialState(phys_pb)
-    phys_state.primal_curr = initial_field
+    phys_state.U = initial_field
     time_delta_prev = timeStepper.null_increment
 
     step_rank = 0
@@ -424,17 +424,12 @@ def ther_lineaire_ops(self, **args):
             linear_solver.factorize(matrix)
 
             rhs = _computeRhs(
-                disc_comp,
-                False,
-                phys_state.time_curr,
-                time_delta,
-                time_theta,
-                phys_state.primal_curr,
+                disc_comp, False, phys_state.time_curr, time_delta, time_theta, phys_state.U
             )
 
             # solve linear system
             diriBCs = disc_comp.getDirichletBC(phys_state.time_curr)
-            phys_state.primal_curr = linear_solver.solve(rhs, diriBCs)
+            phys_state.U = linear_solver.solve(rhs, diriBCs)
 
         _post_hooks(lin_operator, hooks)
         phys_state.commit()
@@ -480,12 +475,12 @@ def ther_lineaire_ops(self, **args):
             linear_solver.factorize(matrix)
 
         rhs = _computeRhs(
-            disc_comp, is_evol, phys_state.time_curr, time_delta, time_theta, phys_state.primal_curr
+            disc_comp, is_evol, phys_state.time_curr, time_delta, time_theta, phys_state.U
         )
 
         # solve linear system
         diriBCs = disc_comp.getDirichletBC(phys_state.time_curr)
-        phys_state.primal_curr = linear_solver.solve(rhs, diriBCs)
+        phys_state.U = linear_solver.solve(rhs, diriBCs)
 
         _post_hooks(lin_operator, hooks)
         phys_state.commit()

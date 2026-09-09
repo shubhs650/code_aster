@@ -15,60 +15,76 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine carelo(modele, carele, base, chrel1, chrel2, &
-                  chrel3)
-    implicit none
-#include "jeveux.h"
 !
+subroutine carelo(model, caraElem, jvBase, &
+                  chrel1, chrel2, chrel3)
+!
+    use coorSyst_module, only: setOrieFields
+    implicit none
+!
+#include "jeveux.h"
 #include "asterfort/calcul.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/megeom.h"
-    character(len=1) :: base
-    character(len=8) :: carele, modele
-    character(len=19) :: chrel1, chrel2, chrel3
-!     BUT:
+!
+    character(len=8), intent(in) :: caraElem, model
+    character(len=1), intent(in) :: jvBase
+    character(len=19), intent(in) :: chrel1, chrel2, chrel3
+!
+! --------------------------------------------------------------------------------------------------
+!
 !       CALCULER LES REPERES LOCAUX DES ELEMENTS
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN MODELE  : MODELE
 !     IN CARELE  : CARA_ELEM
 !     IN BASE    : G/V
 !     OUT CHREL1 : 1ER  VECTEUR DU REPERE LOCAL
 !     OUT CHREL2 : 2EME VECTEUR DU REPERE LOCAL
 !     OUT CHREL3 : 3EME VECTEUR DU REPERE LOCAL
-! ---------------------------------------------------------------------
-!     VARIABLES LOCALES
 !
-    character(len=8) :: lpain(4), lpaou(3)
-    character(len=19) :: ligrmo, lchin(4), lchou(3)
-    character(len=19) :: chgeom
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 3
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    character(len=19) :: modelLigrel, chgeom
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
 !
-    call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-!
-    call megeom(modele, chgeom)
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+
+! - Get geometry field
+    call megeom(model, chgeom)
+
+! - Set input fields
     lchin(1) = chgeom
     lpain(1) = 'PGEOMER'
-    lchin(2) = carele//'.CARORIEN'
-    lpain(2) = 'PCAORIE'
-    lchin(3) = carele//'.CARCOQUE'
-    lpain(3) = 'PCACOQU'
-    lchin(4) = carele//'.CARMASSI'
-    lpain(4) = 'PCAMASS'
-!
-    lchou(1) = chrel1
-    lpaou(1) = 'PREPLO1'
-    lchou(2) = chrel2
-    lpaou(2) = 'PREPLO2'
-    lchou(3) = chrel3
-    lpaou(3) = 'PREPLO3'
-    call calcul('C', 'REPERE_LOCAL', ligrmo, 4, lchin, &
-                lpain, 3, lchou, lpaou, base, &
-                'NON')
+    nbFieldIn = 1
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Set output fields
+    lchout(1) = chrel1
+    lpaout(1) = 'PREPLO1'
+    lchout(2) = chrel2
+    lpaout(2) = 'PREPLO2'
+    lchout(3) = chrel3
+    lpaout(3) = 'PREPLO3'
+
+! - Compute
+    call calcul('C', 'REPERE_LOCAL', modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'NON')
 !
     call jedema()
 end subroutine

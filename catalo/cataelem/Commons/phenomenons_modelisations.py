@@ -36,7 +36,7 @@ phen.add(
     "PLAQ_MITC",
     Modelisation(
         dim=(2, 3),
-        code="DKT",
+        code="MIT",
         attrs=(
             (AT.NBSIGM, "6"),
             (AT.TYPMOD, "C_PLAN"),
@@ -45,7 +45,7 @@ phen.add(
             (AT.EFGE, "OUI"),
             (AT.SOUS_POINT, "OUI"),
         ),
-        elements=((MT.QUAD9, EL.PLAQ_MITC),),
+        elements=((MT.QUAD9, EL.PLAQ_MITC_QUAD9), (MT.TRIA6, EL.PLAQ_MITC_TRIA6)),
     ),
 )
 
@@ -684,24 +684,6 @@ phen.add(
             (MT.PENTA15, EL.GVI_3D_PE15),
             (MT.PYRAM13, EL.GVI_3D_PY13),
             (MT.TETRA10, EL.GVI_3D_TE10),
-            (MT.QUAD8, EL.MECA_FACE8),
-            (MT.TRIA6, EL.MECA_FACE6),
-            (MT.SEG3, EL.MECA_ARETE3),
-        ),
-    ),
-)
-
-phen.add(
-    "3D_GVNO",
-    Modelisation(
-        dim=(3, 3),
-        code="3GN",
-        attrs=((AT.NBSIGM, "6"), (AT.TYPMOD, "3D"), (AT.TYPMOD2, "GDVARINO")),
-        elements=(
-            (MT.HEXA20, EL.MNVG_HEXA20),
-            (MT.PENTA15, EL.MNVG_PENTA15),
-            (MT.PYRAM13, EL.MNVG_PYRAM13),
-            (MT.TETRA10, EL.MNVG_TETRA10),
             (MT.QUAD8, EL.MECA_FACE8),
             (MT.TRIA6, EL.MECA_FACE6),
             (MT.SEG3, EL.MECA_ARETE3),
@@ -1422,6 +1404,16 @@ phen.add(
 )
 
 phen.add(
+    "3D_INTERF_POU",
+    Modelisation(
+        dim=(3, 3),
+        code="3SP",
+        attrs=((AT.TYPMOD, "3D"), (AT.TYPMOD2, "INTSOLPI"), (AT.INTERFACE, "OUI")),
+        elements=((MT.HEXA27, EL.MECA_S8P2),),
+    ),
+)
+
+phen.add(
     "3D_JOINT",
     Modelisation(
         dim=(3, 3),
@@ -2022,16 +2014,6 @@ phen.add(
             (AT.TYPMOD2, "GRADVARI"),
         ),
         elements=((MT.SEG3, EL.MEAXSE3), (MT.TRIA6, EL.GVI_AX_TR6), (MT.QUAD8, EL.GVI_AX_QU8)),
-    ),
-)
-
-phen.add(
-    "AXIS_GVNO",
-    Modelisation(
-        dim=(2, 2),
-        code="AGN",
-        attrs=((AT.AXIS, "OUI"), (AT.NBSIGM, "4"), (AT.TYPMOD, "AXIS"), (AT.TYPMOD2, "GDVARINO")),
-        elements=((MT.SEG3, EL.MEAXSE3), (MT.TRIA6, EL.MNAXTR6), (MT.QUAD8, EL.MNAXQS8)),
     ),
 )
 
@@ -2808,6 +2790,38 @@ phen.add(
 )
 
 phen.add(
+    "BARRE_2D_NL",
+    Modelisation(
+        dim=(1, 2),
+        code="B2D",
+        attrs=(
+            (AT.POUTRE, "OUI"),
+            (AT.TYPMOD, "1D"),
+            (AT.EFGE, "OUI"),
+            (AT.SIGM, "NON"),
+            (AT.STRX, "NON"),
+        ),
+        elements=((MT.SEG2, EL.MEBA2DSE2), (MT.SEG3, EL.MEBA2DSE3)),
+    ),
+)
+
+phen.add(
+    "BARRE_3D_NL",
+    Modelisation(
+        dim=(1, 3),
+        code="B3D",
+        attrs=(
+            (AT.POUTRE, "OUI"),
+            (AT.TYPMOD, "1D"),
+            (AT.EFGE, "OUI"),
+            (AT.SIGM, "NON"),
+            (AT.STRX, "NON"),
+        ),
+        elements=((MT.SEG2, EL.MEBA3DSE2), (MT.SEG3, EL.MEBA3DSE3)),
+    ),
+)
+
+phen.add(
     "CABLE",
     Modelisation(
         dim=(1, 3),
@@ -2832,6 +2846,7 @@ phen.add(
         attrs=(
             (AT.POUTRE, "OUI"),
             (AT.TYPMOD, "1D"),
+            (AT.TYPMOD2, "CABLE_GA"),
             (AT.EFGE, "OUI"),
             (AT.SIGM, "NON"),
             (AT.STRX, "NON"),
@@ -4434,21 +4449,6 @@ phen.add(
 )
 
 phen.add(
-    "D_PLAN_GVNO",
-    Modelisation(
-        dim=(2, 2),
-        code="DGN",
-        attrs=(
-            (AT.NBSIGM, "4"),
-            (AT.D_PLAN, "OUI"),
-            (AT.TYPMOD, "D_PLAN"),
-            (AT.TYPMOD2, "GDVARINO"),
-        ),
-        elements=((MT.SEG3, EL.MEPLSE3), (MT.TRIA6, EL.MNDPTR6), (MT.QUAD8, EL.MNDPQS8)),
-    ),
-)
-
-phen.add(
     "D_PLAN_HH2D",
     Modelisation(
         dim=(2, 2),
@@ -5581,7 +5581,7 @@ phen.add(
         dim=(2, 2),
         code="JH1",
         attrs=(
-            (AT.TYPMOD, "D_PLAN"),
+            (AT.TYPMOD, "PLAN"),
             (AT.TYPMOD2, "JHMS"),
             (AT.MECA, "OUI"),
             (AT.THER, "NON"),
@@ -6074,7 +6074,7 @@ phen.add(
         dim=(2, 2),
         code="HA1",
         attrs=(
-            (AT.FORMULATION, "HHO_LINE"),
+            (AT.FORMULATION, "HHO_MLINE"),
             (AT.AXIS, "OUI"),
             (AT.TYPMOD2, "HHO"),
             (AT.TYPMOD, "AXIS"),
@@ -6082,8 +6082,8 @@ phen.add(
             (AT.NBSIGM, "4"),
         ),
         elements=(
-            (MT.QUAD9, EL.MECA_AXQ9_HHO111),
-            (MT.TRIA7, EL.MECA_AXT7_HHO111),
+            (MT.QUAD9, EL.MECA_AXQ9_HHO121),
+            (MT.TRIA7, EL.MECA_AXT7_HHO121),
             (MT.SEG3, EL.MECA_2DAX_HHO1_F),
         ),
     ),
@@ -6096,7 +6096,7 @@ phen.add(
         dim=(2, 2),
         code="HA2",
         attrs=(
-            (AT.FORMULATION, "HHO_QUAD"),
+            (AT.FORMULATION, "HHO_MQUAD"),
             (AT.AXIS, "OUI"),
             (AT.TYPMOD2, "HHO"),
             (AT.TYPMOD, "AXIS"),
@@ -6104,8 +6104,8 @@ phen.add(
             (AT.NBSIGM, "4"),
         ),
         elements=(
-            (MT.QUAD9, EL.MECA_AXQ9_HHO222),
-            (MT.TRIA7, EL.MECA_AXT7_HHO222),
+            (MT.QUAD9, EL.MECA_AXQ9_HHO232),
+            (MT.TRIA7, EL.MECA_AXT7_HHO232),
             (MT.SEG3, EL.MECA_2DAX_HHO2_F),
         ),
     ),
@@ -6117,7 +6117,7 @@ phen.add(
         dim=(2, 2),
         code="HA3",
         attrs=(
-            (AT.FORMULATION, "HHO_CUBI"),
+            (AT.FORMULATION, "HHO_MCUBI"),
             (AT.AXIS, "OUI"),
             (AT.TYPMOD2, "HHO"),
             (AT.TYPMOD, "AXIS"),
@@ -6125,8 +6125,8 @@ phen.add(
             (AT.NBSIGM, "4"),
         ),
         elements=(
-            (MT.QUAD9, EL.MECA_AXQ9_HHO333),
-            (MT.TRIA7, EL.MECA_AXT7_HHO333),
+            (MT.QUAD9, EL.MECA_AXQ9_HHO343),
+            (MT.TRIA7, EL.MECA_AXT7_HHO343),
             (MT.SEG3, EL.MECA_2DAX_HHO3_F),
         ),
     ),
@@ -6138,7 +6138,7 @@ phen.add(
         dim=(2, 2),
         code="HA3",
         attrs=(
-            (AT.FORMULATION, "HHO_QUAR"),
+            (AT.FORMULATION, "HHO_MQUAR"),
             (AT.AXIS, "OUI"),
             (AT.TYPMOD2, "HHO"),
             (AT.TYPMOD, "AXIS"),
@@ -6146,8 +6146,8 @@ phen.add(
             (AT.NBSIGM, "4"),
         ),
         elements=(
-            (MT.QUAD9, EL.MECA_AXQ9_HHO444),
-            (MT.TRIA7, EL.MECA_AXT7_HHO444),
+            (MT.QUAD9, EL.MECA_AXQ9_HHO454),
+            (MT.TRIA7, EL.MECA_AXT7_HHO454),
             (MT.SEG3, EL.MECA_2DAX_HHO4_F),
         ),
     ),
@@ -6547,7 +6547,7 @@ phen.add(
 phen.add(
     "COQUE_AXIS",
     Modelisation(
-        dim=(1, 2), code="CQA", attrs=((AT.COQUE, "OUI"),), elements=((MT.SEG3, EL.THCASE3),)
+        dim=(1, 2), code="CTA", attrs=((AT.COQUE, "OUI"),), elements=((MT.SEG3, EL.THCASE3),)
     ),
 )
 

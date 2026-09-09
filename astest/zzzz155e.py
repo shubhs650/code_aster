@@ -30,9 +30,32 @@ rank = MPI.ASTER_COMM_WORLD.Get_rank()
 size = MPI.ASTER_COMM_WORLD.Get_size()
 
 filename = "zzzz155e.med"
+filename2 = "zzzz155e.23"
 
 mesh = CA.ParallelMesh()
-mesh.readMedFile(filename)
+mesh.readMedFile(filename, deterministic=True)
+mesh.printMedFile("test.med", mode="w")
+
+mesh2 = CA.ParallelMesh()
+mesh2.readMedFile(filename2, deterministic=True)
+# overwrite file
+mesh2.printMedFile("test.med", mode="w")
+
+mesh2 = DEFI_GROUP(reuse=mesh2, MAILLAGE=mesh2, CREA_GROUP_NO=_F(TOUT_GROUP_MA="OUI"))
+
+vol1 = set(mesh2.getNodes("VOL1"))
+vol2 = set(mesh2.getNodes("VOL2"))
+vol3 = vol2 - vol1
+mesh2.setGroupOfNodes("VOL3", list(vol3))
+
+modRed = AFFE_MODELE(
+    MAILLAGE=mesh2, AFFE=(_F(GROUP_MA=("VOL1", "VOL2"), PHENOMENE="MECANIQUE", MODELISATION="3D"),)
+)
+
+f1 = CA.FieldOnNodesReal(modRed)
+f1.setValues(0.0)
+
+f1Red = f1.restrict(["DX"], ["VOL3"])
 
 model = AFFE_MODELE(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="3D"))
 

@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine betimp(BEHinteg, &
+subroutine betimp(BEHInteg, &
                   nmat, mater, sig, vind, vinf, &
                   nseui1, nseui2, nseui3, nseui4, &
                   sige, sigd)
@@ -60,7 +60,7 @@ subroutine betimp(BEHinteg, &
 !       IN  SIGE   :  CONTRAINTE ELASTIQUE
 !       IN  SIGD   :  CONTRAINTE A L'INSTANT PRECEDENT
 !       ----------------------------------------------------------------
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: nmat, nseui4, ifm, niv
     integer(kind=8) :: nseui1, nseui2, nseui3
     real(kind=8) :: pc, pt, sig(6), sige(6), sigd(6), dev(6), lc
@@ -108,7 +108,7 @@ subroutine betimp(BEHinteg, &
 ! --- LONGUEUR CARACTERISTIQUE POUR LOI BETON LC
 !
     if (mater(9, 2) .lt. zero) then
-        lc = BEHinteg%behavESVA%behavESVAGeom%elemSize1
+        lc = BEHInteg%behavESVA%behavESVAGeom%elemSize1
     else
         lc = mater(9, 2)
     end if
@@ -127,7 +127,7 @@ subroutine betimp(BEHinteg, &
 !
     pc = vind(1)
     pt = vind(2)
-    call betfpp(BEHinteg, &
+    call betfpp(BEHInteg, &
                 mater, nmat, pc, pt, &
                 3, fc, ft, dfcdlc, dftdlt, &
                 kuc, kut, ke)
@@ -186,7 +186,7 @@ subroutine betimp(BEHinteg, &
 !
     pc = vinf(1)
     pt = vinf(2)
-    call betfpp(BEHinteg, &
+    call betfpp(BEHInteg, &
                 mater, nmat, pc, pt, &
                 3, fc, ft, dfcdlc, dftdlt, &
                 kuc, kut, ke)

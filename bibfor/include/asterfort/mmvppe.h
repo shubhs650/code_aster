@@ -31,12 +31,14 @@ interface
                       kappa    ,&
                       taujeu1  , taujeu2  ,&
                       dnepmait1, dnepmait2)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: ndim, nne, nnm, nnl, nbdm
         integer(kind=8), intent(in) :: i_reso_geom
         aster_logical, intent(in) :: l_large_slip
         real(kind=8), intent(in) :: jeusup
         real(kind=8), intent(in) :: tau1(3), tau2(3)
-        real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2,9), ddffm(3,9)
+        real(kind=8), intent(in) :: ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), ffl(MT_NNOMAX2D)
+        real(kind=8), intent(in) :: dffm(2,MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
         real(kind=8), intent(out) :: jeu, djeu(3)
         real(kind=8), intent(out) :: djeut(3), dlagrc, dlagrf(2)
         real(kind=8), intent(out) :: norm(3), mprojt(3, 3)

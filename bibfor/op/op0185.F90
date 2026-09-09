@@ -42,6 +42,9 @@ subroutine op0185()
 !
     typinf = cotsti(typsup)
     ASSERT(typinf .ne. 'INCONNU')
+    if (typinf .eq. 'LIST_INST') then
+        typinf = ' '
+    end if
     call copisd(typinf, 'G', sd1, sd2)
 !
     call jedema()

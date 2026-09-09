@@ -37,6 +37,7 @@ subroutine tgveri(option, carcri, compor, nno, geom, &
 #include "asterfort/wkvect.h"
 #include "asterfort/tgveri_use.h"
 #include "asterfort/Behaviour_type.h"
+#include "MeshTypes_type.h"
 #include "blas/dcopy.h"
     aster_logical :: matsym
     character(len=16) :: option, compor(COMPOR_SIZE)
@@ -73,7 +74,7 @@ subroutine tgveri(option, carcri, compor, nno, geom, &
     integer(kind=8) :: nvari, ncont
     integer(kind=8) :: i, j, k, indi, nvar, init, pos, iuse
     real(kind=8) :: v, epsilo, fp, fm, pertu, maxdep, maxgeo
-    real(kind=8) :: matper(3*27*3*27)
+    real(kind=8) :: matper(3*MT_NNOMAX*3*MT_NNOMAX)
     blas_int :: b_incx, b_incy, b_n
     save init, pos
     data matra/'PYTHON.TANGENT.MATA'/

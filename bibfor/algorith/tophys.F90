@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine tophys(dplmod, xgene, xphys)
+subroutine tophys(dplmod, xgene, xphys, nbddl_)
     implicit none
 !    Convert into the physical basis some data in generalized coordinates
 !
@@ -27,18 +27,24 @@ subroutine tophys(dplmod, xgene, xphys)
     real(kind=8), pointer  :: dplmod(:)
     real(kind=8), pointer  :: xgene(:)
     real(kind=8), intent(out) :: xphys(:)
+    integer(kind=8), intent(in), optional :: nbddl_
 !-----------------------------------------------------------------------
-    integer(kind=8) :: i, j, nbmode
+    integer(kind=8) :: i, j, nbmode, nbddl
 !-----------------------------------------------------------------------
-    nbmode = size(dplmod)/3
+    if (present(nbddl_)) then
+        nbddl = nbddl_
+    else
+        nbddl = 3
+    end if
+    nbmode = size(dplmod)/nbddl
 
-    do j = 1, 3
+    do j = 1, nbddl
         xphys(j) = 0.d0
     end do
 !
-    do j = 1, 3
+    do j = 1, nbddl
         do i = 1, nbmode
-            xphys(j) = xphys(j)+dplmod((i-1)*3+j)*xgene(i)
+            xphys(j) = xphys(j)+dplmod((i-1)*nbddl+j)*xgene(i)
         end do
     end do
 end subroutine

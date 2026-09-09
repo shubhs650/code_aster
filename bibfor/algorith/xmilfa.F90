@@ -32,6 +32,7 @@ subroutine xmilfa(elrefp, ndim, ndime, geom, cnset, &
 #include "asterfort/xnormv.h"
 #include "asterfort/xxmmvd.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: ip1, ip2, pm2, cnset(*), nnose, it, ndim, ndime
     real(kind=8) :: pinref(*), geom(*), milfa(ndim), ainter(*)
@@ -61,9 +62,9 @@ subroutine xmilfa(elrefp, ndim, ndime, geom, cnset, &
 !
     integer(kind=8) :: a1, a2, a, b, d, ib, ar(12, 3), nbar, ia, id
     integer(kind=8) :: i, j, zxain, nno
-    real(kind=8) :: xref(81), ptb(ndime), ptd(ndime), newpt(ndim)
+    real(kind=8) :: xref(3*MT_NNOMAX3D), ptb(ndime), ptd(ndime), newpt(ndim)
     real(kind=8) :: pta(ndime), cosu, cosv, cosw
-    real(kind=8) :: ff(27), t1(ndime), t2(ndime), sinu, rbid, t3(ndime)
+    real(kind=8) :: ff(MT_NNOMAX), t1(ndime), t2(ndime), sinu, rbid, t3(ndime)
     aster_logical :: courbe
     blas_int :: b_incx, b_incy, b_n
 !

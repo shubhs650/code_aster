@@ -19,6 +19,7 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine cfcarm(noma, defico, newgeo, posmai, typmai,&
                       nummai, alias, nommai, ndim, nnomam,&
                       coorma)
@@ -32,6 +33,6 @@ interface
         character(len=8) :: nommai
         integer(kind=8) :: ndim
         integer(kind=8) :: nnomam
-        real(kind=8) :: coorma(27)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
     end subroutine cfcarm
 end interface

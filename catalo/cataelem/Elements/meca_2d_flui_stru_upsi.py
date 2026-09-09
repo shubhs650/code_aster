@@ -86,9 +86,34 @@ class MEFSSE2PSI(Element):
             para_in=((SP.PGEOMER, LC.EGEOM2D), (SP.PMATERC, LC.CMATERC)),
             para_out=((SP.PMATUUR, MMATUUR),),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
-        OP.TOU_INI_ELGA(te=99, para_out=((OP.TOU_INI_ELGA.PGEOM_R, LC.EGGAU2D),)),
-        OP.TOU_INI_ELNO(te=99, para_out=((OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELGA(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELGA.PGEOM_R, LC.EGGAU2D),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
     )
 
 

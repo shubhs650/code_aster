@@ -17,8 +17,8 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W0104,C1505
 !
-subroutine lc0015(BEHinteg, &
-                  option, angmas, typmod, &
+subroutine lc0015(BEHInteg, &
+                  option, typmod, &
                   fami, kpg, ksp, ndim, jvMaterCode, &
                   compor, carcri, timePrev, timeCurr, &
                   neps, epsm, deps, &
@@ -39,9 +39,8 @@ subroutine lc0015(BEHinteg, &
 #include "asterfort/nzedga.h"
 #include "asterfort/nzisfw.h"
 !
-    type(Behaviour_Integ), intent(in):: BEHinteg
+    type(Behaviour_Integ), intent(in):: BEHInteg
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(3)
     character(len=8), intent(in) :: typmod(2)
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg, ksp, ndim, jvMaterCode
@@ -78,7 +77,7 @@ subroutine lc0015(BEHinteg, &
     metaRela = compor(META_RELA)
     metaGlob = compor(META_GLOB)
     call metaGetMechanism(metaRela, metaGlob, l_hard_kine=l_hard_kine)
-    ! call notAnisot(angmas)
+
     ! call onlyIsoPara(typmod)
 
     if (l_hard_kine) then

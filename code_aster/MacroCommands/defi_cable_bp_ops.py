@@ -85,7 +85,7 @@ def defi_cable_bp_ops(
     # RECUPERATION DES INFOS DONNEES PAR LE MOT-CLE "CONE"
 
     if CONE:
-        dCONE = CONE[0].cree_dict_valeurs(CONE[0].mc_liste)
+        dCONE = CONE[0]
         for i in list(dCONE.keys()):
             if dCONE[i] is None:
                 del dCONE[i]

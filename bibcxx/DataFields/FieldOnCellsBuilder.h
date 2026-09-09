@@ -84,7 +84,8 @@ FieldOnCellsPtrBuilder( const FiniteElementDescriptorPtr FEDesc, const std::stri
             carele = carael->getName();
         }
 
-        auto _DCEL = std::make_shared< SimpleFieldOnCellsLong >( cham_elem->getName() );
+        auto _DCEL =
+            std::make_shared< SimpleFieldOnCellsLong >( cham_elem->getName(), FEDesc->getMesh() );
         CALLO_CESVAR( carele, comporName, cham_elem->getDescription()->getName(),
                       _DCEL->getName() );
         dcel = _DCEL->getName();
@@ -96,6 +97,7 @@ FieldOnCellsPtrBuilder( const FiniteElementDescriptorPtr FEDesc, const std::stri
         CalculPtr calcul = std::make_unique< Calcul >( "INI_STRX" );
         calcul->setModel( carael->getModel() );
         calcul->addElementaryCharacteristicsField( carael );
+        calcul->addOrientationField( carael );
         calcul->addOutputField( "PSTRX_R", cham_elem );
         calcul->compute();
     } else {

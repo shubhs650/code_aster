@@ -1180,7 +1180,8 @@ contains
                             loadNume, &
                             loadPreObjectZ, loadLigrelZ, &
                             nbFieldInGene, lpain, lchin, &
-                            jvBase, resuElemZ, matrElemZ)
+                            jvBase, resuElemZ, matrElemZ, &
+                            lMove_, timeMapMoveZ_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         aster_logical, intent(in) :: l_stat
@@ -1193,14 +1194,24 @@ contains
         character(len=1), intent(in) :: jvBase
         character(len=*), intent(inout) :: resuElemZ
         character(len=*), intent(in) :: matrElemZ
+        aster_logical, optional, intent(in) :: lMove_
+        character(len=*), optional, intent(in) :: timeMapMoveZ_
 ! ----- Local
         integer(kind=8), parameter :: nbInputField = 0
         character(len=24), parameter :: inputLoadField(2) = &
                                         (/'                        ', &
                                           '                        '/)
         integer(kind=8) :: indxNeutType
+        aster_logical :: lMove
+        character(len=24) :: timeMapMove
 !   ------------------------------------------------------------------------------------------------
 !
+        lMove = ASTER_FALSE
+        timeMapMove = " "
+        if (present(lMove_)) then
+            lMove = lMove_
+            timeMapMove = timeMapMoveZ_
+        end if
         do indxNeutType = 1, LOAD_NEUT_NBTYPE
             call compLoadMatrType(l_stat, theta, &
                                   modelZ, timeMapZ, &
@@ -1208,7 +1219,8 @@ contains
                                   loadPreObjectZ, loadLigrelZ, &
                                   nbInputField, inputLoadField, &
                                   nbFieldInGene, lpain, lchin, &
-                                  jvBase, resuElemZ, matrElemZ)
+                                  jvBase, resuElemZ, matrElemZ, &
+                                  lMove, timeMapMove)
         end do
 !
 !   ------------------------------------------------------------------------------------------------
@@ -1243,7 +1255,8 @@ contains
                                 loadPreObjectZ, loadLigrelZ, &
                                 nbInputField, inputLoadFieldZ, &
                                 nbFieldInGene, lpain, lchin, &
-                                jvBase, resuElemZ, matrElemZ)
+                                jvBase, resuElemZ, matrElemZ, &
+                                lMove_, timeMapMoveZ_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         aster_logical, intent(in) :: l_stat
@@ -1258,6 +1271,8 @@ contains
         character(len=1), intent(in) :: jvBase
         character(len=*), intent(inout) :: resuElemZ
         character(len=*), intent(in) :: matrElemZ
+        aster_logical, optional, intent(in) :: lMove_
+        character(len=*), optional, intent(in) :: timeMapMoveZ_
 ! ----- Local
         integer(kind=8), parameter ::  nbFieldOut = 1
         character(len=8), parameter :: lpaout(nbFieldOut) = 'PMATTTR'
@@ -1267,10 +1282,18 @@ contains
         character(len=16) :: loadMatrOption
         character(len=24) :: loadField(2), ligrelToUse
         integer(kind=8) :: nbFieldIn
+        aster_logical :: lMove
+        character(len=24) :: timeMapMove
 !   ------------------------------------------------------------------------------------------------
 !
         ASSERT(indxNeutType .ge. 1)
         ASSERT(indxNeutType .le. LOAD_NEUT_NBTYPE)
+        lMove = ASTER_FALSE
+        timeMapMove = " "
+        if (present(lMove_)) then
+            lMove = lMove_
+            timeMapMove = timeMapMoveZ_
+        end if
 
 ! ----- Detect thermal load
         call getNeumLoadType(indxNeutType, &
@@ -1295,7 +1318,8 @@ contains
                                 timeMapZ, &
                                 loadField(1), &
                                 loadIsFunc, &
-                                nbFieldInGene, nbFieldIn, lpain, lchin)
+                                nbFieldInGene, nbFieldIn, lpain, lchin, &
+                                lMove, timeMapMove)
 
 ! --------- Get LIGREL to use
             call getLigrelToUse(indxNeutType, &
@@ -1303,7 +1327,7 @@ contains
                                 ligrelToUse)
 
 ! --------- Generate new RESU_ELEM name
-            newnom = resuElemZ(10:16)
+            newnom = resuElemZ(12:16)
             call gcnco2(newnom)
             resuElemZ(10:16) = newnom(2:8)
             lchout(1) = resuElemZ
@@ -1314,7 +1338,6 @@ contains
                         nbFieldIn, lchin, lpain, &
                         nbFieldOut, lchout, lpaout, &
                         jvBase, 'OUI')
-
             if (.not. l_stat) then
                 call multResuElem(lchout(1), theta)
             end if
@@ -1375,7 +1398,8 @@ contains
                               timeMapZ, &
                               loadFieldZ, &
                               loadIsFunc, &
-                              nbFieldInGene, nbFieldIn, lpain, lchin)
+                              nbFieldInGene, nbFieldIn, lpain, lchin, &
+                              lMove_, timeMapMoveZ_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         integer(kind=8), intent(in) :: indxNeutType
@@ -1385,8 +1409,19 @@ contains
         integer(kind=8), intent(in) :: nbFieldInGene
         integer(kind=8), intent(out) :: nbFieldIn
         character(len=*), intent(inout) :: lpain(LOAD_NEUT_NBMAXIN), lchin(LOAD_NEUT_NBMAXIN)
+        aster_logical, optional, intent(in) :: lMove_
+        character(len=*), optional, intent(in) :: timeMapMoveZ_
+! ----- Locals
+        aster_logical :: lMove
+        character(len=24) :: timeMapMove
 !   ------------------------------------------------------------------------------------------------
 !
+        lMove = ASTER_FALSE
+        timeMapMove = " "
+        if (present(lMove_)) then
+            lMove = lMove_
+            timeMapMove = timeMapMoveZ_
+        end if
         ASSERT(indxNeutType .ge. 1 .and. indxNeutType .le. LOAD_NEUT_NBTYPE)
         nbFieldIn = nbFieldInGene
 
@@ -1409,6 +1444,11 @@ contains
         nbFieldIn = nbFieldIn+1
         lpain(nbFieldIn) = 'PINSTR'
         lchin(nbFieldIn) = timeMapZ
+        if (indxNeutType .eq. LOAD_NEUT_ECH_PAROI) then
+            if (lMove) then
+                lchin(nbFieldIn) = timeMapMove
+            end if
+        end if
 
         ASSERT(nbFieldIn .le. LOAD_NEUT_NBMAXIN)
 !

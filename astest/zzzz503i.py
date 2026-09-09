@@ -92,7 +92,7 @@ test.assertEqual(numeDDL.getPhysicalQuantity(), "DEPL_R")
 #                                      [8, 9, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15]][rank])
 
 # -------------------------------------------
-# MatrixScaler verification section
+# MatrixScaler verification section - No context manager
 
 from code_aster.LinearAlgebra import MatrixScaler
 import numpy as np
@@ -114,7 +114,7 @@ nt = PETSc.NormType.NORM_INFINITY
 test.assertAlmostEqual(matrAsse.norm("NORM_INFINITY"), 1527.7777777794063)
 test.assertAlmostEqual(matrAsse.toPetsc().norm(nt), norm(matrAsse.toNumpy(), np.inf))
 
-S.computeScaling(matrAsse, verbose=True)
+S.computeScaling(matrAsse, merge_dof=[["DX", "DY", "DZ"], ["DRX", "DRY", "DRZ"]], verbose=True)
 S.scaleMatrix(matrAsse)
 
 test.assertAlmostEqual(matrAsse.toPetsc().norm(nt), 1.0977480819609067)
@@ -130,6 +130,28 @@ S.unscaleSolution(scaled_sol)
 
 test.assertAlmostEqual(scaled_sol.toPetsc().norm(nt), ref_sol.toPetsc().norm(nt))
 
+# MatrixScaler verification section - with context manager
+rhs = CA.FieldOnNodesReal(numeDDL)
+rhs.setValues(1)
+
+mySolver = CA.MumpsSolver()
+mySolver.factorize(matrAsse)
+
+ref_sol = mySolver.solve(rhs)
+
+with MatrixScaler.matrixScaler(
+    matrAsse,
+    rhs,
+    merge_dof=[["DX", "DY", "DZ"], ["DRX", "DRY", "DRZ"]],
+    scaling_type=True,
+    verbose=True,
+) as scaling:
+    mySolver.factorize(matrAsse)
+    scaled_sol = mySolver.solve(rhs)
+    # The solution *must* be unscaled !
+    scaling.unscaleSolution(scaled_sol)
+
+test.assertAlmostEqual(scaled_sol.toPetsc().norm(nt), ref_sol.toPetsc().norm(nt))
 
 test.printSummary()
 

@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+#include "MeshTypes_type.h"
 !
 !
 interface
@@ -23,6 +23,6 @@ interface
          character(len=8) :: elrefp
          integer(kind=8) :: nno
          integer(kind=8), optional :: ndime
-         real(kind=8) :: xref(81)
+         real(kind=8) :: xref(3*MT_NNOMAX3D)
     end subroutine xelrex
 end interface

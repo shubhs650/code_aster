@@ -16,19 +16,33 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-!
-!
 interface
-    subroutine ngpipe(typilo, npg, neps, nddl, b,&
-                      ni2ldc, typmod, mat, compor, lgpg,&
-                      ddlm, sigm, vim, ddld, ddl0,&
-                      ddl1, tau, etamin, etamax, copilo)
-        character(len=8) :: typmod(*)
-        character(len=16) :: typilo, compor(*)
-        integer(kind=8) :: npg, neps, nddl, mat, lgpg
-        real(kind=8) :: ddlm(nddl), ddld(nddl), ddl0(nddl), ddl1(nddl)
-        real(kind=8) :: sigm(0:neps*npg-1), vim(lgpg, npg), tau
-        real(kind=8) :: copilo(5, npg), etamin, etamax
-        real(kind=8) :: b(neps, npg, nddl), ni2ldc(0:neps*npg-1)
-    end subroutine ngpipe
+    subroutine ngpipe(BEHInteg, typmod, compor, ndim, npg, neps, nddl, b, ni2ldc, &
+                ddlm, ddld, ddl0, ddl1, lgpg, sigm_user, vim, &
+                dtau, etamin, etamax, copilo)
+
+        use Behaviour_type
+#include "asterfort/Behaviour_type.h"
+
+        type(Behaviour_Integ) :: BEHInteg
+        character(len=8) :: typmod(2)
+        character(len=16) ::compor(COMPOR_SIZE)
+        integer(kind=8), intent(in):: ndim
+        integer(kind=8), intent(in):: npg
+        integer(kind=8), intent(in):: neps
+        integer(kind=8), intent(in):: nddl
+        real(kind=8), intent(in) :: b(neps, npg, nddl)
+        real(kind=8), intent(in) :: ni2ldc(neps, npg)
+        real(kind=8), intent(in) :: ddlm(nddl)
+        real(kind=8), intent(in) :: ddld(nddl)
+        real(kind=8), intent(in) :: ddl0(nddl)
+        real(kind=8), intent(in) :: ddl1(nddl)
+        integer(kind=8), intent(in) :: lgpg
+        real(kind=8), intent(in) :: sigm_user(neps, npg)
+        real(kind=8), intent(in) :: vim(lgpg, npg)
+        real(kind=8), intent(in) :: dtau
+        real(kind=8), intent(in) :: etamin
+        real(kind=8), intent(in) :: etamax
+        real(kind=8), intent(out) :: copilo(5, npg)
+    end subroutine
 end interface

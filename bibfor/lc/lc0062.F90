@@ -15,28 +15,31 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0062(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
+                  instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
 !
-!
-! aslint: disable=W1504,W0104
     implicit none
+!
+#include "asterfort/assert.h"
 #include "asterfort/mxwell.h"
-    integer(kind=8) :: imate, ndim, kpg, ksp, codret, icomp, nvi
-    real(kind=8) :: crit(*), angmas(3)
+!
+    integer(kind=8) :: imate, ndim, kpg, ksp, codret, nvi
+
     real(kind=8) :: instam, instap
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigm(6), sigp(6)
-    real(kind=8) :: vim(*), vip(*)
+    real(kind=8) :: vim(nvi), vip(nvi)
     real(kind=8) :: dsidep(6, 6)
-    character(len=16) :: compor(*), option
+    character(len=16) ::  option
     character(len=8) :: typmod(*)
     character(len=*) :: fami
 !
+    ASSERT(nvi .eq. 1)
     call mxwell(fami, kpg, ksp, ndim, typmod, &
                 imate, instam, instap, deps, sigm, option, &
                 sigp, vip, dsidep, codret)

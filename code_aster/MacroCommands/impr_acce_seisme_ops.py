@@ -169,7 +169,7 @@ def impr_acce_seisme_ops(self, **args):
     asv_refe = []
     if NOCI_REFE is not None:
         for j in NOCI_REFE:
-            noci_refe.append(j.cree_dict_valeurs(j.mc_liste))
+            noci_refe.append(j)
 
         if noci_refe[0]["AMAX"] is not None:
             amaxi_refe = noci_refe[0]["AMAX"]

@@ -17,9 +17,6 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
-from code_aster.CodeCommands import *
-from code_aster.Objects import *
-
 POURSUITE(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"))
 
 MA1 = RELOC_RESU_1.getMesh()

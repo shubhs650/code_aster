@@ -282,6 +282,20 @@ subroutine dismlg(questi, nomobz, repi, repkz, ierd)
                             repk = 'NON'
                         end if
 
+                    else if (questi .eq. 'EXI_HHO_MLINE') then
+                        if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
+                            lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
+                            call teattr('C', 'FORMULATION', formul, iret, typel=elemTypeName)
+                            if (formul .eq. 'HHO_MLINE') then
+                                repk = 'OUI'
+                                go to 99
+                            else
+                                repk = 'NON'
+                            end if
+                        else
+                            repk = 'NON'
+                        end if
+
                     else if (questi .eq. 'EXI_HHO_CSTE') then
                         if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
                             lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
@@ -310,6 +324,20 @@ subroutine dismlg(questi, nomobz, repi, repkz, ierd)
                             repk = 'NON'
                         end if
 
+                    else if (questi .eq. 'EXI_HHO_MQUAD') then
+                        if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
+                            lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
+                            call teattr('C', 'FORMULATION', formul, iret, typel=elemTypeName)
+                            if (formul .eq. 'HHO_MQUAD') then
+                                repk = 'OUI'
+                                go to 99
+                            else
+                                repk = 'NON'
+                            end if
+                        else
+                            repk = 'NON'
+                        end if
+
                     else if (questi .eq. 'EXI_HHO_CUBI') then
                         if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
                             lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
@@ -324,11 +352,39 @@ subroutine dismlg(questi, nomobz, repi, repkz, ierd)
                             repk = 'NON'
                         end if
 
+                    else if (questi .eq. 'EXI_HHO_MCUBI') then
+                        if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
+                            lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
+                            call teattr('C', 'FORMULATION', formul, iret, typel=elemTypeName)
+                            if (formul .eq. 'HHO_MCUBI') then
+                                repk = 'OUI'
+                                go to 99
+                            else
+                                repk = 'NON'
+                            end if
+                        else
+                            repk = 'NON'
+                        end if
+
                     else if (questi .eq. 'EXI_HHO_QUAR') then
                         if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
                             lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
                             call teattr('C', 'FORMULATION', formul, iret, typel=elemTypeName)
                             if (formul .eq. 'HHO_QUAR') then
+                                repk = 'OUI'
+                                go to 99
+                            else
+                                repk = 'NON'
+                            end if
+                        else
+                            repk = 'NON'
+                        end if
+
+                    else if (questi .eq. 'EXI_HHO_MQUAR') then
+                        if (lteatt('TYPMOD2', 'HHO', typel=elemTypeName) .or. &
+                            lteatt('TYPMOD2', 'HHO_GRAD', typel=elemTypeName)) then
+                            call teattr('C', 'FORMULATION', formul, iret, typel=elemTypeName)
+                            if (formul .eq. 'HHO_MQUAR') then
                                 repk = 'OUI'
                                 go to 99
                             else

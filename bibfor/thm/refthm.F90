@@ -17,7 +17,8 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
+subroutine refthm(ds_thm, &
+                  ndim, l_axi, fnoevo, &
                   mecani, press1, press2, tempe, second, &
                   nno, nnos, npi, npg, elem_coor, &
                   dt, dimdef, dimcon, dimuel, jv_poids, &
@@ -26,7 +27,7 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
                   nddl_2nd, b, r, vectu)
 !
     use THM_type
-!
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "asterf_types.h"
@@ -35,11 +36,9 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 #include "asterfort/assert.h"
 #include "asterfort/fnothm.h"
 #include "asterfort/r8inir.h"
-#include "asterfort/terefe.h"
 #include "blas/daxpy.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8), intent(in) :: jv_mater
     integer(kind=8), intent(in) :: ndim
     aster_logical, intent(in) :: l_axi
     aster_logical, intent(in) :: fnoevo
@@ -56,6 +55,7 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
     real(kind=8), intent(out) :: b(dimdef, dimuel)
     real(kind=8), intent(out) :: r(1:dimdef+1)
     real(kind=8), intent(out) :: vectu(dimuel)
+    type(RESI_REFE):: refe
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -86,7 +86,7 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 ! In  dimuel           : number of dof for element
 ! In  jv_poids         : JEVEUX adress for weight of Gauss points (linear shape functions)
 ! In  jv_poids2        : JEVEUX adress for weight of Gauss points (quadratic shape functions)
-! In  jv_func          : JEVEUX adress for shape functions (linear shape functions)
+! In  jv_func          : JEVEUX adress for shape functions (linear shape funcjvMaterctions)
 ! In  jv_func2         : JEVEUX adress for shape functions (quadratic shape functions)
 ! In  jv_dfunc         : JEVEUX adress for derivative of shape functions (linear shape functions)
 ! In  jv_dfunc2        : JEVEUX adress for derivative of shape functions (quadratic shape functions)
@@ -128,34 +128,37 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 !
 ! - Check which *_REFE exist
 !
+    call refe%Init(type_elem)
+
     if (ds_thm%ds_elem%l_dof_meca) then
-        call terefe('SIGM_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('SIGM')
         indx_vale_refe = 1
         list_vale_refe(indx_vale_refe) = vale_refe
     end if
     if (ds_thm%ds_elem%l_dof_pre1) then
-        call terefe('FLUX_HYD1_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('FLUXHYD1')
         indx_vale_refe = 2
         list_vale_refe(indx_vale_refe) = vale_refe
     end if
     if (ds_thm%ds_elem%l_dof_pre2) then
-        call terefe('FLUX_HYD2_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('FLUXHYD2')
         indx_vale_refe = 3
         list_vale_refe(indx_vale_refe) = vale_refe
     end if
     if (ds_thm%ds_elem%l_dof_ther) then
-        call terefe('FLUX_THER_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('FLUXTHER')
         indx_vale_refe = 4
         list_vale_refe(indx_vale_refe) = vale_refe
     end if
     if (ds_thm%ds_elem%l_dof_2nd) then
-        call terefe('LAGR_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('LAGR')
         indx_vale_refe = 5
         list_vale_refe(indx_vale_refe) = vale_refe
-        call terefe('EPSI_REFE', type_elem, vale_refe)
+        vale_refe = refe%GetRef('EPSI')
         indx_vale_refe = 6
         list_vale_refe(indx_vale_refe) = vale_refe
     end if
+    call refe%Check()
 !
 ! - Compute
 !
@@ -198,7 +201,8 @@ subroutine refthm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 ! --------- Compute
             if (vale_refe .ne. r8vide()) then
                 sigtm(i_dim+dimcon*(kpi-1)) = vale_refe
-                call fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
+                call fnothm(ds_thm, &
+                            ndim, l_axi, fnoevo, &
                             mecani, press1, press2, tempe, second, &
                             nno, nnos, npi, npg, elem_coor, &
                             dt, dimdef, dimcon, dimuel, jv_poids, &

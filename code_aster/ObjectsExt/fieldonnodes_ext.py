@@ -41,43 +41,12 @@ from libaster import (
 )
 
 from ..Objects import PythonBool
-from ..Objects.Serialization import InternalStateBuilder
 from ..Utilities import MPI, ExecutionParameter, PETSc, config, force_list, injector, SharedTmpdir
-from ..Utilities import medcoupling as medc
-
-
-class FieldOnNodesStateBuilder(InternalStateBuilder):
-    """Class that returns the internal state of a *FieldOnNodes*."""
-
-    def save(self, field):
-        """Return the internal state of a *Result* to be pickled.
-
-        Arguments:
-            field (*FieldOnNodes*): The *FieldOnNodes* object to be pickled.
-
-        Returns:
-            *InternalStateBuilder*: The internal state itself.
-        """
-        super().save(field)
-        self._st["dofd"] = field.getDescription()
-        return self
-
-    def restore(self, field):
-        """Restore the *DataStructure* content from the previously saved internal
-        state.
-
-        Arguments:
-            field (*DataStructure*): The *DataStructure* object to be restored.
-        """
-        super().restore(field)
-        if self._st["dofd"]:
-            field.setDescription(self._st["dofd"])
 
 
 @injector(FieldOnNodesReal)
 class ExtendedFieldOnNodesReal:
     cata_sdj = "SD.sd_champ.sd_cham_no_class"
-    internalStateBuilder = FieldOnNodesStateBuilder
 
     def restrict(self, cmps=[], groupsOfNodes=[], same_rank=None):
         """Return a new field restricted to the list of components and groups of nodes given
@@ -326,19 +295,16 @@ class ExtendedFieldOnNodesReal:
 @injector(FieldOnNodesLong)
 class ExtendedFieldOnNodesLong:
     cata_sdj = "SD.sd_champ.sd_cham_no_class"
-    internalStateBuilder = FieldOnNodesStateBuilder
 
 
 @injector(FieldOnNodesChar8)
 class ExtendedFieldOnNodesChar8:
     cata_sdj = "SD.sd_champ.sd_cham_no_class"
-    internalStateBuilder = FieldOnNodesStateBuilder
 
 
 @injector(FieldOnNodesComplex)
 class ExtendedFieldOnNodesComplex:
     cata_sdj = "SD.sd_champ.sd_cham_no_class"
-    internalStateBuilder = FieldOnNodesStateBuilder
 
     def restrict(self, cmps=[], groupsOfNodes=[], same_rank=None):
         """Return a new field restricted to the list of components and groups of nodes given

@@ -17,17 +17,20 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine comp_read_typmod(mesh, v_model_elem, elem_type, &
-                                keywf, i_comp, rela_comp, type_cpla_in, &
-                                model_mfront, type_cpla_out)
+    subroutine comp_read_typmod(mesh, modelCell, &
+                                cellAffeJv, lAllCellAffe, nbCellAffe, &
+                                relaComp, relaCompPY, &
+                                factorKeyword, iFactorKeyword, &
+                                modelMGIS, typeCpla)
         character(len=8), intent(in) :: mesh
-        integer(kind=8), pointer :: v_model_elem(:)
-        integer(kind=8), intent(in) :: elem_type
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
-        character(len=16), intent(in) :: rela_comp
-        character(len=16), intent(in) :: type_cpla_in
-        integer(kind=8), intent(out) :: model_mfront
-        character(len=16), intent(out) :: type_cpla_out
+        integer(kind=8), pointer :: modelCell(:)
+        character(len=24), intent(in) :: cellAffeJv
+        aster_logical, intent(in) :: lAllCellAffe
+        integer(kind=8), intent(in):: nbCellAffe
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
+        character(len=16), intent(in) :: relaComp, relaCompPY
+        integer(kind=8), intent(out) :: modelMGIS
+        character(len=16), intent(out) :: typeCpla
     end subroutine comp_read_typmod
 end interface

@@ -16,16 +16,19 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmEvalGravity(j_mater, time, grav)
+subroutine thmEvalGravity(ds_thm, time, gravity)
 !
+    use Behaviour_type
+    use MaterialPara_type
+    use THM_type
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvala.h"
 !
-    integer(kind=8), intent(in) :: j_mater
+    type(THM_DS), intent(in) :: ds_thm
     real(kind=8), intent(in) :: time
-    real(kind=8), intent(out) :: grav(3)
+    real(kind=8), intent(out) :: gravity(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -35,42 +38,42 @@ subroutine thmEvalGravity(j_mater, time, grav)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  j_mater          : coded material address
+! In  ds_thm           : datastructure for THM
 ! In  time             : current time
-! Out grav             : gravity
+! Out gravity          : gravity
 !
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: grav_func(1)
-    integer(kind=8), parameter :: nb_resu = 3
-    integer(kind=8) :: icodre(nb_resu)
-    real(kind=8) :: resu_vale(nb_resu)
-    character(len=16), parameter :: resu_name(nb_resu) = (/'PESA_X', 'PESA_Y', 'PESA_Z'/)
+    integer(kind=8), parameter :: nbProp = 3
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'PESA_X', 'PESA_Y', 'PESA_Z'/)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    grav(:) = 0.d0
-    resu_vale(:) = 0.d0
-!
+    gravity = 0.d0
+    propVale = 0.d0
+
 ! - Get parameters
-!
-    call rcvala(j_mater, ' ', 'THM_DIFFU', &
+    call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
                 0, ' ', [0.0d0], &
-                nb_resu, resu_name, resu_vale, &
-                icodre, 0, nan='NON')
-!
+                nbProp, propName, propVale, &
+                propCode, 0, nan='NON')
+
 ! - Get function
-!
-    call rcvala(j_mater, ' ', 'THM_DIFFU', &
+    call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
                 1, 'INST', [time], &
                 1, 'PESA_MULT', grav_func, &
-                icodre(1), 0, nan='NON')
-    if (icodre(1) .eq. 1) then
+                propCode(1), 0, nan='NON')
+    if (propCode(1) .eq. 1) then
         grav_func(1) = 1.d0
     end if
 !
-    grav(1) = grav_func(1)*resu_vale(1)
-    grav(2) = grav_func(1)*resu_vale(2)
-    grav(3) = grav_func(1)*resu_vale(3)
+    gravity(1) = grav_func(1)*propVale(1)
+    gravity(2) = grav_func(1)*propVale(2)
+    gravity(3) = grav_func(1)*propVale(3)
 !
 end subroutine

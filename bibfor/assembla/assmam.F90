@@ -302,9 +302,9 @@ subroutine assmam(jvBase, matrAsseZ, &
 
 !   -- allocation des objets .NUMLOX et .POSDDX:
 !   ----------------------------------------------
-!   50 est suppose etre le + gd nombre de noeuds d'une maille
+!   70 est suppose etre le + gd nombre de noeuds d'une maille
 !      standard (jusqu'a present : 27 (hexa27))
-    nbnomx = max(nbnoss, 50)
+    nbnomx = max(nbnoss, 70)
     call wkvect('&&ASSMAM.NUMLO1', 'V V I', 2*nbnomx, jnulo1)
     call wkvect('&&ASSMAM.POSDD1', 'V V I', nbnomx*nmxcmp, jposd1)
 !

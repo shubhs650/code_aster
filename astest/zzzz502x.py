@@ -54,6 +54,13 @@ solverList = [_F(METHODE="MUMPS"), _F(METHODE="PETSC", RESI_RELA=1e-12, PRE_COND
 
 dblLagList = ["OUI", "NON"]
 
+LINST = DEFI_LIST_REEL(VALE=(0.0, 1.0))
+
+LINST2 = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=LINST), ECHEC=_F(SUBD_NIVEAU=5, SUBD_PAS=10))
+
+LINEDEPL = DEFI_FONCTION(NOM_PARA="INST", ABSCISSE=(0, 1), ORDONNEE=(1, 1))
+
+
 for dblLag in dblLagList:
     for solver in solverList:
 
@@ -97,6 +104,29 @@ for dblLag in dblLagList:
                 test.assertAlmostEqual(d[-1], 0)
             else:
                 test.assertAlmostEqual(g[-1], -1)
+
+        if dblLag == "OUI":
+            pRESUSNL = STAT_NON_LINE(
+                MODELE=pmodel,
+                CHAM_MATER=pMATE,
+                EXCIT=(_F(CHARGE=pload0), _F(CHARGE=pload1), _F(CHARGE=pload2), _F(CHARGE=pload3)),
+                INCREMENT=_F(LIST_INST=LINST2),
+                COMPORTEMENT=(_F(DEFORMATION="PETIT", RELATION="ELAS", TOUT="OUI"),),
+                SOLVEUR=solver,
+            )
+
+            g = pRESUSNL.getField("DEPL", 1).restrict(["DX"], ["GAUCHE"]).getValues()
+
+            d = pRESUSNL.getField("DEPL", 1).restrict(["DX"], ["DROITE"]).getValues()
+
+            if nProc == 1:
+                test.assertAlmostEqual(d[-1], 0)
+                test.assertAlmostEqual(g[-1], -1)
+            else:
+                if rank == 0:
+                    test.assertAlmostEqual(d[-1], 0)
+                else:
+                    test.assertAlmostEqual(g[-1], -1)
 
 
 # --------------------------------------------------------------
@@ -146,6 +176,29 @@ for dblLag in dblLagList:
                 test.assertAlmostEqual(b[-1], -1)
             else:
                 test.assertAlmostEqual(h[-1], 0)
+
+        if dblLag == "OUI":
+            pRESUSNL = STAT_NON_LINE(
+                MODELE=pmodel,
+                CHAM_MATER=pMATE,
+                EXCIT=(_F(CHARGE=pload0), _F(CHARGE=pload1), _F(CHARGE=pload2), _F(CHARGE=pload3)),
+                INCREMENT=_F(LIST_INST=LINST2),
+                COMPORTEMENT=(_F(DEFORMATION="PETIT", RELATION="ELAS", TOUT="OUI"),),
+                SOLVEUR=solver,
+            )
+
+            b = pRESUSNL.getField("DEPL", idx).restrict(["DY"], ["BAS"]).getValues()
+
+            h = pRESUSNL.getField("DEPL", idx).restrict(["DY"], ["HAUT"]).getValues()
+
+            if nProc == 1:
+                test.assertAlmostEqual(b[-1], -1)
+                test.assertAlmostEqual(h[-1], 0)
+            else:
+                if rank == 0:
+                    test.assertAlmostEqual(b[-1], -1)
+                else:
+                    test.assertAlmostEqual(h[-1], 0)
 
 test.printSummary()
 

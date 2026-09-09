@@ -22,15 +22,16 @@ interface
                       elem_slav_nbnode, elem_slav_coor, elem_slav_code,&
                       poin_inte       , inte_weight   , nb_poin_inte  ,&
                       inte_neigh_     , ierror_)
+#include "MeshTypes_type.h"
         real(kind=8), intent(in) :: proj_tole
         integer(kind=8), intent(in) :: elem_dime
-        real(kind=8), intent(in) :: elem_slav_coor(3,9)
+        real(kind=8), intent(in) :: elem_slav_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_slav_nbnode
         character(len=8), intent(in) :: elem_slav_code
-        real(kind=8), intent(in) :: elem_mast_coor(3,9)
+        real(kind=8), intent(in) :: elem_mast_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_mast_nbnode
         character(len=8), intent(in) :: elem_mast_code
-        real(kind=8), intent(out) :: poin_inte(elem_dime-1,16)
+        real(kind=8), intent(out) :: poin_inte(2,16)
         real(kind=8), intent(out) :: inte_weight
         integer(kind=8), intent(out) :: nb_poin_inte
         integer(kind=8), optional, intent(inout) :: inte_neigh_(4)

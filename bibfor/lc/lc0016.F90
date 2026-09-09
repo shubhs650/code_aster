@@ -15,39 +15,34 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine lc0016(fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
-                  nvi, dsidep, codret)
+! aslint: disable=W0104
+!
+subroutine lc0016(fami, kpg, ksp, ndim, jvMaterCode, &
+                  instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
 !
     implicit none
 !
 #include "asterfort/lcdrpr.h"
-!
-! aslint: disable=W1504,W0104
+#include "asterfort/Behaviour_type.h"
 !
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
+    integer(kind=8), intent(in) :: jvMaterCode
+    real(kind=8), intent(in) :: instam, instap
     real(kind=8), intent(in) :: epsm(*)
     real(kind=8), intent(in) :: deps(*)
     real(kind=8), intent(in) :: sigm(*)
-    real(kind=8), intent(in) :: vim(*)
-    character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
-    real(kind=8), intent(out) :: sigp(*)
-    real(kind=8), intent(out) :: vip(*)
-    character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: nvi
+    real(kind=8), intent(in) :: vim(nvi)
+    character(len=16), intent(in) :: option
+    real(kind=8), intent(out) :: sigp(*)
+    real(kind=8), intent(out) :: vip(nvi)
+    character(len=8), intent(in) :: typmod(*)
     real(kind=8), intent(out) :: dsidep(*)
     integer(kind=8), intent(out) :: codret
 !
@@ -59,7 +54,8 @@ subroutine lc0016(fami, kpg, ksp, ndim, imate, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call lcdrpr(fami, typmod, option, imate, compor, sigm, &
+
+    call lcdrpr(fami, typmod, option, jvMaterCode, sigm, &
                 deps, vim, &
                 vip, sigp, dsidep, codret)
 !

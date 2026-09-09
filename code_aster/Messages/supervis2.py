@@ -88,7 +88,8 @@ Langue des messages : %(k8)s
     10: {
         "message": _(
             """Version de Python : %(k1)s
-Version de NumPy : %(k2)s"""
+Version de NumPy : %(k2)s
+Version de MEDCoupling : %(k3)s"""
         ),
         "flags": "CENTER",
     },

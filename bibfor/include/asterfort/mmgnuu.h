@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
+#include "MeshTypes_type.h"
 interface
     subroutine mmgnuu(ndim  , nne   , nnm   ,&
                       wpg   , ffe   , ffm   , dffm  ,&
@@ -27,7 +28,7 @@ interface
                       h     , hah   , &
                       matree, matrmm, matrem, matrme)
         integer(kind=8), intent(in) :: ndim, nnm, nne
-        real(kind=8), intent(in) :: wpg, ffe(9), ffm(9), dffm(2, 9)
+        real(kind=8), intent(in) :: wpg, ffe(9), ffm(9), dffm(2, MT_NNOMAX2D)
         real(kind=8), intent(in) :: jacobi, coefac, jeu, dlagrc
         real(kind=8), intent(in) :: mprojn(3,3)
         real(kind=8), intent(in) :: mprt1n(3,3), mprt2n(3,3), mprnt1(3,3), mprnt2(3,3)

@@ -36,6 +36,7 @@ subroutine copnor(noma, ds_contact, posmai, ksi1, &
 #include "asterfort/mmtann.h"
 #include "asterfort/mmtypm.h"
 #include "asterfort/normev.h"
+#include "MeshTypes_type.h"
 !
 !
     integer(kind=8) :: posmai
@@ -75,7 +76,7 @@ subroutine copnor(noma, ds_contact, posmai, ksi1, &
     integer(kind=8) :: jdecno, posno, nummai
     integer(kind=8) :: ino, idim, iret
     integer(kind=8) :: ndim, nno
-    real(kind=8) :: vecta1(27), vecta2(27), vecnor(27)
+    real(kind=8) :: vecta1(3, MT_NNOMAX2D), vecta2(3, MT_NNOMAX2D), vecnor(3, MT_NNOMAX2D)
     real(kind=8) :: norm(3), noor
     character(len=8) :: alias
 !
@@ -110,20 +111,20 @@ subroutine copnor(noma, ds_contact, posmai, ksi1, &
         call apvect(sdappa, 'APPARI_NOEUD_TAU1', posno, tau1)
         call apvect(sdappa, 'APPARI_NOEUD_TAU2', posno, tau2)
         do idim = 1, 3
-            vecta1(3*(ino-1)+idim) = tau1(idim)
-            vecta2(3*(ino-1)+idim) = tau2(idim)
+            vecta1(idim, ino) = tau1(idim)
+            vecta2(idim, ino) = tau2(idim)
         end do
     end do
 !
 ! --- VECTEURS NORMAUX LISSES AUX NOEUDS DE LA MAILLE (DEJA NORMES)
 !
     do ino = 1, nno
-        call mmnorm(ndim, vecta1(3*(ino-1)+1), vecta2(3*(ino-1)+1), vecnor(3*(ino-1)+1), noor)
+        call mmnorm(ndim, vecta1(1:3, ino), vecta2(1:3, ino), vecnor(1:3, ino), noor)
     end do
 !
 ! --- NORMALE EN CE POINT PAR INTERPOLATION A PARTIR DES VALEURS NODALES
 !
-    call mmcoor(alias, nno, ndim, vecnor, ksi1, &
+    call mmcoor(alias, nno, vecnor, ksi1, &
                 ksi2, norm)
 !
 ! --- NORMALISATION DE LA NORMALE

@@ -18,6 +18,8 @@
 !
 subroutine te0417(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystCO3D
     implicit none
 !
 #include "jeveux.h"
@@ -35,53 +37,57 @@ subroutine te0417(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: xi(3, 9), xg(3), ix2(3), ix1x2, ix1x3, ix2x3, matine(6)
-    real(kind=8) :: vecta(9, 2, 3), vectn(9, 3), vectpt(9, 2, 3)
-    integer(kind=8) :: i, intsn, intsx, j, jgeom, k, l1
+    real(kind=8) :: nodeGeom(3, 9), xg(3), ix2(3), ix1x2, ix1x3, ix2x3, matine(6)
+    integer(kind=8) :: i, intsn, intsx, j, jvGeom, k, l1
     integer(kind=8) :: l2, lcastr, lzi, lzr, nb1, nb2, npgsn
     real(kind=8) :: epais, epais2, epais3, rho, rnormc, volume, wgt
     real(kind=8) :: xx, xy, xz, yy, yz, zz
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystCO3D(nomte, jvGeom, &
+                          plateCara, plateOrie)
+
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
     nb1 = zi(lzi-1+1)
     nb2 = zi(lzi-1+2)
     npgsn = zi(lzi-1+4)
     call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
 !
-    call jevech('PGEOMER', 'L', jgeom)
-!
     do i = 1, nb2
-        xi(1, i) = zr(jgeom+3*(i-1))
-        xi(2, i) = zr(jgeom+3*(i-1)+1)
-        xi(3, i) = zr(jgeom+3*(i-1)+2)
+        nodeGeom(1, i) = zr(jvGeom+3*(i-1))
+        nodeGeom(2, i) = zr(jvGeom+3*(i-1)+1)
+        nodeGeom(3, i) = zr(jvGeom+3*(i-1)+2)
     end do
-!
-    call dxroep(rho, epais)
+
+! - Get plate parameters
+    call dxroep(plateCara, rho, epais)
     epais2 = epais*epais
     epais3 = epais*epais2
 !
     call jevech('PMASSINE', 'E', lcastr)
-!
-    call vectan(nb1, nb2, xi, zr(lzr), vecta, &
-                vectn, vectpt)
-!
     volume = 0.d0
-!
-    do k = 1, 3
-        xg(k) = 0.d0
-        ix2(k) = 0.d0
-    end do
+    xg = 0.d0
+    ix2 = 0.d0
+
     ix1x2 = 0.d0
     ix1x3 = 0.d0
     ix2x3 = 0.d0
 !
     do intsn = 1, npgsn
-!
 !     RNORMC EST LE DETERMINANT DE LA SURFACE MOYENNE
-!
-        call vectci(intsn, nb1, xi, zr(lzr), rnormc)
+        call vectci(intsn, nb1, nodeGeom, zr(lzr), rnormc)
 !
 !     WGT= ZR(9-1+INTE) * ZR(LZR+126-1+INTSN)
 !        =    1.D0      * ZR(LZR+126-1+INTSN)
@@ -99,31 +105,36 @@ subroutine te0417(option, nomte)
 !
         do j = 1, nb1
             do k = 1, 3
-                xg(k) = xg(k)+epais*wgt*zr(l2+j)*xi(k, j)
+                xg(k) = xg(k)+epais*wgt*zr(l2+j)*nodeGeom(k, j)
             end do
 !
 !     MOMENTS ET PRODUITS D'INERTIE
 !
             do i = 1, nb1
                 do k = 1, 3
-                    ix2(k) = ix2(k)+epais*wgt*zr(l2+j)*xi(k, j)*zr(l2+i)* &
-                             xi(k, i)+epais3/12.d0*wgt*zr(l2+j)*vectn(j, k)*zr( &
-                             l2+i)*vectn(i, k)
+                    ix2(k) = ix2(k)+ &
+                             epais*wgt* &
+                             zr(l2+j)*nodeGeom(k, j)*zr(l2+i)*nodeGeom(k, i)+ &
+                             epais3/12.d0*wgt* &
+                             zr(l2+j)*plateOrie%vectNorm(j, k)*zr(l2+i)*plateOrie%vectNorm(i, k)
                 end do
-!
-                ix1x2 = ix1x2+epais*wgt*zr(l2+j)*xi(1, j)*zr(l2+i)*xi(2, i)+ &
-                        epais3/12.d0*wgt*zr(l2+j)*vectn(j, 1)*zr(l2+i)* &
-                        vectn(i, 2)
-                ix1x3 = ix1x3+epais*wgt*zr(l2+j)*xi(1, j)*zr(l2+i)*xi(3, i)+ &
-                        epais3/12.d0*wgt*zr(l2+j)*vectn(j, 1)*zr(l2+i)* &
-                        vectn(i, 3)
-                ix2x3 = ix2x3+epais*wgt*zr(l2+j)*xi(2, j)*zr(l2+i)*xi(3, i)+ &
-                        epais3/12.d0*wgt*zr(l2+j)*vectn(j, 2)*zr(l2+i)* &
-                        vectn(i, 3)
+                ix1x2 = ix1x2+ &
+                        epais*wgt* &
+                        zr(l2+j)*nodeGeom(1, j)*zr(l2+i)*nodeGeom(2, i)+ &
+                        epais3/12.d0*wgt* &
+                        zr(l2+j)*plateOrie%vectNorm(j, 1)*zr(l2+i)*plateOrie%vectNorm(i, 2)
+                ix1x3 = ix1x3+ &
+                        epais*wgt* &
+                        zr(l2+j)*nodeGeom(1, j)*zr(l2+i)*nodeGeom(3, i)+ &
+                        epais3/12.d0*wgt* &
+                        zr(l2+j)*plateOrie%vectNorm(j, 1)*zr(l2+i)*plateOrie%vectNorm(i, 3)
+                ix2x3 = ix2x3+ &
+                        epais*wgt* &
+                        zr(l2+j)*nodeGeom(2, j)*zr(l2+i)*nodeGeom(3, i)+ &
+                        epais3/12.d0*wgt* &
+                        zr(l2+j)*plateOrie%vectNorm(j, 2)*zr(l2+i)*plateOrie%vectNorm(i, 3)
             end do
-!
         end do
-!
     end do
 !
     matine(1) = rho*(ix2(2)+ix2(3))

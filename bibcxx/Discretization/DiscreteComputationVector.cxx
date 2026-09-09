@@ -258,6 +258,7 @@ DiscreteComputation::getExternalStateVariablesForces(
             }
             if ( currElemChara ) {
                 calcul->addElementaryCharacteristicsField( currElemChara );
+                calcul->addOrientationField( currElemChara );
             }
 
             calcul->addTimeField( "PINSTR", time_curr );

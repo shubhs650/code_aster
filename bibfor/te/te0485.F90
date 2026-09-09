@@ -15,122 +15,114 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine te0485(nomopt, nomte)
+!
+subroutine te0485(option, nomte)
 !
     use Behaviour_module, only: behaviourOption
-    use HHO_type
-    use HHO_utils_module
-    use HHO_size_module
-    use HHO_quadrature_module
-    use HHO_Meca_module
     use HHO_compor_module
     use HHO_GV_module
     use HHO_init_module, only: hhoInfoInitCell
     use HHO_matrix_module
-!
+    use HHO_Meca_module
+    use HHO_quadrature_module
+    use HHO_size_module
+    use HHO_type
+    use HHO_utils_module
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/Behaviour_type.h"
-#include "asterfort/HHO_size_module.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
+#include "asterfort/HHO_size_module.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nmtstm.h"
 #include "asterfort/writeVector.h"
 #include "jeveux.h"
 !
+    character(len=16), intent(in) :: nomte, option
+!
 ! --------------------------------------------------------------------------------------------------
-!  HHO
-!  Mechanics - STAT_NON_LINE - GRAD_VARI
+!
+! HHO
+! Mechanics - STAT_NON_LINE - GRAD_VARI
 !
 ! In  option           : name of option to compute
 ! In  nomte            : type of finite element
+!
 ! --------------------------------------------------------------------------------------------------
-    character(len=16) :: nomte, nomopt
 !
-! --- Local variables
-!
+    character(len=8), parameter :: fami = "RIGI", typmod2 = "GRADVARI"
     type(HHO_Data) :: hhoDataMk, hhoDataGv
     type(HHO_Cell) :: hhoCell
     type(HHO_Meca_State) :: hhoMecaState
     type(HHO_GV_State) :: hhoGVState
-    type(HHO_Compor_State) :: hhoComporState
+    type(HHO_Compor_State) :: hhoCS
     type(HHO_Quadrature) :: hhoQuadCellRigi
     integer(kind=8) :: mk_cbs, mk_fbs, mk_total_dofs
     integer(kind=8) :: gv_cbs, gv_fbs, gv_total_dofs, total_dofs
     integer(kind=8) :: jmatt, npg, jcret
     aster_logical :: lMatr, lVect, lSigm, lVari, matsym
-    character(len=4), parameter :: fami = 'RIGI'
     real(kind=8) :: rhs(MSIZE_TDOFS_MIX)
     type(HHO_matrix) :: lhs
 !
-! --- Get HHO informations
+! --------------------------------------------------------------------------------------------------
 !
+    if (option /= "RIGI_MECA_TANG" .and. &
+        option /= "FULL_MECA" .and. &
+        option /= "FORC_NODA" .and. &
+        option /= "RAPH_MECA") then
+        ASSERT(ASTER_FALSE)
+    end if
+
+! - Get element parameters
+    call elrefe_info(fami=fami, npg=npg)
+
+! - Get HHO data on the modelisation
     call hhoInfoInitCell(hhoCell, hhoDataMk)
     call hhoDataGVInit(hhoDataGv)
-!
-! --- Get element parameters
-!
-    call elrefe_info(fami=fami, npg=npg)
-!
-! --- Number of dofs
+
+! - Number of dofs
     call hhoMecaDofs(hhoCell, hhoDataMk, mk_cbs, mk_fbs, mk_total_dofs)
     call hhoTherDofs(hhoCell, hhoDataGv, gv_cbs, gv_fbs, gv_total_dofs)
     total_dofs = mk_total_dofs+gv_total_dofs+gv_cbs
-!
-    if (nomopt /= "RIGI_MECA_TANG" .and. &
-        nomopt /= "FULL_MECA" .and. &
-        nomopt /= "FORC_NODA" .and. &
-        nomopt /= "RAPH_MECA") then
-        ASSERT(ASTER_FALSE)
-    end if
-!
-! --- Properties of behaviour
-!
-    call hhoComporState%initialize(fami, nomopt, hhoCell%ndim, hhoCell%barycenter)
-    hhoComporState%typmod(2) = 'GRADVARI'
-!
-! --- Initialize quadrature for the rigidity
-!
+
+! - Initialize quadrature for the rigidity
     call hhoQuadCellRigi%initCell(hhoCell, npg)
-!
-! --- Initialize displacement, vari, ...
-!
-    call hhoMecaState%initialize(hhoCell, hhoDataMk, hhoComporState, hhoDataGv)
-    call hhoGVState%initialize(hhoCell, hhoDataMk, hhoDataGv, hhoComporState)
-!
-! --- Compute Operators
-!
-    call hhoCalcOpGv(hhoCell, hhoDataMk, hhoDataGv, hhoComporState%l_largestrain, &
+
+! - Properties of behaviour
+    call hhoCS%initialize(fami, option, hhoCell%ndim, hhoCell%barycenter, typmod2)
+
+! - Initialize displacement, vari, ...
+    call hhoMecaState%initialize(hhoCell, hhoDataMk, hhoCS, hhoDataGv)
+    call hhoGVState%initialize(hhoCell, hhoDataMk, hhoDataGv, hhoCS)
+
+! - Compute Operators
+    call hhoCalcOpGv(hhoCell, hhoDataMk, hhoDataGv, hhoCS%l_largestrain, &
                      hhoMecaState, hhoGvState)
-!
-! --- Compute local contribution
-!
+
+! - Compute local contribution
     call hhoGradVariLC(hhoCell, hhoDataMk, hhoDataGv, hhoQuadCellRigi, &
-                       hhoMecaState, hhoComporState, hhoGVState, lhs, rhs)
-!
-    call behaviourOption(nomopt, hhoComporState%compor, lMatr, lVect, lVari, lSigm)
-!
-! --- Save return code
-!
+                       hhoMecaState, hhoCS, hhoGVState, lhs, rhs)
+
+    call behaviourOption(option, hhoCS%compor, &
+                         lMatr, lVect, &
+                         lVari, lSigm)
+
+! - Save return code
     if (lSigm) then
         call jevech('PCODRET', 'E', jcret)
-        zi(jcret) = hhoComporState%codret
+        zi(jcret) = hhoCS%codret
     end if
-!
-! --- Save rhs
-!
-    if (lVect .or. nomopt == "FORC_NODA") then
+
+! - Save rhs
+    if (lVect .or. option == "FORC_NODA") then
         call writeVector('PVECTUR', total_dofs, rhs)
     end if
-!
-! --- Save of lhs
-!
+
+! - Save of lhs
     if (lMatr) then
-        call nmtstm(hhoComporState%carcri, jmatt, matsym)
-!
+        call nmtstm(hhoCS%carcri, jmatt, matsym)
         if (matsym) then
             call lhs%write('PMATUUR', ASTER_TRUE)
         else

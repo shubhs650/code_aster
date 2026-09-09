@@ -35,20 +35,21 @@ subroutine gapint(elem_dime, l_axis, &
 #include "asterfort/mmdonf.h"
 #include "asterfort/mmnonf.h"
 #include "asterfort/mmmjac.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmtang.h"
 !
     integer(kind=8), intent(in) :: elem_dime
     aster_logical, intent(in) :: l_axis
     character(len=8), intent(in) :: elem_slav_code
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coorO(3, elem_slav_nbnode)
-    real(kind=8), intent(in) :: elem_slav_coorN(3, elem_slav_nbnode)
+    real(kind=8), intent(in) :: elem_slav_coorO(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_slav_coorN(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coorN(3, elem_mast_nbnode)
+    real(kind=8), intent(in) :: elem_mast_coorN(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: nb_poin_inte
-    real(kind=8), intent(in) :: poin_inte(elem_dime-1, nb_poin_inte)
-    real(kind=8), intent(in) :: poin_gaus_ma(elem_dime-1, 36)
+    real(kind=8), intent(in) :: poin_inte(2, nb_poin_inte)
+    real(kind=8), intent(in) :: poin_gaus_ma(2, 36)
     real(kind=8), intent(out) :: gap_moy
     real(kind=8), intent(out) :: inte_weight
 !
@@ -77,15 +78,14 @@ subroutine gapint(elem_dime, l_axis, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i_tria, i_gauss, nb_tria, nb_gauss, i_node, i_dime, nb_gaus_tot
+    integer(kind=8) :: i_tria, i_gauss, nb_tria, nb_gauss, nb_gaus_tot
     real(kind=8) :: tria_coor(2, 3), gauss_weight(12), gauss_coor(2, 12), dist_sign
     real(kind=8) :: jaco_weight, dire_norm(3), dist, vect_pm(3)
     real(kind=8) :: tau1(3), tau2(3), ksi1, ksi2, jacobian, sig
     integer(kind=8) :: tria_node(6, 3)
     character(len=8) :: gauss_family
-    real(kind=8) :: shape_func(9), shape_dfunc(2, 9)
-    real(kind=8) :: gauss_coot(2)
-    real(kind=8) :: elem_slav_cootN(27), gauss_coouN(3)
+    real(kind=8) :: shape_func(MT_NNOMAX2D), shape_dfunc(2, MT_NNOMAX2D)
+    real(kind=8) :: gauss_coot(3), gauss_coouN(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -93,15 +93,6 @@ subroutine gapint(elem_dime, l_axis, &
     inte_weight = 0.d0
     shape_func(:) = 0.d0
     shape_dfunc(:, :) = 0.d0
-!
-! - Transform the format of slave element coordinates
-!
-    do i_node = 1, elem_slav_nbnode
-        do i_dime = 1, elem_dime
-            elem_slav_cootN(elem_dime*(i_node-1)+i_dime) = &
-                elem_slav_coorN(i_dime, i_node)
-        end do
-    end do
 !
 ! - Triangulation of convex polygon defined by intersection points
 !
@@ -147,7 +138,7 @@ subroutine gapint(elem_dime, l_axis, &
             dist = 0.d0
             dire_norm(1:3) = 0.d0
             gauss_coouN(1:3) = 0.d0
-            gauss_coot(1:2) = 0.d0
+            gauss_coot = 0.d0
             tau1(:) = 0.d0
             tau2(:) = 0.d0
             ksi1 = 0.d0
@@ -158,14 +149,14 @@ subroutine gapint(elem_dime, l_axis, &
                 gauss_coot(2) = gauss_coor(2, i_gauss)
             end if
 ! --------- Get shape functions and first derivative
-            call mmnonf(elem_dime, elem_slav_nbnode, elem_slav_code, &
+            call mmnonf(elem_slav_code, &
                         gauss_coot(1), gauss_coot(2), &
                         shape_func)
-            call mmdonf(elem_dime, elem_slav_nbnode, elem_slav_code, &
+            call mmdonf(elem_slav_code, &
                         gauss_coot(1), gauss_coot(2), &
                         shape_dfunc)
 ! --------- Transfert Gauss coordinates in real space (new geometry)
-            call reerel(elem_slav_code, elem_slav_nbnode, elem_dime, elem_slav_cootN, &
+            call reerel(elem_slav_code, elem_slav_nbnode, 3, elem_slav_coorN, &
                         gauss_coot, gauss_coouN)
 ! --------- Compute jacobian (on old geometry)
             call mmmjac(l_axis, elem_slav_nbnode, elem_dime, &

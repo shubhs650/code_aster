@@ -351,6 +351,10 @@ class char_frot(ASSD):
     pass
 
 
+class char_gene(ASSD):
+    pass
+
+
 class char_meca(ASSD):
     pass
 

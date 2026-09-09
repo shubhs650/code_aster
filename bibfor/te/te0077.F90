@@ -49,7 +49,7 @@ subroutine te0077(option, nomte)
     integer(kind=8) :: icodre(1)
     character(len=16) :: phenom
     real(kind=8) :: valQP(MAX_QP), cp(1)
-    real(kind=8) :: mass(MAX_BS, MAX_BS)
+    real(kind=8) :: mass(MAX_BS_CG, MAX_BS_CG)
     integer(kind=8) ::  imate, itemps, kp
     character(len=8), parameter :: famiM = "MASS"
 !

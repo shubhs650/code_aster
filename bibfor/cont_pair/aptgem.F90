@@ -40,6 +40,7 @@ subroutine aptgem(sdappa, mesh, newgeo, sdcont_defi, model_ndim, &
 #include "asterfort/jexnum.h"
 #include "asterfort/int_to_char8.h"
 #include "asterfort/mmctan.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmtann.h"
 #include "asterfort/utmess.h"
 !
@@ -89,7 +90,7 @@ subroutine aptgem(sdappa, mesh, newgeo, sdcont_defi, model_ndim, &
     integer(kind=8) :: elem_indx, elem_nume
     real(kind=8) :: tau1(3), tau2(3)
     character(len=24) :: sdappa_tgel
-    real(kind=8) :: elem_coor(27), node_coor(3)
+    real(kind=8) :: elem_coor(3, MT_NNOMAX2D), node_coor(3)
     real(kind=8), pointer :: v_sdappa_tgel(:) => null()
     integer(kind=8), pointer :: v_mesh_connex(:) => null()
 !

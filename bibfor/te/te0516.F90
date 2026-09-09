@@ -15,31 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
 subroutine te0516(option, nomte)
 !
-!
-! --------------------------------------------------------------------------------------------------
-!
-!           ELEMENTS DE POUTRE MULTI-FIBRES DE TIMOSHENKO AVEC GAUCHISSEMENT.
-!
-!       OPTION       RAPH_MECA FULL_MECA RIGI_MECA_TANG
-!       NOMTE        MECA_POU_D_TGM
-!
-! --------------------------------------------------------------------------------------------------
-!
-!
-    use Behaviour_module, only: behaviourOption
-!
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-    character(len=16) :: option, nomte
-!
-#include "jeveux.h"
 #include "asterf_types.h"
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/bsigma.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jeexin.h"
@@ -67,61 +55,64 @@ subroutine te0516(option, nomte)
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
 #include "asterfort/utpvlg.h"
-#include "asterfort/Behaviour_type.h"
 #include "blas/dscal.h"
+#include "jeveux.h"
+!
+    character(len=16) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
+!           ELEMENTS DE POUTRE MULTI-FIBRES DE TIMOSHENKO AVEC GAUCHISSEMENT.
+!
+!       OPTION       RAPH_MECA FULL_MECA RIGI_MECA_TANG
+!       NOMTE        MECA_POU_D_TGM
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: nc, nno, dimklv, npg, iret, codrep
     parameter(nc=7, dimklv=2*nc*(2*nc+1)/2, nno=2, npg=3)
     real(kind=8) :: hoel(nc), fl(2*nc), hota(nc, nc), d1b(nc, 2*nc)
     real(kind=8) :: rg0(2*nc, 2*nc), eps(nc), deps(nc), u(2*nc), du(2*nc)
     real(kind=8) :: klv(dimklv), work(nc, 2*nc), co(npg)
     real(kind=8) :: rigge0(2*nc, 2*nc), ddu(2*nc), effgep(nc), d1bsig(4, 2*nc)
-!
     integer(kind=8) :: ne, cara, idepla, ifgp
     integer(kind=8) :: ii, jcret, npge
-    integer(kind=8) :: igeom, imate, icontm, iorien, ivarim, iinstp, ipoids
-    integer(kind=8) :: icarcr, ideplm, ideplp, iinstm, ivectu, icontp, ivarip, imat
+    integer(kind=8) :: jvGeom, jvMaterc, icontm, iorien, ivarim, jvInstpr, ipoids
+    integer(kind=8) :: jvCarcri, ideplm, ideplp, jvInstmr, ivectu, icontp, ivarip, imat
     integer(kind=8) :: jacf, ivarmp, codret
     integer(kind=8) :: ncomp, nbvalc, isdcom
-    integer(kind=8) :: kp, jj, kk, istrxm, istrxp, istrmp, ncomp2
+    integer(kind=8) :: kpg, jj, kk, istrxm, istrxp, istrmp, ncomp2
     real(kind=8) :: ey, ez, gamma, xl, xls2, Nx, My, Mz
     real(kind=8) :: aa, xiy, xiz, alfay, alfaz, xjx, xjg
     real(kind=8) :: e, g, nu, temp, phiy, phiz
     real(kind=8) :: defam(6), defap(6), angp(3)
     real(kind=8) :: pgl(3, 3), ffp(3), matsct(6)
-    real(kind=8) :: ang1(3)
     real(kind=8) :: xiyr2, xizr2, hotage(4, 4), epsm
     real(kind=8) :: ksi1, d1b3(2, 3), sigfib, mflex(4)
     real(kind=8) :: carsec(6)
-    character(len=16), pointer :: compor(:) => null()
-!
-    aster_logical :: reactu, isgrot
     aster_logical :: lVect, lMatr, lVari, lSigm
-!
-    character(len=4) :: fami
-    character(len=8) :: mator
-    character(len=16) :: rela_comp, defo_comp, mult_comp, rigi_geom, type_comp
-!
+    character(len=8) :: materSect
+    character(len=16), pointer :: compor(:) => null()
+    aster_logical :: reactu, isgrot
+    character(len=16) :: defoComp, multComp, rigiGeom, typeComp
     integer(kind=8) :: nbfibr, nbgrfi, tygrfi, nbcarm, nug(10)
-!
     real(kind=8), pointer :: defmfib(:) => null()
     real(kind=8), pointer :: defpfib(:) => null()
     real(kind=8), pointer :: modufib(:) => null()
     real(kind=8), pointer :: vsigfib(:) => null()
     real(kind=8), pointer :: varfib(:) => null()
-! --------------------------------------------------------------------------------------------------
     integer(kind=8), parameter :: nb_cara = 8
     real(kind=8) :: vale_cara(nb_cara)
     character(len=8), parameter :: noms_cara(nb_cara) = (/'AY1  ', 'AZ1  ', 'EY1  ', 'EZ1  ', &
                                                           'JX1  ', 'JG1  ', 'IYR21', 'IZR21'/)
     blas_int :: b_incx, b_n
+    type(Material_Para) :: materPara
+!
 ! --------------------------------------------------------------------------------------------------
 !
-!
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, npg=npge, jpoids=ipoids)
+    call elrefe_info(fami=fami, &
+                     npg=npge, jpoids=ipoids)
     ASSERT(npg .ge. npge)
     co(1:npg) = zr(ipoids:ipoids+npg-1)
 !
@@ -132,7 +123,7 @@ subroutine te0516(option, nomte)
     mflex(:) = 0.d0
     codret = 0
     codrep = 0
-!
+
 !   Récupération des caractéristiques des fibres
     call pmfinfo(nbfibr, nbgrfi, tygrfi, nbcarm, nug, &
                  jacf=jacf)
@@ -142,65 +133,87 @@ subroutine te0516(option, nomte)
     ncomp = 18
 !   Nombre de composantes d'efforts et de déformations généralisés
     ncomp2 = 7
+
 !   Longueur de l'élément et pointeur sur le géométrie
-    xl = lonele(igeom=igeom)
-!
+    xl = lonele(igeom=jvGeom)
+
 !  Paramètres en entrée
-!
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PINSTMR', 'L', iinstm)
-    call jevech('PINSTPR', 'L', iinstp)
-    call jevech('PMATERC', 'L', imate)
     call jevech('PCAORIE', 'L', iorien)
-    call jevech('PCARCRI', 'L', icarcr)
     call jevech('PDEPLMR', 'L', ideplm)
     call jevech('PSTRXMR', 'L', istrxm)
 !   la presence du champ de deplacement a l instant t+ devrait etre conditionne  par l'option
 !   (avec rigi_meca_tang ca n a pas de sens). Ce champ est initialise a 0 par la routine nmmatr.
     call jevech('PDEPLPR', 'L', ideplp)
     call jevech('PDDEPLA', 'L', idepla)
-!
     call jevech('PCONTMR', 'L', icontm)
     call jevech('PVARIMR', 'L', ivarim)
-!
+
 !   Pour matric=(RIGI_MECA_TANG) : valeurs "+" égalent valeurs "-"
     icontp = icontm
     ivarip = ivarim
     istrxp = istrxm
     ivarmp = ivarim
-!
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
+
+! - Get fields for non-linear behaviour
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
+
 ! - Properties of behaviour
-    rela_comp = compor(RELA_NAME)
-    defo_comp = compor(DEFO)
-    mult_comp = compor(MULTCOMP)
-    rigi_geom = compor(RIGI_GEOM)
-    type_comp = compor(INCRELAS)
+    defoComp = compor(DEFO)
+    multComp = compor(MULTCOMP)
+    rigiGeom = compor(RIGI_GEOM)
+    typeComp = compor(INCRELAS)
     read (compor(NVAR), '(I16)') nbvalc
-!
+    reactu = defoComp .eq. 'GROT_GDEP' .or. rigiGeom .eq. 'OUI'
+    isgrot = defoComp .eq. 'GROT_GDEP'
+
+! - Some checks
+    if (typeComp .eq. 'COMP_ELAS') then
+        call utmess('F', 'POUTRE0_90')
+    else if ((defoComp .ne. 'PETIT') .and. (defoComp .ne. 'GROT_GDEP')) then
+        call utmess('F', 'POUTRE0_40', sk=defoComp)
+    end if
+    if ((defoComp .ne. 'PETIT') .and. (defoComp .ne. 'GROT_GDEP')) then
+        call utmess('F', 'POUTRE0_40', sk=defoComp)
+    end if
+    call jeexin(multComp, iret)
+    if (iret .eq. 0) then
+        call utmess('F', 'POUTRE0_14', sk=nomte)
+    end if
+
 ! - Select objects to construct from option name
-    call behaviourOption(option, compor, lMatr, lVect, lVari, &
-                         lSigm, codret)
+    call behaviourOption(option, compor, &
+                         lMatr, lVect, &
+                         lVari, lSigm, &
+                         codret)
     if (option .eq. 'RIGI_MECA_TANG') then
         lVect = ASTER_FALSE
         lSigm = ASTER_FALSE
         lVari = ASTER_FALSE
     end if
-!
-!   verification que c'est bien des multifibres
-    call jeexin(mult_comp, iret)
-    if (iret .eq. 0) then
-        call utmess('F', 'POUTRE0_14', sk=nomte)
-    end if
-!
-!   Récupération de la SD_COMPOR ou le comportement des groupes de fibres est stocké
-!   pour chaque groupe : (nom, mater, loi, ... ) dans l'ordre croissant des numéros de groupes.
-!       Cf : dc_mutltifibre
-    call jeveuo(mult_comp, 'L', isdcom)
-!
-!   déformations anélastiques
-    defam(:) = 0.0d0
-    defap(:) = 0.0d0
-!
+
+! - Get time
+    call jevech('PINSTMR', 'L', jvInstmr)
+    call jevech('PINSTPR', 'L', jvInstpr)
+
+!   Recuperation de la SD_COMPOR ou le comportement des groupes de fibres est stocke
+!   pour chaque groupe : (nom, mater, loi, algo1d, deformation nbfig) dans
+!   l'ordre croissant des numeros de groupes
+    call jeveuo(multComp, 'L', isdcom)
+
+!   deformations anelastiques
+    defam = 0.d0
+    defap = 0.d0
+
 !  Paramètres en sortie
     if (lMatr) then
         call jevech('PMATUUR', 'E', imat)
@@ -218,37 +231,19 @@ subroutine te0516(option, nomte)
         call jevech('PVARIPR', 'E', ivarip)
         call jevech('PSTRXPR', 'E', istrxp)
     end if
-!
-!   Calcul des matrices de changement de repère
-!
-    if (type_comp .eq. 'COMP_ELAS') then
-        call utmess('F', 'POUTRE0_90')
-    else if ((defo_comp .ne. 'PETIT') .and. (defo_comp .ne. 'GROT_GDEP')) then
-        call utmess('F', 'POUTRE0_40', sk=defo_comp)
-    end if
-!
-!   Géometrie éventuellement reactualisée
-!
-    reactu = defo_comp .eq. 'GROT_GDEP' .or. rigi_geom .eq. 'OUI'
-    isgrot = defo_comp .eq. 'GROT_GDEP'
-!
-!   Calcul des matrices de changement de repère
-!
-    if ((defo_comp .ne. 'PETIT') .and. (defo_comp .ne. 'GROT_GDEP')) then
-        call utmess('F', 'POUTRE0_40', sk=defo_comp)
-    end if
-!
+
+! - Update geometry
     if (reactu) then
 !       recuperation du 3eme angle nautique au temps t-
         gamma = zr(istrxm+18-1)
 !       calcul de PGL,XL et ANGP
         if (isgrot) then
 !           Rotation sur iteration non convergee
-            call porea1(nno, nc, zr(ideplm), zr(ideplp), zr(igeom+1), &
+            call porea1(nno, nc, zr(ideplm), zr(ideplp), zr(jvGeom+1), &
                         gamma, lVect, pgl, xl, angp)
         else
 !          Rotation sur dernier pas convergee
-            call porea3(nno, nc, zr(ideplm), zr(ideplp), zr(igeom+1), &
+            call porea3(nno, nc, zr(ideplm), zr(ideplp), zr(jvGeom+1), &
                         gamma, pgl, xl, angp)
         end if
 !       sauvegarde des angles nautiques
@@ -258,21 +253,16 @@ subroutine te0516(option, nomte)
             zr(istrxp+18-1) = angp(3)
         end if
     else
-        ang1(1) = zr(iorien-1+1)
-        ang1(2) = zr(iorien-1+2)
-        ang1(3) = zr(iorien-1+3)
-        call matrot(ang1, pgl)
+        call matrot(zr(iorien), pgl)
     end if
     xls2 = xl/2.d0
-!
+
 !   recuperation des caracteristiques de la section
     call pmfitg(tygrfi, nbfibr, nbcarm, zr(jacf), carsec)
     aa = carsec(1)
     xiy = carsec(5)
     xiz = carsec(4)
-!
     call poutre_modloc('CAGNP2', noms_cara, nb_cara, lvaleur=vale_cara)
-!
     alfay = vale_cara(1)
     alfaz = vale_cara(2)
     ey = vale_cara(3)
@@ -281,6 +271,7 @@ subroutine te0516(option, nomte)
     xjg = vale_cara(6)
     xiyr2 = vale_cara(7)
     xizr2 = vale_cara(8)
+
 !   calcul des deplacements et de leurs increments passage dans le repere local
     call utpvgl(nno, nc, pgl, zr(ideplm), u)
     call utpvgl(nno, nc, pgl, zr(ideplp), du)
@@ -295,15 +286,15 @@ subroutine te0516(option, nomte)
         ddu(7*(ii-1)+3) = ddu(7*(ii-1)+3)+ey*ddu(7*(ii-1)+4)
     end do
 !   coefficient dependant de la temperature moyenne
-    call moytem(fami, npg, 1, '+', temp, &
-                iret)
+    call moytem(fami, npg, 1, '+', temp, iret)
+
 !   caracteristiques elastiques (pas de temperature pour l'instant)
 !   on prend le E et NU du materiau torsion (voir op0059)
-    call pmfmats(mator)
-    ASSERT(mator .ne. ' ')
-    call matela(zi(imate), mator, 1, temp, e, &
-                nu)
+    call pmfmats(materSect)
+    ASSERT(materSect .ne. ' ')
+    call matela(zi(jvMaterc), materSect, 1, temp, e, nu)
     g = e/(2.d0*(1.d0+nu))
+
 !   matrice de raideur elastique : materiau integre sur la section
     hoel(1) = e*aa
     hoel(2) = g*aa/alfay
@@ -322,9 +313,9 @@ subroutine te0516(option, nomte)
     AS_ALLOCATE(vr=vsigfib, size=nbfibr)
     AS_ALLOCATE(vr=varfib, size=nbfibr*nbvalc*npg)
 !   boucle sur les points de gauss
-    do kp = 1, 3
+    do kpg = 1, 3
 !       calcul de EPS, DEPS, D1B ( EPSI = D1B * U ) :
-        call jsd1ff(kp, xl, phiy, phiz, d1b)
+        call jsd1ff(kpg, xl, phiy, phiz, d1b)
         eps(1:nc) = 0.0d0
         deps(1:nc) = 0.0d0
 !       calcul de l'increment de deformation sur un pas en grands deplacements il est cumulatif.
@@ -334,7 +325,7 @@ subroutine te0516(option, nomte)
 !             precedente (0 pour la première itération)
 !           - apres calcul de deps, on le stocke dans strxpr
 !       les deformations sont stockes a partir de la 8eme position
-        kk = ncomp*(kp-1)+ncomp2
+        kk = ncomp*(kpg-1)+ncomp2
         if (.not. reactu) then
 !           calcul classique des deformations à partir de DU
             do ii = 1, nc
@@ -371,8 +362,10 @@ subroutine te0516(option, nomte)
                     defpfib)
         epsm = (u(8)-u(1))/xl
 !       module et contraintes sur chaque fibre (comportement)
-        call pmfmcf(kp, nbgrfi, nbfibr, nug, zk24(isdcom), &
-                    zr(icarcr), option, zr(iinstm), zr(iinstp), zi(imate), &
+        call pmfmcf(materPara, &
+                    option, zr(jvCarcri), &
+                    kpg, nbgrfi, nbfibr, nug, zk24(isdcom), &
+                    zr(jvInstmr), zr(jvInstpr), &
                     nbvalc, defam, defap, zr(ivarim), zr(ivarmp), &
                     zr(icontm), defmfib, defpfib, epsm, modufib, &
                     vsigfib, varfib, codrep)
@@ -414,7 +407,7 @@ subroutine te0516(option, nomte)
             call dscal(b_n, xls2, hota, b_incx)
             b_n = to_blas_int(nc*nc)
             b_incx = to_blas_int(1)
-            call dscal(b_n, co(kp), hota, b_incx)
+            call dscal(b_n, co(kpg), hota, b_incx)
             call utbtab('CUMU', nc, 2*nc, hota, d1b, &
                         work, rg0)
         end if
@@ -422,7 +415,7 @@ subroutine te0516(option, nomte)
         if (lSigm) then
 !           Contraintes
             do ii = 1, nbfibr
-                zr(icontp-1+nbfibr*(kp-1)+ii) = vsigfib(ii)
+                zr(icontp-1+nbfibr*(kpg-1)+ii) = vsigfib(ii)
             end do
         end if
         if (lVari) then
@@ -442,7 +435,7 @@ subroutine te0516(option, nomte)
             My = ffp(3)
             Mz = -ffp(2)
 !           Calcul des efforts généralisés
-            ifgp = ncomp*(kp-1)-1
+            ifgp = ncomp*(kpg-1)-1
             zr(istrxp+ifgp+1) = Nx
             zr(istrxp+ifgp+2) = zr(istrxm+ifgp+2)+hoel(2)*deps(2)
             zr(istrxp+ifgp+3) = zr(istrxm+ifgp+3)+hoel(3)*deps(3)
@@ -457,14 +450,14 @@ subroutine te0516(option, nomte)
 !
             do kk = 1, 2*nc
                 do ii = 1, nc
-                    fl(kk) = fl(kk)+xls2*zr(istrxp+ifgp+ii)*d1b(ii, kk)*co(kp)
+                    fl(kk) = fl(kk)+xls2*zr(istrxp+ifgp+ii)*d1b(ii, kk)*co(kpg)
                 end do
             end do
         end if
 !       Calcul de la matrice de rigidite geometrique
         if (lMatr .and. reactu) then
             hotage(:, :) = 0.0d0
-            ifgp = ncomp*(kp-1)-1
+            ifgp = ncomp*(kpg-1)-1
             do ii = 1, ncomp2
                 effgep(ii) = zr(istrxp+ifgp+ii)
             end do
@@ -498,12 +491,12 @@ subroutine te0516(option, nomte)
             call dscal(b_n, xls2, hotage, b_incx)
             b_n = to_blas_int(4*4)
             b_incx = to_blas_int(1)
-            call dscal(b_n, co(kp), hotage, b_incx)
+            call dscal(b_n, co(kpg), hotage, b_incx)
 !           Recuperation de la matrice des fonctions de forme d1bsig
 !           Le dernier argument permet de choisir l'interpolation :
 !               lineaire (0)
 !               cubique flexion-torsion(1)
-            call bsigma(kp, xl, phiy, phiz, d1bsig, &
+            call bsigma(kpg, xl, phiy, phiz, d1bsig, &
                         1)
             call utbtab('CUMU', 4, 2*nc, hotage, d1bsig, &
                         work, rigge0)
@@ -540,9 +533,9 @@ subroutine te0516(option, nomte)
                 do ne = 1, 2
                     do ii = 1, nbfibr
                         sigfib = 0.d0
-                        do kp = 1, 3
-                            kk = icontp+nbfibr*(kp-1)+ii-1
-                            sigfib = sigfib+zr(kk)*d1b3(ne, kp)
+                        do kpg = 1, 3
+                            kk = icontp+nbfibr*(kpg-1)+ii-1
+                            sigfib = sigfib+zr(kk)*d1b3(ne, kpg)
                         end do
                         kk = 2*(ne-1)
                         cara = jacf+(ii-1)*nbcarm

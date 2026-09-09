@@ -17,6 +17,7 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
+import numpy as np
 
 from code_aster.Commands import *
 from code_aster import CA
@@ -27,6 +28,9 @@ DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"), INFO=1)
 test = CA.TestCase()
 
 mesh = LIRE_MAILLAGE(FORMAT="MED", UNITE=20, PARTITIONNEUR="PTSCOTCH")
+
+mesh.setGroupOfCells("OBSERV", [149, 150])
+mesh.setGroupOfNodes("OBSERV", [100, 101])
 
 model = AFFE_MODELE(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="3D"))
 
@@ -66,6 +70,7 @@ SOLUT = STAT_NON_LINE(
     NEWTON=_F(REAC_INCR=1, PREDICTION="ELASTIQUE", MATRICE="TANGENTE", REAC_ITER=1),
     INCREMENT=_F(LIST_INST=LIST),
     SOLVEUR=linear_solver,
+    OBSERVATION=_F(NOM_CMP="DZ", NOM_CHAM="DEPL", GROUP_NO="OBSERV"),
     INFO=1,
 )
 
@@ -82,8 +87,31 @@ SOLUN = MECA_NON_LINE(
     NEWTON=_F(REAC_INCR=1, PREDICTION="ELASTIQUE", MATRICE="TANGENTE", REAC_ITER=1),
     INCREMENT=_F(LIST_INST=LIST),
     SOLVEUR=linear_solver,
+    OBSERVATION=_F(NOM_CMP="DZ", NOM_CHAM="DEPL", GROUP_NO="OBSERV"),
     INFO=1,
 )
+
+
+def assert_same_table(table_1, table_2):
+    for parameter in table_1.getParameters():
+        column_1 = table_1.get_column(parameter)
+        if all([x is None for x in column_1]):
+            continue
+        test.assertEqual(table_1.getColumnType(parameter), table_2.getColumnType(parameter))
+        column_2 = table_2.get_column(parameter)
+        if parameter == "VALE":
+            test.assertArrayEqual(
+                np.array(column_1), np.array(column_2), rtol=1.0e-10, atol=1.0e-10
+            )
+        else:
+            test.assertEqual(column_1, column_2)
+
+
+tabsnl = RECU_TABLE(CO=SOLUT, NOM_TABLE="OBSERVATION")
+tabmnl = RECU_TABLE(CO=SOLUN, NOM_TABLE="OBSERVATION")
+IMPR_TABLE(TABLE=tabsnl, UNITE=6)
+IMPR_TABLE(TABLE=tabmnl, UNITE=6)
+assert_same_table(tabsnl, tabmnl)
 
 print("Field in new SNL:", flush=True)
 SOLUN.printListOfFields()

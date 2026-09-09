@@ -109,6 +109,7 @@ void PhysicalProblem::setDOFNumbering( const BaseDOFNumberingPtr dofNume ) {
     if ( dofNume ) {
         _dofNume = dofNume;
     }
+    computeListOfLoads( "" );
 };
 
 void PhysicalProblem::computeBehaviourProperty( py::object &keywords,

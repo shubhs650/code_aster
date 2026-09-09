@@ -21,7 +21,8 @@
 interface
     subroutine gtctma(elem_coor, elem_nbnode,elem_code, elem_dime,&
                       ctcoor)
-        real(kind=8), intent(in) :: elem_coor(3,9)
+#include "MeshTypes_type.h"
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_nbnode
         character(len=8), intent(in) :: elem_code
         integer(kind=8), intent(in) :: elem_dime

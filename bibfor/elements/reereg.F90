@@ -27,6 +27,7 @@ subroutine reereg(stop, elrefp, nnop, coor, xg, &
 #include "asterfort/elrfvf.h"
 #include "asterfort/invjax.h"
 #include "asterfort/utmess.h"
+#include "MeshTypes_type.h"
 #include "blas/ddot.h"
 !
     character(len=1) :: stop
@@ -61,7 +62,7 @@ subroutine reereg(stop, elrefp, nnop, coor, xg, &
 ! ----------------------------------------------------------------------
 !
     integer(kind=8) :: nbnomx, itermx, ndim_coor
-    parameter(nbnomx=27, itermx=50)
+    parameter(nbnomx=MT_NNOMAX3D, itermx=50)
 !
     real(kind=8) :: zero, tolerc
     integer(kind=8) :: iter, i, k, idim, ino, ipb

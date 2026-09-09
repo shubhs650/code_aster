@@ -50,6 +50,7 @@ subroutine xsifel(elrefp, ndim, coorse, igeom, jheavt, &
 #include "asterfort/xcalfev_wrap.h"
 #include "asterfort/xcinem.h"
 #include "asterfort/xnbddl.h"
+#include "MeshTypes_type.h"
 !
     character(len=8) :: elrefp
     integer(kind=8) :: igeom, ndim, nfh, ddlc, ddlm, nfe, nnop, idecpg, idepl, jheavn
@@ -101,12 +102,13 @@ subroutine xsifel(elrefp, ndim, coorse, igeom, jheavt, &
     real(kind=8) :: du3dm(3, 3), grad(ndim, ndim), dudm(3, 3), poids
     real(kind=8) :: dtdm(3, 3), tzero(3), dzero(3, 4), th
     real(kind=8) :: dudme(3, 4), dtdme(3, 4), du1dme(3, 4), du2dme(3, 4)
-    real(kind=8) :: du3dme(3, 4), sigse(6*27), dfdx(27), dfdy(27), dfdz(27)
+    real(kind=8) :: du3dme(3, 4), sigse(6*MT_NNOMAX3D), dfdx(MT_NNOMAX3D)
+    real(kind=8) :: dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D)
     real(kind=8) :: u1l(3), u2l(3), u3l(3), u1(3), u2(3), u3(3), r
-    real(kind=8) :: depla(3), theta(3), tgudm(3), tpn(27), tref, tempg
+    real(kind=8) :: depla(3), theta(3), tgudm(3), tpn(MT_NNOMAX3D), tref, tempg
     real(kind=8) :: ttrgu, ttrgv, dfdm(3, 4), cs, coef, rho, rac2
     real(kind=8) :: dtx, dty, dtz
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3)
+    real(kind=8) :: fk(MT_NNOMAX3D, 3, 3), dkdgl(MT_NNOMAX3D, 3, 3, 3)
     integer(kind=8) :: icodre(4)
     character(len=16) :: nomres(4)
     character(len=8) :: elrese(6), fami(6), fami_se

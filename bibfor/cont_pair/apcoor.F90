@@ -24,11 +24,12 @@ subroutine apcoor(v_connex, v_connex_lcum, jv_geom, &
 !
 #include "asterf_types.h"
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8), pointer :: v_connex(:)
     integer(kind=8), pointer :: v_connex_lcum(:)
     integer(kind=8), intent(in) :: jv_geom, elem_nume, elem_nbnode, elem_dime
-    real(kind=8), intent(out) :: elem_coor(27)
+    real(kind=8), intent(out) :: elem_coor(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -49,12 +50,11 @@ subroutine apcoor(v_connex, v_connex_lcum, jv_geom, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: node_nume, i_node, i_dime
-    aster_logical:: debug
+    aster_logical, parameter :: debug = ASTER_FALSE
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    debug = ASTER_FALSE
-    elem_coor(1:27) = 0.d0
+    elem_coor = 0.d0
 !
     do i_node = 1, elem_nbnode
         node_nume = v_connex(v_connex_lcum(elem_nume)-1+i_node)
@@ -62,9 +62,9 @@ subroutine apcoor(v_connex, v_connex_lcum, jv_geom, &
             write (*, *) "noeud", node_nume
         end if
         do i_dime = 1, elem_dime
-            elem_coor(3*(i_node-1)+i_dime) = zr(jv_geom+3*(node_nume-1)+i_dime-1)
+            elem_coor(i_dime, i_node) = zr(jv_geom+3*(node_nume-1)+i_dime-1)
             if (debug) then
-                write (*, *) i_dime, elem_coor(3*(i_node-1)+i_dime)
+                write (*, *) i_dime, elem_coor(i_dime, i_node)
             end if
         end do
     end do

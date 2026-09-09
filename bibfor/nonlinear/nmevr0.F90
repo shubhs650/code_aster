@@ -22,8 +22,6 @@ subroutine nmevr0(sddisc)
 !
 #include "asterf_types.h"
 #include "asterfort/dieven.h"
-#include "asterfort/getFailAction.h"
-#include "asterfort/nmecrr.h"
 #include "asterfort/utdidt.h"
 #include "event_def.h"
 !
@@ -41,7 +39,6 @@ subroutine nmevr0(sddisc)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: iterSuppZero = 0
     aster_logical :: lActivate
     integer(kind=8) :: iFail, nbFail, actionType
 !
@@ -50,10 +47,6 @@ subroutine nmevr0(sddisc)
     call utdidt('L', sddisc, 'LIST', 'NECHEC', vali_=nbFail)
     do iFail = 1, nbFail
         call dieven(sddisc, iFail, lActivate)
-        call getFailAction(sddisc, iFail, actionType)
-        if (actionType .eq. FAIL_ACT_ITER) then
-            call nmecrr(sddisc, 'ITERSUP', paraValeI_=iterSuppZero)
-        end if
     end do
 !
 end subroutine

@@ -15,15 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine w175ca(modele, carele, chfer1, chefge, chfer2)
-        character(len=8) :: modele
-        character(len=8) :: carele
-        character(len=19) :: chfer1
-        character(len=19) :: chefge
-        character(len=19) :: chfer2
+    subroutine w175ca(model, caraElem, chfer1, chefge, chfer2)
+        character(len=8), intent(in) :: model, caraElem
+        character(len=19), intent(in) :: chfer1, chfer2, chefge
     end subroutine w175ca
 end interface

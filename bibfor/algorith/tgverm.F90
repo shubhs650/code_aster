@@ -15,33 +15,39 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
+! aslint: disable=W1504
 subroutine tgverm(option, carcri, compor, nno1, nno2, &
                   nno3, geom, ndim, nddl, deplp, &
                   sdepl, vu, vg, vp, vectu, &
                   svect, ncont, contp, scont, nvari, &
                   varip, svari, matuu, smatr, matsym, &
                   epsilo, epsilp, epsilg, varia, iret)
-! aslint: disable=W1504
+!
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8miem.h"
+#include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jeexin.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/mavec.h"
 #include "asterfort/r8inir.h"
-#include "asterfort/utmess.h"
 #include "asterfort/tgveri_use.h"
+#include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
 #include "blas/dcopy.h"
+#include "jeveux.h"
+#include "MeshTypes_type.h"
+!
     aster_logical :: matsym
-    character(len=16) :: option, compor(*)
+    character(len=16) :: option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
     integer(kind=8) :: iret, nno1, nno2, nno3, ndim
-    integer(kind=8) :: vu(3, 27), vg(27), vp(27)
-    real(kind=8) :: carcri(*), sdepl(*), scont(*), svect(*)
+    integer(kind=8) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX), vp(MT_NNOMAX)
+    real(kind=8) :: sdepl(*), scont(*), svect(*)
     real(kind=8) :: geom(*), deplp(*), vectu(*), contp(*), matuu(*)
     real(kind=8) :: varip(*), svari(*), smatr(*), varia(*)
 !

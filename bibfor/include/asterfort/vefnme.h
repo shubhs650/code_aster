@@ -17,18 +17,18 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine vefnme(optionz, modelz, mate, cara_elem, &
-                      compor, nh, ligrelz, &
-                      varcz, sigmz, strxz, &
-                      dispz, &
-                      base, vect_elemz)
-        character(len=*), intent(in) :: optionz, modelz
-        character(len=24), intent(in) :: cara_elem, mate
+    subroutine vefnme(optionz, modelz, materCode, caraElem, &
+                      compor, nh, ligrelInZ, &
+                      varcz, sigmz, strxz, dispz, &
+                      jvBase, vectElemZ)
+        character(len=*), intent(in) :: optionz
+        character(len=*), intent(in) :: modelz
+        character(len=24), intent(in) :: caraElem, materCode
         character(len=19), intent(in) :: compor
         integer(kind=8), intent(in) :: nh
-        character(len=*), intent(in) :: ligrelz
+        character(len=*), intent(in) :: ligrelInZ
         character(len=*), intent(in) :: sigmz, varcz, strxz, dispz
-        character(len=1), intent(in) :: base
-        character(len=*), intent(in) :: vect_elemz
+        character(len=1), intent(in) :: jvBase
+        character(len=*), intent(in) :: vectElemZ
     end subroutine vefnme
 end interface

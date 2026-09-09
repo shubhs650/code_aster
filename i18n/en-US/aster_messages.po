@@ -61892,10 +61892,12 @@ msgstr ""
 #, python-format
 msgid ""
 "Version de Python : %(k1)s\n"
-"                          Version de NumPy : %(k2)s"
+"                          Version de NumPy : %(k2)s\n"
+"                          Version de MEDCoupling : %(k3)s"
 msgstr ""
 "Python version: %(k1)s\n"
-"                          NumPy version: %(k2)s"
+"                          NumPy version: %(k2)s\n"
+"                          MEDCoupling version: %(k2)s"
 
 #: /home/I26352/dev/integration-default/src/bibpyt/Messages/supervis2.py:96
 #, python-format

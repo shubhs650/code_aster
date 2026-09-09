@@ -15,11 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504
 !
-subroutine calcme(BEHinteg, &
-                  option, j_mater, ndim, typmod, angl_naut, &
-                  compor, carcri, instam, instap, &
+subroutine calcme(BEHInteg, &
+                  ndim, option, typmod, &
+                  compor, carcri, &
+                  instam, instap, &
                   addeme, adcome, dimdef, dimcon, &
                   defgem, deps, &
                   congem, vintm, &
@@ -28,22 +28,19 @@ subroutine calcme(BEHinteg, &
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/nmcomp.h"
 #include "asterfort/Behaviour_type.h"
+#include "asterfort/nmcomp.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
-    integer(kind=8), intent(in) :: j_mater
     character(len=8), intent(in) :: typmod(2)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam, instap
     integer(kind=8), intent(in) :: ndim, dimdef, dimcon, addeme, adcome
     real(kind=8), intent(in) :: vintm(*)
-    real(kind=8), intent(in) :: angl_naut(3)
     real(kind=8), intent(in) :: defgem(dimdef), deps(6), congem(dimcon)
     real(kind=8), intent(inout) :: congep(dimcon)
     real(kind=8), intent(inout) :: vintp(*)
@@ -59,13 +56,8 @@ subroutine calcme(BEHinteg, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  option           : option to compute
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  typmod           : type of modelization (TYPMOD2)
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (3) Gamma - clockwise around X
 ! In  compor           : behaviour
 ! In  carcri           : parameters for comportment
 ! In  instam           : time at beginning of time step
@@ -85,9 +77,8 @@ subroutine calcme(BEHinteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: nsig = 6, neps = 6, ndsdeme = 36
-    integer(kind=8), parameter ::  kpg = 1, ksp = 1
-    character(len=4), parameter :: fami = 'FPG1'
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -95,11 +86,12 @@ subroutine calcme(BEHinteg, &
     retcom = 0
 
 ! - Integration of mechanical behaviour
-    call nmcomp(BEHinteg, &
-                fami, kpg, ksp, ndim, typmod, &
-                j_mater, compor, carcri, instam, instap, &
+    call nmcomp(BEHInteg, &
+                ndim, option, typmod, &
+                instam, instap, &
+                compor, carcri, multComp, &
                 neps, defgem(addeme+ndim), deps, nsig, congem(adcome), &
-                vintm, option, angl_naut, &
+                vintm, &
                 congep(adcome), vintp, ndsdeme, dsdeme, retcom)
 !
 end subroutine

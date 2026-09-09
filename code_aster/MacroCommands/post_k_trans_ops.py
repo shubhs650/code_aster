@@ -58,6 +58,7 @@ def post_k_trans_ops(self, **args):
     # Verification de cohérence sur le nombre de modes
     #
     # RESULTAT TRANSITOIRE
+    nomresu = RESU_TRANS.getName()
     nmodtr = RESU_TRANS.getNumberOfModes()
     # BASE MODALE
     if DIME == 2:

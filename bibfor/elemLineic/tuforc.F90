@@ -19,6 +19,7 @@
 !
 subroutine tuforc(option, nbNode, nbDof, nbFourier)
 !
+    use resi_refe_module, only: RESI_REFE
     use beamElem_type
     use pipeElem_type
     use pipeElem_module
@@ -31,7 +32,6 @@ subroutine tuforc(option, nbNode, nbDof, nbFourier)
 #include "asterfort/jevech.h"
 #include "asterfort/pipeElem_type.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
 #include "blas/daxpy.h"
 #include "jeveux.h"
@@ -50,7 +50,7 @@ subroutine tuforc(option, nbNode, nbDof, nbFourier)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids, jgano
     real(kind=8) :: weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
     integer(kind=8) :: jvSigm, jvVect
@@ -64,6 +64,7 @@ subroutine tuforc(option, nbNode, nbDof, nbFourier)
     real(kind=8) :: forcNodaMean(nbDof), forcNoda(nbDof)
     type(pipeElem_Prop) :: pipeElem
     blas_int :: b_incx, b_incy, b_n
+    type(RESI_REFE):: refe
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -113,7 +114,9 @@ subroutine tuforc(option, nbNode, nbDof, nbFourier)
 
     else if (option .eq. 'REFE_FORC_NODA') then
 ! ----- Get reference stress
-        call terefe('SIGM_REFE', 'MECA_TUYAU', sigmRefe)
+        call refe%Init('MECA_TUYAU')
+        sigmRefe = refe%GetRef('SIGM')
+        call refe%Check()
 
 ! ----- Output field is vector
         call jevech('PVECTUR', 'E', jvVect)

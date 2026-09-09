@@ -39,7 +39,8 @@ def configure(self):
 @Configure.conf
 def check_python(self):
     self.load("python")
-    self.check_python_version((3, 6, 0))
+    self.check_python_version((3, 7, 0))
+    self.check_venv()
     self.check_python_headers()
     if self.env.CC_IS_INTEL:
         self.env["LIB_PYEMBED"] = list(set(self.env["LIB_PYEMBED"]))
@@ -59,6 +60,16 @@ def check_python(self):
         except Errors.ConfigurationError:
             cfgext = "json"
     self.env["CFG_EXT"] = cfgext
+
+
+@Configure.conf
+def check_venv(self):
+    self.start_msg("Detecting virtual environment")
+    venv = os.environ.get("VIRTUAL_ENV") or "no"
+    self.env["VIRTUAL_ENV"] = ""
+    if venv != "no":
+        self.env["VIRTUAL_ENV"] = f"\nsource {venv}/bin/activate"
+    self.end_msg(venv)
 
 
 @Configure.conf

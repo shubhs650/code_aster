@@ -36,7 +36,6 @@ subroutine nmforc_acci(list_func_acti, &
 #include "asterfort/diinst.h"
 #include "asterfort/infdbg.h"
 #include "asterfort/isfonc.h"
-#include "asterfort/ndynlo.h"
 #include "asterfort/nmchex.h"
 #include "asterfort/nmdebg.h"
 #include "asterfort/NonLinear_type.h"

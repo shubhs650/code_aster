@@ -17,106 +17,116 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0451(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/codent.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/excent.h"
+#include "asterfort/get_elas_id.h"
 #include "asterfort/jevech.h"
+#include "asterfort/plate_type.h"
 #include "asterfort/rcvala.h"
-#include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
-    character(len=16) :: option, nomte
-! ======================================================================
-!  BUT:  CALCUL DE L'OPTION EFGE_ELGA
-!        POUR LES ELEMENTS DE COQUE A "SOUS-POINTS"
-!        ON PART DE SIEF_ELGA ET ON INTEGRE DANS L'EPAISSEUR
-! ......................................................................
+#include "jeveux.h"
 !
-    integer(kind=8) :: j1, nbcou, npgh, jsigm, idec, jeff, npg, itab(7), iret
-    integer(kind=8) :: nbsp, kpg, ibid, nbsig, nbeff, icou, jmate, icodre(1), j2
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: DKT, DST, Q4G, COQUE_AXIS, COQUE_3D
+!
+! Options: EFGE_ELGA
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: elasKeyword = 'ELAS_COQMU'
+    integer(kind=8) :: nbLayer, npgh, jvSiefIn, idec, jvEfgeElga, npg, itab(7), iret
+    integer(kind=8) :: nbsp, kpg, nbsig, nbeff, iLayer
+    integer(kind=8) :: jvMaterc, elasID
     real(kind=8) :: nxx, nyy, mxx, myy, nxy, mxy, qx, qy, excen
-    real(kind=8) :: r8bid, cb, cm, ch, h, hb, hm, hh
+    real(kind=8) :: cb, cm, ch, h, hb, hm, hh
     real(kind=8) :: siyyb, siyym, siyyh, sixxb, sixxm, sixxh, sixyb, sixym
     real(kind=8) :: sixyh
-    real(kind=8) :: siyzb, siyzm, siyzh, sixzb, sixzm, sixzh, epcou(100), epi(1)
-    character(len=8) :: alias8
-    character(len=16) :: nomres
-    character(len=3) :: cmod, num
-    character(len=2) :: val
-    aster_logical :: lcoqmu, lreel
-!     ------------------------------------------------------------------
-    call teattr('S', 'ALIAS8', alias8, ibid)
-    cmod = alias8(3:5)
-    if (cmod .eq. 'DKT' .or. cmod .eq. 'DST' .or. cmod .eq. 'Q4G' .or. cmod .eq. 'CQ3') then
-        nbsig = 6
-        nbeff = 8
-    else if (cmod .eq. 'CQA' .or. cmod .eq. 'CQC' .or. cmod .eq. 'CQD') then
+    real(kind=8) :: siyzb, siyzm, siyzh, sixzb, sixzm, sixzh, epcou(100), hLayer
+    character(len=3) :: iLayerStr
+    character(len=2) :: oneStr
+    aster_logical :: lComposite, lreel
+    integer(kind=8), parameter :: nbProp = 1
+    character(len=16) :: propName(1)
+    integer(kind=8) :: propCode(1)
+    real(kind=8) :: propVale(1)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+!
+! --------------------------------------------------------------------------------------------------
+!
+    ASSERT(option .eq. 'EFGE_ELGA')
+
+! - Get plate properties
+    call getCara(plateCara, plateOrie)
+    call compCoorSystNone(plateOrie)
+
+! - Size of stress/force
+    nbsig = 6
+    nbeff = 8
+    if (plateCara%type .eq. PLATE_COAX) then
         nbsig = 4
         nbeff = 6
-    else
-        ASSERT(.false.)
     end if
-!
-!     -- EPAISSEUR :
-    call jevech('PCACOQU', 'L', j1)
-    h = zr(j1)
-!
-!     -- NOMBRE DE COUCHES :
-    call jevech('PNBSP_I', 'L', j2)
-    nbcou = zi(j2)
-!
-!
-!     -- SI LE MATERIAU EST 'ELAS_COQMU', LES COUCHES
-!        N'ONT PAS LA MEME EPAISSEUR.
-!        ON LES STOCKE DANS EPCOU
-!     ------------------------------------------------
-    lcoqmu = .false.
-    call jevech('PMATERC', 'L', jmate)
-    call codent(1, 'G', num)
-    call codent(1, 'G', val)
-    nomres = 'C'//num//'_V'//val
-    r8bid = 0.d0
-    call rcvala(zi(jmate), ' ', 'ELAS_COQMU', 0, ' ', &
-                [r8bid], 1, nomres, epi(1), icodre(1), &
-                0)
-    if (icodre(1) .eq. 0) lcoqmu = .true.
-    if (lcoqmu) then
-        ASSERT(nbcou .le. 100)
-        do icou = 1, nbcou
-            call codent(icou, 'G', num)
-            nomres = 'C'//num//'_V'//val
-            call rcvala(zi(jmate), ' ', 'ELAS_COQMU', 0, ' ', &
-                        [r8bid], 1, nomres, epi(1), icodre(1), &
-                        0)
-            ASSERT(icodre(1) .eq. 0)
-            ASSERT(epi(1) .ge. 0.d0)
-            epcou(icou) = epi(1)
+
+! - Get shell properties
+    h = plateCara%thick
+    nbLayer = plateCara%nbLayer
+    ASSERT(nbLayer .le. 100)
+
+! - Detect ELAS_COQMU
+    call jevech('PMATERC', 'L', jvMaterc)
+    call get_elas_id(zi(jvMaterc), elasID)
+    lComposite = elasID .eq. ELAS_COMPOSITE
+    if (lComposite) then
+        ASSERT(nbLayer .le. 100)
+        call codent(1, 'G', oneStr)
+        do iLayer = 1, nbLayer
+! --------- Get thickness of current layer
+            call codent(iLayer, 'G', iLayerStr)
+            propName(1) = 'C'//iLayerStr//'_V'//oneStr
+            call rcvala(zi(jvMaterc), ' ', elasKeyword, &
+                        0, ' ', [0.d0], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
+            ASSERT(propCode(1) .eq. 0)
+            hLayer = propVale(1)
+            ASSERT(hLayer .ge. 0.d0)
+            epcou(iLayer) = hLayer
         end do
     end if
-!
-!
-!     -- CONTRAINTES DANS LES COUCHES :
-!     ----------------------------------
-    call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, &
-                itab=itab)
-    jsigm = itab(1)
+
+! - Acces to input stress in layers
+    call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, itab=itab)
+    jvSiefIn = itab(1)
     npg = itab(3)
     nbsp = itab(7)
     npgh = 3
-    ASSERT(nbsp .eq. nbcou*npgh)
+    ASSERT(nbsp .eq. nbLayer*npgh)
     ASSERT(itab(2) .eq. nbsig*npg)
-!
-!
-!     -- CALCUL DES EFFORTS PAR INTEGRATION DANS L'EPAISSEUR :
-!     --------------------------------------------------------
-    call tecach('OOO', 'PEFGER', 'E', iret, nval=7, &
-                itab=itab)
-    jeff = itab(1)
+
+! - Output field
+    call tecach('OOO', 'PEFGER', 'E', iret, nval=7, itab=itab)
+    jvEfgeElga = itab(1)
     ASSERT(itab(2) .eq. nbeff*npg)
-!
-!     -- BOUCLE SUR LES POINTS DE GAUSS :
+
     do kpg = 1, npg
         nxx = 0.d0
         nyy = 0.d0
@@ -126,53 +136,53 @@ subroutine te0451(option, nomte)
         mxy = 0.d0
         qx = 0.d0
         qy = 0.d0
-!
-!       -- BOUCLE SUR LES COUCHES :
+
         hb = -h/2
-        do icou = 1, nbcou
-            idec = ((kpg-1)*nbcou+(icou-1))*npgh*nbsig
+        do iLayer = 1, nbLayer
+            idec = ((kpg-1)*nbLayer+ &
+                    (iLayer-1))*npgh*nbsig
 !
 !         -- HB, HM, HH : "HAUTEUR" DES SOUS-POINTS :
-            if (lcoqmu) then
-                epi(1) = epcou(icou)
+            if (lComposite) then
+                hLayer = epcou(iLayer)
             else
-                epi(1) = h/nbcou
+                hLayer = h/nbLayer
             end if
-            hm = hb+epi(1)/2.d0
-            hh = hm+epi(1)/2.d0
+            hm = hb+hLayer/2.d0
+            hh = hm+hLayer/2.d0
 !
 !         -- SIXXB, SIYYB, ... : CONTRAINTES AU BAS DE LA COUCHE
-            sixxb = zr(jsigm-1+idec+1)
-            siyyb = zr(jsigm-1+idec+2)
-            sixyb = zr(jsigm-1+idec+4)
+            sixxb = zr(jvSiefIn-1+idec+1)
+            siyyb = zr(jvSiefIn-1+idec+2)
+            sixyb = zr(jvSiefIn-1+idec+4)
             if (nbsig .eq. 6) then
-                sixzb = zr(jsigm-1+idec+5)
-                siyzb = zr(jsigm-1+idec+6)
+                sixzb = zr(jvSiefIn-1+idec+5)
+                siyzb = zr(jvSiefIn-1+idec+6)
             end if
 !         -- SIXXM, SIYYM, ... : CONTRAINTES AU MILIEU DE LA COUCHE
-            sixxm = zr(jsigm-1+idec+1+nbsig)
-            siyym = zr(jsigm-1+idec+2+nbsig)
-            sixym = zr(jsigm-1+idec+4+nbsig)
+            sixxm = zr(jvSiefIn-1+idec+1+nbsig)
+            siyym = zr(jvSiefIn-1+idec+2+nbsig)
+            sixym = zr(jvSiefIn-1+idec+4+nbsig)
             if (nbsig .eq. 6) then
-                sixzm = zr(jsigm-1+idec+5+nbsig)
-                siyzm = zr(jsigm-1+idec+6+nbsig)
+                sixzm = zr(jvSiefIn-1+idec+5+nbsig)
+                siyzm = zr(jvSiefIn-1+idec+6+nbsig)
             end if
 !
 !         -- SIXXH, SIYYH, ... : CONTRAINTES EN HAUT DE LA COUCHE
-            sixxh = zr(jsigm-1+idec+1+2*nbsig)
-            siyyh = zr(jsigm-1+idec+2+2*nbsig)
-            sixyh = zr(jsigm-1+idec+4+2*nbsig)
+            sixxh = zr(jvSiefIn-1+idec+1+2*nbsig)
+            siyyh = zr(jvSiefIn-1+idec+2+2*nbsig)
+            sixyh = zr(jvSiefIn-1+idec+4+2*nbsig)
             if (nbsig .eq. 6) then
-                sixzh = zr(jsigm-1+idec+5+2*nbsig)
-                siyzh = zr(jsigm-1+idec+6+2*nbsig)
+                sixzh = zr(jvSiefIn-1+idec+5+2*nbsig)
+                siyzh = zr(jvSiefIn-1+idec+6+2*nbsig)
             end if
 !
 !         -- ON INTEGRE DANS L'EPAISSEUR DE CHAQUE COUCHE
 !            AVEC UNE FORRMULE DE NEWTON-COTES A 3 POINTS
 !            LES COEFFICIENTS SONT 1/6, 4/6 ET 1/6
-            cb = epi(1)/6
-            cm = 4.d0*epi(1)/6
-            ch = epi(1)/6
+            cb = hLayer/6
+            cm = 4.d0*hLayer/6
+            ch = hLayer/6
 !
 !         -- NXX, NYY, NXY = SOMME DE SIXX, SIYY, SIXY :
             nxx = nxx+cb*sixxb+cm*sixxm+ch*sixxh
@@ -191,18 +201,18 @@ subroutine te0451(option, nomte)
             mxy = mxy+cb*sixyb*hb+cm*sixym*hm+ch*sixyh*hh
 !
 !         -- MISE A JOUR DE HB POUR LA COUCHE SUIVANTE :
-            hb = hb+epi(1)
+            hb = hb+hLayer
         end do
 !
-        zr(jeff-1+(kpg-1)*nbeff+1) = nxx
-        zr(jeff-1+(kpg-1)*nbeff+2) = nyy
-        zr(jeff-1+(kpg-1)*nbeff+4) = mxx
-        zr(jeff-1+(kpg-1)*nbeff+5) = myy
+        zr(jvEfgeElga-1+(kpg-1)*nbeff+1) = nxx
+        zr(jvEfgeElga-1+(kpg-1)*nbeff+2) = nyy
+        zr(jvEfgeElga-1+(kpg-1)*nbeff+4) = mxx
+        zr(jvEfgeElga-1+(kpg-1)*nbeff+5) = myy
         if (nbeff .eq. 8) then
-            zr(jeff-1+(kpg-1)*nbeff+3) = nxy
-            zr(jeff-1+(kpg-1)*nbeff+6) = mxy
-            zr(jeff-1+(kpg-1)*nbeff+7) = qx
-            zr(jeff-1+(kpg-1)*nbeff+8) = qy
+            zr(jvEfgeElga-1+(kpg-1)*nbeff+3) = nxy
+            zr(jvEfgeElga-1+(kpg-1)*nbeff+6) = mxy
+            zr(jvEfgeElga-1+(kpg-1)*nbeff+7) = qx
+            zr(jvEfgeElga-1+(kpg-1)*nbeff+8) = qy
         end if
     end do
 !
@@ -210,11 +220,11 @@ subroutine te0451(option, nomte)
 !     -- POUR LES COQUES EXCENTREES, LES EFFORTS CALCULES SONT
 !        DANS LE PLAN 'MOYEN'. IL FAUT LES CALCULER DANS LE PLAN 'MAIL'
 !     -----------------------------------------------------------------
-    if (cmod .eq. 'DKT' .or. cmod .eq. 'DST') then
-        excen = zr(j1-1+5)
+    if (plateCara%type .eq. PLATE_DKT .or. plateCara%type .eq. PLATE_DST) then
+        excen = plateCara%offset
         lreel = .true.
         call excent('MAIL', excen, npg, nbeff, lreel, &
-                    zr(jeff), zr(jeff), zc(jeff), zc(jeff))
+                    zr(jvEfgeElga), zr(jvEfgeElga), zc(jvEfgeElga), zc(jvEfgeElga))
     end if
 !
 end subroutine

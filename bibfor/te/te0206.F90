@@ -20,7 +20,8 @@ subroutine te0206(option, nomte)
 !
     use Behaviour_module
     use Behaviour_type
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -50,11 +51,10 @@ subroutine te0206(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: ndim = 3
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: nno, npg, nddl
     integer(kind=8) :: ipoids, ivf, idfde
-    integer(kind=8) :: igeom, imater, icarcr, idepm, iddep, icoret
+    integer(kind=8) :: jvGeom, jvMaterc, jvCarcri, jvDeplmr, jvDeplpr, icoret
     integer(kind=8) :: icontm, icontp, ivect, imatr
     integer(kind=8) :: ivarim, ivarip, jtab(7), iret, iinstm, iinstp
     integer(kind=8) :: lgpg, codret
@@ -62,10 +62,11 @@ subroutine te0206(option, nomte)
     real(kind=8) :: coopg(4, 4)
     character(len=8), parameter :: typmod(2) = (/'3D      ', 'ELEMJOIN'/)
     character(len=16), pointer :: compor(:) => null()
-    character(len=16) :: rela_comp
+    character(len=16) :: relaComp
     aster_logical :: matsym
     aster_logical :: lVect, lMatr, lVari, lSigm
-    type(Behaviour_Integ) :: BEHinteg
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -89,32 +90,38 @@ subroutine te0206(option, nomte)
     ASSERT(npg .le. 4)
 
 ! - Get input fields
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imater)
-    call jevech('PCARCRI', 'L', icarcr)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PDEPLMR', 'L', idepm)
-    call jevech('PDEPLPR', 'L', iddep)
-    call jevech('PVARIMR', 'L', ivarim)
-    call jevech('PCONTMR', 'L', icontm)
+    call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PINSTMR', 'L', iinstm)
     call jevech('PINSTPR', 'L', iinstp)
+    call jevech('PCONTMR', 'L', icontm)
+    call jevech('PVARIMR', 'L', ivarim)
+    call jevech('PDEPLMR', 'L', jvDeplmr)
+    call jevech('PDEPLPR', 'L', jvDeplpr)
     call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg = max(jtab(6), 1)*jtab(7)
-!
-!     CALCUL DES COORDONNEES DES POINTS DE GAUSS, POIDS=0
-    call gedisc(3, nno, npg, zr(ivf), zr(igeom), &
-                coopg)
+
+! - Get behaviour parameters
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
+    relaComp = compor(RELA_NAME)
 
 ! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
 
 ! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, zr(icarcr), &
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jvCarcri), &
                               zr(iinstm), zr(iinstp), &
-                              fami, zi(imater), &
-                              BEHinteg)
+                              materPara, BEHInteg)
 
 ! - Select objects to construct from option name
     call behaviourOption(option, compor, &
@@ -122,14 +129,14 @@ subroutine te0206(option, nomte)
                          lVari, lSigm, &
                          codret)
 
-! - Properties of behaviour
-    rela_comp = compor(RELA_NAME)
+! - CALCUL DES COORDONNEES DES POINTS DE GAUSS, POIDS=0
+    call gedisc(3, nno, npg, zr(ivf), zr(jvGeom), coopg)
 
 ! - Get output fields
     if (lMatr) then
-        matsym = .true.
-        if (rela_comp .eq. 'JOINT_MECA_RUPT') matsym = .false.
-        if (rela_comp .eq. 'JOINT_MECA_FROT') matsym = .false.
+        matsym = ASTER_TRUE
+        if (relaComp .eq. 'JOINT_MECA_RUPT') matsym = ASTER_FALSE
+        if (relaComp .eq. 'JOINT_MECA_FROT') matsym = ASTER_FALSE
         if (matsym) then
             call jevech('PMATUUR', 'E', imatr)
         else
@@ -148,9 +155,9 @@ subroutine te0206(option, nomte)
 !
     call nmfi3d(BEHInteg, typmod, &
                 nno, nddl, npg, lgpg, zr(ipoids), &
-                zr(ivf), zr(idfde), zi(imater), option, zr(igeom), &
-                zr(idepm), zr(iddep), zr(icontm), zr(icontp), zr(ivect), &
-                zr(imatr), zr(ivarim), zr(ivarip), zr(icarcr), compor, &
+                zr(ivf), zr(idfde), option, zr(jvGeom), &
+                zr(jvDeplmr), zr(jvDeplpr), zr(icontm), zr(icontp), zr(ivect), &
+                zr(imatr), zr(ivarim), zr(ivarip), zr(jvCarcri), compor, &
                 matsym, coopg, zr(iinstm), zr(iinstp), lMatr, lVect, lSigm, &
                 codret)
 

@@ -10,8 +10,8 @@ x = sympy.Symbol("x", real=True)
 y = sympy.Symbol("y", real=True)
 
 # deplacement a renseigner
-ux = 0.8 * x * x * y *y - x + 1
-uy = -y * y * y *y + 0.1 * x - 0.5 * y * x
+ux = 0.8 * x * x * y *y*x - x + 1
+uy = -y * y * y *y*x + 0.1 * x - 0.5 * y * x
 
 # calcul G
 G = simplify(sympy.Matrix([[diff(ux, x), diff(ux, y)], [diff(uy, x), diff(uy, y)]]))

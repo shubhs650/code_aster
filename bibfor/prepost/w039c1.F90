@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
 subroutine w039c1(carte, ifi, form, ligrel, titre)
     implicit none
 #include "jeveux.h"
@@ -182,7 +182,7 @@ subroutine w039c1(carte, ifi, form, ligrel, titre)
 
 !     -- TRANSFORMATION DE CES2 EN CEL2 (CHAM_ELEM/ELEM) :
 !     ----------------------------------------------------
-    call cescel(ces2, ligrel, 'TOU_INI_ELEM', 'PNEU1_R', 'OUI', &
+    call cescel(ces2, ligrel, 'TOU_INI_ELEM', 'PNEUT_R', 'OUI', &
                 nncp, 'V', cel2, 'F', iret)
     ASSERT(iret .eq. 0)
     call detrsd('CHAM_ELEM_S', ces2)

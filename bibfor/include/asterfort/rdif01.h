@@ -15,27 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine rdif01(fami, kpg, ksp, rela_comp, mod,&
-                      imat, matcst, nbcomm, cpmono, nfs,&
-                      nsg, toutms, nvi, nmat, vini,&
-                      cothe, coeff, dcothe, dcoeff, pgl,&
-                      nbphas, coel, x, dtime, neps,&
-                      epsd, detot, dvin, nhsr, numhsr,&
+    subroutine rdif01(materPara, &
+                      relaComp, typmod1, &
+                      matcst, nbcomm, cpmono, nfs, &
+                      nsg, toutms, nvi, nmat, vini, &
+                      cothe, coeff, dcothe, dcoeff, pgl, &
+                      nbphas, coel, x, dtime, neps, &
+                      epsd, detot, dvin, nhsr, numhsr, &
                       hsr, itmax, toler, iret)
+        use MaterialPara_type
         integer(kind=8) :: nhsr
         integer(kind=8) :: nmat
         integer(kind=8) :: nvi
         integer(kind=8) :: nsg
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: rela_comp
-        character(len=8) :: mod
-        integer(kind=8) :: imat
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: relaComp
+        character(len=8), intent(in) :: typmod1
         character(len=3) :: matcst
         integer(kind=8) :: nbcomm(nmat, 3)
         character(len=24) :: cpmono(5*nmat+1)

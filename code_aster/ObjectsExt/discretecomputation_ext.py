@@ -341,11 +341,11 @@ class ExtendedDiscreteComputation:
             raise RuntimeError("Not implemented")
 
     @profile
-    def getNonLinearNeumannForces(self, primal_curr, time_curr, assembly=True):
+    def getNonLinearNeumannForces(self, U, time_curr, assembly=True):
         """Return the nonlinear Neumann forces field
 
         Arguments:
-                primal_curr : current primal solution
+                U : current primal solution
                 time_curr (float): current time
                 assembly (bool): assemble if True
 
@@ -357,7 +357,7 @@ class ExtendedDiscreteComputation:
         phys_pb = self.getPhysicalProblem()
 
         if phys_pb.isThermal():
-            return self.getThermalNonLinearNeumannForces(primal_curr, time_curr, assembly)
+            return self.getThermalNonLinearNeumannForces(U, time_curr, assembly)
         elif phys_pb.isMechanical():
             raise RuntimeError("Not implemented")
         elif phys_pb.isAcoustic():
@@ -414,8 +414,8 @@ class ExtendedDiscreteComputation:
             else:
                 tempVar = tmp_internVar
             _, codret, internVar, stress, r_stress = self.getInternalMechanicalForces(
-                phys_state.primal_prev,
-                phys_state.primal_step,
+                phys_state.U_t,
+                phys_state.deltaU,
                 phys_state.stress,
                 phys_state.internVar,
                 tempVar,
@@ -426,7 +426,7 @@ class ExtendedDiscreteComputation:
             )
         else:
             codret, stress, r_stress = self.getInternalThermalForces(
-                phys_state.primal_prev, phys_state.primal_step, phys_state.externVar
+                phys_state.U_t, phys_state.deltaU, phys_state.externVar
             )
             internVar = None
 
@@ -441,12 +441,12 @@ class ExtendedDiscreteComputation:
         phys_pb = self.getPhysicalProblem()
         if phys_pb.getDOFNumbering().useLagrangeDOF():
             # Compute kinematic forces (B^t.Lagr_curr)
-            dualizedBC_forces = self.getDualForces(phys_state.primal_curr)
+            dualizedBC_forces = self.getDualForces(phys_state.U)
             resi.resi_dual = dualizedBC_forces
 
-            # Compute dualized BC (B^t.primal_curr - primal_impo)
-            # Compute dualized BC (B^t.primal_curr)
-            dualizedBC_disp = self.getDualPrimal(phys_state.primal_curr, scaling)
+            # Compute dualized BC (B^t.U - primal_impo)
+            # Compute dualized BC (B^t.U)
+            dualizedBC_disp = self.getDualPrimal(phys_state.U, scaling)
 
             # Imposed dualized BC (primal_impo)
             dualizedBC_impo = self.getImposedDualBC(phys_state.time_curr)
@@ -480,12 +480,10 @@ class ExtendedDiscreteComputation:
                 phys_state.time_curr, varc_curr=phys_state.externVar
             )
 
-            resi_ext += self.getNonLinearNeumannForces(phys_state.primal_curr, phys_state.time_curr)
+            resi_ext += self.getNonLinearNeumannForces(phys_state.U, phys_state.time_curr)
 
-            resi_ext += self.getThermalExchangeForces(phys_state.primal_curr, phys_state.time_curr)
-            resi_ext += self.getThermalNonLinearVolumetricForces(
-                phys_state.primal_curr, phys_state.time_curr
-            )
+            resi_ext += self.getThermalExchangeForces(phys_state.U, phys_state.time_curr)
+            resi_ext += self.getThermalNonLinearVolumetricForces(phys_state.U, phys_state.time_curr)
         elif self.getPhysicalProblem().isMechanical():
             resi_ext = self.getNeumannForces(
                 phys_state.time_curr, time_step=phys_state.time_step, varc_curr=phys_state.externVar
@@ -496,10 +494,7 @@ class ExtendedDiscreteComputation:
             )
 
             resi_ext -= self.getMechanicalCouplingForces(
-                phys_state.primal_prev,
-                phys_state.primal_step,
-                phys_state.time_prev,
-                phys_state.time_step,
+                phys_state.U_t, phys_state.deltaU, phys_state.time_prev, phys_state.time_step
             )
         else:
             raise RuntimeError()
@@ -522,16 +517,16 @@ class ExtendedDiscreteComputation:
         if contact_manager:
             if contact_manager.defi.isParallel():
                 cMesh = contact_manager.defi.getConnectionModel().getMesh()
-                primal_prev = phys_state.primal_prev.transfertToConnectionMesh(cMesh)
-                primal_step = phys_state.primal_step.transfertToConnectionMesh(cMesh)
+                U_t = phys_state.U_t.transfertToConnectionMesh(cMesh)
+                deltaU = phys_state.deltaU.transfertToConnectionMesh(cMesh)
             else:
-                primal_prev = phys_state.primal_prev
-                primal_step = phys_state.primal_step
+                U_t = phys_state.U_t
+                deltaU = phys_state.deltaU
             # Compute contact forces
             contact_forces = self.getContactForces(
                 contact_manager.getPairingCoordinates(),
-                primal_prev,
-                primal_step,
+                U_t,
+                deltaU,
                 phys_state.time_prev,
                 phys_state.time_step,
                 contact_manager.data(),
@@ -597,8 +592,8 @@ class ExtendedDiscreteComputation:
         elif matrix_type == "PRED_TANGENTE":
             if phys_pb.isMechanical():
                 _, codret, matr_elem_rigi = self.getPredictionTangentStiffnessMatrix(
-                    phys_state.primal_prev,
-                    phys_state.primal_step,
+                    phys_state.U_t,
+                    phys_state.deltaU,
                     phys_state.stress,
                     phys_state.internVar,
                     phys_state.time_prev,
@@ -608,10 +603,7 @@ class ExtendedDiscreteComputation:
                 )
             else:
                 matr_elem_rigi = self.getTangentConductivityMatrix(
-                    phys_state.primal_prev,
-                    phys_state.primal_step,
-                    phys_state.externVar,
-                    with_dual=False,
+                    phys_state.U_t, phys_state.deltaU, phys_state.externVar, with_dual=False
                 )
                 codret = 0
         elif matrix_type == "TANGENTE":
@@ -621,8 +613,8 @@ class ExtendedDiscreteComputation:
                 else:
                     tempVar = tmp_internVar
                 _, codret, matr_elem_rigi = self.getTangentStiffnessMatrix(
-                    phys_state.primal_prev,
-                    phys_state.primal_step,
+                    phys_state.U_t,
+                    phys_state.deltaU,
                     phys_state.stress,
                     phys_state.internVar,
                     tempVar,
@@ -633,10 +625,7 @@ class ExtendedDiscreteComputation:
                 )
             else:
                 matr_elem_rigi = self.getTangentConductivityMatrix(
-                    phys_state.primal_prev,
-                    phys_state.primal_step,
-                    phys_state.externVar,
-                    with_dual=False,
+                    phys_state.U_t, phys_state.deltaU, phys_state.externVar, with_dual=False
                 )
                 codret = 0
         else:
@@ -675,15 +664,15 @@ class ExtendedDiscreteComputation:
         if contact_manager:
             if contact_manager.defi.isParallel():
                 cMesh = contact_manager.defi.getConnectionModel().getMesh()
-                primal_prev = phys_state.primal_prev.transfertToConnectionMesh(cMesh)
-                primal_step = phys_state.primal_step.transfertToConnectionMesh(cMesh)
+                U_t = phys_state.U_t.transfertToConnectionMesh(cMesh)
+                deltaU = phys_state.deltaU.transfertToConnectionMesh(cMesh)
             else:
-                primal_prev = phys_state.primal_prev
-                primal_step = phys_state.primal_step
+                U_t = phys_state.U_t
+                deltaU = phys_state.deltaU
             matr_elem_cont = self.getContactMatrix(
                 contact_manager.getPairingCoordinates(),
-                primal_prev,
-                primal_step,
+                U_t,
+                deltaU,
                 phys_state.time_prev,
                 phys_state.time_step,
                 contact_manager.data(),
@@ -717,21 +706,18 @@ class ExtendedDiscreteComputation:
 
             matr_elem_ext.addElementaryTerm(
                 self.getThermalTangentNonLinearNeumannMatrix(
-                    phys_state.primal_curr, phys_state.time_curr, phys_state.externVar
+                    phys_state.U, phys_state.time_curr, phys_state.externVar
                 ).getElementaryTerms()
             )
             matr_elem_ext.addElementaryTerm(
                 self.getThermalTangentNonLinearVolumetricMatrix(
-                    phys_state.primal_curr, phys_state.time_curr
+                    phys_state.U, phys_state.time_curr
                 ).getElementaryTerms()
             )
             matr_elem_ext.build()
         elif phys_pb.isMechanical():
             matr_elem_ext = self.getMechanicalCouplingMatrix(
-                phys_state.primal_prev,
-                phys_state.primal_step,
-                phys_state.time_prev,
-                phys_state.time_step,
+                phys_state.U_t, phys_state.deltaU, phys_state.time_prev, phys_state.time_step
             )
 
         return matr_elem_ext

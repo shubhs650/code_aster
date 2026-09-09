@@ -74,7 +74,7 @@ subroutine te0311(option, nomte)
     integer(kind=8) :: icodre(3)
 !
     character(len=8) :: nompar(4)
-    character(len=4) :: fami
+    character(len=8) :: fami
 !
     aster_logical :: fonc, l_not_zero
 !.......................................................................

@@ -28,16 +28,24 @@ bool TimesList::setValues( const VectorReal &values ) {
     _values->reserve( values.size() );
     _values->updateValuePointer();
 
-    ASTERINTEGER compteur = 0;
-    ASTERDOUBLE save = 0.;
+    ASTERDOUBLE previous = -1.e300, minstep = 1.e300, maxstep = 0.;
     for ( VectorRealCIter tmp = values.begin(); tmp != values.end(); ++tmp ) {
         _values->push_back( *tmp );
         const ASTERDOUBLE &curVal = *tmp;
-        if ( compteur != 0 && save >= curVal )
+        if ( previous >= curVal )
             throw std::runtime_error( "Time function not strictly increasing" );
-        save = *tmp;
-        ++compteur;
+        if ( *tmp - previous < minstep )
+            minstep = *tmp - previous;
+        previous = *tmp;
     }
+
+    _infor->updateValuePointer();
+    // 0: MANUEL / AUTO
+    // 1: PAS_MINI / 1.d-12
+    ( *_infor )[2] = values.back() - values.front();
+    // 3: NB_PAS_MAXI
+    ( *_infor )[4] = minstep;
+    ( *_infor )[7] = values.size();
 
     return true;
 };

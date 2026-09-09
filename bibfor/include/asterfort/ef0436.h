@@ -15,11 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
 !
-!
-          interface 
-            subroutine ef0436(nomte)
-              character(len=16) :: nomte
-            end subroutine ef0436
-          end interface 
+interface
+    subroutine ef0436()
+    end subroutine ef0436
+end interface

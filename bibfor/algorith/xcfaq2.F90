@@ -41,6 +41,7 @@ subroutine xcfaq2(jlsn, jlst, jgrlsn, igeom, noma, &
 #include "asterfort/xmilfi.h"
 #include "asterfort/xxmmvd.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: jgrlsn, igeom, nface, cface(30, 6), jlsn, jlst
     integer(kind=8) :: nfiss, ifiss, nptf, nbtot, nmaabs
@@ -71,7 +72,7 @@ subroutine xcfaq2(jlsn, jlst, jgrlsn, igeom, noma, &
     real(kind=8) :: alpha, nd(3), coor2d(9)
     real(kind=8) :: ab(2), lsta, lstb, lstc, abprim(2), prec, lonref, cridist
     real(kind=8) :: eps
-    real(kind=8) :: ff(27), ksic(3), sc, tabar(9), minlsn, maxlsn
+    real(kind=8) :: ff(MT_NNOMAX), ksic(3), sc, tabar(9), minlsn, maxlsn
     real(kind=8) :: m(3), lsnm, lstm, ksi, milfi(3), smilfi, lsnabs
     integer(kind=8) :: j, ar(12, 3), nbar, na, nb, ins, n(3)
     integer(kind=8) :: ia, i, ipt, nno, k

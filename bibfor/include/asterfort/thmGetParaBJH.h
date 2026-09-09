@@ -16,12 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaBJH(ds_thm,j_mater, p1)
+interface
+    subroutine thmGetParaBJH(ds_thm, p1)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
         real(kind=8), intent(in) :: p1
-
     end subroutine thmGetParaBJH
-end interface 
+end interface

@@ -16,18 +16,16 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmCheckPorosity(j_mater, meca, ds_thm)
+subroutine thmCheckPorosity(relaMeca, ds_thm)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/utmess.h"
 !
-    integer(kind=8), intent(in) :: j_mater
-    character(len=16), intent(in) :: meca
+    character(len=16), intent(in) :: relaMeca
     type(THM_DS), intent(in) :: ds_thm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -39,31 +37,30 @@ subroutine thmCheckPorosity(j_mater, meca, ds_thm)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  j_mater          : coded material address
-! In  meca             : relation for mechanical part
+! In  relaMeca         : relation for mechanical part
 !
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: poro_init, poro_meca, poro_diff, poro_tole
-    integer(kind=8) :: icodre(1)
-    real(kind=8) :: para_vale(1)
+    integer(kind=8) :: propCode(1)
+    real(kind=8) :: propVale(1)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     poro_init = ds_thm%ds_parainit%poro_init
-!
+
 ! - Check
-!
-    if (meca .eq. 'CAM_CLAY') then
+    if (relaMeca .eq. 'CAM_CLAY') then
         poro_tole = 1.D-6
-        call rcvala(j_mater, ' ', meca, &
+        call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                    ' ', relaMeca, &
                     0, ' ', [0.d0], &
-                    1, ['PORO'], para_vale, &
-                    icodre, 0)
-        poro_meca = para_vale(1)
+                    1, ['PORO'], propVale, &
+                    propCode, 0)
+        poro_meca = propVale(1)
         poro_diff = abs(poro_meca-poro_init)
         if (abs(poro_diff) .gt. poro_tole) then
-            call utmess('F', 'THM2_60', sk=meca)
+            call utmess('F', 'THM2_60', sk=relaMeca)
         end if
     end if
 !

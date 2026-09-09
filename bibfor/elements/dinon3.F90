@@ -18,16 +18,18 @@
 !
 subroutine dinon3(neq, ul, dul, utl, nno, &
                   nbcomp, varimo, raide, nbpar, param, &
-                  okdire, varipl)
+                  okdire, varipl, dforcz)
 ! ----------------------------------------------------------------------
     implicit none
 #include "asterf_types.h"
 #include "asterc/r8miem.h"
-    integer(kind=8) :: neq, nbcomp, nno, nbpar
-    real(kind=8) :: ul(neq), dul(neq), utl(neq)
-    real(kind=8) :: varimo(nbcomp*3), varipl(nbcomp*3)
-    real(kind=8) :: raide(nbcomp), param(6, nbpar)
-    aster_logical :: okdire(6)
+    integer(kind=8), intent(in) :: neq, nbcomp, nno, nbpar
+    real(kind=8), intent(in) :: ul(neq), dul(neq), utl(neq)
+    real(kind=8), intent(in) :: varimo(nbcomp*3), param(6, nbpar)
+    real(kind=8), intent(out) :: varipl(nbcomp*3)
+    real(kind=8), intent(inout) :: raide(nbcomp)
+    aster_logical, intent(in) :: okdire(6)
+    real(kind=8), intent(out), optional :: dforcz(6)
 !
 ! ======================================================================
 !
@@ -67,7 +69,7 @@ subroutine dinon3(neq, ul, dul, utl, nno, &
 !***************** DECLARATION DES VARIABLES LOCALES *******************
 !
     integer(kind=8) :: ii
-    real(kind=8) :: ulel, dulel, utlel, zero, un, r8min
+    real(kind=8) :: ulel, dulel, utlel, zero, un, r8min, dforc(6)
 !
     real(kind=8) :: puis, xxx, mu, kr, ke, mel, deno, drotx, drotxc
     real(kind=8) :: momp, momm, mxplus, mxmoin
@@ -79,6 +81,7 @@ subroutine dinon3(neq, ul, dul, utl, nno, &
     r8min = r8miem()
     zero = 0.0d0
     un = 1.0d0
+    dforc(:) = 0.d0
 !
     do ii = 1, nbcomp
 !        INDEX DES VARIABLES INTERNES
@@ -123,7 +126,7 @@ subroutine dinon3(neq, ul, dul, utl, nno, &
                         drotxc = dulel-(mel-(momm-mxmoin))/ke
                         varipl(icumu) = varimo(icumu)+drotxc
 !                    CALCUL DE MX(+)
-                        if (puis .lt. zero) then
+                        if (puis .le. zero) then
                             mxplus = varipl(icumu)*kr
                         else
                             xxx = abs(varipl(icumu))*kr/mu
@@ -138,7 +141,7 @@ subroutine dinon3(neq, ul, dul, utl, nno, &
                         drotxc = dulel+(mel+(momm-mxmoin))/ke
                         varipl(icumu) = varimo(icumu)+drotxc
 !                    CALCUL DE MX(+)
-                        if (puis .lt. zero) then
+                        if (puis .le. zero) then
                             mxplus = varipl(icumu)*kr
                         else
                             xxx = abs(varipl(icumu))*kr/mu
@@ -161,7 +164,9 @@ subroutine dinon3(neq, ul, dul, utl, nno, &
                     varipl(iener) = varimo(iener)+abs(mel*drotx)+(mxplus+mxmoin)*drotx*0.5d0
                 end if
             end if
+            dforc(ii) = raide(ii)*dulel
         end if
     end do
+    if (present(dforcz)) dforcz(:) = dforc(:)
 !
 end subroutine

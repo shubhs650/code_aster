@@ -23,7 +23,6 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PCHHOBS = InputParameter(phys=PHY.N3600R, comment=""" HHO - coefficient base locale""")
 
 
@@ -34,7 +33,7 @@ PNBSP_I = InputParameter(
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
 )
 

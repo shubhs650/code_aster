@@ -19,10 +19,10 @@
 subroutine ssgngm(noma, iocc, nbgnaj)
     implicit none
 #include "jeveux.h"
+#include "asterfort/addGroupNode.h"
 #include "asterfort/utlisi.h"
 #include "asterfort/assert.h"
 #include "asterfort/dismoi.h"
-#include "asterfort/getvem.h"
 #include "asterfort/getvtx.h"
 #include "asterfort/gmgnre.h"
 #include "asterfort/jedema.h"
@@ -40,6 +40,7 @@ subroutine ssgngm(noma, iocc, nbgnaj)
 #include "asterfort/cleanListOfGrpMa.h"
 #include "asterfort/checkListOfGrpMa.h"
 #include "asterfort/isParallelMesh.h"
+#include "asterfort/vector_comm_ghost_values_i.h"
 !
     character(len=8) :: noma
 !     BUT: AJOUTER S'IL LE FAUT A UN MAILLAGE DES GROUP_NO DE MEME NOM
@@ -51,21 +52,23 @@ subroutine ssgngm(noma, iocc, nbgnaj)
 !
     character(len=8) :: k8b, koui
     character(len=16) :: selec
-    character(len=24) :: grpma, grpno, nomgno, nomgma
-    integer(kind=8) :: nbgnaj, nbis, ii
+    character(len=24) :: grpma, grpno, nomgno, nomgma, grpmap
+    integer(kind=8) :: nbgnaj, nbis, ii, ino, n1_save
     integer(kind=8) :: ialii1, ialii2, n, ntrou
     character(len=24), pointer :: v_gno(:) => null(), v_gma(:) => null()
+    integer(kind=8), pointer :: v_trav(:) => null(), v_trav_v(:) => null()
 !
 ! DEB-------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
     integer(kind=8) :: i, ialgma, ialima, ialino, ianbno, iangno
-    integer(kind=8) :: ibid, ier, iocc, iret, jtrav
+    integer(kind=8) :: ibid, ier, iocc, iret
     integer(kind=8) :: n1, nb, nbgma, nbgno, nbma, nbnoto, no
     aster_logical :: l_exi_in_grp, l_exi_in_grp_p, l_parallel_mesh, l_added_grpno
 !-----------------------------------------------------------------------
     call jemarq()
     grpma = noma//'.GROUPEMA       '
+    grpmap = noma//'.PAR_GRPMAI'
     grpno = noma//'.GROUPENO       '
     nbgnaj = 0
     nbgno = 0
@@ -79,12 +82,22 @@ subroutine ssgngm(noma, iocc, nbgnaj)
 !     --------------------------
     call getvtx('CREA_GROUP_NO', 'TOUT_GROUP_MA', iocc=iocc, scal=koui, nbret=n1)
     if (n1 .eq. 1) then
-        call jelira(noma//'.GROUPEMA', 'NMAXOC', nbgma)
+        if (l_parallel_mesh) then
+            call jelira(noma//'.PAR_GRPMAI', 'NOMMAX', nbgma)
+        else
+            call jelira(noma//'.GROUPEMA', 'NMAXOC', nbgma)
+        end if
         call wkvect('&&SSGNGM.LISTE_GMA', 'V V K24', nbgma, ialgma)
-        do i = 1, nbgma
-            call jenuno(jexnum(grpma, i), zk24(ialgma-1+i))
-        end do
-        call cleanListOfGrpMa(noma, zk24(ialgma), nbgma, ASTER_TRUE, iret)
+        if (l_parallel_mesh) then
+            do i = 1, nbgma
+                call jenuno(jexnum(grpmap, i), zk24(ialgma-1+i))
+            end do
+        else
+            do i = 1, nbgma
+                call jenuno(jexnum(grpma, i), zk24(ialgma-1+i))
+            end do
+            call cleanListOfGrpMa(noma, zk24(ialgma), nbgma, ASTER_TRUE, iret)
+        end if
         iangno = ialgma
 !
 !     ---  CAS : "GROUP_MA"
@@ -93,65 +106,30 @@ subroutine ssgngm(noma, iocc, nbgnaj)
 !
 !      CRITERE DE SELECTION
         call getvtx('CREA_GROUP_NO', 'CRIT_NOEUD', iocc=iocc, scal=selec, nbret=ibid)
-        call getvem(noma, 'GROUP_MA', 'CREA_GROUP_NO', 'GROUP_MA', iocc, &
-                    0, k8b, nb)
+        call getvtx('CREA_GROUP_NO', 'GROUP_MA', iocc=iocc, nbval=0, &
+                    vect=k8b, nbret=nbgma)
+        call wkvect('&&SSGNGM.LISTE_GMA', 'V V K24', -nbgma, ialgma)
+        call getvtx('CREA_GROUP_NO', 'GROUP_MA', iocc=iocc, nbval=-nbgma, &
+                    vect=zk24(ialgma), nbret=nb)
+        nbgma = nb
         call getvtx('CREA_GROUP_NO', 'NOM', iocc=iocc, nbval=0, nbret=no)
-        nbgma = -nb
-        call wkvect('&&SSGNGM.LISTE_GMA', 'V V K24', nbgma, ialgma)
-        call getvem(noma, 'GROUP_MA', 'CREA_GROUP_NO', 'GROUP_MA', iocc, &
-                    nbgma, zk24(ialgma), nb)
+        nbgno = -no
         if (no .ne. 0) then
-            nbgno = -no
             if ((nbgno .ne. nbgma) .and. (nbgno .ne. 1)) then
                 call utmess('F', 'MODELISA7_8')
             end if
-!
             call wkvect('&&SSGNGM.NOM_GNO', 'V V K24', nbgno, iangno)
             call getvtx('CREA_GROUP_NO', 'NOM', iocc=iocc, nbval=nbgno, vect=zk24(iangno), &
                         nbret=no)
-!
-            if (nb .ne. nbgma) then
-                ASSERT(l_parallel_mesh)
-                call wkvect('&&SSGNGM.NOM_TMP', 'V V K24', nbgno, vk24=v_gno)
-                call wkvect('&&SSGNGM.MA_TMP', 'V V K24', nbgma, vk24=v_gma)
-                call getvtx('CREA_GROUP_NO', 'GROUP_MA', iocc=iocc, nbval=nbgma, &
-                            vect=zk24(ialgma), nbret=nb)
-                nb = 0
-                do i = 1, nbgma
-                    nomgma = zk24(ialgma-1+i)
-                    call existGrpMa(noma(1:8), nomgma, l_exi_in_grp, l_exi_in_grp_p)
-                    if (l_exi_in_grp) then
-                        nb = nb+1
-                        v_gno(nb) = zk24(iangno-1+i)
-                        v_gma(nb) = nomgma
-                    end if
-                end do
-!
-                nbgma = nb
-                do i = 1, nbgma
-                    zk24(iangno-1+i) = v_gno(i)
-                    zk24(ialgma-1+i) = v_gma(i)
-                end do
-!
-                do i = nbgma+1, nbgno
-                    zk24(iangno-1+i) = ' '
-                    zk24(ialgma-1+i) = ' '
-                end do
-                nbgno = nbgma
-!
-                call jedetr('&&SSGNGM.NOM_TMP')
-                call jedetr('&&SSGNGM.MA_TMP')
-            end if
         else
-            nbgma = nb
             iangno = ialgma
         end if
-        call checkListOfGrpMa(noma, zk24(ialgma), nbgma, ASTER_TRUE)
+        call checkListOfGrpMa(noma, zk24(ialgma), nbgma, ASTER_FALSE)
         ier = 0
         do i = 1, nbgma
             nomgma = zk24(ialgma-1+i)
             call existGrpMa(noma(1:8), nomgma, l_exi_in_grp, l_exi_in_grp_p)
-            if (.not. l_exi_in_grp) then
+            if (.not. l_exi_in_grp_p) then
                 ier = ier+1
                 call utmess('E', 'ELEMENTS_62', sk=nomgma)
             end if
@@ -161,8 +139,11 @@ subroutine ssgngm(noma, iocc, nbgnaj)
     if (nbgma .eq. 0) goto 60
 !
     call wkvect('&&SSGNGM.LISTE_NO ', 'V V I', nbnoto, ialino)
-    call wkvect('&&SSGNGM.TRAV ', 'V V I', nbnoto, jtrav)
+    call wkvect('&&SSGNGM.TRAV ', 'V V I', nbnoto, vi=v_trav)
     call wkvect('&&SSGNGM.NB_NO    ', 'V V I', nbgma, ianbno)
+    if (l_parallel_mesh) then
+        call wkvect('&&SSGNGM.TRAV_VERIF', 'V V I', nbnoto, vi=v_trav_v)
+    end if
 ! ---------------------------------------------------------------------
     call jelira(grpno, 'NMAXOC', nbis)
 ! ---------------------------------------------------------------------
@@ -171,10 +152,15 @@ subroutine ssgngm(noma, iocc, nbgnaj)
     do i = 1, nbgma
         nomgma = zk24(ialgma-1+i)
         call existGrpMa(noma(1:8), nomgma, l_exi_in_grp, l_exi_in_grp_p)
+        if (l_parallel_mesh) then
+            v_trav(:) = 0
+            v_trav_v(:) = 0
+            n1 = 0
+        end if
         if (l_exi_in_grp) then
             call jelira(jexnom(grpma, nomgma), 'LONUTI', nbma)
             call jeveuo(jexnom(grpma, nomgma), 'L', ialima)
-            call gmgnre(noma, nbnoto, zi(jtrav), zi(ialima), nbma, &
+            call gmgnre(noma, nbnoto, v_trav, zi(ialima), nbma, &
                         zi(ialino), zi(ianbno-1+i), selec)
             n1 = zi(ianbno-1+i)
             ! FUSION DES NOEUDS ISSUES DES GROUP_MA
@@ -209,13 +195,36 @@ subroutine ssgngm(noma, iocc, nbgnaj)
                     end do
                 end if
             end if
+        end if
 
-            !
+        if (l_exi_in_grp .or. (.not. l_exi_in_grp .and. l_exi_in_grp_p)) then
             if ((nbgno .eq. nbgma) .or. (nbgno .eq. 0)) then
                 nomgno = zk24(iangno-1+i)
-                call addGrpNo(noma(1:8), nomgno, zi(ialino), n1, l_added_grpno)
-                if (l_added_grpno) then
-                    nbgnaj = nbgnaj+1
+                if (.not. l_parallel_mesh) then
+                    call addGrpNo(noma(1:8), nomgno, zi(ialino), n1, l_added_grpno)
+                    if (l_added_grpno) then
+                        nbgnaj = nbgnaj+1
+                    end if
+                else
+                    do ino = 1, nbnoto
+                        v_trav_v(ino) = v_trav(ino)
+                    end do
+                    call vector_comm_ghost_values_i(v_trav, noma, 'BIDIR')
+                    n1_save = 0
+                    do ino = 1, nbnoto
+                        if (v_trav_v(ino) .eq. 0 .and. v_trav(ino) .ne. 0) then
+                            zi(ialino+n1+n1_save) = ino
+                            n1_save = n1_save+1
+                        end if
+                    end do
+                    n1 = n1_save+n1
+                    if (n1 .ne. 0) then
+                        call addGroupNode(noma, 1)
+                        call addGrpNo(noma(1:8), nomgno, zi(ialino), n1, l_added_grpno)
+                        if (l_added_grpno) then
+                            nbgnaj = nbgnaj+1
+                        end if
+                    end if
                 end if
             end if
         end if
@@ -223,6 +232,9 @@ subroutine ssgngm(noma, iocc, nbgnaj)
 
     if ((nbgno .eq. 1) .and. (nbgno .ne. nbgma)) then
         nomgno = zk24(iangno)
+        ! Je ne comprends pas la raison du if precedent alors dans le cas l_parallel_mesh
+        ! on plante
+        ASSERT(.not. l_parallel_mesh)
         call addGrpNo(noma(1:8), nomgno, zi(ialii1), n, l_added_grpno)
         if (l_added_grpno) then
             nbgnaj = nbgnaj+1
@@ -235,6 +247,7 @@ subroutine ssgngm(noma, iocc, nbgnaj)
     call jedetr('&&SSGNGM.NOM_GNO')
     call jedetr('&&SSGNGM.LISTE_NO')
     call jedetr('&&SSGNGM.TRAV')
+    call jedetr('&&SSGNGM.TRAV_VERIF')
     call jedetr('&&SSGNGM.NB_NO')
     call jedetr('&&SSCGNO.LITMP1')
     call jedetr('&&SSCGNO.LITMP2')

@@ -16,9 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine getExternalStateVariable(rela_comp, rela_code_py, &
+subroutine getExternalStateVariable(relaComp, relaCompPy, &
                                     l_mfront_offi, l_mfront_proto, &
-                                    extern_addr, variExteCode)
+                                    adrsMGIS, variExteCode)
 !
     use NonLin_Datastructure_type
     use Behaviour_module
@@ -34,9 +34,9 @@ subroutine getExternalStateVariable(rela_comp, rela_code_py, &
 #include "asterfort/iscode.h"
 #include "asterfort/utmess.h"
 !
-    character(len=16), intent(in) :: rela_comp, rela_code_py
+    character(len=16), intent(in) :: relaComp, relaCompPy
     aster_logical, intent(in) :: l_mfront_offi, l_mfront_proto
-    character(len=16), intent(in) :: extern_addr
+    character(len=16), intent(in) :: adrsMGIS
     integer(kind=8), intent(out) :: variExteCode(2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -47,21 +47,21 @@ subroutine getExternalStateVariable(rela_comp, rela_code_py, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  rela_comp        : RELATION comportment
-! In  rela_code_py     : coded comportment for RELATION (coding in Python)
+! In  relaComp         : behaviour (RELATION keyword)
+! In  relaCompPY       : behaviour (RELATION keyword) - For Python
 ! In  l_mfront_proto   : .true. if MFront prototype
 ! In  l_mfront_offi    : .true. if MFront official
-! In  extern_addr          : pointer to the MGIS Behaviour
+! In  adrsMGIS         : address (hexadecimal) for the MGIS Behaviour
 ! Out variExteCode     : coded integers for external state variable
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nb_exte, i_exte, idummy1, idummy2, i_exte_list
-    integer(kind=8), parameter :: nb_exte_list = 31
-    character(len=64) :: name_exte(VARC_EXTE_NBMAXI)
-    character(len=8) :: varc_aster
+    integer(kind=8) :: nbVarc, iVarc, idummy1, idummy2, iExteType
+    integer(kind=8), parameter :: nbExteType = VARC_EXTE_NBTYPE
+    character(len=64) :: varcNameExte(VARC_EXTE_NBMAXI)
+    character(len=8) :: varcName
     integer(kind=8) :: tabcod(60)
-    character(len=8), parameter :: name_varc(nb_exte_list) = (/ &
+    character(len=8), parameter :: varcNameList(nbExteType) = (/ &
                                    'ELTSIZE1', 'COORGA  ', &
                                    'GRADVELO', 'HYGR    ', 'NEUT1   ', &
                                    'NEUT2   ', 'TEMP    ', 'DTX     ', &
@@ -73,54 +73,54 @@ subroutine getExternalStateVariable(rela_comp, rela_code_py, &
                                    'PFERRITE', 'PPERLITE', 'PBAINITE', &
                                    'PMARTENS', 'ALPHPUR ', 'ALPHBET ', &
                                    'TIME    ', 'TEMPREFE'/)
-    aster_logical, parameter :: l_allow_mfront(nb_exte_list) = (/.true., .false., &
-                                                                 .false., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true., .true., &
-                                                                 .true., .true./)
+    aster_logical, parameter :: l_allow_mfront(nbExteType) = (/.true., .false., &
+                                                               .false., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true., .true., &
+                                                               .true., .true./)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     variExteCode = 0
 
 ! - Get names of external state variables
-    nb_exte = 0
-    name_exte = ' '
+    nbVarc = 0
+    varcNameExte = ' '
     if (l_mfront_proto .or. l_mfront_offi) then
-        call mgis_get_number_of_esvs(extern_addr, nb_exte)
-        ASSERT(nb_exte .le. VARC_EXTE_NBMAXI)
-        call mgis_get_esvs(extern_addr, name_exte)
+        call mgis_get_number_of_esvs(adrsMGIS, nbVarc)
+        ASSERT(nbVarc .le. VARC_EXTE_NBMAXI)
+        call mgis_get_esvs(adrsMGIS, varcNameExte)
     else
-        call lcinfo(rela_code_py, idummy1, idummy2, nb_exte)
-        ASSERT(nb_exte .le. VARC_EXTE_NBMAXI)
-        call lcextevari(rela_code_py, nb_exte, name_exte)
+        call lcinfo(relaCompPy, idummy1, idummy2, nbVarc)
+        ASSERT(nbVarc .le. VARC_EXTE_NBMAXI)
+        call lcextevari(relaCompPy, nbVarc, varcNameExte)
     end if
 
 ! - Print
-    if (nb_exte .gt. 0) then
-        call utmess('I', 'COMPOR4_21', si=nb_exte, sk=rela_comp)
-        do i_exte = 1, nb_exte
-            call utmess('I', 'COMPOR4_22', si=i_exte, sk=name_exte(i_exte))
+    if (nbVarc .gt. 0) then
+        call utmess('I', 'COMPOR4_21', si=nbVarc, sk=relaComp)
+        do iVarc = 1, nbVarc
+            call utmess('I', 'COMPOR4_22', si=iVarc, sk=varcNameExte(iVarc))
         end do
     end if
 
 ! - Coding
     tabcod = 0
-    do i_exte = 1, nb_exte
-        do i_exte_list = 1, nb_exte_list
-            varc_aster = getAsterVariableName(name_exte(i_exte))
-            if (varc_aster .eq. name_varc(i_exte_list)) then
-                tabcod(i_exte_list) = 1
-                if (.not. l_allow_mfront(i_exte_list) .and. &
+    do iVarc = 1, nbVarc
+        do iExteType = 1, nbExteType
+            varcName = getAsterVariableName(varcNameExte(iVarc))
+            if (varcName .eq. varcNameList(iExteType)) then
+                tabcod(iExteType) = 1
+                if (.not. l_allow_mfront(iExteType) .and. &
                     (l_mfront_proto .or. l_mfront_offi)) then
-                    call utmess('I', 'COMPOR2_25', sk=name_exte(i_exte))
-                    tabcod(i_exte_list) = 0
+                    call utmess('I', 'COMPOR2_25', sk=varcNameExte(iVarc))
+                    tabcod(iExteType) = 0
                 end if
             end if
         end do

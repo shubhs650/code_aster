@@ -16,12 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine simtep(fami, nno, ndim, nbsig, npg, &
+subroutine simtep(materPara, &
+                  nno, ndim, nbsig, npg, &
                   jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                   nodeCoor, nodeDisp, &
-                  time, anglNaut, jvMaterCode, nharm, &
+                  time, nharm, &
                   sigmEner)
 !
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
@@ -30,13 +32,11 @@ subroutine simtep(fami, nno, ndim, nbsig, npg, &
 #include "asterfort/sigtmc.h"
 #include "jeveux.h"
 !
-    character(len=*), intent(in) :: fami
+    type(Material_Para), intent(inout) :: materPara
     integer(kind=8), intent(in) :: nno, ndim, nbsig, npg
     integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     real(kind=8), intent(in) :: nodeCoor(ndim*nno), nodeDisp(ndim*nno)
-    real(kind=8), intent(in) :: time, anglNaut(3)
-    integer(kind=8), intent(in) :: jvMaterCode
-    real(kind=8), intent(in)  :: nharm
+    real(kind=8), intent(in) :: time, nharm
     real(kind=8), intent(out) :: sigmEner(nbsig*npg)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ subroutine simtep(fami, nno, ndim, nbsig, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
+! IO  materPara        : parameters of material
 ! In  nno              : number of nodes of element
 ! In  ndim             : dimension of element (2 ou 3)
 ! In  nbsig            : number of components for stress tensors (4 or 6)
@@ -61,8 +61,6 @@ subroutine simtep(fami, nno, ndim, nbsig, npg, &
 ! In  nodeCoor         : coordinates of nodes
 ! In  nodeDisp         : displacements at nodes
 ! In  time             : current time
-! In  anglNaut         : nautical angles for definition of basis for non-isotropic elasticity
-! In  jvMaterCode      : adress for material parameters
 ! In  nharm            : Fourier mode
 ! Out sigmEner         : "real" stress tensor at Gauss points
 !
@@ -77,15 +75,16 @@ subroutine simtep(fami, nno, ndim, nbsig, npg, &
     sigmEner = 0.d0
 
 ! - Compute stress at Gauss points
-    call sigmmc(fami, nno, ndim, nbsig, npg, &
+    call sigmmc(materPara, &
+                nno, ndim, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 nodeCoor, nodeDisp, &
-                time, anglNaut, jvMaterCode, nharm, &
+                time, nharm, &
                 sigm)
 
 ! - Compute stresses from external state variables
-    call sigtmc(fami, nbsig, npg, ndim, &
-                time, jvMaterCode, anglNaut, &
+    call sigtmc(materPara, time, &
+                nbsig, npg, ndim, &
                 VARC_STRAIN_TEMP, sigmTher)
 
 ! - Compute "real" stress

@@ -16,138 +16,131 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine efcoq3d(nomte, nb1, nb2, cara, geom, &
-                   lzr, chg, matr, effg, nbcou, &
-                   npgsn, npgsr, npge, nso, npgt)
-!     CALCUL DE EFGE_ELNO
-!     ------------------------------------------------------------------
+subroutine efcoq3d(plateCara, plateOrie, &
+                   nomte, nb1, nb2, &
+                   npgsn, npgsr, npge, nso, &
+                   nodeCoor, &
+                   desr, siefElga, matrGano, &
+                   efgeElno)
+!
+    use plate_type
     implicit none
 !
+#include "asterfort/utmess.h"
 #include "asterfort/vdefgn.h"
 #include "asterfort/vdefro.h"
-#include "asterfort/vdrepe.h"
-#include "asterfort/vectan.h"
 #include "asterfort/vectgt.h"
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=16), intent(in) :: nomte
+    integer(kind=8), intent(in) :: nb1, nb2
+    integer(kind=8), intent(in) :: npgsn, npgsr, npge, nso
+    real(kind=8), intent(in) :: nodeCoor(*)
+    real(kind=8), intent(inout) :: desr(*)
+    real(kind=8), intent(in) :: siefElga(*), matrGano(*)
+    real(kind=8), intent(out) :: efgeElno(*)
 !
-    character(len=16) :: nomte
+! --------------------------------------------------------------------------------------------------
 !
-!-----------------------------------------------------------------------
+!     CALCUL DE EFGE_ELNO
+!
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8) :: i, ic, icomp, ii
     integer(kind=8) :: inte, intsn, intsr, isom
     integer(kind=8) :: j, jj
     integer(kind=8) :: k, k1, kpgs, l
-    integer(kind=8) :: nbcou, ncmp
-    integer(kind=8) :: npge, npgt
-    integer(kind=8) :: nso
-    real(kind=8) :: hic, s, zero, zic, zmin
-!-----------------------------------------------------------------------
-    integer(kind=8) :: icou
-    integer(kind=8) :: nb1, nb2, npgsr, npgsn
-    real(kind=8) :: vecta(9, 2, 3), vectn(9, 3), vectpt(9, 2, 3)
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
-    real(kind=8) :: epais
-    real(kind=8) :: matevn(2, 2, npgt), matevg(2, 2, npgt)
-    real(kind=8) :: geom(*), cara(*), chg(*), matr(*), effg(*), lzr(*)
-    real(kind=8) :: sigm(6, 270), sigma(6, 120), effgc(8, 9), effgt(8, 9)
+    integer(kind=8), parameter :: ncmp = 6
+    real(kind=8) :: hLayer, s, zic, zmin, epais
+    integer(kind=8) :: iLayer, nblayer
+    real(kind=8) :: vectBaseKpg(3, 3)
+    real(kind=8) :: sigm(6, 270), sigma(6, 120), effgc(8, 9), efgeElnoLoca(8, 9)
+    real(kind=8), parameter :: zero = 0.d0
 !
+! --------------------------------------------------------------------------------------------------
 !
-    zero = 0.0d0
-!
-    epais = cara(1)
+    nbLayer = plateCara%nbLayer
+    epais = plateCara%thick
+    if (nbLayer .le. 0) then
+        call utmess('F', 'PLATE1_10')
+    end if
     zmin = -epais/2.d0
-    hic = epais/nbcou
-!
-    call vectan(nb1, nb2, geom, lzr, vecta, &
-                vectn, vectpt)
+    hLayer = epais/nbLayer
 !
     kpgs = 0
-    do icou = 1, nbcou
+    do iLayer = 1, nbLayer
         do inte = 1, npge
             if (inte .eq. 1) then
-                zic = zmin+(icou-1)*hic
+                zic = zmin+(iLayer-1)*hLayer
             else if (inte .eq. 2) then
-                zic = zmin+hic/2.d0+(icou-1)*hic
+                zic = zmin+hLayer/2.d0+(iLayer-1)*hLayer
             else
-                zic = zmin+hic+(icou-1)*hic
+                zic = zmin+hLayer+(iLayer-1)*hLayer
             end if
 !
             do intsn = 1, npgsn
                 kpgs = kpgs+1
-                k1 = 6*((intsn-1)*npge*nbcou+(icou-1)*npge+inte-1)
+                k1 = 6*((intsn-1)*npge*nbLayer+ &
+                        (iLayer-1)*npge+inte-1)
                 do i = 1, 6
-                    sigm(i, kpgs) = chg(k1+i)
+                    sigm(i, kpgs) = siefElga(k1+i)
                 end do
             end do
         end do
     end do
-    ncmp = 6
-!
-!
-! --- DETERMINATION DES REPERES  LOCAUX DE L'ELEMENT AUX POINTS
-! --- D'INTEGRATION ET STOCKAGE DE CES REPERES DANS LE VECTEUR .DESR
-!     --------------------------------------------------------------
+
+! - Compute local basis at integration points
     k = 0
     do intsr = 1, npgsr
-        call vectgt(0, nb1, geom, zero, intsr, &
-                    lzr, epais, vectn, vectg, vectt)
-!
+        call vectgt(plateOrie, 0, nb1, &
+                    nodeCoor, zero, intsr, &
+                    epais, desr, &
+                    vectBaseKpg)
         do j = 1, 3
             do i = 1, 3
                 k = k+1
-                lzr(2000+k) = vectt(i, j)
+                desr(1+2000+k-1) = vectBaseKpg(i, j)
             end do
         end do
     end do
-! !
-! !--- EXTRAPOLATION VERS LES NOEUDS SOMMETS
-! !
-!
-!
-    do icou = 1, nbcou
+
+! - EXTRAPOLATION VERS LES NOEUDS SOMMETS
+    do iLayer = 1, nbLayer
         do ic = 1, ncmp
             do i = 1, npge*nso
                 l = npge*npgsn*(i-1)
                 s = 0.d0
                 do j = 1, npge*npgsn
-                    jj = (icou-1)*npge*npgsn+j
-                    s = s+matr(l+j)*sigm(ic, jj)
+                    jj = (iLayer-1)*npge*npgsn+j
+                    s = s+matrGano(l+j)*sigm(ic, jj)
                 end do
-                ii = (icou-1)*npge*nso+i
+                ii = (iLayer-1)*npge*nso+i
                 sigma(ic, ii) = s
             end do
         end do
     end do
-! !
-! ! --- DETERMINATION DES MATRICE DE PASSAGE DES REPERES INTRINSEQUES
-! ! --- AUX NOEUDS ET AUX POINTS D'INTEGRATION DE L'ELEMENT
-! ! --- AU REPERE UTILISATEUR :
-! !     ---------------------
-    call vdrepe(nomte, matevn, matevg)
-! !
+
     do i = 1, nb2
         do j = 1, 8
-            effgt(j, i) = 0.d0
+            efgeElnoLoca(j, i) = 0.d0
         end do
     end do
-    do ic = 1, nbcou
+
+    do ic = 1, nbLayer
         j = (ic-1)*npge*nso+1
-        zic = zmin+(ic-1)*hic
-        call vdefgn(nomte, nb2, hic, zic, sigma(1, j), &
+        zic = zmin+(ic-1)*hLayer
+        call vdefgn(nomte, nb2, hLayer, zic, sigma(1, j), &
                     effgc)
         do isom = 1, nb2
             do icomp = 1, 8
-                effgt(icomp, isom) = effgt(icomp, isom)+effgc(icomp, isom)
+                efgeElnoLoca(icomp, isom) = efgeElnoLoca(icomp, isom)+effgc(icomp, isom)
             end do
         end do
     end do
-! !
-! ! --- PASSAGE DU VECTEUR DES EFFORTS GENERALISES DEFINI AUX NOEUDS
-! ! --- DE L'ELEMENT DU REPERE INTRINSEQUE AU REPERE UTILISATEUR :
-! !     --------------------------------------------------------
-!
-    call vdefro(nb2, matevn, effgt, effg)
-!
-!
+
+! - PASSAGE DU VECTEUR DES EFFORTS GENERALISES DEFINI AUX NOEUDS
+! - DE L'ELEMENT DU REPERE INTRINSEQUE AU REPERE UTILISATEUR :
+    call vdefro(nb2, plateOrie%matevn, efgeElnoLoca, efgeElno)
 !
 end subroutine

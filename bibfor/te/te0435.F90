@@ -16,11 +16,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1006
 !
 subroutine te0435(option, nomte)
 !
     use Behaviour_module, only: behaviourOption
-!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystMemb
     implicit none
 !
 #include "asterf_types.h"
@@ -49,7 +51,7 @@ subroutine te0435(option, nomte)
 !
 ! Elementary computation
 !
-! Elements: GRILLE_MEMBRANE / GRILLE_EXCENTRE
+! Elements: MEMBRANE
 !
 ! Options: FULL_MECA_*, RIGI_MECA_*, RAPH_MECA
 !          RIGI_MECA
@@ -64,24 +66,22 @@ subroutine te0435(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: mxnpg, mxvect, mxmatr
-    parameter(mxnpg=27, mxvect=3*9, mxmatr=3*9*3*9)
-    integer(kind=8) :: mxpara
-    parameter(mxpara=7)
-!
-    character(len=8) :: nompar(mxpara)
-    real(kind=8) :: valpar(mxpara)
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter :: mxnpg = 27, mxvect = 3*9, mxmatr = 3*9*3*9, nddl = 3, ncomp = 3
+    integer(kind=8), parameter :: nbPara = 7
+    character(len=8), parameter :: paraName(nbPara) = (/'X   ', 'Y   ', 'Z   ', &
+                                                        'INST', &
+                                                        'XF  ', 'YF  ', 'ZF  '/)
+    real(kind=8) :: paraVale(nbPara)
     integer(kind=8) :: ier
     real(kind=8) :: x, y, z, xf, yf, zf
-!
-    character(len=4) :: fami
-    integer(kind=8) :: nddl, nno, nnos, npg, ndim, ncomp, nvari
+    integer(kind=8) :: nno, npg, ndim, nvari
     integer(kind=8) :: n, kpg, iret, cod(9)
-    integer(kind=8) :: ipoids, ivf, idfde, jgano, jtab(7)
-    integer(kind=8) :: igeom, icacoq, imate, icompo, icarcr
-    integer(kind=8) :: iinstm, iinstp, icontm, ideplm, ideplp, ivarim, ivarix
-    integer(kind=8) :: ivectu, icontp, ivarip, jcret, imatuu, imatun, icontx, i_pres
-    integer(kind=8) :: i_temp, kdec, i, j, k, iddl, ino, ndofbynode
+    integer(kind=8) :: ipoids, ivf, idfde, jtab(7)
+    integer(kind=8) :: jvGeom, jvMaterc, jvCompor, jvCarcri
+    integer(kind=8) :: iinstm, iinstp, icontm, jvDispM, jvDispIncr, ivarim, ivarix
+    integer(kind=8) :: jvVect, jvSigm, jvVariP, jvCodret, jvMatrSyme, jvMatrUsym, icontx, jvPress
+    integer(kind=8) :: jvInst, i, j, k, iddl, ino, ndofbynode
     real(kind=8) :: pres, pres_point(mxnpg)
     real(kind=8) :: matr(mxmatr), geom_reac(mxvect)
     real(kind=8) :: dff(2, 9), alpha, beta, h, preten
@@ -89,54 +89,55 @@ subroutine te0435(option, nomte)
     aster_logical :: pttdef, grddef
     aster_logical :: lVect, lMatr, lVari, lSigm
     character(len=16), pointer :: compor(:) => null()
-    character(len=16) :: defo_comp, rela_comp
+    character(len=16) :: defoComp, relaComp
     blas_int :: b_incx, b_incy, b_n
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystMemb(plateOrie)
+
     lNonLine = (option(1:9) .eq. 'FULL_MECA') .or. (option(1:9) .eq. 'RAPH_MECA') .or. &
                (option(1:10) .eq. 'RIGI_MECA_') .and. (option(1:15) .ne. 'RIGI_MECA_PRSU_')
     lLine = option .eq. 'RIGI_MECA'
     cod = 0
-!
-! - NOMBRE DE COMPOSANTES DES TENSEURS
-!
-    ncomp = 3
-    nddl = 3
-!
+
 ! - FONCTIONS DE FORME ET POINTS DE GAUSS
-!
-    fami = 'RIGI'
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
     ndofbynode = ndim+1
-!
+
 ! - Get input fields
-!
     lVect = ASTER_FALSE
     lVari = ASTER_FALSE
     lSigm = ASTER_FALSE
     lMatr = ASTER_FALSE
-    call jevech('PGEOMER', 'L', igeom)
     if ((option(1:15) .ne. 'RIGI_MECA_PRSU_') .and. (option .ne. 'CHAR_MECA_PRSU_F')) then
-        call jevech('PCACOQU', 'L', icacoq)
-        call jevech('PMATERC', 'L', imate)
+        call jevech('PMATERC', 'L', jvMaterc)
     end if
     if (lNonLine) then
-        call jevech('PCOMPOR', 'L', icompo, vk16=compor)
-        call jevech('PCARCRI', 'L', icarcr)
+        call jevech('PCOMPOR', 'L', jvCompor, vk16=compor)
+        call jevech('PCARCRI', 'L', jvCarcri)
         call jevech('PINSTMR', 'L', iinstm)
         call jevech('PINSTPR', 'L', iinstp)
         call jevech('PCONTMR', 'L', icontm)
-        call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                    itab=jtab)
+        call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
         nvari = max(jtab(6), 1)*jtab(7)
         call jevech('PVARIMR', 'L', ivarim)
         call jevech('PVARIMP', 'L', ivarix)
     end if
     if (option .ne. 'RIGI_MECA') then
-        call jevech('PDEPLMR', 'L', ideplm)
-        call jevech('PDEPLPR', 'L', ideplp)
+        call jevech('PDEPLMR', 'L', jvDispM)
+        call jevech('PDEPLPR', 'L', jvDispIncr)
     end if
 !
     if (lNonLine) then
@@ -144,12 +145,12 @@ subroutine te0435(option, nomte)
         call behaviourOption(option, compor, lMatr, lVect, lVari, &
                              lSigm)
 ! ----- Properties of behaviour
-        rela_comp = compor(RELA_NAME)
-        defo_comp = compor(DEFO)
-        pttdef = (defo_comp .eq. 'PETIT')
-        grddef = (defo_comp .eq. 'GROT_GDEP')
+        relaComp = compor(RELA_NAME)
+        defoComp = compor(DEFO)
+        pttdef = (defoComp .eq. 'PETIT')
+        grddef = (defoComp .eq. 'GROT_GDEP')
         if (.not. pttdef .and. .not. grddef) then
-            call utmess('F', 'MEMBRANE_2', sk=defo_comp)
+            call utmess('F', 'MEMBRANE_2', sk=defoComp)
         end if
     end if
     if (lLine) then
@@ -160,46 +161,38 @@ subroutine te0435(option, nomte)
 !
 ! - PARAMETRES NECESSAIRE AU CALCUL DE LA MATRICE DE RIGITE POUR PRESSION SUIVEUSE
     if (option .eq. 'RIGI_MECA_PRSU_R') then
-        call jevecd('PPRESSR', i_pres, 0.d0)
+        call jevecd('PPRESSR', jvPress, 0.d0)
     end if
 !
     if (option(10:16) .eq. '_PRSU_F') then
-        call jevech('PPRESSF', 'L', i_pres)
-        call jevech('PINSTR', 'L', i_temp)
-        valpar(4) = zr(i_temp)
-        nompar(4) = 'INST'
-        nompar(1) = 'X'
-        nompar(2) = 'Y'
-        nompar(3) = 'Z'
-        nompar(5) = 'XF'
-        nompar(6) = 'YF'
-        nompar(7) = 'ZF'
+        call jevech('PPRESSF', 'L', jvPress)
+        call jevech('PINSTR', 'L', jvInst)
+        paraVale(4) = zr(jvInst)
         do iddl = 1, nddl*nno
-            geom_reac(iddl) = zr(igeom+iddl-1)+zr(ideplm+iddl-1)+zr(ideplp+iddl-1)
+            geom_reac(iddl) = zr(jvGeom+iddl-1)+zr(jvDispM+iddl-1)+zr(jvDispIncr+iddl-1)
         end do
     end if
-!
+
 ! - Get output fields
-!
     if (lVect) then
-        call jevech('PVECTUR', 'E', ivectu)
+        call jevech('PVECTUR', 'E', jvVect)
     end if
     if (lSigm) then
-        call jevech('PCONTPR', 'E', icontp)
-        call jevech('PCODRET', 'E', jcret)
+        call jevech('PCONTPR', 'E', jvSigm)
+        call jevech('PCODRET', 'E', jvCodret)
     end if
     if (lVari) then
-        call jevech('PVARIPR', 'E', ivarip)
+        call jevech('PVARIPR', 'E', jvVariP)
         b_n = to_blas_int(npg*nvari)
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)
-        call dcopy(b_n, zr(ivarix), b_incx, zr(ivarip), b_incy)
+        call dcopy(b_n, zr(ivarix), b_incx, zr(jvVariP), b_incy)
     end if
     if (lMatr) then
-        call jevech('PMATUUR', 'E', imatuu)
+        call jevech('PMATUUR', 'E', jvMatrSyme)
     end if
     if (option(1:15) .eq. 'RIGI_MECA_PRSU_') then
-        call jevech('PMATUNS', 'E', imatun)
+        call jevech('PMATUNS', 'E', jvMatrUsym)
     end if
     if (option .eq. 'RIGI_MECA_IMPLEX') then
         call jevech('PCONTXR', 'E', icontx)
@@ -208,25 +201,15 @@ subroutine te0435(option, nomte)
         b_incy = to_blas_int(1)
         call dcopy(b_n, zr(icontm), b_incx, zr(icontx), b_incy)
     end if
-!
-!
-! -----------------------------------------------------------------
-! ---          IMPORTATION DES PARAMETRES MATERIAU              ---
-! -----------------------------------------------------------------
-!
-! - DIRECTION DE REFERENCE POUR UN COMPORTEMENT ANISOTROPE
-! - EPAISSEUR
-! - PRECONTRAINTES
-!
+
     if ((option(1:15) .ne. 'RIGI_MECA_PRSU_') .and. (option .ne. 'CHAR_MECA_PRSU_F')) then
-        alpha = zr(icacoq+1)*r8dgrd()
-        beta = zr(icacoq+2)*r8dgrd()
-        h = zr(icacoq)
-! ---   On empeche une epaisseur nulle ou negative
+        alpha = plateOrie%alpha
+        beta = plateOrie%beta
+        h = plateCara%thick
         if (h .lt. r8prem()) then
             call utmess('F', 'MEMBRANE_1')
         end if
-        preten = zr(icacoq+3)/h
+        preten = plateCara%tension/h
     end if
 !
     do kpg = 1, npg
@@ -236,11 +219,10 @@ subroutine te0435(option, nomte)
         end do
         if (option .eq. 'RIGI_MECA_PRSU_R') then
             call nmprmb_matr(nno, npg, kpg, zr(ipoids+kpg), zr(ivf), &
-                             dff, igeom, ideplm, ideplp, i_pres, &
-                             imatun)
+                             dff, jvGeom, jvDispM, jvDispIncr, jvPress, &
+                             jvMatrUsym)
         elseif ((option .eq. 'RIGI_MECA_PRSU_F') .or. &
                 (option .eq. 'CHAR_MECA_PRSU_F')) then
-            kdec = (kpg-1)*nno
             x = 0.d0
             y = 0.d0
             z = 0.d0
@@ -248,70 +230,65 @@ subroutine te0435(option, nomte)
             yf = 0.d0
             zf = 0.d0
             do ino = 1, nno
-                x = x+zr(igeom+3*(ino-1)+1-1)*zr(ivf+kdec+ino-1)
-                y = y+zr(igeom+3*(ino-1)+2-1)*zr(ivf+kdec+ino-1)
-                z = z+zr(igeom+3*(ino-1)+3-1)*zr(ivf+kdec+ino-1)
-                xf = xf+geom_reac(3*(ino-1)+1)*zr(ivf+kdec+ino-1)
-                yf = yf+geom_reac(3*(ino-1)+2)*zr(ivf+kdec+ino-1)
-                zf = zf+geom_reac(3*(ino-1)+3)*zr(ivf+kdec+ino-1)
+                x = x+zr(jvGeom+3*(ino-1)+1-1)*zr(ivf+(kpg-1)*nno+ino-1)
+                y = y+zr(jvGeom+3*(ino-1)+2-1)*zr(ivf+(kpg-1)*nno+ino-1)
+                z = z+zr(jvGeom+3*(ino-1)+3-1)*zr(ivf+(kpg-1)*nno+ino-1)
+                xf = xf+geom_reac(3*(ino-1)+1)*zr(ivf+(kpg-1)*nno+ino-1)
+                yf = yf+geom_reac(3*(ino-1)+2)*zr(ivf+(kpg-1)*nno+ino-1)
+                zf = zf+geom_reac(3*(ino-1)+3)*zr(ivf+(kpg-1)*nno+ino-1)
             end do
-            valpar(1) = x
-            valpar(2) = y
-            valpar(3) = z
-            valpar(5) = xf
-            valpar(6) = yf
-            valpar(7) = zf
-            call fointe('FM', zk8(i_pres), mxpara, nompar, valpar, &
+            paraVale(1) = x
+            paraVale(2) = y
+            paraVale(3) = z
+            paraVale(5) = xf
+            paraVale(6) = yf
+            paraVale(7) = zf
+            call fointe('FM', zk8(jvPress), nbPara, paraName, paraVale, &
                         pres, ier)
             pres_point(kpg) = pres
         else
             if (pttdef) then
-                call mbxnlr(option, fami, nddl, nno, ncomp, &
-                            kpg, ipoids, igeom, imate, ideplm, &
-                            ideplp, ivectu, icontp, imatuu, dff, &
-                            alpha, beta, lVect, lMatr)
+                call mbxnlr(plateOrie, &
+                            option, fami, nddl, nno, ncomp, &
+                            kpg, ipoids, jvGeom, jvMaterc, jvDispM, &
+                            jvDispIncr, jvVect, jvSigm, jvMatrSyme, dff, &
+                            lVect, lMatr)
             else if (grddef) then
-                if (rela_comp(1:14) .eq. 'ELAS_MEMBRANE_') then
+                if (relaComp(1:14) .eq. 'ELAS_MEMBRANE_') then
                     if ((abs(alpha) .gt. r8prem()) .or. (abs(beta) .gt. r8prem())) then
                         call utmess('A', 'MEMBRANE_6')
                     end if
-                    call mbgnlr(lVect, lMatr, nno, ncomp, imate, &
-                                icompo, dff, alpha, beta, h, &
-                                preten, igeom, ideplm, ideplp, kpg, &
-                                fami, ipoids, icontp, ivectu, imatuu)
+                    call mbgnlr(lVect, lMatr, nno, ncomp, jvMaterc, &
+                                jvCompor, dff, alpha, beta, h, &
+                                preten, jvGeom, jvDispM, jvDispIncr, kpg, &
+                                fami, ipoids, jvSigm, jvVect, jvMatrSyme)
                 else
                     call utmess('F', 'MEMBRANE_3')
                 end if
             end if
         end if
     end do
-!
-!
-! - Second member
-!
+
     if (option .eq. 'CHAR_MECA_PRSU_F') then
-        call jevech('PVECTUR', 'E', ivectu)
+        call jevech('PVECTUR', 'E', jvVect)
         call nmpr3d_vect(nno, npg, ndofbynode, zr(ipoids), zr(ivf), &
-                         zr(idfde), geom_reac, pres_point, zr(ivectu))
-!
-! - Tangent matrix
-!
+                         zr(idfde), geom_reac, pres_point, zr(jvVect))
     else if (option .eq. 'RIGI_MECA_PRSU_F') then
         call nmpr3d_matr(nno, npg, zr(ipoids), zr(ivf), zr(idfde), &
                          geom_reac, pres_point, matr)
-        call jevech('PMATUNS', 'E', imatun)
+        call jevech('PMATUNS', 'E', jvMatrUsym)
         k = 0
         do i = 1, nddl*nno
             do j = 1, nddl*nno
                 k = k+1
-                zr(imatun-1+k) = matr((j-1)*nddl*nno+i)
+                zr(jvMatrUsym-1+k) = matr((j-1)*nddl*nno+i)
             end do
         end do
         ASSERT(k .eq. nddl*nno*nddl*nno)
     end if
 !
     if (lSigm) then
-        call codere(cod, npg, zi(jcret))
+        call codere(cod, npg, zi(jvCodret))
     end if
 !
 end subroutine

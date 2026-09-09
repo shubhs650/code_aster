@@ -33,6 +33,7 @@ subroutine laElemCont(parameters, geom, coor_qp_sl, hF, &
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 #include "contact_module.h"
 !
     type(ContactParameters), intent(in) :: parameters
@@ -73,8 +74,10 @@ subroutine laElemCont(parameters, geom, coor_qp_sl, hF, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: shape_func_sl(9), dshape_func_sl(2, 9), ddshape_func_sl(3, 9)
-    real(kind=8) :: shape_func_ma(9), dshape_func_ma(2, 9), ddshape_func_ma(3, 9)
+    real(kind=8) :: shape_func_sl(MT_NNOMAX2D), dshape_func_sl(2, MT_NNOMAX2D)
+    real(kind=8) :: ddshape_func_sl(3, MT_NNOMAX2D)
+    real(kind=8) :: shape_func_ma(MT_NNOMAX2D), dshape_func_ma(2, MT_NNOMAX2D)
+    real(kind=8) :: ddshape_func_ma(3, MT_NNOMAX2D)
     real(kind=8) :: shape_func_lagr(4), lagr_v_(3), mu_f_(MAX_LAGA_DOFS, 2)
     real(kind=8) :: norm_mast(3), tau_slav_(3, 2), tau_mast(3, 2)
     real(kind=8) :: H, coor_qp_ma(2), lagrc_gap, lagr_c_, lagr_f_(2)
@@ -122,7 +125,7 @@ subroutine laElemCont(parameters, geom, coor_qp_sl, hF, &
 !
 ! ----- Evaluate shape function for Lagrange (slave)
 !
-    call shapeFuncLagr(geom%elem_dime, geom%elem_slav_code, coor_qp_sl, &
+    call shapeFuncLagr(geom%elem_slav_code, coor_qp_sl, &
                        shape_func_lagr)
 !
 ! ----- Evaluate Lagr_c and gamma_c at quadrature point

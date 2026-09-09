@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
-
+from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
 import copy
 from collections import Counter
 from itertools import chain
@@ -113,7 +114,74 @@ def _busymscalinf(A, niter, atol):
     return As, DDl, DDr
 
 
-class MatrixScaler:
+class mScaler(ABC):
+    def __init__(self, scaling_type) -> None:
+        "Initialization of mScaler"
+        self.scaling_type = scaling_type
+        self.lvect = None
+        self.rvect = None
+
+    @classmethod
+    def factory(cls, scaling_type):
+        if scaling_type:
+            return MatrixScaler()
+        else:
+            return NoScaler()
+
+    @abstractmethod
+    def computeScaling(self, matrix, merge_dof, verbose):
+        pass
+
+    @abstractmethod
+    def scaleMatrix(self, matrix: AssemblyMatrixDisplacementReal or AssemblyMatrixTemperatureReal):
+        pass
+
+    @abstractmethod
+    def scaleRHS(self, rhs: FieldOnNodesReal):
+        pass
+
+    @abstractmethod
+    def unscaleSolution(self, sol: FieldOnNodesReal):
+        pass
+
+    @abstractmethod
+    def getScalingVectors(self):
+        pass
+
+
+class NoScaler(mScaler):
+    def __init__(self):
+        "Initialization of NoScaler"
+        super().__init__("NoScaler")
+
+    def computeScaling(self, matrix, merge_dof, verbose):
+        lsize = matrix.size(local=True)[0]
+        lvect = np.ones(lsize)
+        rvect = np.ones(lsize)
+        self.lvect = lvect
+        self.rvect = rvect
+
+    def scaleMatrix(self, matrix: AssemblyMatrixDisplacementReal or AssemblyMatrixTemperatureReal):
+        """Scale the matrix in argument using the previously computed scaling vectors
+        (from initial to normalized)."""
+        return matrix
+
+    def scaleRHS(self, rhs: FieldOnNodesReal):
+        """Scale the rhs in argument using the previously computed scaling vectors
+        (from initial to normalized)."""
+        return rhs
+
+    def unscaleSolution(self, sol: FieldOnNodesReal):
+        """Unscale the solution in argument using the previously computed scaling vectors
+        (from normalized to initial)."""
+        return sol
+
+    def getScalingVectors(self):
+        """Return the left and right scaling vectors (in this order)."""
+        return self.lvect, self.rvect
+
+
+class MatrixScaler(mScaler):
     """Helper object to scale matrices or vectors according to [1].
     The scaling is computed and applied by groups of components aka for a
     thermo-hydro-mechanical problem, all displacement dofs are scaled by the same
@@ -124,24 +192,24 @@ class MatrixScaler:
             Daniel Ruiz and Bora Ucar
             http://perso.ens-lyon.fr/bora.ucar/codes.html"""
 
-    def __init__(self) -> None:
-        self.lvect = None
-        self.rvect = None
+    def __init__(self):
+        "Initialization of MatrixScaler"
+        super().__init__("MatrixScaler")
 
     def computeScaling(
         self,
-        A: AssemblyMatrixDisplacementReal or AssemblyMatrixTemperatureReal,
-        merge_dof=[["DX", "DY", "DZ"], ["DRX", "DRY", "DRZ"]],
+        matrix: AssemblyMatrixDisplacementReal or AssemblyMatrixTemperatureReal,
+        merge_dof,
         verbose=False,
     ):
         """Compute and store the entries of the right and left scaling vectors.
 
         Arguments:
-        A [AssemblyMatrix] : the matrix providing the dofs and the reference values
+        matrix [AssemblyMatrix] : the matrix providing the dofs and the reference values
         merge_dof [str] : the dofs that will be considered together
         """
-        nmbrg = A.getDOFNumbering()
-        pA = A.toPetsc()
+        nmbrg = matrix.getDOFNumbering()
+        pA = matrix.toPetsc()
 
         dof2row = nmbrg.getDictComponentsToDOFs(local=False)
 
@@ -206,7 +274,7 @@ class MatrixScaler:
             )
 
         # the scaling vectors - they have the same shape as the local matrix
-        lsize = A.size(local=True)[0]
+        lsize = matrix.size(local=True)[0]
         lvect = np.zeros(lsize)
         rvect = np.zeros(lsize)
         for row in range(lsize):
@@ -217,12 +285,12 @@ class MatrixScaler:
         # TODO fix the dirty hack after solution of issue32296
         has_DirichletBC = False
         try:
-            has_DirichletBC = any(A.getDirichletBCDOFs())
+            has_DirichletBC = any(matrix.getDirichletBCDOFs())
         except AsterError:
             pass
         if has_DirichletBC:
-            lvect[np.where(np.array(A.getDirichletBCDOFs()) == 1)] = 1.0
-            rvect[np.where(np.array(A.getDirichletBCDOFs()) == 1)] = 1.0
+            lvect[np.where(np.array(matrix.getDirichletBCDOFs()) == 1)] = 1.0
+            rvect[np.where(np.array(matrix.getDirichletBCDOFs()) == 1)] = 1.0
 
         self.lvect = lvect
         self.rvect = rvect
@@ -251,3 +319,21 @@ class MatrixScaler:
     def getScalingVectors(self):
         """Return the left and right scaling vectors (in this order)."""
         return self.lvect, self.rvect
+
+
+class matrixScaler(AbstractContextManager):
+    def __init__(self, matrix, rhs, merge_dof=None, scaling_type=False, verbose=False):
+        self._scaling = mScaler.factory(scaling_type)
+        self._matrix = matrix
+        self._rhs = rhs
+        self._merge_dof = merge_dof or [["DX", "DY", "DZ"], ["DRX", "DRY", "DRZ"]]
+        self._verbose = verbose
+
+    def __enter__(self):
+        self._scaling.computeScaling(self._matrix, merge_dof=self._merge_dof, verbose=self._verbose)
+        self._scaling.scaleMatrix(self._matrix)
+        self._scaling.scaleRHS(self._rhs)
+        return self._scaling
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False

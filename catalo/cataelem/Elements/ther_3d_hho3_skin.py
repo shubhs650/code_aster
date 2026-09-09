@@ -198,22 +198,28 @@ class THER3DQU9_HHO3_F(Element):
                 (OP.TOU_INI_ELGA.PGEOM_R, LC.EGGEO3D),
                 (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
                 (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELEM(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
-                (OP.TOU_INI_ELEM.PNEU1_R, LC.CNEUTR1),
+                (OP.TOU_INI_ELEM.PCAMA_R, LC.CCAMASS),
                 (OP.TOU_INI_ELEM.PCOEH_R, LC.CHECHPR),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
     )

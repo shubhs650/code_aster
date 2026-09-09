@@ -39,6 +39,7 @@ subroutine lac_gapi(mesh, ds_contact)
 #include "asterfort/cfdisi.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/as_allocate.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: mesh
     type(NL_DS_Contact), intent(in) :: ds_contact
@@ -76,7 +77,8 @@ subroutine lac_gapi(mesh, ds_contact)
     integer(kind=8) :: elem_slav_nbnode, elem_slav_nume, elem_slav_dime
     integer(kind=8) :: elem_mast_nbnode, elem_mast_nume, elem_mast_dime
     character(len=8) :: elem_mast_code, elem_slav_code
-    real(kind=8) :: elem_slav_coorO(27), elem_mast_coorN(27), elem_slav_coorN(27)
+    real(kind=8) :: elem_slav_coorO(3, MT_NNOMAX2D), elem_mast_coorN(3, MT_NNOMAX2D)
+    real(kind=8) :: elem_slav_coorN(3, MT_NNOMAX2D)
     character(len=19) :: newgeo
     integer(kind=8) :: jv_geomO, jv_geomN
     integer(kind=8) :: patch_indx

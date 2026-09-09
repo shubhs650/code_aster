@@ -33,8 +33,7 @@ void UTMESS( char *typm, char *idmess );
 
 void UTMESS( const char *typm, const char *idmess );
 
-void UTMESS( const std::string &typm, const std::string &idmess );
-
-void UtmessCore( const std::string &typm, const std::string &idmess, const VectorString &vec );
+void UTMESS( const std::string &typm, const std::string &idmess, const VectorString &vk = {},
+             const VectorLong &vi = {}, const VectorReal &vr = {} );
 
 #endif /* MESSAGES_H_ */

@@ -18,17 +18,18 @@
 !
 subroutine te0448(nomopt, nomte)
 !
+    use HHO_algebra_module
     use HHO_basis_module
     use HHO_eval_module
-    use HHO_init_module, only: hhoInfoInitCellAndFace
     use HHO_gradrec_module
+    use HHO_init_module, only: hhoInfoInitCellAndFace
+    use HHO_matrix_module
     use HHO_Meca_module
     use HHO_quadrature_module
     use HHO_size_module
+    use HHO_SmallStrainMeca_module
     use HHO_type
     use HHO_utils_module
-    use HHO_matrix_module
-    use HHO_algebra_module
 !
     implicit none
 !
@@ -42,7 +43,6 @@ subroutine te0448(nomopt, nomte)
 #include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/readVector.h"
-#include "blas/dgemv.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !  HHO
@@ -58,18 +58,18 @@ subroutine te0448(nomopt, nomte)
     type(HHO_basis_cell) :: hhoBasisCell
     type(HHO_Quadrature) :: hhoQuadCellRigi
     integer(kind=8) :: cbs, fbs, total_dofs, gbs, gbs_sym
-    integer(kind=8) :: npg
+    integer(kind=8) :: npg, faces_dofs, cbs_cmp, gbs_axis
     integer(kind=8) :: ipg, idefo, nsig
-    aster_logical :: l_largestrains
-    character(len=4) :: fami
+    aster_logical :: l_axi
+    character(len=8) :: fami
     character(len=8) :: typmod(2)
     type(HHO_Data) :: hhoData
     type(HHO_Cell) :: hhoCell
-    real(kind=8) :: G_curr(3, 3), E_curr(6)
+    real(kind=8) :: E_curr(6)
     real(kind=8) :: coorpg(3)
     real(kind=8) :: BSCEval(MSIZE_CELL_SCAL)
     real(kind=8), dimension(MSIZE_TDOFS_VEC) :: depl_curr
-    real(kind=8), dimension(MSIZE_CELL_MAT) :: G_curr_coeff
+    real(kind=8), dimension(MSIZE_CELL_MAT) :: E_curr_coeff
     type(HHO_matrix) :: gradrec
 !
 ! --- Get HHO informations
@@ -83,7 +83,9 @@ subroutine te0448(nomopt, nomte)
 !
 ! --- Number of dofs
     call hhoMecaNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, &
-                       gbs, gbs_sym)
+                       gbs, gbs_sym, gbs_axis)
+    cbs_cmp = cbs/hhoCell%ndim
+    faces_dofs = total_dofs-cbs
     nsig = nbsigm()
     ASSERT(cbs <= MSIZE_CELL_VEC)
     ASSERT(fbs <= MSIZE_FACE_VEC)
@@ -101,6 +103,7 @@ subroutine te0448(nomopt, nomte)
         typmod(1) = '3D'
     case (2)
         if (lteatt('AXIS', 'OUI')) then
+            l_axi = ASTER_TRUE
             typmod(1) = 'AXIS'
         else if (lteatt('C_PLAN', 'OUI')) then
             ASSERT(ASTER_FALSE)
@@ -117,21 +120,8 @@ subroutine te0448(nomopt, nomte)
 !
     call jevech('PDEFOPG', 'E', idefo)
 !
-! --- Large strains ?
-!
-    l_largestrains = ASTER_FALSE
-!
-! --- Compute Operators
-!
-    if (l_largestrains) then
-!
-! ----- Compute Gradient reconstruction
-        call hhoGradRecFullMat(hhoCell, hhoData, gradrec)
-    else
-!
 ! ----- Compute Symmetric Gradient reconstruction
-        call hhoGradRecSymFullMat(hhoCell, hhoData, gradrec)
-    end if
+    call hhoGradRecSymFullMat(hhoCell, hhoData, gradrec)
 !
 ! --- get displacement
 !
@@ -144,7 +134,7 @@ subroutine te0448(nomopt, nomte)
 !
 ! --- Compute local contribution
 !
-    call gradrec%dot(depl_curr, G_curr_coeff)
+    call gradrec%dot(depl_curr, E_curr_coeff)
 !
 ! ----- Loop on quadrature point
 !
@@ -155,12 +145,8 @@ subroutine te0448(nomopt, nomte)
 !
         call hhoBasisCell%BSEval(coorpg(1:3), 0, hhoData%grad_degree(), BSCEval)
 !
-        if (l_largestrains) then
-            G_curr = hhoEvalMatCell(hhoCell%ndim, gbs, BSCEval, G_curr_coeff)
-        else
-            E_curr = hhoEvalSymMatCell(hhoCell%ndim, gbs_sym, BSCEval, G_curr_coeff)
-            zr(idefo-1+(ipg-1)*nsig+1:idefo-1+ipg*nsig) = E_curr(1:nsig)
-        end if
+        E_curr = hhoEvalSymMatCell(hhoCell%ndim, gbs_sym, BSCEval, E_curr_coeff)
+        zr(idefo-1+(ipg-1)*nsig+1:idefo-1+ipg*nsig) = E_curr(1:nsig)
     end do
 !
     call gradrec%free()

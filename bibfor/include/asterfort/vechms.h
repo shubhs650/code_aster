@@ -15,18 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vechms(nomo, mate, mateco, carele, varplu, lischa,&
-                      partps, vecele)
-        character(len=8) :: nomo
-        character(len=24) :: mate, mateco
-        character(len=24) :: carele
-        character(len=19) :: varplu
-        character(len=19) :: lischa
-        real(kind=8) :: partps(3)
-        character(len=19) :: vecele
+    subroutine vechms(model, materField, materCode, caraElem, varplu, listLoad, &
+                      partps, vectElem)
+        character(len=8), intent(in) :: model
+        character(len=24), intent(in) :: materField, caraElem, materCode
+        real(kind=8), intent(in) :: partps(3)
+        character(len=19), intent(in) :: listLoad, varplu
+        character(len=19), intent(in) :: vectElem
     end subroutine vechms
 end interface

@@ -15,21 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vechmx(nomo, lischa, ichar, nbch, nomlis,&
-                      nbin_maxi, lpain, lchin, lastin, vecele)
-        integer(kind=8) :: nbin_maxi
-        character(len=8) :: nomo
-        character(len=19) :: lischa
-        integer(kind=8) :: ichar
-        integer(kind=8) :: nbch
-        character(len=24) :: nomlis
-        character(len=8) :: lpain(nbin_maxi)
-        character(len=19) :: lchin(nbin_maxi)
-        integer(kind=8) :: lastin
-        character(len=19) :: vecele
+    subroutine vechmx(model, listLoad, iLoad, nbLoadIndx, listLoadIndxJv, &
+                      nbFieldInMax, lpain, lchin, nbFieldIn, vectElem)
+        character(len=8), intent(in) :: model
+        character(len=19), intent(in) :: listLoad
+        integer(kind=8), intent(in) :: iLoad, nbLoadIndx
+        character(len=24), intent(in) :: listLoadIndxJv
+        integer(kind=8), intent(in) :: nbFieldInMax
+        character(len=8), intent(inout) :: lpain(nbFieldInMax)
+        character(len=19), intent(inout) :: lchin(nbFieldInMax)
+        integer(kind=8), intent(inout) :: nbFieldIn
+        character(len=19), intent(in) :: vectElem
     end subroutine vechmx
 end interface

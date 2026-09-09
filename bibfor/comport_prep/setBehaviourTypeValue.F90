@@ -73,7 +73,7 @@ subroutine setBehaviourTypeValue(prepMapCompor, iFactorKeyword_, &
     if (present(comporMap_)) then
         comporMap_(1:COMPOR_SIZE) = 'VIDE'
         comporMap_(RELA_NAME) = prepPara%rela_comp
-        comporMap_(MGIS_ADDR) = prepExte%extern_addr
+        comporMap_(MGIS_ADDR) = prepExte%adrsMGIS
         write (comporMap_(NVAR), '(I16)') prepPara%nbVari
         comporMap_(DEFO) = prepPara%defo_comp
         comporMap_(INCRELAS) = prepPara%type_comp
@@ -132,7 +132,7 @@ subroutine setBehaviourTypeValue(prepMapCompor, iFactorKeyword_, &
     if (present(comporList_)) then
         comporList_(1:COMPOR_SIZE) = 'VIDE'
         comporList_(RELA_NAME) = prepPara%rela_comp
-        comporList_(MGIS_ADDR) = prepExte%extern_addr
+        comporList_(MGIS_ADDR) = prepExte%adrsMGIS
         write (comporList_(NVAR), '(I16)') prepPara%nbVari
         comporList_(DEFO) = prepPara%defo_comp
         comporList_(INCRELAS) = prepPara%type_comp

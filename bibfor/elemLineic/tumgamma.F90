@@ -49,14 +49,14 @@ subroutine tumgamma(nbNode, nbFourier, nbDof)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "MASS"
+    character(len=8), parameter :: fami = "MASS"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     integer(kind=8) :: jvAcce
     integer(kind=8) :: jvVect
     real(kind=8) :: mass(nbDof, nbDof)
     real(kind=8) :: radiusLayer
     real(kind=8) :: poids, weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
-    integer(kind=8) :: jvMaterCode
+    integer(kind=8) :: jvMaterc
     real(kind=8) :: meanTemp, rho
     real(kind=8) :: jacobi, xpg(PIPE_MAX_NPG)
     real(kind=8) :: phi
@@ -99,8 +99,8 @@ subroutine tumgamma(nbNode, nbFourier, nbDof)
     end if
 
 ! - Get density
-    call jevech('PMATERC', 'L', jvMaterCode)
-    call pipeGetDensity(jvMaterCode, rho, meanTemp)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call pipeGetDensity(jvMaterc, rho, meanTemp)
 
 ! - Loop on Gauss points (on segment)
     nvec = 0.d0

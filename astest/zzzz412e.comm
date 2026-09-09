@@ -35,7 +35,6 @@ mailcol = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
 #    (LONG BEACH EAST WEST)
 #
 
-from code_aster.CodeCommands.defi_list_reel import DEFI_LIST_REEL
 from sdnx100h import F_FONC
 
 LBEW, LBNS = F_FONC()

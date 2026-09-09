@@ -162,7 +162,7 @@ pA_unscaled = matrAsse.toPetsc()
 
 S = MatrixScaler.MatrixScaler()
 logger.setLevel(2)
-S.computeScaling(matrAsse)
+S.computeScaling(matrAsse, merge_dof=[["DX", "DY", "DZ"], ["DRX", "DRY", "DRZ"]])
 S.scaleMatrix(matrAsse)
 
 pA_scaled = matrAsse.toPetsc()

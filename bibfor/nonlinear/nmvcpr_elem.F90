@@ -16,10 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmvcpr_elem(modelz, matez, matecoz, cara_elemz, &
-                       nume_harm, time_comp, hval_incr, &
-                       varc_refez, comporz, &
-                       base, vect_elemz)
+subroutine nmvcpr_elem(modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                       poum, hval_incr, &
+                       varcRefeZ, comporZ, &
+                       vectElemZ)
 !
     implicit none
 !
@@ -32,13 +32,11 @@ subroutine nmvcpr_elem(modelz, matez, matecoz, cara_elemz, &
 #include "asterfort/varcCalcPrep.h"
 #include "asterfort/varcDetect.h"
 !
-    character(len=*), intent(in) :: modelz, cara_elemz, matez, matecoz
-    integer(kind=8), intent(in) :: nume_harm
-    character(len=1), intent(in) :: time_comp
-    character(len=*), intent(in) :: varc_refez, comporz
+    character(len=*), intent(in) :: modelZ, caraElemZ, materFieldZ, materCodeZ
+    character(len=1), intent(in) :: poum
+    character(len=*), intent(in) :: varcRefeZ, comporZ
     character(len=19), intent(in) :: hval_incr(*)
-    character(len=1), intent(in) :: base
-    character(len=*), intent(in) :: vect_elemz
+    character(len=*), intent(in) :: vectElemZ
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -49,80 +47,73 @@ subroutine nmvcpr_elem(modelz, matez, matecoz, cara_elemz, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  model          : name of model
-! In  mate           : name of material characteristics (field)
-! In  mateco         : name of coded material
-! In  cara_elem      : name of elementary characteristics (field)
-! In  nume_harm      : Fourier harmonic number
-! In  time_comp        :  '-' or '+' for command variables evaluation
+! In  materField     : name of material characteristics (field)
+! In  materCode      : name of coded material
+! In  caraElem       : name of elementary characteristics (field)
+! In  poum           :  '-' or '+' for command variables evaluation
 ! In  hval_incr      : hat-variable for incremental values
-! In  varc_refe      : name of reference command variables vector
+! In  varcRefe       : name of reference command variables vector
 ! In  compor         : name of comportment definition (field)
-! In  base           : JEVEUX base to create objects
-! In  vect_elem      : elementary vectors
+! In  vectElem      : elementary vectors
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: mxchin = 37, mxchout = 2
-    character(len=8) :: lpain(mxchin), lpaout(mxchout)
-    character(len=19) :: lchin(mxchin), lchout(mxchout)
+    character(len=1), parameter :: jvBase = "V"
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
     aster_logical :: l_temp, l_hydr, l_ptot
     aster_logical :: l_sech, l_epsa, l_meta
-    character(len=19) :: sigm_prev, vari_prev, varc_prev, varc_curr
-    integer(kind=8) :: nbin, nbout
-    character(len=24) :: mult_comp, chsith
+    character(len=19) :: sigmPrev, variPrev, varcPrev, varcCurr
+    integer(kind=8) :: nbFieldIn, nbFieldOut
+    character(len=24) :: multComp
+    character(len=24), parameter :: chsith = '&&VECTME.CHSITH'
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    mult_comp = comporz
-    chsith = '&&VECTME.CHSITH'
-!
+    multComp = comporZ
+
 ! - Get fields from hat-variables - Begin of time step
-!
-    call nmchex(hval_incr, 'VALINC', 'SIGMOI', sigm_prev)
-    call nmchex(hval_incr, 'VALINC', 'VARMOI', vari_prev)
-    call nmchex(hval_incr, 'VALINC', 'COMMOI', varc_prev)
-    call nmchex(hval_incr, 'VALINC', 'COMPLU', varc_curr)
-!
+    call nmchex(hval_incr, 'VALINC', 'SIGMOI', sigmPrev)
+    call nmchex(hval_incr, 'VALINC', 'VARMOI', variPrev)
+    call nmchex(hval_incr, 'VALINC', 'COMMOI', varcPrev)
+    call nmchex(hval_incr, 'VALINC', 'COMPLU', varcCurr)
+
 ! - Detect external state variables
-!
-    call varcDetect(matez, l_temp, l_hydr, l_ptot, l_sech, l_epsa, l_meta)
-!
+    call varcDetect(materFieldZ, l_temp, l_hydr, l_ptot, l_sech, l_epsa, l_meta)
+
 ! - Prepare elementary vectors
-!
-    call detrsd('VECT_ELEM', vect_elemz)
-    call maveElemCreate(base, vect_elemz, modelz)
-!
+    call detrsd('VECT_ELEM', vectElemZ)
+    call maveElemCreate(jvBase, vectElemZ, modelZ)
+
 ! - Preparation
-!
-    call varcCalcPrep(modelz, cara_elemz, matecoz, &
-                      nume_harm, time_comp, &
+    call varcCalcPrep(modelZ, caraElemZ, materCodeZ, &
+                      poum, &
                       l_temp, l_meta, &
-                      varc_refez, varc_prev, varc_curr, &
-                      comporz, mult_comp, chsith, &
-                      sigm_prev, vari_prev, &
-                      mxchin, mxchout, &
-                      nbin, nbout, &
+                      varcRefeZ, varcPrev, varcCurr, &
+                      comporZ, multComp, chsith, &
+                      sigmPrev, variPrev, &
+                      nbFieldInMax, nbFieldOutMax, &
+                      nbFieldIn, nbFieldOut, &
                       lpain, lchin, &
                       lpaout, lchout)
-!
+
 ! - Calls to CALCUL
-!
-    call varcCalcComp(modelz, chsith, &
+    call varcCalcComp(modelZ, chsith, &
                       l_temp, l_hydr, l_ptot, &
                       l_sech, l_epsa, &
-                      nbin, nbout, &
+                      nbFieldIn, nbFieldOut, &
                       lpain, lchin, &
                       lpaout, lchout, &
-                      base, vect_elemz)
-!
+                      vectElemZ)
+
 ! - Call to CALCUL special for metallurgy (non-incremental)
-!
-    if (time_comp .eq. '+' .and. l_meta) then
-        call varcCalcMeta(modelz, &
-                          nbin, nbout, &
+    if (poum .eq. '+' .and. l_meta) then
+        call varcCalcMeta(modelZ, &
+                          nbFieldIn, nbFieldOut, &
                           lpain, lchin, &
                           lpaout, lchout, &
-                          base, vect_elemz)
+                          vectElemZ)
     end if
 !
 end subroutine

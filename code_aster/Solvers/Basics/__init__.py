@@ -30,6 +30,7 @@ __all__ = (
     "Context",
     "ContextMixin",
     "LoggingManager",
+    "Observation",
     "PhysicalState",
     "Residuals",
 )
@@ -37,5 +38,6 @@ __all__ = (
 from .bases import DispatcherMixin, EventId, EventSource, Observer, ProblemType
 from .context import Context, ContextMixin
 from .logging_manager import LoggingManager
+from .observation import Observation
 from .physical_state import PhysicalState
 from .residual import Residuals

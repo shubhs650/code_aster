@@ -81,21 +81,27 @@ void Calcul::addOutputField( const std::string &parameterName, const DataFieldPt
 /** @brief Add input fields for elementary characteristics */
 void Calcul::addElementaryCharacteristicsField( const ElementaryCharacteristicsPtr elemChara ) {
     if ( elemChara ) {
-        addInputField( "PCAORIE", elemChara->getLocalBasis() );
         addInputField( "PCADISK", elemChara->getDiscreteRigidity() );
         addInputField( "PCADISM", elemChara->getDiscreteMass() );
         addInputField( "PCADISA", elemChara->getDiscreteDamping() );
         addInputField( "PCAGEPO", elemChara->getBeamGeometry() );
         addInputField( "PCAGNPO", elemChara->getBeamSection() );
-        addInputField( "PCACOQU", elemChara->getShellParameters() );
         addInputField( "PCAARPO", elemChara->getFlexibilityCoefficients() );
         addInputField( "PCACABL", elemChara->getCableParameters() );
         addInputField( "PCAGNBA", elemChara->getBarParameters() );
-        addInputField( "PCAMASS", elemChara->getMaterialBase() );
         addInputField( "PCAPOUF", elemChara->getFluidBeamParameters() );
         addInputField( "PNBSP_I", elemChara->getNumberOfSubpoints() );
         addInputField( "PFIBRES", elemChara->getFibers() );
         addInputField( "PCINFDI", elemChara->getDiscreteParameters() );
+    }
+}
+
+/** @brief Add input fields for orientation */
+void Calcul::addOrientationField( const ElementaryCharacteristicsPtr elemChara ) {
+    if ( elemChara ) {
+        addInputField( "PCAORIE", elemChara->getLocalBasis() );
+        addInputField( "PCACOQU", elemChara->getShellParameters() );
+        addInputField( "PCAMASS", elemChara->getMaterialBase() );
     }
 }
 

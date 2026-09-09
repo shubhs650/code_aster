@@ -19,13 +19,15 @@
 !
 !
 interface
-    subroutine dxeffi(option, nomte, pgl, cont, ind,&
+    subroutine dxeffi(plateCara, plateOrie, &
+                      option, nomte, cont, ind, &
                       effint)
-        character(len=*) :: option
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8) :: cont(*), effint(*)
         character(len=16) :: nomte
-        real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: cont(*)
+        character(len=*) :: option
         integer(kind=8) :: ind
-        real(kind=8) :: effint(*)
     end subroutine dxeffi
 end interface

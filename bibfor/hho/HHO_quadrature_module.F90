@@ -33,7 +33,6 @@ module HHO_quadrature_module
 #include "asterf_debug.h"
 #include "asterfort/assert.h"
 #include "asterfort/elraga.h"
-#include "asterfort/lteatt.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/reereg.h"
 #include "asterfort/utmess.h"
@@ -50,9 +49,9 @@ module HHO_quadrature_module
     type HHO_Quadrature
         integer(kind=8)                     :: order = 0
         integer(kind=8)                     :: nbQuadPoints = 0
-        real(kind=8), dimension(3, MAX_QP)  :: points = 0.d0
-        real(kind=8), dimension(MAX_QP)     :: weights = 0.d0
-        real(kind=8), dimension(3, MAX_QP)  :: points_param = 0.d0
+        real(kind=8), dimension(3, MSIZE_QP)  :: points = 0.d0
+        real(kind=8), dimension(MSIZE_QP)     :: weights = 0.d0
+        real(kind=8), dimension(3, MSIZE_QP)  :: points_param = 0.d0
         aster_logical                       :: l_point_param = ASTER_TRUE
 ! ----- member functions
     contains
@@ -165,7 +164,7 @@ contains
         call elraga('SE2', rules(this%order), dimp, nbpg, xpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
 !
         do ipg = 1, nbpg
@@ -217,7 +216,7 @@ contains
         call elraga('QU4', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
 !
         do ipg = 1, nbpg
@@ -272,7 +271,7 @@ contains
         call elraga('HE8', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
 !
         do ipg = 1, nbpg
@@ -328,7 +327,7 @@ contains
         call elraga('TR3', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
         jaco = 2.d0*measure
 !
@@ -397,7 +396,7 @@ contains
         call elraga('TR3', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(n_simp*nbpg <= MAX_QP)
+        ASSERT(n_simp*nbpg <= MSIZE_QP)
         this%nbQuadPoints = 0
         this%l_point_param = param
 !
@@ -468,7 +467,7 @@ contains
         call elraga('TE4', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
         jaco = 6.d0*measure
 !
@@ -533,7 +532,7 @@ contains
         call elraga('TE4', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(n_simp*nbpg <= MAX_QP)
+        ASSERT(n_simp*nbpg <= MSIZE_QP)
         this%nbQuadPoints = 0
         this%l_point_param = param
 !
@@ -600,7 +599,7 @@ contains
         call elraga('PY5', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
 !
         do ipg = 1, nbpg
@@ -655,7 +654,7 @@ contains
         call elraga('PE6', rules(this%order), dimp, nbpg, coorpg, poidpg)
 !
 ! ----- fill hhoQuad
-        ASSERT(nbpg <= MAX_QP)
+        ASSERT(nbpg <= MSIZE_QP)
         this%nbQuadPoints = nbpg
 !
         do ipg = 1, nbpg
@@ -674,13 +673,13 @@ contains
 !
 !===================================================================================================
 !
-    subroutine hhoGetQuadCell(this, hhoCell, order, axis, split, param, adapt)
+    subroutine hhoGetQuadCell(this, hhoCell, order, split, param, adapt)
 !
         implicit none
 !
         type(HHO_cell), intent(in)            :: hhoCell
         integer(kind=8), intent(in)           :: order
-        aster_logical, intent(in), optional   :: split, param, adapt, axis
+        aster_logical, intent(in), optional   :: split, param, adapt
         class(HHO_quadrature), intent(out)    :: this
 !
 ! --------------------------------------------------------------------------------------------------
@@ -689,7 +688,6 @@ contains
 !   Get the quadrature rules for the current cell
 !   In hhoCell      : a HHO cell
 !   In order        : quadrature order
-!   In axis     : axisymetric ? multpiply by r the weith if True
 !   Out this        : hho quadrature
 !
 ! --------------------------------------------------------------------------------------------------
@@ -704,11 +702,7 @@ contains
             adapt_ = adapt
         end if
 !
-        axis_ = ASTER_FALSE
-        if (present(adapt)) then
-            axis_ = axis
-        end if
-!
+        axis_ = hhoCell%l_axis
         if (axis_ .and. adapt_) then
             this%order = this%order+1
         end if
@@ -724,7 +718,7 @@ contains
         end if
 !
         if (split_simpl) then
-            !
+!
             if (present(param)) then
                 param_ = param
             else
@@ -765,7 +759,7 @@ contains
             end do
         end if
 !
-        ASSERT(this%nbQuadPoints <= MAX_QP)
+        ASSERT(this%nbQuadPoints <= MSIZE_QP)
 !
     end subroutine
 !
@@ -773,13 +767,13 @@ contains
 !
 !===================================================================================================
 !
-    subroutine hhoGetQuadFace(this, hhoFace, order, axis, split, param, adapt)
+    subroutine hhoGetQuadFace(this, hhoFace, order, split, param, adapt)
 !
         implicit none
 !
         type(HHO_face), intent(in)          :: hhoFace
         integer(kind=8), intent(in)         :: order
-        aster_logical, intent(in), optional :: adapt, split, param, axis
+        aster_logical, intent(in), optional :: adapt, split, param
         class(HHO_quadrature), intent(out)  :: this
 !
 ! --------------------------------------------------------------------------------------------------
@@ -788,7 +782,6 @@ contains
 !   Get the quadrature rules for the current face
 !   In hhoFace      : a HHO face
 !   In order        : quadrature order
-!   In axis     : axisymetric ? multpiply by r the weith if True
 !   Out this     : hho quadrature
 !
 ! --------------------------------------------------------------------------------------------------
@@ -803,9 +796,12 @@ contains
             adapt_ = adapt
         end if
 !
-        axis_ = ASTER_FALSE
-        if (present(adapt)) then
-            axis_ = axis
+        axis_ = hhoFace%l_axis
+        if (axis_) then
+            ! We modifiy quadrature for edges on axe
+            ! Do no multiply by r since it remains an
+            ! edge after revolution
+            axis_ = .not. hhoFace%l_axis_on_axe
         end if
 !
         if (axis_ .and. adapt_) then
@@ -823,7 +819,7 @@ contains
         end if
 !
         if (split_simpl) then
-            !
+!
             if (present(param)) then
                 param_ = param
             else
@@ -856,7 +852,7 @@ contains
             end do
         end if
 !
-        ASSERT(this%nbQuadPoints <= MAX_QP)
+        ASSERT(this%nbQuadPoints <= MSIZE_QP)
 !
     end subroutine
 !
@@ -1074,15 +1070,13 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
         integer(kind=8) :: order
-        aster_logical :: axis
 !
-        ASSERT(npg .le. MAX_QP)
+        ASSERT(npg .le. MSIZE_QP)
         this%nbQuadPoints = npg
 !
         call hhoSelectOrder(hhoCell%typema, npg, order)
 !
-        axis = lteatt("TYPMOD", "AXIS")
-        call hhoGetQuadCell(this, hhoCell, order, axis, ASTER_FALSE, adapt=ASTER_FALSE)
+        call hhoGetQuadCell(this, hhoCell, order, split=ASTER_FALSE, adapt=ASTER_FALSE)
 !
     end subroutine
 !
@@ -1109,16 +1103,14 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
         integer(kind=8) :: order
-        aster_logical :: axis
 !
-        ASSERT(npg .le. MAX_QP)
+        ASSERT(npg .le. MSIZE_QP)
         this%nbQuadPoints = npg
 !
         call hhoSelectOrder(hhoFace%typema, npg, order)
 !
-        axis = lteatt("TYPMOD", "AXIS")
-        call hhoGetQuadFace(this, hhoFace, order, axis, &
-                            ASTER_FALSE, adapt=ASTER_FALSE)
+        call hhoGetQuadFace(this, hhoFace, order, &
+                            split=ASTER_FALSE, adapt=ASTER_FALSE)
 !
     end subroutine
 !

@@ -102,7 +102,7 @@ class ThermalOperators(BaseOperators):
 
         disc_comp = DiscreteComputation(self.problem)
         self._resi_prev.resi_mass = disc_comp.getNonLinearCapacityForces(
-            self.state.primal_prev, self.state.primal_step, self.state.externVar
+            self.state.U_t, self.state.deltaU, self.state.externVar
         )
 
         self._first_iter = self._stat_init = False
@@ -142,7 +142,7 @@ class ThermalOperators(BaseOperators):
         disc_comp = DiscreteComputation(self.problem)
 
         mass_ther = disc_comp.getTangentCapacityMatrix(
-            self.state.primal_prev, self.state.primal_step, self.state.externVar
+            self.state.U_t, self.state.deltaU, self.state.externVar
         )
 
         codret, rigi_ther, rigi_ther_dual = disc_comp.getInternalTangentMatrix(self.state)
@@ -173,7 +173,7 @@ class ThermalOperators(BaseOperators):
     def _getResidualStat(self, scaling=1.0):
         """Computes the residual for the stationary case."""
         residual, internVar, stress = super().getResidual(scaling=scaling)
-        self._tmp_stress = stress
+        self._tmp_stress = stress  # should be named Phi
         self._tmp_internVar = internVar
         if self._stat_init:
             self._resi_temp = residual
@@ -187,7 +187,7 @@ class ThermalOperators(BaseOperators):
         resi_curr = super().getResidual(scaling=scaling)[0]
 
         resi_curr.resi_mass = disc_comp.getNonLinearCapacityForces(
-            self.state.primal_prev, self.state.primal_step, self.state.externVar
+            self.state.U_t, self.state.deltaU, self.state.externVar
         )
 
         residual = Residuals()

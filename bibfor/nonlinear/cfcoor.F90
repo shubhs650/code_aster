@@ -26,6 +26,7 @@ subroutine cfcoor(noma, defico, newgeo, posmam, ksi1, &
 #include "asterfort/cfcarm.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmcoor.h"
     character(len=8) :: noma
     character(len=24) :: defico
@@ -57,7 +58,7 @@ subroutine cfcoor(noma, defico, newgeo, posmam, ksi1, &
 !
 !
     integer(kind=8) :: nnomam, idim, ndim, nummam
-    real(kind=8) :: coorma(27)
+    real(kind=8) :: coorma(3, MT_NNOMAX2D)
     character(len=8) :: alias, nommam
     character(len=4) :: typmai
 !
@@ -82,7 +83,7 @@ subroutine cfcoor(noma, defico, newgeo, posmam, ksi1, &
 !
 ! --- COORDONNEES DU PROJETE
 !
-    call mmcoor(alias, nnomam, ndim, coorma, ksi1, &
+    call mmcoor(alias, nnomam, coorma, ksi1, &
                 ksi2, coordp)
 !
     call jedema()

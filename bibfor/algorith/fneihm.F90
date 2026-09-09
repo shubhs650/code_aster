@@ -17,15 +17,15 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2, &
+subroutine fneihm(ds_thm, &
+                  nno1, nno2, &
                   npi, npg, wref, iu, ip, &
                   ipf, iq, vff1, vff2, dffr2, &
-                  geom, ang, congem, r, vectu, &
+                  geom, congem, r, vectu, &
                   mecani, press1, press2, dimdef, &
                   dimcon, dimuel, ndim, axi)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -33,28 +33,22 @@ subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2, &
 #include "asterfort/matthm.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    aster_logical :: fnoevo, axi
+    aster_logical :: axi
     integer(kind=8) :: dimdef, dimcon, nno1, nno2
     integer(kind=8) :: dimuel, ndim
     integer(kind=8) :: npi, npg, mecani(8), press1(9), press2(9)
     integer(kind=8) :: addeme, addep1, addep2
     integer(kind=8) :: iu(3, 18), ip(2, 9), ipf(2, 2, 9), iq(2, 2, 9)
-    real(kind=8) :: deltat, geom(ndim, nno2), dffr2(ndim-1, nno2, npi)
+    real(kind=8) :: geom(ndim, nno2), dffr2(ndim-1, nno2, npi)
     real(kind=8) :: congem(dimcon, npi), vff1(nno1, npi), vff2(nno2, npi)
-    real(kind=8) :: vectu(dimuel), r(dimdef), ang(24), wref(npg)
+    real(kind=8) :: vectu(dimuel), r(dimdef), wref(npg)
 !
-! ======================================================================
-!     BUT:  CALCUL  DE L'OPTION FORC_NODA POUR JOINT AVEC COUPLAGE HM
-!  SI FNOEVO = VRAI
-!  C EST QUE L'ON APPELLE DEPUIS STAT NON LINE  :
-!  ET ALORS LES TERMES DEPENDANT DE DELTAT SONT EVALUES
+! --------------------------------------------------------------------------------------------------
 !
-!  SI  FNOEVO = FAUX
-!  C EST QUE L'ON APPELLE DEPUIS CALCNO  :
-!  ET ALORS LES TERMES DEPENDANT DE DELTAT NE SONT PAS EVALUES
-! ======================================================================
-! IN
-! ======================================================================
+! BUT:  CALCUL  DE L'OPTION FORC_NODA POUR JOINT AVEC COUPLAGE HM
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! In  ds_thm           : datastructure for THM
 ! AXI       AXISYMETRIQUE ?
 ! TYPMOD    MODELISATION (D_PLAN, AXI, 3D ?)
@@ -72,25 +66,23 @@ subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2, &
 ! DIMDEF    DIMENSION DES DEFORMATIONS GENERALISEES ELEMENTAIRES
 ! IVF       FONCTIONS DE FORMES QUADRATIQUES
 ! IVF2      FONCTIONS DE FORMES LINEAIRES
-! ======================================================================
-! OUT
-! ======================================================================
 ! OUT R       : TABLEAU DES RESIDUS
 ! OUT VECTU   : FORCES NODALES
-! ======================================================================
-    integer(kind=8) :: adcome, adcp11, addlh1, adcop1, adcop2
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: adcome, addlh1, adcop1, adcop2
     integer(kind=8) :: kpi, i, n
     real(kind=8) :: wi, q(dimdef, dimuel)
 !
-! ======================================================================
-! --- DETERMINATION DES VARIABLES CARACTERISANT LE MILIEU --------------
-! ======================================================================
+! --------------------------------------------------------------------------------------------------
 !
+
+! - DETERMINATION DES VARIABLES CARACTERISANT LE MILIEU
     addeme = mecani(2)
     adcome = mecani(3)
     addep1 = press1(3)
     addlh1 = press1(4)
-    adcp11 = press1(5)
     adcop1 = press1(7)
     addep2 = press2(3)
     adcop2 = press2(6)
@@ -112,22 +104,19 @@ subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2, &
         do i = 1, dimdef
             r(i) = 0.d0
         end do
-!
-! ======================================================================
-! --- CALCUL DE LA MATRICE Q AU POINT DE GAUSS -------------------------
-! ======================================================================
-!
-        call matthm(ds_thm, ndim, axi, nno1, nno2, dimuel, &
+
+! ----- Compute [B] matrix for generalized strains
+        call matthm(ds_thm, &
+                    ndim, axi, nno1, nno2, dimuel, &
                     dimdef, iu, ip, ipf, iq, &
                     addep1, &
                     addlh1, vff1(1, kpi), vff2(1, kpi), dffr2(1, 1, kpi), wref(kpi), &
-                    geom, ang, wi, q)
-!
-! ======================================================================
-        call fonoei(ds_thm, ndim, deltat, fnoevo, dimdef, dimcon, &
+                    geom, wi, q)
+
+        call fonoei(ds_thm, &
+                    ndim, dimdef, dimcon, &
                     addeme, &
                     addep1, addep2, addlh1, adcome, &
-                    adcp11, &
                     adcop1, adcop2, congem(1, kpi), &
                     r)
 !
@@ -140,7 +129,6 @@ subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2, &
                 vectu(i) = vectu(i)+q(n, i)*r(n)*wi
             end do
         end do
-!
     end do
 !
 end subroutine

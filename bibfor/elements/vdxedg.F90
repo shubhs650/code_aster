@@ -16,9 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vdxedg(nomte, option, nodeCoor, &
+subroutine vdxedg(plateCara, plateOrie, &
+                  nomte, option, nodeCoor, &
                   degeElga, degeElno)
 !
+    use plate_type
     implicit none
 !
 #include "asterfort/btdfn.h"
@@ -36,6 +38,8 @@ subroutine vdxedg(nomte, option, nodeCoor, &
 #include "asterfort/vectgt.h"
 #include "jeveux.h"
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
     character(len=16), intent(in) :: nomte, option
     real(kind=8), intent(in) :: nodeCoor(3, 9)
     real(kind=8), intent(out) :: degeElga(72), degeElno(8, 9)
@@ -54,11 +58,10 @@ subroutine vdxedg(nomte, option, nodeCoor, &
     real(kind=8), parameter :: btdfBendZero(3, 42) = 0.d0
     integer(kind=8) :: nb1, nb2, npgsn, npgsr
     integer(kind=8) :: kpgsn, kpgsr, kwgt
-    integer(kind=8) :: jvCacoqu, jvDisp
-    integer(kind=8) :: i, j, k
+    integer(kind=8) :: jvDisp
+    integer(kind=8) :: i, k
     integer(kind=8) :: lzi, lzr
-    real(kind=8) :: vecta(9, 2, 3), vectn(9, 3), vectpt(9, 2, 3)
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
+    real(kind=8) :: vectTangKpg(2, 3), vectBaseKpg(3, 3)
     real(kind=8) :: hsfm(3, 9), hss(2, 9), hsj1m(3, 9), hsj1s(2, 9)
     real(kind=8) :: hsf(3, 9), hsj1fx(3, 9), wgt
     real(kind=8) :: btdm(4, 3, 42), btdf(3, 42), btds(4, 2, 42)
@@ -72,10 +75,7 @@ subroutine vdxedg(nomte, option, nodeCoor, &
     degeElga = 0.d0
     degeElno = 0.d0
 
-! - Get displacements
-    call jevech('PDEPLAR', 'L', jvDisp)
-
-! - Get objects
+! - Access to static objects of COQUE_3D
     call jevete('&INEL.'//nomte(1:8)//'.DESI', ' ', lzi)
     nb1 = zi(lzi-1+1)
     nb2 = zi(lzi-1+2)
@@ -83,38 +83,44 @@ subroutine vdxedg(nomte, option, nodeCoor, &
     npgsn = zi(lzi-1+4)
     call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
 
-! - Get thickness
-    call jevech('PCACOQU', 'L', jvCacoqu)
-    epais = zr(jvCacoqu)
+! - Get plate parameters
+    epais = plateCara%thick
 
-! - Compute local basis
-    call vectan(nb1, nb2, nodeCoor, zr(lzr), vecta, &
-                vectn, vectpt)
-    call trndgl(nb2, vectn, vectpt, zr(jvDisp), disp, &
-                rotf)
+! - Get displacements
+    call jevech('PDEPLAR', 'L', jvDisp)
+
+! - Change coordinates of displacements/rotations
+    call trndgl(nb2, plateOrie%vectNorm, plateOrie%vectTang, zr(jvDisp), &
+                disp, rotf)
 !
     kwgt = 0
 ! - MEMBRANE ET CISAILLEMENT
     do kpgsr = 1, npgsr
-        call mahsms(0, nb1, nodeCoor, un, kpgsr, &
-                    zr(lzr), epais, vectn, vectg, vectt, &
+        call mahsms(plateOrie, &
+                    0, nb1, &
+                    nodeCoor, un, kpgsr, &
+                    zr(lzr), epais, &
+                    vectBaseKpg, vectTangKpg, &
                     hsfm, hss)
-        call hsj1ms(epais, vectg, vectt, hsfm, hss, &
+        call hsj1ms(epais, vectTangKpg, vectBaseKpg, hsfm, hss, &
                     hsj1m, hsj1s)
         call btdmsr(nb1, nb2, un, kpgsr, zr(lzr), &
-                    epais, vectpt, hsj1m, hsj1s, btdm, &
+                    epais, plateOrie%vectTang, hsj1m, hsj1s, btdm, &
                     btds)
     end do
 
 ! - FLEXION
     do kpgsn = 1, npgsn
-        call mahsf(1, nb1, nodeCoor, un, kpgsn, &
-                   zr(lzr), epais, vectn, vectg, vectt, &
+        call mahsf(plateOrie, &
+                   1, nb1, &
+                   nodeCoor, un, kpgsn, &
+                   zr(lzr), epais, &
+                   vectBaseKpg, vectTangKpg, &
                    hsf)
-        call hsj1f(kpgsn, zr(lzr), epais, vectg, vectt, &
+        call hsj1f(kpgsn, zr(lzr), epais, vectTangKpg, vectBaseKpg, &
                    hsf, kwgt, hsj1fx, wgt)
         call btdfn(1, nb1, nb2, un, kpgsn, &
-                   zr(lzr), epais, vectpt, hsj1fx, btdf)
+                   zr(lzr), epais, plateOrie%vectTang, hsj1fx, btdf)
 
 ! ----- Final btild/btild1
         call btdmsn(1, nb1, kpgsn, npgsr, zr(lzr), &
@@ -160,19 +166,5 @@ subroutine vdxedg(nomte, option, nodeCoor, &
         call vddege(nomte, nb2, npgsn, zr(lzr), degeElga, &
                     degeElno)
     end if
-
-! - DETERMINATION DES REPERES LOCAUX DE L'ELEMENT AUX POINTS
-! - D'INTEGRATION ET STOCKAGE DE CES REPERES DANS LE VECTEUR .DESR
-    k = 0
-    do kpgsr = 1, npgsr
-        call vectgt(0, nb1, nodeCoor, zero, kpgsr, &
-                    zr(lzr), epais, vectn, vectg, vectt)
-        do j = 1, 3
-            do i = 1, 3
-                k = k+1
-                zr(lzr+2000+k-1) = vectt(i, j)
-            end do
-        end do
-    end do
 !
 end subroutine

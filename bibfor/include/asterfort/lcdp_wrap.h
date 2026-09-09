@@ -15,29 +15,22 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
-
+#include "asterfort/Behaviour_type.h"
 #include "asterf_types.h"
-
+!
 interface
     subroutine lcdp_wrap(fami, kpg, ksp, ndim, imate, &
-                        crit, instam, instap, neps, epsm,&
-                        deps, vim, option, sigm, sigp, vip,& 
-                        typmod, dsidep, codret)
-
+                         carcri, neps, epsm, &
+                         deps, vim, option, sigp, &
+                         vip, dsidep, codret)
         use lcdp_module, only: dp_material
-
-        integer(kind=8)      :: imate, ndim, kpg, ksp, codret, neps
-        real(kind=8) :: instam,instap
-        real(kind=8) :: crit(*)
-        real(kind=8) :: epsm(neps), deps(neps)
-        real(kind=8) :: sigp(neps), sigm(neps)
-        real(kind=8) :: vim(*), vip(*)
-        real(kind=8) :: dsidep(neps,neps)
-        character(len=16) :: option
         character(len=*) :: fami
-        character(len=8) :: typmod(*)
-    end subroutine 
+        integer(kind=8) :: imate, ndim, kpg, ksp, codret, neps
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        real(kind=8) :: epsm(neps), deps(neps)
+        real(kind=8) :: sigp(neps)
+        real(kind=8) :: vim(*), vip(*)
+        real(kind=8) :: dsidep(neps, neps)
+        character(len=16) :: option
+    end subroutine
 end interface

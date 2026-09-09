@@ -21,18 +21,19 @@ subroutine xalgo3(ndim, elrefp, nnop, it, nnose, cnset, typma, ndime, &
                   pmmax, nmilie, mfis, lonref, pinref, pintt, pmitt, jonc, exit)
     implicit none
 !
-#    include "jeveux.h"
-#    include "asterfort/assert.h"
-#    include "asterfort/xalg30.h"
-#    include "asterfort/xalg31.h"
-#    include "asterfort/xalg40.h"
-#    include "asterfort/xalg41.h"
-#    include "asterfort/xalg42.h"
-#    include "asterfort/xalg20.h"
+#include "jeveux.h"
+#include "asterfort/assert.h"
+#include "asterfort/xalg30.h"
+#include "asterfort/xalg31.h"
+#include "asterfort/xalg40.h"
+#include "asterfort/xalg41.h"
+#include "asterfort/xalg42.h"
+#include "asterfort/xalg20.h"
+#include "MeshTypes_type.h"
     character(len=8) :: typma, elrefp
     integer(kind=8) ::  ndim, ndime, nnop, it, nnose, cnset(*), exit(2)
     integer(kind=8) ::  ninter, pmmax, npts, nptm, nmilie, mfis, ar(12, 3)
-    real(kind=8) :: lonref, ainter(*), pmilie(*), lsnelp(27)
+    real(kind=8) :: lonref, ainter(*), pmilie(*), lsnelp(MT_NNOMAX)
     real(kind=8) :: pinref(*), pintt(*), pmitt(*), geom(81)
     aster_logical :: jonc
 !            BUT :  TROUVER LES PTS MILIEUX DANS L ELEMENT COUPE EN 3D

@@ -15,48 +15,42 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W0104
+! aslint: disable=W1504
 !
-subroutine lc8028(BEHinteg, &
+subroutine lc8028(BEHInteg, &
                   fami, kpg, ksp, ndim, imate, &
-                  compor, mult_comp, carcri, instam, instap, neps, &
-                  epsm, deps, nsig, sigm, vim, &
-                  option, angmas, sigp, nvi, vip, &
-                  typmod, icomp, ndsde, dsidep, codret)
+                  compor, carcri, instam, instap, neps, &
+                  epsm, deps, nsig, sigm, nvi, vim, &
+                  option, sigp, vip, &
+                  typmod, ndsde, dsidep, codret)
 !
     use Behaviour_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/Behaviour_type.h"
-#include "asterfort/nmcpla.h"
 #include "asterfort/kitPrepBehaviour.h"
+#include "asterfort/nmcpla.h"
 !
-    type(Behaviour_Integ), intent(inout) :: BEHinteg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    character(len=16), intent(in) :: mult_comp
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
-    integer(kind=8), intent(in) :: neps
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8), intent(in) :: instam, instap
+    integer(kind=8), intent(in) :: neps, nvi
     real(kind=8), intent(in) :: epsm(*)
     real(kind=8), intent(in) :: deps(*)
     integer(kind=8), intent(in) :: nsig
     real(kind=8), intent(in) :: sigm(*)
-    real(kind=8), intent(in) :: vim(*)
+    real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(out) :: sigp(*)
-    integer(kind=8), intent(in) :: nvi
-    real(kind=8), intent(out) :: vip(*)
+    real(kind=8), intent(out) :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: ndsde
     real(kind=8), intent(out) :: dsidep(*)
     integer(kind=8), intent(out) :: codret
@@ -77,7 +71,7 @@ subroutine lc8028(BEHinteg, &
 !
 ! - Compute behaviour
 !
-    call nmcpla(BEHinteg, &
+    call nmcpla(BEHInteg, &
                 fami, kpg, ksp, ndim, typmod, imate, &
                 compor_plas, compor_creep, carcri, &
                 instam, instap, neps, epsm, deps, &

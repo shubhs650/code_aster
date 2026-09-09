@@ -337,11 +337,8 @@ subroutine caddli(keywordfact, load, mesh, model, valeType)
         call jedetr(list_node)
 !
     end do
-!
+
 ! - Final linear relation affectation
-!
-    if (keywordfact .eq. 'DDL_IMPO') then
-    end if
     call aflrch(list_rela, load, 'LIN')
 !
     call jedetr('&&CADDLI.DIRECT')

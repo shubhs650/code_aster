@@ -15,14 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine w155ce(nomres, resu, nbordr, liordr)
-        integer(kind=8) :: nbordr
-        character(len=8) :: nomres
-        character(len=8) :: resu
-        integer(kind=8) :: liordr(nbordr)
+    subroutine w155ce(resultOut, resultIn, nbStore, listStore)
+        character(len=8), intent(in) :: resultOut, resultIn
+        integer(kind=8), intent(in) :: nbStore, listStore(nbStore)
     end subroutine w155ce
 end interface

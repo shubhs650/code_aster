@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0395(option, nomte)
+    use resi_refe_module, only: RESI_REFE
     implicit none
 #include "jeveux.h"
 #include "asterfort/elrefe_info.h"
@@ -24,7 +25,6 @@ subroutine te0395(option, nomte)
 #include "asterfort/nmasf3.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "blas/daxpy.h"
 !
     character(len=16) :: option, nomte
@@ -39,6 +39,7 @@ subroutine te0395(option, nomte)
     integer(kind=8) :: ipoids, ivf, idfde, igeom, jvSief, imate, jvDisp
     integer(kind=8) :: icomp, ii, iretc, iretd
     blas_int :: b_incx, b_incy, b_n
+    type(RESI_REFE):: refe
 ! DEB ------------------------------------------------------------------
 !
 ! ---- CARACTERISTIQUES DU TYPE D'ELEMENT :
@@ -81,7 +82,9 @@ subroutine te0395(option, nomte)
 !
 !
     else if (option .eq. 'REFE_FORC_NODA') then
-        call terefe('SIGM_REFE', 'MECA_ISO', sigref)
+        call refe%Init(nomte)
+        sigref = refe%GetRef('SIGM')
+        call refe%Check()
 !
         call tecach('ONO', 'PDEPLMR', 'L', iretd, iad=jvDisp)
 !

@@ -23,7 +23,6 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PVARCPR = InputParameter(
     phys=PHY.VARI_R,
     container="VOLA!&&CCPARA.VARI_INT_N",
@@ -33,7 +32,7 @@ PVARCPR = InputParameter(
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
 )
 
@@ -169,7 +168,10 @@ SIEF_ELGA = Option(
         CondCalcul("+", ((AT.PHENO, "ME"), (AT.BORD, "0"))),
         CondCalcul("-", ((AT.PHENO, "ME"), (AT.ABSO, "OUI"))),
         CondCalcul("-", ((AT.PHENO, "ME"), (AT.FLUIDE, "OUI"))),
-        CondCalcul("-", ((AT.PHENO, "ME"), (AT.INTERFACE, "OUI"), (AT.TYPMOD2, "INTERFAC"))),
+        CondCalcul("-", ((AT.PHENO, "ME"), (AT.INTERFACE, "OUI"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "EJ_HYME"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "ELEMJOIN"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "INTSOLPI"))),
     ),
     comment=""" CALCUL DES CONTRAINTES ET/OU EFFORTS GENERALISES AUX POINTS DE GAUSS
    A PARTIR DES DEPLACEMENTS. LICITE EN LINEAIRE SEULEMENT. """,

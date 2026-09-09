@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
+#include "MeshTypes_type.h"
 interface
     subroutine mmform(ndim  ,&
                       typmae, typmam,&
@@ -28,8 +29,8 @@ interface
         character(len=8), intent(in) :: typmae, typmam
         integer(kind=8), intent(in) :: nne, nnm
         real(kind=8), intent(in) :: xpc, ypc, xpr, ypr
-        real(kind=8), intent(out) :: ffe(9), dffe(2, 9), ddffe(3, 9)
-        real(kind=8), intent(out) :: ffm(9), dffm(2, 9), ddffm(3, 9)
-        real(kind=8), intent(out) :: ffl(9), dffl(2, 9), ddffl(3, 9)
+        real(kind=8), intent(out) :: ffe(9), dffe(2, MT_NNOMAX2D), ddffe(3, MT_NNOMAX2D)
+        real(kind=8), intent(out) :: ffm(9), dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
+        real(kind=8), intent(out) :: ffl(9), dffl(2, MT_NNOMAX2D), ddffl(3, MT_NNOMAX2D)
     end subroutine mmform
 end interface

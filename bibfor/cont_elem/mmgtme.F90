@@ -25,10 +25,11 @@ subroutine mmgtme(ndim, nne, nnm, &
 !
     implicit none
 !
+#include "MeshTypes_type.h"
 #include "asterf_types.h"
 !
     integer(kind=8), intent(in) :: ndim, nnm, nne
-    real(kind=8), intent(in) :: wpg, ffe(9), ddffm(3, 9)
+    real(kind=8), intent(in) :: wpg, ffe(9), ddffm(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: jacobi, coefac, coefff, jeu, dlagrc
     real(kind=8), intent(in) :: mprt11(3, 3), mprt22(3, 3), mprt21(3, 3), mprt12(3, 3)
     real(kind=8), intent(in) :: kappa(2, 2), vech1(3), vech2(3), h(2, 2)
@@ -131,23 +132,40 @@ subroutine mmgtme(ndim, nne, nnm, &
                     jj = ndim*(j-1)+k
                     matrme(ii, jj) = matrme(ii, jj)+ &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*coefff*( &
-                                     mprt11(l, k)*ffe(i)*(kappa(1, 1)*kappa(1, 1)+ &
-                                               kappa(1, 2)*kappa(2, 1))*(ddffm(1, j)+ddffm(3, j))+ &
-                                     mprt12(l, k)*ffe(i)*(kappa(1, 1)*kappa(1, 1)+ &
-                                               kappa(1, 2)*kappa(2, 1))*(ddffm(2, j)+ddffm(3, j))+ &
-                                     mprt21(l, k)*ffe(i)*(kappa(1, 2)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(1, 2))*(ddffm(1, j)+ddffm(3, j))+ &
-                                     mprt22(l, k)*ffe(i)*(kappa(1, 2)*kappa(1, 1)+ &
-                                              kappa(2, 2)*kappa(1, 2))*(ddffm(3, j)+ddffm(2, j)))+ &
+                                     mprt11(l, k)*ffe(i)*(kappa(1, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(1, 2)*kappa(2, 1))* &
+                                     (ddffm(1, j)+ddffm(3, j))+ &
+                                     mprt12(l, k)*ffe(i)*(kappa(1, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(1, 2)*kappa(2, 1))* &
+                                     (ddffm(2, j)+ddffm(3, j))+ &
+                                     mprt21(l, k)*ffe(i)*(kappa(1, 2)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(1, 2))* &
+                                     (ddffm(1, j)+ddffm(3, j))+ &
+                                     mprt22(l, k)*ffe(i)*(kappa(1, 2)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(1, 2))* &
+                                     (ddffm(3, j)+ddffm(2, j)))+ &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*coefff*( &
-                                     mprt11(l, k)*ffe(i)*(kappa(2, 1)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(2, 1))*(ddffm(1, j)+ddffm(3, j))+ &
-                                     mprt12(l, k)*ffe(i)*(kappa(2, 1)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(2, 1))*(ddffm(2, j)+ddffm(3, j))+ &
-                                     mprt21(l, k)*ffe(i)*(kappa(1, 2)*kappa(2, 1)+ &
-                                               kappa(2, 2)*kappa(2, 2))*(ddffm(1, j)+ddffm(3, j))+ &
-                                     mprt22(l, k)*ffe(i)*(kappa(1, 2)*kappa(2, 1)+ &
-                                                 kappa(2, 2)*kappa(2, 2))*(ddffm(3, j)+ddffm(2, j)))
+                                     mprt11(l, k)*ffe(i)*(kappa(2, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 1))* &
+                                     (ddffm(1, j)+ddffm(3, j))+ &
+                                     mprt12(l, k)*ffe(i)*(kappa(2, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 1))* &
+                                     (ddffm(2, j)+ddffm(3, j))+ &
+                                     mprt21(l, k)*ffe(i)*(kappa(1, 2)* &
+                                                          kappa(2, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 2))* &
+                                     (ddffm(1, j)+ddffm(3, j))+ &
+                                     mprt22(l, k)*ffe(i)*(kappa(1, 2)* &
+                                                          kappa(2, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 2))* &
+                                     (ddffm(3, j)+ddffm(2, j)) &
+                                     )
                 end do
             end do
         end do

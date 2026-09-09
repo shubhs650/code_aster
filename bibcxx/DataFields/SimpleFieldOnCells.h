@@ -207,9 +207,15 @@ class SimpleFieldOnCells : public DataField {
 
     /**
      * @brief Constructeur
+
+     */
+    SimpleFieldOnCells() = delete;
+
+    /**
+     * @brief Constructeur
      * @param name Nom Jeveux du champ aux éléments
      */
-    SimpleFieldOnCells( const std::string name )
+    SimpleFieldOnCells( const std::string name, const BaseMeshPtr mesh = nullptr )
         : DataField( name, "CHAM_ELEM_S" ),
           _descriptor( JeveuxVectorChar8( getName() + ".CESK" ) ),
           _size( JeveuxVectorLong( getName() + ".CESD" ) ),
@@ -219,15 +225,11 @@ class SimpleFieldOnCells : public DataField {
           _nbCells( 0 ),
           _nbComp( 0 ),
           _nbPt( 0 ),
-          _nbSpt( 0 ) {};
+          _nbSpt( 0 ),
+          _mesh( mesh ) {};
 
-    /**
-     * @brief Constructeur
-
-     */
-    SimpleFieldOnCells() : SimpleFieldOnCells( DataStructureNaming::getNewName( 19 ) ) {};
-
-    SimpleFieldOnCells( const BaseMeshPtr mesh ) : SimpleFieldOnCells() { _mesh = mesh; };
+    SimpleFieldOnCells( const BaseMeshPtr mesh )
+        : SimpleFieldOnCells( DataStructureNaming::getNewName( 19 ), mesh ) {};
 
     SimpleFieldOnCells( const BaseMeshPtr mesh, const std::string &loc, const std::string &quantity,
                         const VectorString &comp, bool zero = false )
@@ -270,6 +272,14 @@ class SimpleFieldOnCells : public DataField {
 
         build();
     }
+
+    /** @brief restricted constructor (Set) and method (Get) to support pickling */
+    SimpleFieldOnCells( const py::tuple &tup )
+        : SimpleFieldOnCells( tup[0].cast< std::string >(), tup[1].cast< BaseMeshPtr >() ) {
+        build();
+    };
+
+    py::tuple _getState() const { return py::make_tuple( getName(), getMesh() ); };
 
     BaseMeshPtr getMesh() const { return _mesh; };
 
@@ -805,6 +815,59 @@ class SimpleFieldOnCells : public DataField {
     };
 
     auto getComponentsName2Index() const { return _name2Index; }
+
+    ASTERDOUBLE norm( const std::string normType ) const {
+        AS_ASSERT( normType == "NORM_1" || normType == "NORM_2" || normType == "NORM_INFINITY" );
+
+        ASTERDOUBLE norme = 0.0;
+
+        const int rank = getMPIRank();
+
+        JeveuxVectorLong cellsRank = getMesh()->getCellsOwner();
+        cellsRank->updateValuePointer();
+
+        const ASTERINTEGER nbCells = getMesh()->getNumberOfCells();
+        const ASTERINTEGER nbCmp = this->getNumberOfComponents();
+
+        for ( ASTERINTEGER cell = 0; cell < nbCells; ++cell ) {
+            if ( ( *cellsRank )[cell] == rank ) {
+                ASTERINTEGER npt = getNumberOfPointsOfCell( cell );
+                ASTERINTEGER nspt = getNumberOfSubPointsOfCell( cell );
+                for ( ASTERINTEGER icmp = 0; icmp < nbCmp; icmp++ ) {
+                    for ( ASTERINTEGER ipt = 0; ipt < npt; ipt++ ) {
+                        for ( ASTERINTEGER ispt = 0; ispt < nspt; ispt++ ) {
+                            if ( hasValue( cell, icmp, ipt, ispt ) ) {
+                                const auto val = this->getValue( cell, icmp, ipt, ispt );
+
+                                if ( normType == "NORM_1" ) {
+                                    norme += std::abs( val );
+                                } else if ( normType == "NORM_2" ) {
+                                    norme += val * val;
+                                } else if ( normType == "NORM_INFINITY" ) {
+                                    norme = std::max( norme, std::abs( val ) );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+#ifdef ASTER_HAVE_MPI
+        if ( getMesh()->isParallel() ) {
+            ASTERDOUBLE norm2 = norme;
+            if ( normType == "NORM_1" || normType == "NORM_2" )
+                AsterMPI::all_reduce( norm2, norme, MPI_SUM );
+            else
+                AsterMPI::all_reduce( norm2, norme, MPI_MAX );
+        }
+#endif
+
+        if ( normType == "NORM_2" )
+            norme = std::sqrt( norme );
+
+        return norme;
+    }
 };
 
 using SimpleFieldOnCellsReal = SimpleFieldOnCells< ASTERDOUBLE >;

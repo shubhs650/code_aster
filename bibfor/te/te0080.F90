@@ -49,7 +49,7 @@ subroutine te0080(option, nomte)
     parameter(nbres=4)
     character(len=8) :: nompar(nbres)
     real(kind=8) :: valpar(nbres), sour, valQP(MAX_QP)
-    real(kind=8) :: theta, soun, sounp1, rhs(MAX_BS)
+    real(kind=8) :: theta, soun, sounp1, rhs(MAX_BS_CG)
 !
     call FECell%init()
     call FEQuadCell%initCell(FECell, "RIGI")

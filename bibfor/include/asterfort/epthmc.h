@@ -17,14 +17,15 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine epthmc(fami, nbEpsi, npg, ndim, &
-                      time, anglNaut, jvMaterCode, &
+    subroutine epthmc(materPara, time, &
+                      nbEpsi, npg, ndim, &
                       indxVarcStrain, epsiVarc)
         use BehaviourStrain_type
-        character(len=*), intent(in) :: fami
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        real(kind=8), intent(in) :: time
         integer(kind=8), intent(in) :: nbEpsi, npg, ndim
-        real(kind=8), intent(in) :: time, anglNaut(3)
-        integer(kind=8), intent(in) :: jvMaterCode, indxVarcStrain
+        integer(kind=8), intent(in) :: indxVarcStrain
         real(kind=8), intent(out) :: epsiVarc(nbEpsi*npg)
     end subroutine epthmc
 end interface

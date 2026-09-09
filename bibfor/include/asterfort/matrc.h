@@ -15,14 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine matrc(nno, kcis, matc, vectt)
-        integer(kind=8) :: nno
-        real(kind=8) :: kcis
-        real(kind=8) :: matc(5, 5)
-        real(kind=8) :: vectt(3, 3)
+    subroutine matrc(plateOrie, vectBaseKpg, tempMoye, kcis, matrElas)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8), intent(in) :: vectBaseKpg(3, 3)
+        real(kind=8), intent(in) :: tempMoye, kcis
+        real(kind=8), intent(out) :: matrElas(5, 5)
     end subroutine matrc
 end interface

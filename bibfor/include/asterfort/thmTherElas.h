@@ -17,10 +17,9 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine thmTherElas(ds_thm, angl_naut, mdal, dalal)
+    subroutine thmTherElas(ds_thm, mdal, dalal)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(out) :: mdal(6)
         real(kind=8), intent(out) :: dalal
     end subroutine thmTherElas

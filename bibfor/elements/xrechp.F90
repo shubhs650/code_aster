@@ -61,13 +61,14 @@ subroutine xrechp(ndim, elrefp, nnop, igeom, itps, &
 #include "asterfort/xcalc_heav.h"
 #include "asterfort/xjacf2.h"
 #include "asterfort/xjacff.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xxmmvd.h"
 !-----------------------------------------------------------------------
 !
     character(len=4) :: fonree
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, nnop, igeom, itps, ihechp, jptint, jcface, jlonch
-    integer(kind=8) :: jlst, jbasec, nfh, nfe, imattt, heavn(27, 5)
+    integer(kind=8) :: jlst, jbasec, nfh, nfe, imattt, heavn(MT_NNOMAX3D, 5)
 !
 !-----------------------------------------------------------------------
 !
@@ -81,8 +82,8 @@ subroutine xrechp(ndim, elrefp, nnop, igeom, itps, &
 !
     parameter(mxstac=1000)
 !
-    real(kind=8) :: theta, he(2), xg(4), jac, ff(27), r27bid(27), nd(3)
-    real(kind=8) :: dfbid(27, 3), r3bid(3), lst, rr(2), ffenr(nnop, 1+nfh+nfe)
+    real(kind=8) :: theta, he(2), xg(4), jac, ff(MT_NNOMAX3D), rnbid(MT_NNOMAX3D), nd(3)
+    real(kind=8) :: dfbid(MT_NNOMAX3D, 3), r3bid(3), lst, rr(2), ffenr(nnop, 1+nfh+nfe)
     real(kind=8) :: hechp, r8tmp, r
 !
 !     PAR CONVENTION :
@@ -162,13 +163,13 @@ subroutine xrechp(ndim, elrefp, nnop, igeom, itps, &
                 call xjacff(elrefp, elrefc, elc, ndim, fpg, &
                             jptint, ifa, cface, ipgf, nnop, &
                             nnop, igeom, jbasec, xg, jac, &
-                            ff, r27bid, dfbid, nd, r3bid, &
+                            ff, rnbid, dfbid, nd, r3bid, &
                             r3bid)
             else if (ndim .eq. 2) then
                 call xjacf2(elrefp, elrefc, elc, ndim, fpg, &
                             jptint, ifa, cface, nptf, ipgf, &
                             nnop, nnop, igeom, jbasec, xg, &
-                            jac, ff, r27bid, dfbid, nd, &
+                            jac, ff, rnbid, dfbid, nd, &
                             r3bid)
             end if
 !

@@ -55,7 +55,7 @@ contains
         type(FE_Quadrature), intent(in) :: FEQuad
         type(FE_Basis), intent(in) :: FEBasis
         real(kind=8), intent(in) :: ValuesQP(MAX_QP)
-        real(kind=8), intent(out) :: rhs(MAX_BS)
+        real(kind=8), intent(out) :: rhs(MAX_BS_CG)
 ! --------------------------------------------------------------------------------------------------
 !   HHO
 !
@@ -69,7 +69,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: ipg
-        real(kind=8), dimension(MAX_BS) :: BSEval
+        real(kind=8), dimension(MAX_BS_CG) :: BSEval
         real(kind=8) :: coeff
 !
         rhs = 0.d0
@@ -97,7 +97,7 @@ contains
         type(FE_Quadrature), intent(in) :: FEQuad
         type(FE_Basis), intent(in) :: FEBasis
         real(kind=8), intent(in) :: ValuesQP(3, MAX_QP)
-        real(kind=8), intent(out) :: rhs(MAX_BV)
+        real(kind=8), intent(out) :: rhs(MAX_BV_CG)
 ! --------------------------------------------------------------------------------------------------
 !   HHO
 !
@@ -111,7 +111,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: ipg, idim
-        real(kind=8), dimension(MAX_BS) :: BSEval
+        real(kind=8), dimension(MAX_BS_CG) :: BSEval
         real(kind=8) :: coeff(3)
 !
         rhs = 0.d0

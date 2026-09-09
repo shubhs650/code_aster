@@ -16,15 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine compGetMecaPart(rela_comp, kit_comp, meca_comp)
+subroutine compGetMecaPart(relaComp, kitComp, relaMeca)
 !
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/comp_meca_l.h"
 !
-    character(len=16), intent(in) :: rela_comp, kit_comp(4)
-    character(len=16), intent(out) :: meca_comp
+    character(len=16), intent(in) :: relaComp, kitComp(4)
+    character(len=16), intent(out) :: relaMeca
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -34,9 +34,9 @@ subroutine compGetMecaPart(rela_comp, kit_comp, meca_comp)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  rela_comp        : RELATION comportment
-! In  kit_comp         : KIT comportment
-! Out meca_comp        : mecanical part of behaviour
+! In  relaComp         : RELATION comportment
+! In  kitComp          : KIT comportment
+! Out relaMeca         : mecanical part of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -44,17 +44,14 @@ subroutine compGetMecaPart(rela_comp, kit_comp, meca_comp)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    meca_comp = ' '
-    call comp_meca_l(rela_comp, 'KIT_THM', l_kit_thm)
-    call comp_meca_l(rela_comp, 'KIT_DDI', l_kit_ddi)
+    relaMeca = relaComp
+    call comp_meca_l(relaComp, 'KIT_THM', l_kit_thm)
+    call comp_meca_l(relaComp, 'KIT_DDI', l_kit_ddi)
     if (l_kit_thm) then
-        meca_comp = kit_comp(1)
+        relaMeca = kitComp(1)
 
     elseif (l_kit_ddi) then
-        meca_comp = kit_comp(1)
-
-    else
-        meca_comp = rela_comp
+        relaMeca = kitComp(1)
 
     end if
 !

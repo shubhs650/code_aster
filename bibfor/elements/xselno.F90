@@ -38,6 +38,7 @@ subroutine xselno(nno, nnop, nbsig, nse, ndim, &
 !
 !
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 #include "asterfort/assert.h"
     integer(kind=8) :: mxval
     parameter(mxval=32*10*6)
@@ -49,12 +50,12 @@ subroutine xselno(nno, nnop, nbsig, nse, ndim, &
 !     MXVAL = 32 (NBSE MAX) * 10(NBNOSE MAX) * 6 (NBCMP MAX)-> en quadratique
 !
     integer(kind=8) :: ndim, nnop, nno
-    integer(kind=8) :: nbsig, nbseco(27)
+    integer(kind=8) :: nbsig, nbseco(MT_NNOMAX3D)
     integer(kind=8) :: jcnset
     integer(kind=8) :: jout2
     integer(kind=8) :: i, j, nse, ise, in, ino, ic
 !
-    real(kind=8) :: tmp, somsig(27, 6)
+    real(kind=8) :: tmp, somsig(MT_NNOMAX3D, 6)
 !
     real(kind=8) :: siseno(mxval)
 !

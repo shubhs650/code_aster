@@ -20,11 +20,11 @@
 module HHO_basis_module
 !
     use HHO_geometry_module
+    use HHO_matrix_module
     use HHO_measure_module
     use HHO_monogen_module
     use HHO_quadrature_module
     use HHO_type
-    use HHO_matrix_module
     use compensated_ops_module, only: sum, dot_product, matmul, addFMA
 !
     implicit none
@@ -36,6 +36,7 @@ module HHO_basis_module
 #include "asterfort/HHO_basis_module.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/jevech.h"
+#include "asterfort/lteatt.h"
 #include "asterfort/readVector.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
@@ -84,7 +85,7 @@ module HHO_basis_module
         real(kind=8) :: scaling_factor(2) = 0.d0
         real(kind=8) :: rotmat(2, 3) = 0.d0
         real(kind=8) :: coeff_mono(MAX_FACE_COEF) = 0.d0
-        integer(kind=8)      :: coeff_shift(MSIZE_FACE_SCAL+1) = 0
+        integer(kind=8) :: coeff_shift(MSIZE_FACE_SCAL+1) = 0
 ! ----- member function
     contains
         procedure, pass :: initialize => hhoBasisFaceInit
@@ -98,14 +99,13 @@ module HHO_basis_module
     end type
 ! --------------------------------------------------------------------------------------------------
 ! --------------------------------------------------------------------------------------------------
-    public  :: HHO_basis_cell, HHO_basis_face
+    public  :: HHO_basis_cell, HHO_basis_face, hhoGetMaxDegree
     private :: hhoBasisCellInit, hhoBasisFaceInit, hhoBSCellSize, hhoBSFaceSize
     private :: hhoBVCellSize, hhoBVFaceSize, hhoBMCellSize
     private :: hhoBSCellRange, hhoBVCellRange, hhoBMCellRange, hhoBSFaceRange, hhoBVFaceRange
     private :: hhoBSCellEval, hhoBSFaceEval, hhoBSCellGradEv, hhoBVCellSymGdEv, check_order
     private :: map_pt_cell, map_pt_face, orthonormalization
     private :: hhoBasisCellType, hhoBasisFaceType
-    private :: getMaxDegree
 !
 contains
 !
@@ -148,7 +148,7 @@ contains
 !
 !===================================================================================================
 !
-    subroutine getMaxDegree(cell_degree, face_degree)
+    subroutine hhoGetMaxDegree(cell_degree, face_degree)
 !
         implicit none
         integer(kind=8), optional, intent(out) :: cell_degree, face_degree
@@ -252,7 +252,7 @@ contains
         type(HHO_basis_cell) :: hhoBasisIner
         type(HHO_Quadrature) :: hhoQuad
 !
-        call getMaxDegree(max_deg_cell, max_deg_face)
+        call hhoGetMaxDegree(max_deg_cell, max_deg_face)
 !
         call this%hhoMono%initialize(hhoCell%ndim, max_deg_cell)
 !
@@ -337,7 +337,7 @@ contains
 !
         type(HHO_Face), intent(in)               :: hhoFace
         class(HHO_basis_face), intent(out)       :: this
-        integer(kind=8), optional, intent(in)            :: type
+        integer(kind=8), optional, intent(in)    :: type
 !
 ! --------------------------------------------------------------------------------------------------
 !   HHO
@@ -356,7 +356,7 @@ contains
         type(HHO_basis_face) :: hhoBasisIner
         type(HHO_Quadrature) :: hhoQuad
 !
-        call getMaxDegree(max_deg_cell, max_deg_face)
+        call hhoGetMaxDegree(max_deg_cell, max_deg_face)
 !
         call this%hhoMono%initialize(hhoFace%ndim, max_deg_face)
 !
@@ -403,7 +403,7 @@ contains
 ! ------------ If you have this error - add the basis field as an input of your option
                 call jevech('PCHHOBO', 'E', iret)
 !
-                if (this%ndim > 1) then
+                if (this%ndim > 1 .or. hhoFace%l_axis) then
 !
                     call hhoQuad%getQuadFace(hhoFace, 2*max_deg_face)
                     call basisOrthoIpg%initialize(MSIZE_FACE_SCAL, hhoQuad%nbQuadPoints, 0.d0)
@@ -466,9 +466,9 @@ contains
         implicit none
 !
         class(HHO_basis_face), intent(in)       :: this
-        integer(kind=8), intent(in)                     :: min_order
-        integer(kind=8), intent(in)                     :: max_order
-        integer(kind=8)                                 :: size_basis
+        integer(kind=8), intent(in)             :: min_order
+        integer(kind=8), intent(in)             :: max_order
+        integer(kind=8)                         :: size_basis
 !
 ! --------------------------------------------------------------------------------------------------
 !   HHO
@@ -496,10 +496,10 @@ contains
         implicit none
 !
         class(HHO_basis_cell), intent(in)       :: this
-        integer(kind=8), intent(in)                     :: min_order
-        integer(kind=8), intent(in)                     :: max_order
-        integer(kind=8), intent(out)                    :: ifrom
-        integer(kind=8), intent(out)                    :: ito
+        integer(kind=8), intent(in)             :: min_order
+        integer(kind=8), intent(in)             :: max_order
+        integer(kind=8), intent(out)            :: ifrom
+        integer(kind=8), intent(out)            :: ito
 !
 ! --------------------------------------------------------------------------------------------------
 !   HHO
@@ -1331,12 +1331,12 @@ contains
         integer(kind=8) :: i, j, k, ipg, npg, i_ortho
         real(kind=8) :: rp(MSIZE_CELL_SCAL, MSIZE_CELL_SCAL), rc(MSIZE_CELL_SCAL, MSIZE_CELL_SCAL)
         real(kind=8) :: ra(MSIZE_CELL_SCAL, MSIZE_CELL_SCAL)
-        real(kind=8) :: ri(MSIZE_CELL_SCAL), w_bpg(MAX_QP)
+        real(kind=8) :: ri(MSIZE_CELL_SCAL), w_bpg(MSIZE_QP)
         real(kind=8) :: alpha
 !
         ASSERT(nb_basis <= MSIZE_CELL_SCAL)
 !
-        if (ndim == 1) then
+        if (ndim == 1 .and. .not. lteatt("TYPMOD", "AXIS")) then
             ! Coeffficient of Legendre basis
             coeff_shift(1:8) = [1, 2, 4, 7, 11, 16, 22, 29]
             coeff_mono(1:28) = &

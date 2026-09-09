@@ -67,7 +67,7 @@ class LoggingManager:
         logger.info("-" * (len(self.columns) * (self.length_col + 1) + 1))
 
     def printConvTableEntries(self):
-        """Print titles of colums"""
+        """Print titles of columns"""
 
         nb_row = 0
         for key in self.columns:

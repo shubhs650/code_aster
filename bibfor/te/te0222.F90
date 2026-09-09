@@ -15,7 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W1501
+!
 subroutine te0222(option, nomte)
 !
 !------------------------------------------------------------------------------------------
@@ -73,7 +74,7 @@ subroutine te0222(option, nomte)
 !                       DECLARATION DES VARIABLES
 ! =====================================================================
 !
-    type(Behaviour_Integ) :: BEHinteg
+    type(Behaviour_Integ) :: BEHInteg
 !
     real(kind=8), parameter :: rac2 = sqrt(2.d0)
     character(len=16), parameter :: nomres(4) = ['E    ', 'NU   ', 'ALPHA', 'RHO  ']
@@ -127,7 +128,7 @@ subroutine te0222(option, nomte)
                      jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
 !
 !-- Initialisation des champs et paramètres
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
 
 !-- Initialisation des paramètres
     epsi = r8prem()
@@ -184,7 +185,6 @@ subroutine te0222(option, nomte)
 !   Cas des éléments incompressibles
     inco = lteatt('INCO', 'C3')
     if (inco) then
-        typmod(2) = 'INCO'
         call jevech('PDEPLA', 'L', ideplinco)
     else if (lteatt('INCO', 'C2') .or. lteatt('INCO', 'C20') .or. lteatt('INCO', 'C5GV')) then
         call utmess('F', 'RUPTURE1_90')
@@ -677,7 +677,7 @@ subroutine te0222(option, nomte)
 
         else
 !
-            call nmelnl(BEHinteg, &
+            call nmelnl(BEHInteg, &
                         fami, kp, 1, &
                         ndim, typmod, matcod, compor, &
                         eps, gonf, pres, sigl, energi)

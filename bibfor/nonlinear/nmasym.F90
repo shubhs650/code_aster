@@ -16,34 +16,37 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine nmasym(fami, kpg, ksp, icodma, option, &
-                  xlong0, a, tmoins, tplus, dlong0, &
+subroutine nmasym(materPara, option, &
+                  xlong0, a, dlong0, &
                   effnom, vim, effnop, vip, klv, &
                   fono)
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
+!
 #include "asterfort/nm1das.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
-    integer(kind=8) :: kpg, ksp, neq, nbt, nvar, icodma
-    parameter(neq=6, nbt=21, nvar=4)
 !
-    character(len=*) :: fami, option
-    real(kind=8) :: xlong0, a, syc, syt, etc, ett, cr
-    real(kind=8) :: e, dlong0, tmoins, tplus
+    integer(kind=8), parameter :: neq = 6, nbt = 21, nvar = 4
+    type(Material_Para), intent(in) :: materPara
+    character(len=*) :: option
+    real(kind=8) :: xlong0, a, syc, syt, etc, ett
+    real(kind=8) :: e, dlong0
     real(kind=8) :: effnom, vim(nvar)
     real(kind=8) :: effnop, vip(nvar), fono(neq), klv(nbt)
-! -------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
 !    TRAITEMENT DE LA RELATION DE COMPORTEMENT -ELASTOPLASTICITE-
 !    ECROUISSAGE ISOTROPE ASYMETRIQUE LINEAIRE - VON MISES-
 !    POUR UN MODELE BARRE ELEMENT MECA_BARRE
 !
-! -------------------------------------------------------------------
-! IN  :
+! --------------------------------------------------------------------------------------------------
+!
 !       XLONG0 : LONGUEUR DE L'ELEMENT DE BARRE AU REPOS
 !       A      : SECTION DE LA BARRE
-!       TMOINS : INSTANT PRECEDENT
-!       TPLUS  : INSTANT COURANT
 !       XLONGM : LONGEUR DE L'ELEMENT AU TEMPS MOINS
 !       DLONG0 : INCREMENT D'ALLONGEMENT DE L'ELEMENT
 !       EFFNOM : EFFORT NORMAL PRECEDENT
@@ -54,19 +57,21 @@ subroutine nmasym(fami, kpg, ksp, icodma, option, &
 !       FONO   : FORCES NODALES COURANTES
 !       KLV    : MATRICE TANGENTE
 !
-!----------VARIABLES LOCALES
+! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
     real(kind=8) :: sigm, deps, dsdem, dsdep, sigp, xrig
-    integer(kind=8) :: nbpar, nbres, kpg1, spt
+    character(len=16), parameter :: propElas = "E"
+    integer(kind=8), parameter :: nbProp = 4
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = &
+                                    (/'SY_C        ', 'DC_SIGM_EPSI', &
+                                      'SY_T        ', 'DT_SIGM_EPSI'/)
 !
-    real(kind=8) :: valpar, valres(4)
-    integer(kind=8) :: icodre(4)
-    character(len=8) :: nompar, famil, poum
-    character(len=16) :: nomela, nomasl(4)
-    data nomela/'E'/
-    data nomasl/'SY_C', 'DC_SIGM_EPSI', 'SY_T', 'DT_SIGM_EPSI'/
-!
-!----------INITIALISATIONS
+! --------------------------------------------------------------------------------------------------
 !
     call r8inir(nbt, 0.d0, klv, 1)
     call r8inir(neq, 0.d0, fono, 1)
@@ -75,48 +80,45 @@ subroutine nmasym(fami, kpg, ksp, icodma, option, &
 !
     deps = dlong0/xlong0
     sigm = effnom/a
-!
-! --- CARACTERISTIQUES ELASTIQUES
-!
-    nbres = 2
-    nbpar = 0
-    nompar = '  '
-    valpar = 0.d0
-    famil = 'FPG1'
-    kpg1 = 1
-    spt = 1
-    poum = '+'
-    call rcvalb(famil, kpg1, spt, poum, icodma, &
-                ' ', 'ELAS', 0, nompar, [valpar], &
-                1, nomela, valres, icodre, 1)
-    e = valres(1)
-!
-! --- CARACTERISTIQUES ECROUISSAGE LINEAIRE ASYMETRIQUE
-!
-!
-!JMP  NBRES = 5
-    nbres = 4
-    nbpar = 0
-    call rcvalb(fami, 1, 1, '+', icodma, &
-                ' ', 'ECRO_ASYM_LINE', nbpar, nompar, [valpar], &
-                nbres, nomasl, valres, icodre, 1)
-    syc = valres(1)
-    etc = valres(2)
-    syt = valres(3)
-    ett = valres(4)
-!JMP    CR     = VALRES(5) MODELE DE RESTAURATION PAS AU POINT
-!
-    cr = 0.d0
-!
-!
-    call nm1das(fami, kpg, ksp, e, syc, &
-                syt, etc, ett, cr, tmoins, &
-                tplus, icodma, sigm, deps, vim, &
+
+! - Copy material parameters with other scheme parameters
+    call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                       materParaFPG1)
+
+! - CARACTERISTIQUES ELASTIQUES
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                '+', &
+                materParaFPG1%jvMaterCode, &
+                ' ', 'ELAS', &
+                0, ' ', [0.d0], &
+                1, propElas, propVale, &
+                propCode, 1)
+    e = propVale(1)
+
+! - CARACTERISTIQUES ECROUISSAGE LINEAIRE ASYMETRIQUE
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                '+', &
+                materParaFPG1%jvMaterCode, &
+                ' ', 'ECRO_ASYM_LINE', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    syc = propVale(1)
+    etc = propVale(2)
+    syt = propVale(3)
+    ett = propVale(4)
+    call nm1das(materPara, &
+                e, syc, &
+                syt, etc, ett, &
+                sigm, deps, vim, &
                 sigp, vip, dsdem, dsdep)
     effnop = sigp*a
-!
-! --- CALCUL DU COEFFICIENT NON NUL DE LA MATRICE TANGENTE
-!
+
+! - CALCUL DU COEFFICIENT NON NUL DE LA MATRICE TANGENTE
     if (option(1:10) .eq. 'RIGI_MECA_' .or. option(1:9) .eq. 'FULL_MECA') then
 !
         if (option(11:14) .eq. 'ELAS') then
@@ -132,12 +134,9 @@ subroutine nmasym(fami, kpg, ksp, icodma, option, &
         klv(7) = -xrig
         klv(10) = xrig
     end if
-!
+
 ! --- CALCUL DES FORCES NODALES
-!
     fono(1) = -effnop
     fono(4) = effnop
-!
-! -------------------------------------------------------------
 !
 end subroutine

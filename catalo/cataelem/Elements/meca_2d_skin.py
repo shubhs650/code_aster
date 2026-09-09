@@ -40,10 +40,6 @@ MMATUNS = ArrayOfComponents(phys=PHY.MDNS_R, locatedComponents=DDL_MECA)
 
 MVECTUR = ArrayOfComponents(phys=PHY.VDEP_R, locatedComponents=DDL_MECA)
 
-ENEU1_R = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X[30]",))
-
-ELNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELEM", components=("X[30]",))
-
 
 # ---------------------------------------------------------------------------------------------------
 class MEPLSE2(Element):
@@ -93,6 +89,7 @@ class MEPLSE2(Element):
                 (SP.PMATERC, LC.CMATERC),
                 (OP.CALC_G.PTHETAR, LC.ETHETA),
                 (OP.CALC_G.PVARCPR, LC.ZVARCPG),
+                (OP.CALC_G.ISCPLAN, LC.E1NEUTI),
                 (SP.PVITESS, DDL_MECA),
             ),
             para_out=((SP.PGTHETA, LC.CKGTHET),),
@@ -109,6 +106,7 @@ class MEPLSE2(Element):
                 (SP.PINSTR, LC.MTEMPSR),
                 (OP.CALC_G_F.PTHETAR, LC.ETHETA),
                 (OP.CALC_G_F.PVARCPR, LC.ZVARCPG),
+                (OP.CALC_G_F.ISCPLAN, LC.E1NEUTI),
                 (SP.PVITESS, DDL_MECA),
             ),
             para_out=((SP.PGTHETA, LC.CKGTHET),),
@@ -127,6 +125,7 @@ class MEPLSE2(Element):
                 (SP.PPULPRO, LC.CFREQR),
                 (OP.CALC_K_G.PTHETAR, LC.ETHETA),
                 (OP.CALC_K_G.PVARCPR, LC.ZVARCPG),
+                (OP.CALC_K_G.ISCPLAN, LC.E1NEUTI),
                 (SP.PVARCRR, LC.ZVARCPG),
             ),
             para_out=((SP.PGTHETA, LC.CKGTHET),),
@@ -146,6 +145,7 @@ class MEPLSE2(Element):
                 (SP.PINSTR, LC.MTEMPSR),
                 (OP.CALC_K_G_F.PTHETAR, LC.ETHETA),
                 (OP.CALC_K_G_F.PVARCPR, LC.ZVARCPG),
+                (OP.CALC_K_G_F.ISCPLAN, LC.E1NEUTI),
                 (SP.PVARCRR, LC.ZVARCPG),
             ),
             para_out=((SP.PGTHETA, LC.CKGTHET),),
@@ -283,28 +283,33 @@ class MEPLSE2(Element):
             te=99,
             para_out=(
                 (OP.TOU_INI_ELEM.PERREUR, LC.CERROR),
-                (OP.TOU_INI_ELEM.PNEUT_F, ELNEUT_F),
-                (SP.PNEU1_R, ENEU1_R),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (OP.TOU_INI_ELEM.PCAMA_R, LC.CCAMASS),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
             ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
-                (OP.TOU_INI_ELGA.PDEPL_R, LC.EGDEP3D),
+                (OP.TOU_INI_ELGA.PDEPL_R, LC.EGDEP2D),
                 (OP.TOU_INI_ELGA.PGEOM_R, LC.EGGEO2D),
                 (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
                 (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
                 (OP.TOU_INI_ELGA.PPRES_R, LC.EPRESGA),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PPRES_R, LC.EPRE2DR),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
     )

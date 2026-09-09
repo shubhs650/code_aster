@@ -18,17 +18,19 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
-                              rela_comp, defo_comp, kit_comp, type_cpla, post_iter, &
-                              regu_visc, post_incr, &
-                              extern_addr, extern_type, infoVari)
+    subroutine comp_meca_name(nbVari, nbVariMeca, &
+                              l_excl, variExcl, l_kit_meta, &
+                              relaComp, defoComp, kitComp, typeCpla, postIter, &
+                              reguVisc, postIncr, &
+                              adrsMGIS, solvBehavType, infoVari)
         integer(kind=8), intent(in) :: nbVari, nbVariMeca
         aster_logical, intent(in) :: l_excl
-        character(len=16), intent(in) :: vari_excl
+        character(len=16), intent(in) :: variExcl
         aster_logical, intent(in) :: l_kit_meta
-        character(len=16), intent(in) :: extern_addr, rela_comp, defo_comp, kit_comp(4)
-        character(len=16), intent(in) :: type_cpla, post_iter, regu_visc, post_incr
-        integer(kind=8), intent(in) :: extern_type
+        character(len=16), intent(in) :: relaComp, defoComp, kitComp(4)
+        character(len=16), intent(in) :: typeCpla, postIter, reguVisc, postIncr
+        character(len=16), intent(in) :: adrsMGIS
+        integer(kind=8), intent(in) :: solvBehavType
         character(len=16), pointer :: infoVari(:)
     end subroutine comp_meca_name
 end interface

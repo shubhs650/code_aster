@@ -32,8 +32,6 @@ NDEPLAC = LocatedComponents(phys=PHY.DEPL_C, type="ELNO", components=("DX", "DY"
 
 DDL_MECA = LocatedComponents(phys=PHY.DEPL_R, type="ELNO", components=("DX", "DY", "DZ"))
 
-ENEU1_R = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X[30]",))
-
 MVECTUR = ArrayOfComponents(phys=PHY.VDEP_R, locatedComponents=DDL_MECA)
 
 MVECZZR = ArrayOfComponents(phys=PHY.VSIZ_R, locatedComponents=LC.DDL_NOZ1)
@@ -330,7 +328,7 @@ class MECA_HEXA20(Element):
         OP.CHAR_MECA_EPSI_F(
             te=49,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINF, LC.CEPS3DF),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -342,7 +340,7 @@ class MECA_HEXA20(Element):
         OP.CHAR_MECA_EPSI_R(
             te=49,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PEPSINR, LC.EGPS3DR),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -363,7 +361,7 @@ class MECA_HEXA20(Element):
         OP.CHAR_MECA_HYDR_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -409,7 +407,7 @@ class MECA_HEXA20(Element):
         OP.CHAR_MECA_SECH_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -421,7 +419,7 @@ class MECA_HEXA20(Element):
         OP.CHAR_MECA_TEMP_R(
             te=13,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -516,7 +514,7 @@ class MECA_HEXA20(Element):
         OP.ENEL_ELGA(
             te=576,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.ENEL_ELGA.PCOMPOR, LC.CCOMPOR),
                 (OP.ENEL_ELGA.PCONTRR, LC.EGIG3DR),
                 (SP.PDEPLAR, DDL_MECA),
@@ -605,7 +603,7 @@ class MECA_HEXA20(Element):
         OP.EPME_ELGA(
             te=25,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.EPME_ELGA.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
@@ -624,7 +622,7 @@ class MECA_HEXA20(Element):
         OP.EPMG_ELGA(
             te=25,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.EPMG_ELGA.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
@@ -653,7 +651,7 @@ class MECA_HEXA20(Element):
         OP.EPOT_ELEM(
             te=218,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -697,7 +695,7 @@ class MECA_HEXA20(Element):
         OP.EPSI_ELGA(
             te=25,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -821,7 +819,7 @@ class MECA_HEXA20(Element):
         OP.FULL_MECA(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
@@ -851,7 +849,7 @@ class MECA_HEXA20(Element):
         OP.FULL_MECA_ELAS(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.FULL_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
@@ -1029,19 +1027,15 @@ class MECA_HEXA20(Element):
             para_out=((SP.PCOURAN, LC.ECOURAN),),
         ),
         OP.PILO_PRED_DEFO(
-            te=543,
+            te=544,
             para_in=(
                 (OP.PILO_PRED_DEFO.PCOMPOR, LC.CCOMPOR),
-                (OP.PILO_PRED_DEFO.PCONTMR, LC.EGIG3DR),
                 (SP.PDDEPLR, DDL_MECA),
                 (SP.PDEPL0R, DDL_MECA),
-                (SP.PCARCRI, LC.CCARCRI),
                 (SP.PDEPL1R, DDL_MECA),
                 (SP.PDEPLMR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
-                (SP.PMATERC, LC.CMATERC),
-                (SP.PTYPEPI, LC.CTYPEPI),
-                (OP.PILO_PRED_DEFO.PVARIMR, LC.ZVARIPG),
+                (SP.PCDTAU, LC.CCDTAU),
             ),
             para_out=((OP.PILO_PRED_DEFO.PCOPILO, LC.ECOPILO),),
         ),
@@ -1059,7 +1053,6 @@ class MECA_HEXA20(Element):
                 (SP.PDEPLMR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
-                (SP.PTYPEPI, LC.CTYPEPI),
                 (OP.PILO_PRED_ELAS.PVARIMR, LC.ZVARIPG),
             ),
             para_out=((OP.PILO_PRED_ELAS.PCOPILO, LC.ECOPILO),),
@@ -1096,7 +1089,7 @@ class MECA_HEXA20(Element):
         OP.RAPH_MECA(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
@@ -1124,7 +1117,7 @@ class MECA_HEXA20(Element):
         OP.RAPH_MECA_IMPLEX(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
@@ -1151,12 +1144,16 @@ class MECA_HEXA20(Element):
         ),
         OP.REFE_FORC_NODA(
             te=8,
-            para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PREFCO, LC.CRESSIG)),
+            para_in=(
+                (SP.PGEOMER, LC.EGEOM3D),
+                (SP.PRESIREF, LC.CRESIREF),
+                (SP.PRESICMP, LC.CRESICMP),
+            ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.REPERE_LOCAL(
             te=133,
-            para_in=((SP.PCAMASS, LC.CCAMA3D), (SP.PGEOMER, LC.EGEOM3D)),
+            para_in=((SP.PCAMASS, LC.CCAMASS), (SP.PGEOMER, LC.EGEOM3D)),
             para_out=((SP.PREPLO1, LC.CGEOM3D), (SP.PREPLO2, LC.CGEOM3D), (SP.PREPLO3, LC.CGEOM3D)),
         ),
         OP.REST_ECRO(
@@ -1198,7 +1195,7 @@ class MECA_HEXA20(Element):
         OP.RIGI_MECA(
             te=11,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PVARCPR, LC.ZVARCPG),
@@ -1209,7 +1206,7 @@ class MECA_HEXA20(Element):
         OP.RIGI_MECA_ELAS(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RIGI_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
@@ -1245,7 +1242,7 @@ class MECA_HEXA20(Element):
         OP.RIGI_MECA_IMPLEX(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RIGI_MECA_IMPLEX.PCOMPOR, LC.CCOMPOR),
@@ -1276,7 +1273,7 @@ class MECA_HEXA20(Element):
         OP.RIGI_MECA_TANG(
             te=139,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
@@ -1317,7 +1314,7 @@ class MECA_HEXA20(Element):
         OP.SIEF_ELGA(
             te=22,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -1362,8 +1359,11 @@ class MECA_HEXA20(Element):
             te=99,
             para_out=(
                 (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
-                (OP.TOU_INI_ELEM.PNEUT_I, LC.CNTINII),
-                (SP.PNEU1_R, ENEU1_R),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (OP.TOU_INI_ELEM.PCAMA_R, LC.CCAMASS),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
             ),
         ),
         OP.TOU_INI_ELGA(
@@ -1380,6 +1380,7 @@ class MECA_HEXA20(Element):
                 (OP.TOU_INI_ELGA.PSIEF_R, LC.EGIG3DR),
                 (OP.TOU_INI_ELGA.PSOUR_R, LC.ESOURCR),
                 (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -1389,12 +1390,13 @@ class MECA_HEXA20(Element):
                 (OP.TOU_INI_ELNO.PEPSI_R, LC.EEPS3DR),
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (SP.PTEMPN_R, LC.ETEMPNO),
                 (OP.TOU_INI_ELNO.PSIEF_R, LC.ESIG3DR),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
                 (OP.TOU_INI_ELNO.PMATE_R, LC.ENMATE_R),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARC_ELGA(

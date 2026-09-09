@@ -15,17 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dsqrig(nomte, xyzl, option, pgl, rig,&
-                      ener)
-        character(len=16) :: nomte
-        real(kind=8) :: xyzl(3, *)
+    subroutine dsqrig(plateCara, plateOrie, &
+                      xyzl, option, pgl, &
+                      rig, ener)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(plateCara_Para), intent(in) :: plateCara
+        real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
         character(len=16) :: option
-        real(kind=8) :: pgl(*)
-        real(kind=8) :: rig(*)
-        real(kind=8) :: ener(*)
     end subroutine dsqrig
 end interface

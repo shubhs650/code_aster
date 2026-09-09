@@ -17,18 +17,16 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmorth(fami, kpg, ksp, ndim, elasKeyword, &
-                      jvMaterCode, poum, dEpsiIn, sigmPrev, option, &
-                      anglNaut, sigmCurr, dsidep)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: kpg, ksp, ndim
-        character(len=16), intent(in) :: elasKeyword
-        integer(kind=8), intent(in) :: jvMaterCode
+    subroutine nmorth(materPara, ndim, poum, &
+                      dEpsiIn, sigmPrev, option, &
+                      sigmCurr, dsidep)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        integer(kind=8), intent(in) :: ndim
         character(len=*), intent(in) :: poum
         real(kind=8), intent(in) :: dEpsiIn(2*ndim)
         real(kind=8), intent(in) :: sigmPrev(2*ndim)
         character(len=16), intent(in):: option
-        real(kind=8), intent(in) :: anglNaut(3)
         real(kind=8), intent(out) :: sigmCurr(2*ndim)
         real(kind=8), intent(out) :: dsidep(2*ndim, 2*ndim)
     end subroutine nmorth

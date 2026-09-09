@@ -16,16 +16,16 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine nmmaba(icodma, rela_comp, e, dsde, sigy, &
-                  ncstpm, cstpm)
+subroutine nmmaba(jvMaterCode, relaComp, e, dsde, sigy)
+!
     implicit none
+!
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
-    character(len=16) :: rela_comp
-    integer(kind=8) :: icodma
-    integer(kind=8) :: ncstpm
-    real(kind=8) :: cstpm(ncstpm)
+!
+    character(len=16) :: relaComp
+    integer(kind=8) :: jvMaterCode
     real(kind=8) :: e, dsde, sigy
 !     RECUPERATION DES CARACTERISTIQUES DU MATERIAU POUR LES ELEMENTS
 !     MECA_BARRE DANS LE CAS DES COMPORTEMENTS NON LINEAIRES.
@@ -64,7 +64,7 @@ subroutine nmmaba(icodma, rela_comp, e, dsde, sigy, &
     integer(kind=8) :: codres(nbval)
     character(len=8) :: nompar, nomela(1)
     character(len=16) :: nomecl(2), nompim(12)
-    character(len=4) :: fami
+    character(len=8) :: fami
 !
 ! *********** FIN DES DECLARATIONS DES VARIABLES LOCALES ***************
 !
@@ -80,11 +80,10 @@ subroutine nmmaba(icodma, rela_comp, e, dsde, sigy, &
 !
 ! --- MESSAGE D'ERREUR SI COMPORTEMENT NON REPERTORIE POUR LES BARRES
 !
-    if ((rela_comp .ne. 'ELAS') .and. (rela_comp .ne. 'VMIS_ISOT_LINE') .and. &
-        (rela_comp .ne. 'VMIS_CINE_LINE') .and. (rela_comp .ne. 'VMIS_ASYM_LINE') .and. &
-        (rela_comp .ne. 'PINTO_MENEGOTTO') .and. (rela_comp .ne. 'GRILLE_CINE_LINE') .and. &
-        (rela_comp .ne. 'GRILLE_ISOT_LINE') .and. (rela_comp .ne. 'GRILLE_PINTO_MEN')) then
-        call utmess('F', 'COMPOR4_32', sk=rela_comp)
+    if ((relaComp .ne. 'ELAS') .and. (relaComp .ne. 'VMIS_ISOT_LINE') .and. &
+        (relaComp .ne. 'VMIS_CINE_LINE') .and. (relaComp .ne. 'VMIS_ASYM_LINE') .and. &
+        (relaComp .ne. 'GRILLE_CINE_LINE') .and. (relaComp .ne. 'GRILLE_ISOT_LINE')) then
+        call utmess('F', 'COMPOR4_32', sk=relaComp)
     end if
 !
 ! --- INITIALISATIONS
@@ -99,15 +98,15 @@ subroutine nmmaba(icodma, rela_comp, e, dsde, sigy, &
 ! --- CARACTERISTIQUES ELASTIQUES
 !
     nbres = 2
-    call rcvalb(fami, 1, 1, '+', icodma, &
+    call rcvalb(fami, 1, 1, '+', jvMaterCode, &
                 ' ', 'ELAS', nbpar, nompar, [valpar], &
                 1, nomela, valres, codres, 1)
     e = valres(1)
 !
 ! --- CARACTERISTIQUES ECROUISSAGE LINEAIRE
 !
-    if ((rela_comp .eq. 'VMIS_ISOT_LINE') .or. (rela_comp .eq. 'VMIS_CINE_LINE') .or. &
-        (rela_comp .eq. 'GRILLE_CINE_LINE') .or. (rela_comp .eq. 'GRILLE_ISOT_LINE')) then
+    if ((relaComp .eq. 'VMIS_ISOT_LINE') .or. (relaComp .eq. 'VMIS_CINE_LINE') .or. &
+        (relaComp .eq. 'GRILLE_CINE_LINE') .or. (relaComp .eq. 'GRILLE_ISOT_LINE')) then
         nbres = 2
 !
 !
@@ -115,47 +114,15 @@ subroutine nmmaba(icodma, rela_comp, e, dsde, sigy, &
         nbpar = 0
         nompar = '  '
         valpar = 0.d0
-        call rcvalb(fami, 1, 1, '+', icodma, &
+        call rcvalb(fami, 1, 1, '+', jvMaterCode, &
                     ' ', 'ECRO_LINE', nbpar, nompar, [valpar], &
                     1, nomecl, valres, codres, 1)
-        call rcvalb(fami, 1, 1, '+', icodma, &
+        call rcvalb(fami, 1, 1, '+', jvMaterCode, &
                     ' ', 'ECRO_LINE', nbpar, nompar, [valpar], &
                     1, nomecl(2), valres(2), codres(2), 0)
         if (codres(2) .ne. 0) valres(2) = 0.d0
         dsde = valres(1)
         sigy = valres(2)
-    end if
-!
-! --- CARACTERISTIQUES MODELE PINTO MENEGOTTO
-!
-    if ((rela_comp .eq. 'PINTO_MENEGOTTO') .or. (rela_comp .eq. 'GRILLE_PINTO_MEN')) then
-!
-        nbres = 12
-!
-!
-        call r8inir(nbval, 0.d0, valres, 1)
-        nbpar = 0
-        nompar = '  '
-        valpar = 0.d0
-!
-        call rcvalb(fami, 1, 1, '+', icodma, &
-                    ' ', 'PINTO_MENEGOTTO', nbpar, nompar, [valpar], &
-                    nbres, nompim, valres, codres, 0)
-        if (codres(7) .ne. 0) valres(7) = -1.d0
-        cstpm(1) = e
-        cstpm(2) = valres(1)
-        cstpm(3) = valres(2)
-        cstpm(4) = valres(3)
-        cstpm(10) = valres(4)
-        cstpm(5) = valres(5)
-        cstpm(6) = valres(6)
-        cstpm(7) = valres(7)
-        cstpm(8) = valres(8)
-        cstpm(9) = valres(9)
-        cstpm(11) = valres(10)
-        cstpm(12) = valres(11)
-        cstpm(13) = valres(12)
-!
     end if
 !
 end subroutine

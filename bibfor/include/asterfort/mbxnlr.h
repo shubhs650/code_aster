@@ -15,23 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mbxnlr(option,fami,nddl,nno,ncomp,kpg,ipoids,igeom,&
-                  imate,ideplm,ideplp,ivectu,icontp,&
-                  imatuu,dff,alpha,beta,&
-                  vecteu,matric)
-    character(len=16) :: option
-    character(len=4) :: fami
-    integer(kind=8) :: nddl, nno, ncomp
-    integer(kind=8) :: kpg
-    integer(kind=8) :: ipoids
-    integer(kind=8) :: igeom, imate
-    integer(kind=8) :: ideplm, ideplp
-    integer(kind=8) :: ivectu, icontp, imatuu
-    real(kind=8) :: dff(2, nno), alpha, beta
-    aster_logical :: vecteu, matric
+    subroutine mbxnlr(plateOrie, &
+                      option, fami, &
+                      nddl, nno, ncomp, kpg, &
+                      ipoids, jvGeom, &
+                      jvMaterc, jvDispM, jvDispIncr, jvVect, jvSigm, &
+                      jvMatrSyme, dff, &
+                      lVect, lMatr)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: fami
+        integer(kind=8), intent(in) :: nddl, nno, ncomp, kpg
+        integer(kind=8), intent(in) :: ipoids, jvGeom, jvMaterc, jvDispM, jvDispIncr
+        integer(kind=8), intent(in) :: jvVect, jvSigm, jvMatrSyme
+        real(kind=8), intent(in) :: dff(2, nno)
+        aster_logical, intent(in) :: lVect, lMatr
     end subroutine mbxnlr
 end interface

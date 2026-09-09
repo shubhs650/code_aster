@@ -17,12 +17,17 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0359(option, nomte)
-!
+
+    use Behaviour_type
+    use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
-#include "asterfort/eiangl.h"
+#include "asterc/r8vide.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/assert.h"
 #include "asterfort/eimatb.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
@@ -31,13 +36,11 @@ subroutine te0359(option, nomte)
 #include "asterfort/ngpipe.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
-#include "asterfort/utmess.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
+    character(len=16), intent(in) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
-!
 ! Elementary computation
 !
 ! Elements: 3D_INTERFACE
@@ -46,83 +49,88 @@ subroutine te0359(option, nomte)
 ! Options: PILO_PRED_ELAS
 !
 ! --------------------------------------------------------------------------------------------------
-!
 ! In  option           : name of option to compute
 ! In  nomte            : type of finite element
-!
 ! --------------------------------------------------------------------------------------------------
-    character(len=16), parameter :: typilo = 'PRED_ELAS       '
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter:: ntrou_max = 10
 ! --------------------------------------------------------------------------------------------------
-    character(len=8) :: typmod(2), lielrf(10)
     aster_logical :: axi
-    integer(kind=8) :: nno1, nno2, npg, lgpg, ndim, iret, ntrou, jtab(7), neps, nddl
-    integer(kind=8) :: jv_w, jv_vff1, jv_geom, jv_mate, jv_vff2, jv_dff2, jv_dtau
-    integer(kind=8) :: jv_copilo, jv_varim, jv_ddlm, jv_ddld, jv_ddl0, jv_ddl1, jv_angmas
-    integer(kind=8) :: jv_borne
-    real(kind=8):: etamin, etamax
-    real(kind=8), allocatable:: wg(:, :), ni2ldc(:, :), b(:, :, :), ang(:, :)
-    real(kind=8), allocatable:: sigm(:, :)
+    character(len=8) :: typmod(2), lielrf(ntrou_max), attrib
     character(len=16), pointer :: compor(:) => null()
+    integer(kind=8) :: ntrou, ndim_fe, ndim_sp, nno2, nno1, npg, lgpg, jtab(7), nddl, neps
+    integer(kind=8) :: jv_poids, jv_vff2, jv_vff1, jv_dfde2, jv_dfde1
+    integer(kind=8) :: jv_geom, jv_materc, jv_carcri
+    integer(kind=8) :: jv_contm, jv_varim, jv_copil, jv_borne, jv_dtau, jv_typilo
+    integer(kind=8) :: jv_deplm, jv_ddepl, jv_depl0, jv_depl1, iret
+    real(kind=8) :: instam, instap
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
+    real(kind=8), allocatable:: b(:, :, :), w(:, :), ni2ldc(:, :)
 ! --------------------------------------------------------------------------------------------------
-!
-!
-! - Get element parameters
-    call elref2(nomte, 2, lielrf, ntrou)
-    call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nno1, npg=npg, &
-                     jpoids=jv_w, jvf=jv_vff1)
-    call elrefe_info(elrefe=lielrf(2), fami='RIGI', ndim=ndim, nno=nno2, npg=npg, &
-                     jpoids=jv_w, jvf=jv_vff2, jdfde=jv_dff2)
 
-    ndim = ndim+1
-    nddl = ndim*(2*nno1+nno2)
-    neps = 2*ndim
-
-    allocate (ang(merge(1, 3, ndim .eq. 2), nno2), b(neps, npg, nddl), wg(neps, npg), &
-              ni2ldc(neps, npg))
-    allocate (sigm(neps, npg))
-
-! - Type of finite element
+! - Type of modelling
     call teattr('S', 'TYPMOD', typmod(1))
-    call teattr('S', 'TYPMOD2', typmod(2))
+    call teattr('C', 'TYPMOD2', typmod(2), vattr_missing=' ')
+    call teattr('S', 'DIM_COOR_MODELI', attrib)
+    read (attrib, '(I8)') ndim_sp
     axi = lteatt('AXIS', 'OUI')
 
-    ! Parametres
-    call jevech('PGEOMER', 'L', jv_geom)
-    call jevech('PCAMASS', 'L', jv_angmas)
-    call jevech('PMATERC', 'L', jv_mate)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PDEPLMR', 'L', jv_ddlm)
-    call jevech('PDDEPLR', 'L', jv_ddld)
-    call jevech('PDEPL0R', 'L', jv_ddl0)
-    call jevech('PDEPL1R', 'L', jv_ddl1)
-    call jevech('PVARIMR', 'L', jv_varim)
-    call jevech('PCDTAU', 'L', jv_dtau)
-    call jevech('PCOPILO', 'E', jv_copilo)
-    call jevech('PBORNPI', 'L', jv_borne)
+! - Get parameters of element
+    call elref2(nomte, ntrou_max, lielrf, ntrou)
+    call elrefe_info(elrefe=lielrf(2), fami=fami, ndim=ndim_fe, nno=nno2, &
+                     npg=npg, jpoids=jv_poids, jvf=jv_vff2, jdfde=jv_dfde2)
+    call elrefe_info(elrefe=lielrf(1), fami=fami, ndim=ndim_fe, nno=nno1, &
+                     npg=npg, jpoids=jv_poids, jvf=jv_vff1, jdfde=jv_dfde1)
+    ASSERT(ndim_sp .eq. ndim_fe+1)
 
-!    NOMBRE DE VARIABLES INTERNES
+! - Option parameters
+    call jevech('PGEOMER', 'L', jv_geom)
+    call jevech('PDEPLMR', 'L', jv_deplm)
+    call jevech('PCONTMR', 'L', jv_contm)
+    call jevech('PVARIMR', 'L', jv_varim)
+    call jevech('PDDEPLR', 'L', jv_ddepl)
+    call jevech('PDEPL0R', 'L', jv_depl0)
+    call jevech('PDEPL1R', 'L', jv_depl1)
+    call jevech('PMATERC', 'L', jv_materc)
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jv_carcri)
+    call jevech('PCDTAU', 'L', jv_dtau)
+    call jevech('PBORNPI', 'L', jv_borne)
+    call jevech('PCOPILO', 'E', jv_copil)
+
+! Number of internal variables
     call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg = max(jtab(6), 1)*jtab(7)
 
-    ! Repere local
-    if (nint(zr(jv_angmas)) .eq. -1) call utmess('F', 'JOINT1_47')
-    call eiangl(ndim, nno2, zr(jv_angmas+1), ang)
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jv_materc), materPara)
 
-    ! Calcul la matrice de la cinematique
-    call eimatb(nomte, ndim, axi, nno1, nno2, npg, &
-                zr(jv_w), zr(jv_vff1), zr(jv_vff2), zr(jv_dff2), zr(jv_geom), &
-                ang, b, wg, ni2ldc)
+! - Local coordinate system
+    call initLCSPg(ndim_sp, nno2, materPara)
 
-    ! Bornes
-    etamin = zr(jv_borne+1)
-    etamax = zr(jv_borne)
+! - Set main parameters for behaviour (on cell)
+    instam = r8vide()
+    instap = r8vide()
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jv_carcri), &
+                              instam, instap, &
+                              materPara, BEHInteg)
 
-    ! Pilotage
-    sigm = 0
-    call ngpipe(typilo, npg, neps, nddl, b, &
-                ni2ldc, typmod, zi(jv_mate), compor, lgpg, &
-                zr(jv_ddlm), sigm, zr(jv_varim), zr(jv_ddld), zr(jv_ddl0), &
-                zr(jv_ddl1), zr(jv_dtau), etamin, etamax, zr(jv_copilo))
+    ! Kinematics
+    nddl = ndim_sp*(2*nno1+nno2)
+    neps = 2*ndim_sp
+    allocate (b(neps, npg, nddl), w(neps, npg), ni2ldc(neps, npg))
+    call eimatb(nomte, ndim_sp, axi, nno1, nno2, npg, &
+                zr(jv_poids), zr(jv_vff1), zr(jv_vff2), zr(jv_dfde2), zr(jv_geom), &
+                materPara%lcsPara%lcsAnglePg, b, w, ni2ldc)
 
-    deallocate (ang, b, wg, ni2ldc, sigm)
+    ! Computation of path-following coefficients
+    call ngpipe(BEHInteg, typmod, compor, ndim_sp, npg, neps, nddl, b, ni2ldc, &
+                zr(jv_deplm), zr(jv_ddepl), zr(jv_depl0), zr(jv_depl1), &
+                lgpg, zr(jv_contm), zr(jv_varim), &
+                zr(jv_dtau), zr(jv_borne+1), zr(jv_borne), zr(jv_copil))
+
+    deallocate (b, w, ni2ldc)
+
 end subroutine

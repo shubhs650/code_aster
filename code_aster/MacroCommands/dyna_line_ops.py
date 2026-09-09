@@ -1345,6 +1345,7 @@ class DynaLineResu:
         TYPE_EXCIT=None,
         LIST_FREQ_CALC=None,
         CALC_IMPE_FORC=None,
+        SURF=None,
         **args,
     ):
         """initialize complementary parameters for iss"""
@@ -1363,6 +1364,7 @@ class DynaLineResu:
         self.group_ma_interf = GROUP_MA_INTERF
         self.type_excit = TYPE_EXCIT
         self.calc_impe_forc = CALC_IMPE_FORC == "OUI"
+        self.surf = SURF
 
     def __getDynaVibraKeywords(self):
         """return common keywords used for calling DYNA_VIBRA"""
@@ -1461,6 +1463,8 @@ class DynaLineResu:
             keywords["UNITE_RESU_IMPE"] = self.unite_resu_impe
         if self.unite_resu_forc:
             keywords["UNITE_RESU_FORC"] = self.unite_resu_forc
+        if self.surf:
+            keywords["SURF"] = self.surf
         if self.parametre:
             if self.type_calcul == "HARM":
                 l_is_freq_defined = [
@@ -1489,6 +1493,7 @@ class DynaLineResu:
         keywords_hg["BASE_MODALE"] = self.dynaLineFEM.dynaLineBasis.get()
         keywords_hg["TYPE"] = self.parametre["TYPE"]
         keywords_hg["UNITE_RESU_IMPE"] = self.unite_resu_impe
+        # keywords_hg["SURF"] = self.surf
         if self.unite_resu_impe:
             keywords_hg["UNITE_RESU_IMPE"] = self.unite_resu_impe
             if self.unite_resu_forc:
@@ -1549,7 +1554,7 @@ class DynaLineResu:
                 **keywords_hg,
             )
             # retrieve also result in gene basis
-            self.parent.register_result(resgene, self.resu_gene)
+            self.parent.register_result(resu_gene, self.resu_gene)
             __calc_miss = resu_gene
         else:
             __calc_miss = CALC_MISS(

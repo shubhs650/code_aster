@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine betfpp(BEHinteg, &
+subroutine betfpp(BEHInteg, &
                   materf, nmat, pc, pt, &
                   nseuil, fc, ft, dfcdlc, dftdlt, &
                   kuc, kut, ke)
@@ -54,7 +54,7 @@ subroutine betfpp(BEHinteg, &
     parameter(zero=0.d0)
     parameter(d13=.33333333333333d0)
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: nmat, nseuil
     real(kind=8) :: materf(nmat, 2)
     real(kind=8) :: pc, pt, dfcdlc, dftdlt, kuc, kut
@@ -93,8 +93,8 @@ subroutine betfpp(BEHinteg, &
 ! --- LONGUEUR CARACTERISTIQUE POUR LOI BETON LC
 !
     if (materf(9, 2) .lt. zero) then
-        if (BEHinteg%behavESVA%behavESVAGeom%lElemSize1) then
-            lc = BEHinteg%behavESVA%behavESVAGeom%elemSize1
+        if (BEHInteg%behavESVA%behavESVAGeom%lElemSize1) then
+            lc = BEHInteg%behavESVA%behavESVAGeom%elemSize1
         else
             call utmess('F', 'COMPOR2_12')
         end if

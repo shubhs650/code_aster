@@ -17,6 +17,8 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
+from contextlib import AbstractContextManager
+
 from libaster import deleteTemporaryObjects, resetFortranLoggingLevel, setFortranLoggingLevel
 
 from ...Messages import UTMESS, MessageLog
@@ -41,7 +43,7 @@ from ...Utilities import (
     no_new_attributes,
     profile,
 )
-from ..Basics import Context, ContextMixin, PhysicalState
+from ..Basics import Context, ContextMixin, EventId, EventSource, Observation, PhysicalState
 from ..Basics import ProblemType as PBT
 from ..Operators import BaseOperators
 from ..Post import Annealing, ComputeDisplFromHHO, ComputeHydr, ComputeTempFromHHO
@@ -51,7 +53,7 @@ from .storage_manager import StorageManager
 from .time_stepper import TimeStepper
 
 
-class NonLinearOperator(ContextMixin):
+class NonLinearOperator(ContextMixin, EventSource):
     """Solver for linear and non linear problem.
 
     Arguments:
@@ -61,6 +63,7 @@ class NonLinearOperator(ContextMixin):
 
     __needs__ = ("keywords", "stepper", "problem", "problem_type", "result", "state")
 
+    _eventid = EventId.NonLinearOperator
     _store = _step_solver = _hooks = None
     _verb = None
     # FIXME: prefer _current_matrix and property
@@ -117,6 +120,7 @@ class NonLinearOperator(ContextMixin):
         if _get("SOLVEUR"):
             context.linear_solver = LinearSolver.factory("MECA_NON_LINE", mcf=_get("SOLVEUR"))
         context.state = PhysicalState(context.problem_type, size=1)
+        context.state.setObservation(Observation.builder(context))
         context.check()
         return NonLinearOperator.builder(context)
 
@@ -130,12 +134,12 @@ class NonLinearOperator(ContextMixin):
         Returns:
             instance: New object.
         """
-        # same as constructor
-        return cls(context)
+        instance = cls(context)
+        instance.context = context
+        return instance
 
     def __init__(self, context) -> None:
         super().__init__()
-        self.context = context
         self._hooks = []
         self._step_idx = None
         self.current_matrix = None
@@ -164,6 +168,7 @@ class NonLinearOperator(ContextMixin):
                 # if stepper is None ?! should be happen
                 # init_index = reuse.getLastIndex()
                 self._store.setFirstStorageIndex(init_index + 1)
+                self.state._observ.setReuseIndex(init_index)
         return self._store
 
     @property
@@ -206,6 +211,9 @@ class NonLinearOperator(ContextMixin):
         """Initialize run"""
         phys_pb = self.problem
         kwds = self.keywords
+        # not in builder/__init__ to allow the user to define its own objects
+        self.add_observer(self.state)
+        self.stepper.add_observer(self.state)
         # essential to be called enough soon (may change the size of VARI field)
         if self.get_keyword("ETAT_INIT"):
             phys_pb.computeBehaviourProperty(kwds["COMPORTEMENT"], "OUI", 2)
@@ -219,6 +227,7 @@ class NonLinearOperator(ContextMixin):
         self._step_idx = 0
         self.setInitialState()
         self._storeState(self.state)
+        self.notifyObservers()
 
     def _register_hooks(self):
         if self.problem_type & PBT.AllMechanics:
@@ -251,9 +260,9 @@ class NonLinearOperator(ContextMixin):
                 assert isinstance(resu, NonLinearResult), resu
                 para, value = _extract_param(init_state, resu)
 
-                self.state.primal_curr = resu.getField(
-                    "DEPL", para=para, value=value
-                ).copyUsingDescription(nume_equa, True)
+                self.state.U = resu.getField("DEPL", para=para, value=value).copyUsingDescription(
+                    nume_equa, True
+                )
                 _msginit("DEPL", resu.userName)
 
                 if self.state.pb_type == PBT.MecaDyna:
@@ -295,7 +304,7 @@ class NonLinearOperator(ContextMixin):
                     if nume_didi:
                         displ = resu.getField("DEPL", nume_didi).copyUsingDescription(nume_equa)
                     else:
-                        displ = self.state.primal_curr
+                        displ = self.state.U
                     list_of_loads.setDifferentialDisplacement(displ)
 
             if "EVOL_THER" in init_state:
@@ -303,20 +312,18 @@ class NonLinearOperator(ContextMixin):
                 assert isinstance(resu, ThermalResult), resu
                 para, value = _extract_param(init_state, resu)
 
-                self.state.primal_curr = resu.getField(
-                    "TEMP", para=para, value=value
-                ).copyUsingDescription(nume_equa)
+                self.state.U = resu.getField("TEMP", para=para, value=value).copyUsingDescription(
+                    nume_equa
+                )
 
             if "CHAM_NO" in init_state:
-                self.state.primal_curr = init_state.get("CHAM_NO").copyUsingDescription(nume_equa)
+                self.state.U = init_state.get("CHAM_NO").copyUsingDescription(nume_equa)
 
             if "DEPL" in init_state:
-                self.state.primal_curr = init_state.get("DEPL").copyUsingDescription(
-                    nume_equa, False
-                )
+                self.state.U = init_state.get("DEPL").copyUsingDescription(nume_equa, False)
                 list_of_loads = self.problem.getListOfLoads()
                 if list_of_loads.hasDifferential():
-                    list_of_loads.setDifferentialDisplacement(self.state.primal_curr)
+                    list_of_loads.setDifferentialDisplacement(self.state.U)
                 _msginit("DEPL")
 
             if "SIGM" in init_state:
@@ -349,9 +356,9 @@ class NonLinearOperator(ContextMixin):
 
             if "VALE" in init_state:
                 if model.existsHHO():
-                    self.state.primal_curr = HHO(self.problem).projectOnHHOSpace(init_state["VALE"])
+                    self.state.U = HHO(self.problem).projectOnHHOSpace(init_state["VALE"])
                 else:
-                    self.state.primal_curr = self.state.createPrimal(
+                    self.state.U = self.state.createPrimal(
                         self.problem, value={"TEMP": init_state.get("VALE")}
                     )
 
@@ -423,17 +430,20 @@ class NonLinearOperator(ContextMixin):
                 solv.solve()
             except (ConvergenceError, IntegrationError, SolverError) as exc:
                 logger.warning(exc.format("I"))
-                try:
+                with storeLastIfFailed(self, state):
                     self.stepper.failed(exc)
-                except (ConvergenceError, IntegrationError, SolverError):
-                    # an error occurred, ensure that the previous step was stored
-                    logger.warning(
-                        "An error occurred, ensure that the last converged step is saved"
-                    )
-                    self._storeState(state.getState(-1), ignore_policy=True)
-                    raise
             else:
-                if not self.stepper.check_event(state):
+                try:
+                    isok = False
+                    with storeLastIfFailed(self, state):
+                        isok = self.stepper.check_event(state)
+                except ConvergenceError as exc:
+                    # exception for DELTA_GRANDEUR + ARCHIVAGE
+                    if exc.id_message == "ADAPTATION_14":
+                        isok = True
+                    else:
+                        raise
+                if not isok:
                     # + reset current_matrix to None (REAC_INCR)
                     state.revert()
                     continue
@@ -443,14 +453,21 @@ class NonLinearOperator(ContextMixin):
                 self.current_matrix = solv.current_matrix
                 self._step_idx += 1
                 last_stored = self._storeState(state)
+                self.notifyObservers()
         # ensure that last step was stored
         if not last_stored:
             self._storeState(state, ignore_policy=True)
+        table = state._observ.getTable()
+        if table:
+            self.result.setTable("OBSERVATION", table)
 
     def post_hooks(self):
         """Call post hooks"""
         for hook in self._hooks:
             hook(self)
+
+    def get_state(self):
+        """Returns nothing to observers."""
 
     def computeExternalStateVariables(self, current_time):
         """Compute and set external variables in the physical state.
@@ -483,6 +500,22 @@ class NonLinearOperator(ContextMixin):
         logger.setLevel(level)
         if show:
             ExecutionParameter().enable(Options.ShowSyntax)
+
+
+class storeLastIfFailed(AbstractContextManager):
+    def __init__(self, solver, state):
+        self._solver = solver
+        self._state = state
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if isinstance(exc_val, (ConvergenceError, IntegrationError, SolverError)):
+            # an error occurred, ensure that the previous step was stored
+            logger.warning("An error occurred, ensure that the last converged step is saved")
+            self._solver._storeState(self._state.getState(-1), ignore_policy=True)
+            raise
 
 
 def _msginit(field, result=None):

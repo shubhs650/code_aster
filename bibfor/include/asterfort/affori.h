@@ -20,7 +20,7 @@
 !
 interface
     subroutine affori(typ, nomt, cara, val, jad, jin,&
-                      jdno, jdco, nutyma, ntseg,&
+                      jdno, jdco, nutyma, ntseg, nutyel, ntyele, &
                       lseuil, nbseuil, alphayz)
         character(len=*) :: typ
         character(len=*) :: nomt
@@ -32,6 +32,8 @@ interface
         integer(kind=8) :: jdco
         integer(kind=8) :: nutyma
         integer(kind=8) :: ntseg
+        integer(kind=8) :: nutyel
+        integer(kind=8) :: ntyele(*)
         real(kind=8), intent(in), optional :: lseuil
         integer(kind=8), intent(inout), optional :: nbseuil
         real(kind=8), intent(in), optional :: alphayz(2)

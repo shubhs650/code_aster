@@ -15,17 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine pipedo(ndim, typmod, tau, mate, vim,&
-                      epsm, epspc, epsdc, etamin, etamax,&
+    subroutine pipedo(materPara, ndim, typmod, &
+                      tau, &
+                      vim, epsm, epspc, epsdc, etamin, etamax, &
                       a0, a1, a2, a3, etas)
-        integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=8), intent(in) :: typmod(2)
+        integer(kind=8), intent(in) :: ndim
         real(kind=8) :: tau
-        integer(kind=8) :: mate
         real(kind=8) :: vim(7)
         real(kind=8) :: epsm(6)
         real(kind=8) :: epspc(6)

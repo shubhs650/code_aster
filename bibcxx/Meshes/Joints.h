@@ -53,6 +53,8 @@ class Joints : public DataStructure {
     JeveuxVectorLong _groupComm;
     /** @brief MPI group for joints */
     MPIGroupPtr _jointsMPIGroup;
+    /** @brief Joints hash container */
+    JeveuxVectorChar24 _hashContainer;
 
     void buildGroup();
 

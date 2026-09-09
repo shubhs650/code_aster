@@ -18,11 +18,12 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine fneihm(ds_thm, fnoevo, deltat, nno1, nno2,&
-                      npi, npg, wref, iu, ip,&
-                      ipf, iq, vff1, vff2, dffr2,&
-                      geom, ang, congem, r, vectu,&
-                      mecani, press1, press2, dimdef,&
+    subroutine fneihm(ds_thm, &
+                      nno1, nno2, &
+                      npi, npg, wref, iu, ip, &
+                      ipf, iq, vff1, vff2, dffr2, &
+                      geom, congem, r, vectu, &
+                      mecani, press1, press2, dimdef, &
                       dimcon, dimuel, ndim, axi)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
@@ -34,8 +35,6 @@ interface
         integer(kind=8) :: npi
         integer(kind=8) :: nno2
         integer(kind=8) :: nno1
-        aster_logical :: fnoevo
-        real(kind=8) :: deltat
         real(kind=8) :: wref(npg)
         integer(kind=8) :: iu(3, 18)
         integer(kind=8) :: ip(2, 9)
@@ -45,7 +44,6 @@ interface
         real(kind=8) :: vff2(nno2, npi)
         real(kind=8) :: dffr2(ndim-1, nno2, npi)
         real(kind=8) :: geom(ndim, nno2)
-        real(kind=8) :: ang(24)
         real(kind=8) :: congem(dimcon, npi)
         real(kind=8) :: r(dimdef)
         real(kind=8) :: vectu(dimuel)

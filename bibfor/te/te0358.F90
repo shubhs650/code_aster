@@ -51,7 +51,7 @@ subroutine te0358(option, nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1, nbSigm = 6
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     integer(kind=8) :: iNode, iSigm, lgpg, iret
     real(kind=8) :: sigmo
     character(len=16) :: metaPhasName, relaComp, valk(2)

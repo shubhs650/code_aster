@@ -32,7 +32,6 @@ module ExternalStateVariablePrep_module
 ! ==================================================================================================
     private
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/exixfe.h"
 #include "asterfort/jeveuo.h"
@@ -89,7 +88,6 @@ contains
             call jeveuo(fieldUser(1:19)//'.CELD', 'L', vi=celd)
             nbVari = CELD(4)
         end if
-        WRITE (6, *) "CELD: ", exteVariName, nbVari
 
 ! ----- Generic checks
         if (fieldMesh .ne. mesh) then

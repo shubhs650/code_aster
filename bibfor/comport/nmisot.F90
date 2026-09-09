@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
-                  l_epsi_varc, imate, compor, crit, deps, &
+                  l_epsi_varc, imate, relaComp, carcri, deps, &
                   sigm, vim, option, sigp, vip, &
                   dsidep, iret)
 !
@@ -46,8 +46,9 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
     integer(kind=8) :: ndim, imate, kpg, ksp, iret
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor, option
-    real(kind=8) :: crit(*), line, radi
+    character(len=16), intent(in) :: relaComp, option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8) :: line, radi
     real(kind=8) :: deps(6), dx, deuxmu
     real(kind=8) :: sigm(6), vim(*), sigp(6), vip(*), dsidep(6, 6)
 ! ----------------------------------------------------------------------
@@ -148,11 +149,6 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
     sigel = 0.d0
     nompar = "XXXXXXXX"
 !
-!
-    if (.not. (compor(1:9) .eq. 'VMIS_ISOT')) then
-        call utmess('F', 'ALGORITH4_50', sk=compor)
-    end if
-!
 !     -- 2 RECUPERATION DES CARACTERISTIQUES
 !     ---------------------------------------
 !    RCCOMA POUR GERER KIT_DDI (GLRC+VMIS_ISOT)
@@ -206,7 +202,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         defap(k) = defap(k)*rac2
     end do
 !
-    if (compor(1:14) .eq. 'VMIS_ISOT_TRAC') then
+    if (relaComp(1:14) .eq. 'VMIS_ISOT_TRAC') then
         call rcvalb(fami, kpg, ksp, '-', imate, &
                     ' ', phenom, 0, ' ', [0.d0], &
                     1, nomres(2), valres(2), icodre(2), 2)
@@ -223,7 +219,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         num = valres(2)
         deumum = em/(1.d0+num)
 !        CRIT_RUPT
-        if (crit(IPOSTITER) .gt. 0.d0) then
+        if (carcri(IPOSTITER) .gt. 0.d0) then
             if (vim(8) .gt. 0.d0) then
                 lgpg = 8
                 call rupmat(fami, kpg, ksp, imate, vim, &
@@ -244,7 +240,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         nu = valres(2)
 !
 !        CRIT_RUPT
-        if (crit(IPOSTITER) .gt. 0.d0) then
+        if (carcri(IPOSTITER) .gt. 0.d0) then
             if (vim(8) .gt. 0.d0) then
                 lgpg = 8
                 call rupmat(fami, kpg, ksp, imate, vim, &
@@ -295,7 +291,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
 !     ---------------------------------------
     line = 0.d0
     plasti = (vim(2) .ge. 0.5d0)
-    if (compor(10:14) .eq. '_LINE') then
+    if (relaComp(10:14) .eq. '_LINE') then
         line = 1.d0
         nomres(1) = 'D_SIGM_EPSI'
         nomres(2) = 'SY'
@@ -312,7 +308,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
             rprim = dsde*e/(e-dsde)
         end if
         rp = rprim*vim(1)+sigy
-    else if (compor(10:14) .eq. '_PUIS') then
+    else if (relaComp(10:14) .eq. '_PUIS') then
         line = -1.d0
         nomres(1) = 'SY'
         nomres(2) = 'A_PUIS'
@@ -330,7 +326,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         else
             rprim = e
         end if
-    else if (compor(10:14) .eq. '_TRAC') then
+    else if (relaComp(10:14) .eq. '_TRAC') then
         nompar(2) = 'SECH'
         valpam(2) = sechm
         nompar(3) = 'HYDR'
@@ -345,7 +341,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
                     jvalem, nbvalm, em)
 !
 !        CRIT_RUPT VMIS_ISOT_TRAC
-        if (crit(IPOSTITER) .gt. 0.d0) then
+        if (carcri(IPOSTITER) .gt. 0.d0) then
             if (vim(8) .gt. 0.d0) then
                 lgpg = 8
                 call rupmat(fami, kpg, ksp, imate, vim, &
@@ -371,7 +367,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         call rctrac(imate, 1, 'SIGM', para_vale, jprolp, &
                     jvalep, nbvalp, e)
 !        CRIT_RUPT VMIS_ISOT_TRAC
-        if (crit(IPOSTITER) .gt. 0.d0) then
+        if (carcri(IPOSTITER) .gt. 0.d0) then
             if (vim(8) .gt. 0.d0) then
                 lgpg = 8
                 call rupmat(fami, kpg, ksp, imate, vim, &
@@ -458,19 +454,19 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
             vip(2) = 1.d0
             pm = vim(1)
             if (cplan) then
-                niter = abs(nint(crit(1)))
+                niter = abs(nint(carcri(1)))
                 jprol2 = jprolp
                 jvale2 = jvalep
                 nbval2 = nbvalp
-                precr = abs(crit(3))*sigy
+                precr = abs(carcri(3))*sigy
 !
 !
 !             CALCUL DE L'APPROXIMATION : DP SANS CONTRAINTE PLANE
 !
-                if (compor(10:14) .eq. '_LINE') then
+                if (relaComp(10:14) .eq. '_LINE') then
                     dp0 = sieleq-sigy-rprim*pm
                     dp0 = dp0/(rprim+1.5d0*deuxmu)
-                else if (compor(10:14) .eq. '_PUIS') then
+                else if (relaComp(10:14) .eq. '_PUIS') then
                     dp0 = (sieleq-rp)/(1.5d0*deuxmu)
                 else
                     call rcfonc('E', 1, jprolp, jvalep, nbvalp, &
@@ -491,26 +487,26 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
                 end if
                 dx = 3.d0*(1.d0-2.d0*nu)*sigel(3)*dp/(e*dp+2.d0*(1.d0-nu)*rp)
             else
-                if (compor(10:14) .eq. '_LINE') then
+                if (relaComp(10:14) .eq. '_LINE') then
                     dp = sieleq-sigy-rprim*pm
                     dp = dp/(rprim+1.5d0*deuxmu)
                     rp = sigy+rprim*(pm+dp)
-                else if (compor(10:14) .eq. '_PUIS') then
+                else if (relaComp(10:14) .eq. '_PUIS') then
                     dp0 = (sieleq-rp)/(1.5d0*deuxmu)
 !               AMELIORATION DE LA PREDICTION DE DP EN ESTIMANT
 !               RPRIM(PM+DP0)
                     rprim0 = unsurn*sigy*coco*(coco*(pm+dp0))**(unsurn-1)
                     dp0 = dp0/(1+rprim0/1.5d0/deuxmu)
                     xap = dp0
-                    precr = crit(3)*sigy
-                    niter = nint(crit(1))
+                    precr = carcri(3)*sigy
+                    niter = nint(carcri(1))
                     call zerofr(0, 'DEKKER', nmcri2, 0.d0, xap, &
                                 precr, niter, dp, iret, ibid)
                     if (iret .eq. 1) goto 999
                     call ecpuis(e, sigy, alfafa, unsurn, pm, &
                                 dp, rp, rprim)
 !
-                else if (compor(10:14) .eq. '_TRAC') then
+                else if (relaComp(10:14) .eq. '_TRAC') then
                     call rcfonc('E', 1, jprolp, jvalep, nbvalp, &
                                 e=e, nu=nu, p=vim(1), rp=rp, rprim=rprim, &
                                 airerp=airerp, sieleq=sieleq, dp=dp)
@@ -572,7 +568,7 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
         end do
 !
 !      S'il YA RUPTURE ALORS INTERDIRE PLASTICITE CAR LES CONTRAINTES ONT ETE MIS A ZERO
-        if (crit(IPOSTITER) .gt. 0.d0) then
+        if (carcri(IPOSTITER) .gt. 0.d0) then
             if (vim(8) .gt. 0.d0) then
                 plasti = .false.
             end if
@@ -620,10 +616,10 @@ subroutine nmisot(fami, kpg, ksp, ndim, typmod, &
     end if
 !
     if (option(1:9) .ne. 'RIGI_MECA') then
-        if (crit(10) .gt. 0.d0) then
+        if (carcri(10) .gt. 0.d0) then
             call radial(ndimsi, sigm, sigp, vim(2), vip(2), &
                         0, xm, xp, radi)
-            if (radi .gt. crit(10)) then
+            if (radi .gt. carcri(10)) then
                 iret = 2
             end if
         end if

@@ -17,24 +17,24 @@
 ! --------------------------------------------------------------------
 !
 subroutine ther_mtan(l_stat, &
-                     modelZ, caraElemZ, matecoZ, &
+                     modelZ, caraElemZ, materCodeZ, &
                      timePara, varcCurrZ, &
                      comporTherZ, tempIterZ, &
                      resuElemZ, matrElemZ, jvBase)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/calcul.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/gcnco2.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/multResuElem.h"
 #include "asterfort/reajre.h"
 !
     aster_logical, intent(in) :: l_stat
-    character(len=*), intent(in) :: modelZ, caraElemZ, matecoZ
+    character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
     real(kind=8), intent(in) :: timePara(2)
     character(len=*), intent(in) :: tempIterZ, comporTherZ, varcCurrZ
     character(len=*), intent(inout) :: resuElemZ
@@ -52,7 +52,7 @@ subroutine ther_mtan(l_stat, &
 ! In  l_stat           : flag for stationnary computation (no mass term)
 ! In  model            : name of the model
 ! In  caraElem         : name of elementary characteristics (field)
-! In  mateco           : name of codeing material characteristics (field)
+! In  materCode        : name of coding material characteristics (field)
 ! In  timePara         : timePara(1) = theta
 !                        timePara(2) = deltat
 ! In  varcCurr         : command variable for current time
@@ -65,18 +65,18 @@ subroutine ther_mtan(l_stat, &
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=16), parameter :: optionRigi = 'RIGI_THER_TANG', optionMass = 'MASS_THER_TANG'
-    integer(kind=8), parameter :: nbIn = 6, nbout = 1
-    character(len=8) :: lpain(nbIn), lpaout(nbout)
-    character(len=24) :: lchin(nbIn), lchout(nbout)
-    character(len=24) :: ligrel_model
-    character(len=24) :: chgeom, chcara(18)
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=24) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+    character(len=24) :: modelLigrel, chgeom
     character(len=19) :: resuElem
     real(kind=8) :: theta, deltat
+    integer(kind=8) :: nbFieldIn
     character(len=8) :: newnom
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=ligrel_model)
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
     theta = timePara(1)
     deltat = timePara(2)
     lpain = " "
@@ -85,34 +85,35 @@ subroutine ther_mtan(l_stat, &
     lchout = " "
     resuElem = resuElemZ(1:19)
 
-! - Geometry field
+! - Get geometry field
     call megeom(modelZ, chgeom)
 
-! - Elementary characteristics field
-    call mecara(caraElemZ, chcara)
-
-! - Input fields
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom
     lpain(2) = 'PMATERC'
-    lchin(2) = matecoZ
+    lchin(2) = materCodeZ
     lpain(3) = 'PTEMPEI'
     lchin(3) = tempIterZ
     lpain(4) = 'PCOMPOR'
     lchin(4) = comporTherZ
     lpain(5) = 'PVARCPR'
     lchin(5) = varcCurrZ
-    lpain(6) = 'PCAMASS'
-    lchin(6) = chcara(12)
+    nbFieldIn = 5
 
-! - Output fields
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElemZ)
+
+! - Add output field
     lpaout(1) = 'PMATTSR'
     lchout(1) = resuElemZ
 
 ! - Compute rigidity term
-    call calcul("S", optionRigi, ligrel_model, nbin, lchin, &
-                lpain, nbout, lchout, lpaout, jvBase, &
-                'OUI')
+    call calcul("S", optionRigi, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
 
 ! - Multiply values by theta
     call multResuElem(resuElem, theta)
@@ -130,9 +131,10 @@ subroutine ther_mtan(l_stat, &
         lchout(1) = resuElem
 
 ! - --- Compute
-        call calcul("S", optionMass, ligrel_model, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, jvBase, &
-                    'OUI')
+        call calcul("S", optionMass, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
 
 ! - --- Multiply values by 1/dt
         call multResuElem(resuElem, 1.d0/deltat)

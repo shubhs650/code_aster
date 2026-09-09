@@ -278,12 +278,7 @@ evol_me = STAT_NON_LINE(
     NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
     SOLVEUR=_F(ELIM_LAGR="NON"),
     CONVERGENCE=_F(
-        RESI_REFE_RELA=1.0e-3,
-        EPSI_REFE=1.0e-3,
-        SIGM_REFE=100,
-        EFFORT_REFE=700,
-        MOMENT_REFE=4900,
-        ITER_GLOB_MAXI=10,
+        RESI_REFE_RELA=1.0e-3, SIGM_REFE=100, EFFORT_REFE=700, MOMENT_REFE=4900, ITER_GLOB_MAXI=10
     ),
     OBSERVATION=(
         _F(
@@ -652,7 +647,6 @@ TEST_TABLE(
 
 
 # Test de la table d'observation (le max par maille est égal à 1, la moyenne aussi)
-
 TEST_TABLE(
     TABLE=ctrl,
     NOM_PARA="VALE",

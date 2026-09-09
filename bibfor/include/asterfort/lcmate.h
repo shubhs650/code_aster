@@ -15,26 +15,29 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lcmate(fami, kpg, ksp, comp, mod, &
-                      imat, nmat, tempd, tempf, tref, impexp, &
+    subroutine lcmate(materPara, &
+                      carcri, relaComp, typmod1, &
+                      nmat, tempd, tempf, tref, rungeKutta, &
                       typma, hsr, materd, materf, matcst, &
-                      nbcomm, cpmono, angmas, pgl, itmax, &
-                      toler, ndt, ndi, nr, crit, &
+                      nbcomm, cpmono, pgl, itmax, &
+                      toler, ndt, ndi, nr, &
                       nvi, vind, nfs, nsg, toutms, &
-                      nhsr, numhsr, sigd, mult_comp_)
+                      nhsr, numhsr, sigd, multComp_)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: relaComp
+        character(len=8), intent(in) :: typmod1
+        integer(kind=8), intent(in) :: nvi
+        character(len=16), optional, intent(in) :: multComp_
         integer(kind=8) :: nmat
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: comp(*)
-        character(len=8) :: mod
-        integer(kind=8) :: imat
         real(kind=8) :: tempd
         real(kind=8) :: tempf
         real(kind=8) :: tref
-        integer(kind=8) :: impexp
+        integer(kind=8) :: rungeKutta
         character(len=8) :: typma
         real(kind=8) :: hsr(*)
         real(kind=8) :: materd(nmat, 2)
@@ -42,15 +45,12 @@ interface
         character(len=3) :: matcst
         integer(kind=8) :: nbcomm(*)
         character(len=24) :: cpmono(*)
-        real(kind=8) :: angmas(3)
         real(kind=8) :: pgl(3, 3)
         integer(kind=8) :: itmax
         real(kind=8) :: toler
         integer(kind=8) :: ndt
         integer(kind=8) :: ndi
         integer(kind=8) :: nr
-        real(kind=8) :: crit(*)
-        integer(kind=8), intent(in) :: nvi
         real(kind=8) :: vind(*)
         integer(kind=8) :: nfs
         integer(kind=8) :: nsg
@@ -58,6 +58,5 @@ interface
         integer(kind=8) :: nhsr
         integer(kind=8) :: numhsr(*)
         real(kind=8) :: sigd(6)
-        character(len=16), optional, intent(in) :: mult_comp_
     end subroutine lcmate
 end interface

@@ -65,7 +65,6 @@ cata_msg = {
     42: _("""  Activation de chargements de Dirichlet imposés par élimination."""),
     44: _("""  Activation de macro-éléments."""),
     45: _("""  Activation d'éléments de type THM."""),
-    46: _("""  Activation d'éléments de type GVNO."""),
     47: _("""  Activation du calcul des modes de flambement."""),
     48: _("""  Activation du calcul des modes de stabilité."""),
     49: _("""  Activation du calcul des modes vibratoires."""),

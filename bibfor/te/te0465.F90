@@ -65,7 +65,7 @@ subroutine te0465(option, nomte)
     type(HHO_basis_cell) :: hhoBasisCell
     real(kind=8), dimension(MSIZE_CELL_SCAL) :: rhs_T, temp_T_curr
     real(kind=8), dimension(MSIZE_TDOFS_SCAL) :: rhs
-    real(kind=8) :: VoluValuesQP(MAX_QP_CELL)
+    real(kind=8) :: VoluValuesQP(MSIZE_QP_CELL)
     real(kind=8) :: theta, time_curr, tg
     integer(kind=8) :: fbs, nbpara, npg, faces_dofs, cbs, total_dofs
     integer(kind=8) :: j_time, j_sour, ipg, iret
@@ -85,7 +85,7 @@ subroutine te0465(option, nomte)
     call hhoTherDofs(hhoCell, hhoData, cbs, fbs, total_dofs)
     faces_dofs = total_dofs-cbs
 !
-    ASSERT(hhoQuadCell%nbQuadPoints <= MAX_QP_CELL)
+    ASSERT(hhoQuadCell%nbQuadPoints <= MSIZE_QP_CELL)
 !
     VoluValuesQP = 0.d0
     nompar(:) = 'XXXXXXXX'

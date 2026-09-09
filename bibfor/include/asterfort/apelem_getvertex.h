@@ -22,12 +22,13 @@ interface
     subroutine apelem_getvertex(elem_dime, elem_code,&
                                 para_coor, nb_vertex, para_code,&
                                 elem_coor, proj_tole)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_code
-        real(kind=8), intent(out) :: para_coor(elem_dime-1,4)
+        real(kind=8), intent(out) :: para_coor(2,4)
         integer(kind=8), intent(out) :: nb_vertex
         character(len=8), intent(out) :: para_code
-        real(kind=8), intent(in) :: elem_coor(3,9)
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: proj_tole
     end subroutine apelem_getvertex
 end interface

@@ -1,0 +1,156 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.Commands import *
+from code_aster import CA
+
+from code_aster.LinearAlgebra.POD import (
+    PODAnalysis,
+    computeProjectionErrors,
+    is_orthonormal_basis,
+    extractSnapshotsFromResult,
+)
+
+test = CA.TestCase()
+
+# --------------------------------------------------------------------
+#   HF COMPUTATION
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="OUI"))
+
+mesh = LIRE_MAILLAGE(FORMAT="MED")
+
+mesh = MODI_MAILLAGE(reuse=mesh, MAILLAGE=mesh, ORIE_PEAU=_F(GROUP_MA_PEAU="S_e"))
+
+# Define the material
+steel = DEFI_MATERIAU(ELAS=_F(E=210000.0, NU=0.3), ECRO_LINE=_F(D_SIGM_EPSI=100.0, SY=100.0))
+
+chmat = AFFE_MATERIAU(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", MATER=steel))
+# Mechanic model
+model = AFFE_MODELE(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="3D"))
+
+# Boundary condition
+chg_b = AFFE_CHAR_CINE(MODELE=model, MECA_IMPO=_F(GROUP_MA="S_inf", DX=0, DY=0.0, DZ=0))
+
+chg_p = AFFE_CHAR_MECA(MODELE=model, PRES_REP=_F(GROUP_MA="S_e", PRES=1000))
+
+# Time discretization
+list_t = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=10.0, PAS=1.0))
+
+list_i = DEFI_LIST_INST(METHODE="MANUEL", DEFI_LIST=_F(LIST_INST=list_t))
+
+rampe = DEFI_FONCTION(NOM_PARA="INST", VALE=(0.0, 0.0, 10.0, 1.0))
+
+# Complete computation to create base
+stnl = STAT_NON_LINE(
+    MODELE=model,
+    CHAM_MATER=chmat,
+    EXCIT=(_F(CHARGE=chg_b), _F(CHARGE=chg_p, FONC_MULT=rampe)),
+    INCREMENT=_F(LIST_INST=list_i),
+    COMPORTEMENT=_F(RELATION="VMIS_ISOT_LINE"),
+)
+
+stnl = CALC_CHAMP(reuse=stnl, RESULTAT=stnl, CONTRAINTE="SIEF_NOEU")
+
+# --------------------------------------------------------------------
+#   TEST THE EXTRACTION PROCEDURE FROM THE RESULT
+# --------------------------------------------------------------------
+
+
+def test_singular_values(singval_num, singval_ref, msg_end):
+    test_array_floats(singval_num, singval_ref, "singval = ", msg_end)
+
+
+def test_array_floats(arr_num, arr_ref, msg_begin, msg_end):
+    for i in range(len(arr_ref)):
+        test.assertAlmostEqual(arr_num[i], arr_ref[i], msg=msg_begin + str(i) + " " + msg_end)
+
+
+arr_depl = extractSnapshotsFromResult(stnl, "DEPL", "numpy")
+
+nDOF = 192
+n_cut = 3
+
+arr_depl_A = arr_depl[:, :n_cut]
+arr_depl_B = arr_depl[:, n_cut:]
+
+# - Compute the ROB using the snapshot method
+POD_An_A = PODAnalysis.factory(arr_depl_A, method="snapshot", criterion="energy", tolerance=1e-5)
+Phi_A, singval_A = POD_An_A.computePODBasis(option=2)
+
+test.assertEqual(Phi_A.shape[0], nDOF)
+test.assertEqual(Phi_A.shape[1], 2)
+
+POD_An_B = PODAnalysis.factory(arr_depl_B, method="snapshot", criterion="energy", tolerance=1e-5)
+Phi_B, singval_B = POD_An_B.computePODBasisIncremental(Phi_A, singval_A, method="HPOD", option=2)
+
+singval_B_ref = [0.2900185, 0.00180277, 0.09454346, 0.00603555, 0.00061865]
+test_singular_values(singval_B, singval_B_ref, " using incr-POD (HPOD)")
+test.assertEqual(Phi_B.shape[0], nDOF)
+test.assertEqual(Phi_B.shape[1], 5)
+
+Phi_B2, singval_B2 = POD_An_B.computePODBasisIncremental(Phi_A, singval_A, method="HAPOD", option=2)
+singval_B2_ref = [5.0746443, 0.01660781]
+test_singular_values(singval_B2, singval_B2_ref, " using incr-POD (HAPOD)")
+test.assertEqual(Phi_B2.shape[0], nDOF)
+test.assertEqual(Phi_B2.shape[1], 2)
+
+# --------------------------------------------------------------------
+#   TEST ON THE ABSOLUTE PROJECTION ERRORS
+# --------------------------------------------------------------------
+abs_errors, _ = computeProjectionErrors(Phi_B, arr_depl)
+abs_errors_ref = [
+    0.00000000e00,
+    1.08434595e-17,
+    6.09980583e-16,
+    2.48724660e-05,
+    1.15301187e-05,
+    1.71412666e-05,
+    5.12242973e-06,
+    8.18239499e-06,
+    1.33427805e-05,
+    6.84027368e-06,
+    1.23861954e-05,
+]
+test_array_floats(abs_errors_ref, abs_errors, "Absolute errors - ", "- case SVD")
+
+abs_errors, _ = computeProjectionErrors(Phi_B2, arr_depl)
+abs_errors_ref = [
+    0.0,
+    0.00181194,
+    0.00205454,
+    0.00113096,
+    0.00025245,
+    0.00059416,
+    0.00091508,
+    0.00087997,
+    0.0005106,
+    0.00017201,
+    0.00109232,
+]
+test_array_floats(abs_errors_ref, abs_errors, "Absolute errors - ", "- case SVD")
+
+# --------------------------------------------------------------------
+#   TEST FOR ORTHONORMALITY
+# --------------------------------------------------------------------
+test.assertTrue(is_orthonormal_basis(Phi_B, POD_An_B._corrOperator), msg="Orthonormality test - 1")
+test.assertTrue(is_orthonormal_basis(Phi_B, POD_An_B._corrOperator), msg="Orthonormality test - 2")
+
+FIN()

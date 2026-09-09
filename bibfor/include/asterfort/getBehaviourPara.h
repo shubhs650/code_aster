@@ -15,17 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine getBehaviourPara(l_mfront_proto, l_kit_thm, keywf         ,&
-                                i_comp        , algo_inte, iter_inte_maxi,&
-                                resi_inte)
-        aster_logical, intent(in) :: l_mfront_proto
-        aster_logical, intent(in) :: l_kit_thm
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
+    subroutine getBehaviourPara(l_mfront_proto, l_kit_thm, &
+                                factorKeyword, iFactorKeyword, algo_inte, &
+                                iter_inte_maxi, resi_inte)
+        aster_logical, intent(in) :: l_mfront_proto, l_kit_thm
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
         character(len=16), intent(in) :: algo_inte
         integer(kind=8), pointer :: iter_inte_maxi
         real(kind=8), pointer :: resi_inte

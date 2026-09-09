@@ -307,24 +307,6 @@ subroutine utdidt(getset, sddisc, ques_type, question, index_, &
             else if (getset .eq. 'E') then
                 sddiscEsur(SIZE_LESUR*(iechec-1)+9) = vali
             end if
-!
-! ----- Parameters for ITER_SUPPL
-!
-        else if (question .eq. 'PCENT_ITER_PLUS') then
-            if (getset .eq. 'L') then
-                valr = sddiscEsur(SIZE_LESUR*(iechec-1)+7)
-            else if (getset .eq. 'E') then
-                sddiscEsur(SIZE_LESUR*(iechec-1)+7) = valr
-            end if
-
-! ----- Parameters for ADAPT_COEF_PENA
-        else if (question .eq. 'COEF_MAXI') then
-            if (getset .eq. 'L') then
-                valr = sddiscEsur(SIZE_LESUR*(iechec-1)+8)
-            else if (getset .eq. 'E') then
-                sddiscEsur(SIZE_LESUR*(iechec-1)+8) = valr
-            end if
-
         else
             ASSERT(ASTER_FALSE)
         end if

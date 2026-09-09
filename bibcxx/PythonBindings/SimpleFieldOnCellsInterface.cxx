@@ -31,8 +31,6 @@
 void exportSimpleFieldOnCellsToPython( py::module_ &mod ) {
     py::class_< SimpleFieldOnCellsReal, SimpleFieldOnCellsRealPtr, DataField >(
         mod, "SimpleFieldOnCellsReal" )
-        .def( py::init( &initFactoryPtr< SimpleFieldOnCellsReal > ) )
-        .def( py::init( &initFactoryPtr< SimpleFieldOnCellsReal, std::string > ) )
         .def( py::init( &initFactoryPtr< SimpleFieldOnCellsReal, BaseMeshPtr > ),
               py::arg( "mesh" ) )
         .def( py::init( &initFactoryPtr< SimpleFieldOnCellsReal, BaseMeshPtr, std::string,
@@ -56,6 +54,8 @@ void exportSimpleFieldOnCellsToPython( py::module_ &mod ) {
                                    VectorString, const VectorInt &, ASTERINTEGER, bool > ),
               py::arg( "mesh" ), py::arg( "loc" ), py::arg( "quantity" ), py::arg( "cmps" ),
               py::arg( "nbPoints" ), py::arg( "nbSubPoints" ), py::arg( "prol_zero" ) )
+        .def( py::init( &initFactoryPtr< SimpleFieldOnCellsReal, const py::tuple & > ) )
+        .def( define_pickling< SimpleFieldOnCellsReal >() )
         .def(
             "__getitem__",
             +[]( const SimpleFieldOnCellsReal &v, const VectorLong &i ) {
@@ -323,5 +323,14 @@ Returns:
             Returns:
                 SimpleFieldOnCellsReal: field with name physical quantity.
             )",
-              py::arg( "physQuantity" ), py::arg( "map_cmps" ) );
+              py::arg( "physQuantity" ), py::arg( "map_cmps" ) )
+        .def( "norm", &SimpleFieldOnCellsReal::norm, R"(
+            Return the norm of the field
+
+            Arguments:
+                normType (str): "NORM_1", "NORM_2", "NORM_INFINITY"
+
+            Returns:
+                float: norm
+            )" );
 };

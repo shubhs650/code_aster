@@ -15,11 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nmiclg(fami, kpg, ksp, option, rela_comp, &
-                  imate, epsm, deps, sigm, vim, &
-                  sigp, vip, dsde, carcri, codret)
 !
+subroutine nmiclg(materPara, &
+                  option, relaComp, carcri, &
+                  epsm, deps, sigm, vim, &
+                  sigp, vip, dsde, &
+                  codret)
+!
+    use MaterialPara_type
+    use MaterialPara_module
     implicit none
 !
 #include "asterf_types.h"
@@ -29,32 +33,29 @@ subroutine nmiclg(fami, kpg, ksp, option, rela_comp, &
 #include "asterfort/nm1dci.h"
 #include "asterfort/nm1dco.h"
 #include "asterfort/nm1dis.h"
-#include "asterfort/nm1dpm.h"
 #include "asterfort/nmmaba.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
 #include "asterfort/Behaviour_type.h"
-    integer(kind=8) :: imate, kpg, ksp, codret
 !
-    character(len=16) :: rela_comp, option
-    character(len=*) :: fami
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: option, relaComp
     real(kind=8) :: carcri(CARCRI_SIZE)
     real(kind=8) :: vim(*)
     real(kind=8) :: vip(*)
     real(kind=8) :: sigy, sigm, deps, sigp
-    integer(kind=8) :: codres(1)
     real(kind=8) :: dsde, epsm
-! -------------------------------------------------------------------
+    integer(kind=8) :: codret
+!
+! --------------------------------------------------------------------------------------------------
 !
 !    TRAITEMENT DE LA RELATION DE COMPORTEMENT -ELASTOPLASTICITE-
 !    ECROUISSAGE ISOTROPE ET CINEMATIQUE- LINEAIRE - VON MISES-
 !    POUR UN MODELE CABLE_GAINE (EQUIVALENT A MECA_BARRE)
 !
-! -------------------------------------------------------------------
-! IN  : FAMI  : FAMILLE DE POINT DE GAUSS
-!       KPG   : NUMERO DU POINT DE GAUSS DANS LA FAMILLE
-!       KSP   : NUMERO DU SOUS POINT
+! --------------------------------------------------------------------------------------------------
+!
 !       OPTION : OPTION DEMANDEE (R_M_T,FULL OU RAPH_MECA)
 !       IMATE : POINTEUR MATERIAU CODE
 !       EPSM  : DEFORMATION A L'INSTANT MOINS
@@ -67,113 +68,156 @@ subroutine nmiclg(fami, kpg, ksp, option, rela_comp, &
 !       CRILDC : CRITERE LOI DE COMPORTEMENT
 !       CODRET : CODE RETOUR
 !
-!----------VARIABLES LOCALES
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ncstpm
-    parameter(ncstpm=13)
-    character(len=8) :: nomasl(4)
-    real(kind=8) :: cstpm(ncstpm)
+    character(len=8), parameter :: materPoin = " "
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
+    integer(kind=8), parameter :: nbProp = 4
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = &
+                                    (/'SY_C        ', 'DC_SIGM_EPSI', &
+                                      'SY_T        ', 'DT_SIGM_EPSI'/)
     real(kind=8) :: depsth, depsm, tmoins, tplus
     real(kind=8) :: em, ep, dsdem, dsdep
-    real(kind=8) :: valres(4), syc, etc, syt, ett, cr, val(1)
-    aster_logical :: isot, cine, elas, corr, implex, isotli, pinto, asyml, sans
-    data nomasl/'SY_C', 'DC_SIGM_', 'SY_T', 'DT_SIGM_'/
+    real(kind=8) :: syc, etc, syt, ett
+    aster_logical :: isot, cine, elas, corr, implex, isotli, asyml, sans
 !
+! --------------------------------------------------------------------------------------------------
 !
-!----------INITIALISATIONS
-!
-    elas = .false.
-    isot = .false.
-    cine = .false.
-    corr = .false.
-    implex = option(1:16) .eq. 'RIGI_MECA_IMPLEX'
-    isotli = .false.
-    pinto = .false.
-    asyml = .false.
-    if (rela_comp .eq. 'ELAS') then
-        elas = .true.
-    else if ((rela_comp .eq. 'VMIS_ISOT_LINE') .or. (rela_comp .eq. 'VMIS_ISOT_TRAC')) then
-        isot = .true.
-        if (rela_comp .eq. 'VMIS_ISOT_LINE') then
-            isotli = .true.
+    elas = ASTER_FALSE
+    isot = ASTER_FALSE
+    cine = ASTER_FALSE
+    corr = ASTER_FALSE
+    implex = option .eq. 'RIGI_MECA_IMPLEX'
+    isotli = ASTER_FALSE
+    asyml = ASTER_FALSE
+    if (relaComp .eq. 'ELAS') then
+        elas = ASTER_TRUE
+    else if ((relaComp .eq. 'VMIS_ISOT_LINE') .or. (relaComp .eq. 'VMIS_ISOT_TRAC')) then
+        isot = ASTER_TRUE
+        if (relaComp .eq. 'VMIS_ISOT_LINE') then
+            isotli = ASTER_TRUE
         end if
-    else if (rela_comp .eq. 'VMIS_CINE_LINE') then
-        cine = .true.
-    else if (rela_comp .eq. 'CORR_ACIER') then
-        corr = .true.
-    else if (rela_comp .eq. 'PINTO_MENEGOTTO') then
-        pinto = .true.
-    else if (rela_comp .eq. 'VMIS_ASYM_LINE') then
-        asyml = .true.
-    else if (rela_comp .eq. 'SANS') then
-        sans = .true.
+    else if (relaComp .eq. 'VMIS_CINE_LINE') then
+        cine = ASTER_TRUE
+    else if (relaComp .eq. 'CORR_ACIER') then
+        corr = ASTER_TRUE
+    else if (relaComp .eq. 'VMIS_ASYM_LINE') then
+        asyml = ASTER_TRUE
+    else if (relaComp .eq. 'SANS') then
+        sans = ASTER_TRUE
     end if
     if (implex) then
         if ((.not. elas) .and. (.not. isotli)) then
-            call utmess('F', 'POUTRE0_49', sk=rela_comp)
+            call utmess('F', 'POUTRE0_49', sk=relaComp)
         end if
     end if
-!
-!
-! --- CARACTERISTIQUES ELASTIQUES A TMOINS
-!
-    call rcvalb(fami, kpg, ksp, '-', imate, &
-                ' ', 'ELAS', 0, ' ', [0.d0], &
-                1, 'E', val, codres, 1)
-    em = val(1)
-!
-! --- CARACTERISTIQUES ELASTIQUES A TPLUS
-!
-    call rcvalb(fami, kpg, ksp, '+', imate, &
-                ' ', 'ELAS', 0, ' ', [0.d0], &
-                1, 'E', val, codres, 1)
-    ep = val(1)
-!
+
+! - CARACTERISTIQUES ELASTIQUES A TMOINS
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '-', &
+                materPara%jvMaterCode, &
+                materPoin, 'ELAS', &
+                0, ' ', [0.d0], &
+                1, 'E', propVale, propCode, 1)
+    em = propVale(1)
+
+! - CARACTERISTIQUES ELASTIQUES A TPLUS
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', &
+                materPara%jvMaterCode, &
+                materPoin, 'ELAS', &
+                0, ' ', [0.d0], &
+                1, 'E', propVale, propCode, 1)
+    ep = propVale(1)
 !
     if (isot .and. (.not. implex)) then
-        call verift(fami, kpg, ksp, 'T', imate, &
+        call verift(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    'T', &
+                    materPara%jvMaterCode, &
                     epsth_=depsth)
         depsm = deps-depsth
-        call nm1dis(fami, kpg, ksp, imate, em, &
-                    ep, sigm, depsm, vim, option, &
-                    rela_comp, ' ', sigp, vip, dsde)
+        call nm1dis(materPara, &
+                    option, relaComp, materPoin, &
+                    em, ep, sigm, depsm, vim, &
+                    sigp, vip, dsde)
+
     else if (cine) then
-        call verift(fami, kpg, ksp, 'T', imate, &
+        call verift(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    'T', &
+                    materPara%jvMaterCode, &
                     epsth_=depsth)
         depsm = deps-depsth
-        call nm1dci(fami, kpg, ksp, imate, em, &
-                    ep, sigm, depsm, vim, option, &
-                    ' ', sigp, vip, dsde)
+        call nm1dci(materPara, &
+                    option, ' ', &
+                    em, ep, sigm, depsm, vim, &
+                    sigp, vip, dsde)
+
     else if (elas) then
         dsde = ep
         vip(1) = 0.d0
-        call verift(fami, kpg, ksp, 'T', imate, &
+        call verift(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    'T', &
+                    materPara%jvMaterCode, &
                     epsth_=depsth)
         sigp = ep*(sigm/em+deps-depsth)
+
     else if (corr) then
-        call nm1dco(fami, kpg, ksp, option, imate, &
-                    ' ', ep, sigm, epsm, deps, &
-                    vim, sigp, vip, dsde, carcri, &
+        call nm1dco(materPara, option, carcri, &
+                    ' ', &
+                    ep, sigm, epsm, deps, &
+                    vim, sigp, vip, dsde, &
                     codret)
+
     else if (implex) then
-        call lcimpl(fami, kpg, ksp, imate, em, &
-                    ep, sigm, tmoins, tplus, deps, &
+        call lcimpl(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    materPara%jvMaterCode, &
+                    em, ep, sigm, tmoins, tplus, deps, &
                     vim, option, sigp, vip, dsde)
+
     else if (asyml) then
-        call nmmaba(imate, rela_comp, ep, dsde, sigy, &
-                    ncstpm, cstpm)
-        call rcvalb(fami, 1, 1, '+', imate, &
-                    ' ', 'ECRO_ASYM_LINE', 0, ' ', [0.d0], &
-                    4, nomasl, valres, codres, 1)
-        syc = valres(1)
-        etc = valres(2)
-        syt = valres(3)
-        ett = valres(4)
-        cr = 0.d0
-        call nm1das(fami, kpg, ksp, ep, syc, &
-                    syt, etc, ett, cr, tmoins, &
-                    tplus, imate, sigm, deps, vim, &
+        call nmmaba(materPara%jvMaterCode, relaComp, &
+                    ep, dsde, sigy)
+
+! ----- Copy material parameters with other scheme parameters
+        call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                           materParaFPG1)
+
+! ----- CARACTERISTIQUES ECROUISSAGE LINEAIRE ASYMETRIQUE
+        call rcvalb(materParaFPG1%schemePara%fami, &
+                    materParaFPG1%schemePara%kpg, &
+                    materParaFPG1%schemePara%ksp, &
+                    '+', &
+                    materParaFPG1%jvMaterCode, &
+                    ' ', 'ECRO_ASYM_LINE', &
+                    0, ' ', [0.d0], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        syc = propVale(1)
+        etc = propVale(2)
+        syt = propVale(3)
+        ett = propVale(4)
+        call nm1das(materPara, &
+                    ep, syc, &
+                    syt, etc, ett, &
+                    sigm, deps, vim, &
                     sigp, vip, dsdem, dsdep)
+
         if (option(1:10) .eq. 'RIGI_MECA_' .or. option(1:9) .eq. 'FULL_MECA') then
             if (option(11:14) .eq. 'ELAS') then
                 dsde = ep
@@ -185,20 +229,14 @@ subroutine nmiclg(fami, kpg, ksp, option, rela_comp, &
                 end if
             end if
         end if
-    else if (pinto) then
-        call verift(fami, kpg, ksp, 'T', imate, &
-                    epsth_=depsth)
-        depsm = deps-depsth
-        call nmmaba(imate, rela_comp, ep, dsde, sigy, &
-                    ncstpm, cstpm)
-        call nm1dpm(fami, kpg, ksp, imate, option, &
-                    8, ncstpm, cstpm, sigm, vim, &
-                    depsm, vip, sigp, dsde)
+
     else if (sans) then
         sigp = 0.d0
         dsde = 0.d0
+
     else
         ASSERT(ASTER_FALSE)
+
     end if
 !
 end subroutine

@@ -20,14 +20,16 @@ subroutine dxqpgl(xyzg, pgl)
 !
     implicit none
 !
-#include "jeveux.h"
-    real(kind=8) :: xyzg(3, *), pgl(3, 3)
+    real(kind=8), intent(in) :: xyzg(3, *)
+    real(kind=8), intent(out) :: pgl(3, 3)
 !
-!     IN  XYZG  R  12  COORDONNEES  X1 Y1 Z1 X2 Y2 ...
-!     OUT PGL   R 3,3  MATRICE DE PASSAGE GLOBAL INTRINSEQUE
-!     -----------------------------------------------------------------
-!     CONSTRUCTION DE LA MATRICE DE PASSAGE GLOBAL --> INTRINSEQUE
-!     POUR UNE MAILLE TRIANGLE DKQ OU DSQ
+! --------------------------------------------------------------------------------------------------
+!
+! CONSTRUCTION DE LA MATRICE DE PASSAGE GLOBAL --> INTRINSEQUE
+! POUR UNE MAILLE de plaque quadrangle
+!
+! --------------------------------------------------------------------------------------------------
+!
 !
 !            I MILIEU DE 4 1                        3
 !            J MILIEU DE 2 3                        *
@@ -44,11 +46,15 @@ subroutine dxqpgl(xyzg, pgl)
 !
 !     VERIFICATION QUE L'ELEMENT EST REELLEMENT PLAN
 !
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
     real(kind=8) :: vx, vy, vz, xi, yi, zzi, xj
     real(kind=8) :: yj, zzj, xk, yk, zzk, xl, yl, zzl
     real(kind=8) :: norm
-
+!
+! --------------------------------------------------------------------------------------------------
+!
+    pgl = 0.d0
     xi = (xyzg(1, 1)+xyzg(1, 4))/2.d0
     yi = (xyzg(2, 1)+xyzg(2, 4))/2.d0
     zzi = (xyzg(3, 1)+xyzg(3, 4))/2.d0

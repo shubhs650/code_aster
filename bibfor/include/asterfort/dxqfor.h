@@ -15,16 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine dxqfor(global, xyzl, pgl, for, vecl)
+    subroutine dxqfor(plateOrie, global, xyzl, for, vecl)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
         aster_logical :: global
         real(kind=8) :: xyzl(3, *)
-        real(kind=8) :: pgl(3, *)
         real(kind=8) :: for(6, *)
         real(kind=8) :: vecl(*)
     end subroutine dxqfor

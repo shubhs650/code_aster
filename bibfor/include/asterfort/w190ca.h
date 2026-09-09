@@ -15,17 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine w190ca(modele, carele, chmar1, chefge, chamfer, chefge0, chmar2)
-        character(len=8) :: modele
-        character(len=8) :: carele
-        character(len=19) :: chmar1
-        character(len=19) :: chefge
-        character(len=19) :: chamfer
-        character(len=19) :: chefge0
-        character(len=19) :: chmar2
+    subroutine w190ca(model, caraElem, chmar1, chefge, chamfer, chefge0, chmar2)
+        character(len=8), intent(in) :: model, caraElem
+        character(len=19), intent(in) :: chmar1, chmar2, chefge, chamfer, chefge0
     end subroutine w190ca
 end interface

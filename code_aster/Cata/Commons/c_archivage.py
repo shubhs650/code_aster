@@ -22,20 +22,35 @@ from ..Language.DataStructure import listr8_sdaster
 from ..Language.Syntax import BLOC, FACT, SIMP, UN_PARMI, NoRepeat
 
 
-def C_ARCHIVAGE():
+def C_ARCHIVAGE(cmd=None):
+
+    if cmd == "ENDO_VISC":
+        status = "f"
+        regle = (UN_PARMI("PAS_ARCH", "LIST_INST", "INST"),)
+
+        defaut_crit = None
+        defaut_prec = None
+
+    else:
+        status = "d"
+        regle = (UN_PARMI("PAS_ARCH", "LIST_INST", "INST", PAS_ARCH=1),)
+
+        defaut_crit = "RELATIF"
+        defaut_prec = 1e-6
+
     return FACT(
-        statut="d",
+        statut=status,
         max=1,
-        regles=(UN_PARMI("PAS_ARCH", "LIST_INST", "INST", PAS_ARCH=1),),
+        regles=regle,
         PAS_ARCH=SIMP(statut="f", typ="I"),
         LIST_INST=SIMP(statut="f", typ=listr8_sdaster),
         INST=SIMP(statut="f", typ="R", validators=NoRepeat(), max="**"),
         b_crit=BLOC(
             condition="""exists("INST") or exists("LIST_INST")""",
-            CRITERE=SIMP(statut="f", typ="TXM", defaut="RELATIF", into=("RELATIF", "ABSOLU")),
+            CRITERE=SIMP(statut="f", typ="TXM", defaut=defaut_crit, into=("RELATIF", "ABSOLU")),
             b_prec_rela=BLOC(
                 condition="""equal_to("CRITERE", 'RELATIF')""",
-                PRECISION=SIMP(statut="f", typ="R", defaut=1.0e-6),
+                PRECISION=SIMP(statut="f", typ="R", defaut=defaut_prec),
             ),
             b_prec_abso=BLOC(
                 condition="""equal_to("CRITERE", 'ABSOLU')""", PRECISION=SIMP(statut="o", typ="R")

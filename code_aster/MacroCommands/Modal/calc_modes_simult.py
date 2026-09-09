@@ -165,7 +165,7 @@ def calc_modes_simult(self, stop_erreur, sturm, TYPE_RESU, OPTION, INFO, **args)
 
     #
     # read the keyword SOLVEUR (linear solver)
-    solveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+    solveur = SOLVEUR[0]
     if "TYPE_RESU" in solveur:  # because TYPE_RESU is a keyword with a 'global' position
         solveur.pop("TYPE_RESU")
     if "OPTION" in solveur:  # because OPTION is a keyword with a 'global' position

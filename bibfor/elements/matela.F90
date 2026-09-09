@@ -16,13 +16,16 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine matela(icodma, materi, itemp, temp, e, &
-                  nu)
+subroutine matela(jvMaterCode, materPoin, itemp, temp, &
+                  e, nu)
+!
     implicit none
+!
 #include "asterfort/rcvalb.h"
+!
     real(kind=8) :: temp, e, nu
-    integer(kind=8) :: icodma, itemp
-    character(len=*) :: materi
+    integer(kind=8) :: jvMaterCode, itemp
+    character(len=*) :: materPoin
 !
 !     RECUPERATION DES VALEURS DE E, NU
 !     FONCTION EVENTUELLEMENT DE LA TEMPERATURE TEMP
@@ -57,8 +60,8 @@ subroutine matela(icodma, materi, itemp, temp, e, &
         nompar = 'TEMP'
         valpar = temp
     end if
-    call rcvalb('RIGI', 1, 1, '+', icodma, &
-                materi, 'ELAS', nbpar, nompar, [valpar], &
+    call rcvalb('RIGI', 1, 1, '+', jvMaterCode, &
+                materPoin, 'ELAS', nbpar, nompar, [valpar], &
                 2, nomres, valres, codres, 1)
     e = valres(1)
     nu = valres(2)

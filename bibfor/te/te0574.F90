@@ -27,7 +27,6 @@ subroutine te0574(nomopt, nomte)
 !
 #include "jeveux.h"
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/tecach.h"
 #include "asterfort/readVector.h"

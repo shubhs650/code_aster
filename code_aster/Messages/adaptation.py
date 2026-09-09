@@ -71,6 +71,10 @@ cata_msg = {
     13: _(
         """On a atteint le nombre maximal de pas de temps autorisé dans DEFI_LIST_INST. On arrête le calcul."""
     ),
+    14: _(
+        """Le critère DELTA_GRANDEUR - %(k1)s / %(k2)s pour l'ACTION = "ARCHIVAGE" est atteint. On arrête le calcul et on archive les deux derniers pas de temps.
+"""
+    ),
     20: _(
         """
     Pour la méthode d'adaptation de type DELTA_GRANDEUR - %(k1)s / %(k2)s. Le pas de temps calculé vaut <%(r1)19.12e>.

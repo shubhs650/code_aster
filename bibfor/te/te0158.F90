@@ -56,7 +56,7 @@ subroutine te0158(option, nomte)
     integer(kind=8) :: jeffg, lmater, iret, lorien, jdepl, i, j, kp, nc
     integer(kind=8) :: itemp, jtab(7), istrxr
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=16) :: ch16
     integer(kind=8) :: ipos, in
     integer(kind=8) :: npg, nno, ivf, ipoids

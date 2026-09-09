@@ -15,12 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxefg2(pgl, sigt)
-        real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: sigt(32)
+    subroutine dxefg2(plateCara, plateOrie, &
+                      pgl, sigt)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        real(kind=8), intent(in) :: pgl(3, 3)
+        real(kind=8), intent(out) :: sigt(32)
     end subroutine dxefg2
 end interface

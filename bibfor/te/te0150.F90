@@ -81,7 +81,7 @@ subroutine te0150(option, nomte)
     real(kind=8) :: fr(18), fi(18), fgr(18), fgi(18)
     real(kind=8) :: fer(18), fei(18)
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(3), materi
     character(len=16) :: ch16
     aster_logical :: lrho

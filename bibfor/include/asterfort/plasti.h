@@ -18,19 +18,22 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine plasti(BEHinteg    ,&
-                      fami        , kpg   , ksp   , typmod, imate,&
-                      compor      , carcri, instam, instap, &
-                      epsdt       , depst , sigm  ,&
-                      vim         , option, angmas, sigp  , vip,&
-                      dsidep      , icomp , nvi   , codret,&
-                      mult_compor_)
+    subroutine plasti(BEHinteg, &
+                      option, typmod, &
+                      fami, kpg, ksp, jvMaterCode, &
+                      compor, carcri, instam, instap, &
+                      epsdt, depst, &
+                      sigm, &
+                      nvi, vim, &
+                      sigp, vip, &
+                      dsidep, &
+                      codret, multComp_)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg
         integer(kind=8), intent(in) :: ksp
-        integer(kind=8), intent(in) :: imate
+        integer(kind=8), intent(in) :: jvMaterCode
         character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: instam
@@ -38,16 +41,14 @@ interface
         real(kind=8), intent(in) :: epsdt(9)
         real(kind=8), intent(in) :: depst(9)
         real(kind=8), intent(in) :: sigm(6)
-        real(kind=8), intent(in) :: vim(*)
-        character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(3)
-        real(kind=8), intent(out) :: sigp(6)
-        real(kind=8), intent(out) :: vip(*)
-        character(len=8), intent(in) :: typmod(*)
-        integer(kind=8), intent(in) :: icomp
         integer(kind=8), intent(in) :: nvi
+        real(kind=8), intent(in) :: vim(nvi)
+        character(len=16), intent(in) :: option
+        real(kind=8), intent(out) :: sigp(6)
+        real(kind=8), intent(out) :: vip(nvi)
+        character(len=8), intent(in) :: typmod(2)
         real(kind=8), intent(out) :: dsidep(6, *)
         integer(kind=8), intent(out) :: codret
-        character(len=16), optional, intent(in) :: mult_compor_
+        character(len=16), optional, intent(in) :: multComp_
     end subroutine plasti
 end interface

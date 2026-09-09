@@ -17,10 +17,11 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W0104,W1306,C1505
 !
-subroutine lc9078(BEHinteg, fami, kpg, ksp, ndim, imate, &
-                  compor, carcri, instam, instap, neps, epsm, &
-                  deps, nsig, sigm, nvi, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
+subroutine lc9078(BEHinteg, &
+                  fami, kpg, ksp, ndim, jvMaterCode, &
+                  carcri, instam, instap, neps, epsm, &
+                  deps, nsig, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
                   ndsde, dsidep, codret)
 !
     use Behaviour_type
@@ -37,8 +38,7 @@ subroutine lc9078(BEHinteg, fami, kpg, ksp, ndim, imate, &
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    integer(kind=8), intent(in) :: jvMaterCode
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam
     real(kind=8), intent(in) :: instap
@@ -50,11 +50,9 @@ subroutine lc9078(BEHinteg, fami, kpg, ksp, ndim, imate, &
     integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8) :: sigp(nsig)
     real(kind=8) :: vip(nvi)
     character(len=8), intent(in) :: typmod(2)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: ndsde
     real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
                            merge(neps, 6, nsig*neps .eq. ndsde))
@@ -84,7 +82,8 @@ subroutine lc9078(BEHinteg, fami, kpg, ksp, ndim, imate, &
     su = epsm(1:ndim)+deps(1:ndim)
     t = epsm(ndim+1:2*ndim)+deps(ndim+1:2*ndim)
 
-    cl = Init(ndim, option, fami, kpg, ksp, imate, t, su, vim)
+    cl = Init(ndim, option, fami, kpg, ksp, jvMaterCode, t, su, vim, &
+              instap-instam, carcri(RESI_INTE))
     call Integrate(cl, delta, dphi_delta, vi)
     codret = cl%exception
     if (codret .ne. 0) goto 999

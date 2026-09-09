@@ -17,11 +17,10 @@
 ! --------------------------------------------------------------------
 !
 subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
-                  igeom, imate, imatuu, ivectu, icontp, &
-                  ivarip, ichg, ichn, jcret, icarcr, iinstm, iinstp)
+                  igeom, imatuu, ivectu, icontp, &
+                  ivarip, ichg, ichn, jcret, jvCarcri, iinstm, iinstp)
 !
     use Behaviour_module, only: behaviourOption
-!
     implicit none
 !
 #include "jeveux.h"
@@ -30,8 +29,8 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
 #include "asterfort/assert.h"
 #include "asterfort/jevech.h"
 !
-    integer(kind=8) :: icontm, ivarim, ideplm, ideplp, igeom, imate, jcret
-    integer(kind=8) :: imatuu, ivectu, icontp, ichg, ichn, ivarip, icarcr, iinstm, iinstp
+    integer(kind=8) :: icontm, ivarim, ideplm, ideplp, igeom, jcret
+    integer(kind=8) :: imatuu, ivectu, icontp, ichg, ichn, ivarip, jvCarcri, iinstm, iinstp
     character(len=16) :: option
     character(len=16), pointer :: compor(:)
 !
@@ -55,8 +54,6 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
     ivarim = ismaem()
     ideplm = ismaem()
     ideplp = ismaem()
-    igeom = ismaem()
-    imate = ismaem()
     imatuu = ismaem()
     ivectu = ismaem()
     icontp = ismaem()
@@ -64,7 +61,7 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
     ichg = ismaem()
     ichn = ismaem()
     jcret = ismaem()
-    icarcr = ismaem()
+    jvCarcri = ismaem()
     iinstm = ismaem()
     iinstp = ismaem()
 !
@@ -76,8 +73,7 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
         call jevech('PDEPLMR', 'L', ideplm)
         call jevech('PDEPLPR', 'L', ideplp)
         call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PCARCRI', 'L', icarcr)
+        call jevech('PCARCRI', 'L', jvCarcri)
         call jevech('PINSTMR', 'L', iinstm)
         call jevech('PINSTPR', 'L', iinstp)
     else if (option .eq. 'RAPH_MECA') then
@@ -86,8 +82,7 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
         call jevech('PDEPLMR', 'L', ideplm)
         call jevech('PDEPLPR', 'L', ideplp)
         call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PCARCRI', 'L', icarcr)
+        call jevech('PCARCRI', 'L', jvCarcri)
         call jevech('PINSTMR', 'L', iinstm)
         call jevech('PINSTPR', 'L', iinstp)
     else if (option(1:9) .eq. 'FULL_MECA') then
@@ -96,8 +91,7 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
         call jevech('PDEPLMR', 'L', ideplm)
         call jevech('PDEPLPR', 'L', ideplp)
         call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PCARCRI', 'L', icarcr)
+        call jevech('PCARCRI', 'L', jvCarcri)
         call jevech('PINSTMR', 'L', iinstm)
         call jevech('PINSTPR', 'L', iinstp)
     else if (option .eq. 'FORC_NODA') then
@@ -108,18 +102,14 @@ subroutine dilcar(option, compor, icontm, ivarim, ideplm, ideplp, &
     else
         ASSERT(ASTER_FALSE)
     end if
-!
+
 ! - Select objects to construct from option name
-!
     call jevech('PCOMPOR', 'L', vk16=compor)
     call behaviourOption(option, compor, &
                          lMatr, lVect, &
                          lVari, lSigm)
 
-!
 ! - Output fields
-!
-
     if ((option .eq. 'FORC_NODA') .or. (option .eq. 'REFE_FORC_NODA')) then
         call jevech('PVECTUR', 'E', ivectu)
     else

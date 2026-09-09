@@ -15,13 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, sigp, &
+                  carcri, instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, sigp, &
                   vip, dsidep, iret)
+!
     implicit none
+!
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmtaac.h"
 #include "asterfort/nmtacr.h"
 #include "asterfort/nmtadp.h"
@@ -31,12 +35,13 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
 #include "asterfort/nmtarl.h"
 #include "asterfort/nmtasp.h"
 #include "asterfort/nmtaxi.h"
-    integer(kind=8) :: kpg, ksp, ndim, imate
+!
+    integer(kind=8) :: kpg, ksp, ndim, imate, nvi
     character(len=*) :: fami
-    character(len=16) :: compor(*), option
-    real(kind=8) :: crit(*), instam, instap
+    character(len=16) :: option
+    real(kind=8) :: carcri(CARCRI_SIZE), instam, instap
     real(kind=8) :: epsm(6), deps(6)
-    real(kind=8) :: sigm(6), vim(9), sigp(6), vip(9), dsidep(6, 6)
+    real(kind=8) :: sigm(6), vim(nvi), sigp(6), vip(nvi), dsidep(6, 6)
 ! ----------------------------------------------------------------------
 !     REALISE LA LOI DE TAHERI POUR LES
 !     ELEMENTS ISOPARAMETRIQUES EN PETITES DEFORMATIONS
@@ -86,6 +91,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
 !   DIMENSION DES TENSEURS ET MISE AUX NORMES
     ndimsi = ndim*2
     rac2 = sqrt(2.d0)
+    ASSERT(nvi .eq. 9)
     do k = 4, ndimsi
         vim(2+k) = vim(2+k)*rac2
     end do
@@ -107,7 +113,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
 !      PREDICTION ELASTIQUE
         dp = 0.d0
         xi = 1.d0
-        call nmtasp(ndimsi, crit, mat, sigel, vim, &
+        call nmtasp(ndimsi, carcri, mat, sigel, vim, &
                     epm, dp, sp, xi, f, &
                     iret)
         if (iret .eq. 1) goto 999
@@ -116,7 +122,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
         if (f .gt. 0.d0) then
 !
 !        CALCUL DE DP : EQUATION SCALAIRE F=0 AVEC  0 < DP < DPMAX
-            call nmtadp(ndimsi, crit, mat, sigel, vim, &
+            call nmtadp(ndimsi, carcri, mat, sigel, vim, &
                         epm, dp, sp, xi, g, &
                         iret)
 !
@@ -132,7 +138,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
 !          ITERATIONS DE NEWTON
                 sp = vim(2)
                 xi = 1.d0
-                do niter = 1, int(crit(1))
+                do niter = 1, int(carcri(1))
 !
 !            DIRECTION DE DESCENTE
                     call nmtacr(2, ndimsi, mat, sigel, vim, &
@@ -161,7 +167,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
                     dp = dp+rho*dirdp
                     sp = sp+rho*dirsp
 !
-                    if (ener/mat(4)**2 .lt. crit(3)**2) goto 210
+                    if (ener/mat(4)**2 .lt. carcri(3)**2) goto 210
                 end do
                 iret = 1
                 goto 999
@@ -180,7 +186,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
             dp = 0.d0
             xi = 0.d0
             if (vim(9) .ne. 0.d0) then
-                call nmtasp(ndimsi, crit, mat, sigel, vim, &
+                call nmtasp(ndimsi, carcri, mat, sigel, vim, &
                             epm, dp, sp, xi, f, &
                             iret)
                 ASSERT(iret .eq. 0)
@@ -198,7 +204,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
             else
 !
 !          CALCUL DE XI : EQUATION SCALAIRE F=0 AVEC  0 < XI < 1
-                call nmtaxi(ndimsi, crit, mat, sigel, vim, &
+                call nmtaxi(ndimsi, carcri, mat, sigel, vim, &
                             epm, dp, sp, xi, g, &
                             iret)
 !
@@ -207,7 +213,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
 !
                     dp = 0.d0
                     sp = vim(2)
-                    do niter = 1, int(crit(1))
+                    do niter = 1, int(carcri(1))
 !
 !              DIRECTION DE DESCENTE
                         call nmtacr(3, ndimsi, mat, sigel, vim, &
@@ -237,7 +243,7 @@ subroutine nmtahe(fami, kpg, ksp, ndim, imate, &
                         xi = xi+rho*dirxi
                         sp = sp+rho*dirsp
 !
-                        if (ener/mat(4)**2 .lt. crit(3)**2) goto 310
+                        if (ener/mat(4)**2 .lt. carcri(3)**2) goto 310
                     end do
                     iret = 1
                     goto 999

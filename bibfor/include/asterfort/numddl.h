@@ -17,10 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine numddl(numeDofZ, renumZ, base, nbMatrElem, listMatrElem)
+    subroutine numddl(numeDofZ, renumZ, base, nbMatrElem, listMatrElem, &
+                      lMacrElemZ_)
         character(len=2), intent(in) :: base
         character(len=*), intent(in) :: numeDofZ, renumZ
         character(len=24), pointer :: listMatrElem(:)
         integer(kind=8), intent(in) :: nbMatrElem
+        aster_logical, optional, intent(in) :: lMacrElemZ_
     end subroutine numddl
 end interface

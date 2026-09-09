@@ -17,11 +17,13 @@
 ! --------------------------------------------------------------------
 
 !
-!
 interface
-    subroutine dxmat1(fami, epais, df, dm, dmf,&
+    subroutine dxmat1(plateOrie, &
+                      famiZ, epais, df, dm, dmf, &
                       pgl, indith, npg)
-        character(len=4) :: fami
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=*), intent(in) :: famiZ
         real(kind=8) :: epais
         real(kind=8) :: df(3, 3)
         real(kind=8) :: dm(3, 3)

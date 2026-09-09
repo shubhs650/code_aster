@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306
 !
-subroutine nmelas_elas(BEHinteg, &
+subroutine nmelas_elas(BEHInteg, &
                        fami, kpg, ksp, typmod, &
                        jvMaterCode, eps, option, sig, &
                        vi, dsidep)
@@ -35,9 +35,9 @@ subroutine nmelas_elas(BEHinteg, &
 #include "asterfort/verifs.h"
 #include "asterfort/verift.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in)      :: fami
-    character(len=8), intent(in)      :: typmod(*)
+    character(len=8), intent(in)      :: typmod(2)
     character(len=16), intent(in)     :: option
     integer(kind=8), intent(in)       :: jvMaterCode, kpg, ksp
     real(kind=8), intent(in)          :: eps(:)
@@ -84,7 +84,7 @@ subroutine nmelas_elas(BEHinteg, &
 
 ! Caracteristiques elastiques et contraintes initiales
     call get_elas_para(fami, jvMaterCode, poum, kpg, ksp, elasID, elasKeyword, &
-                       e_=e, nu_=nu, BEHinteg=BEHinteg)
+                       e_=e, nu_=nu, BEHInteg=BEHInteg)
     lambda = e*nu/((1-2*nu)*(1+nu))
     deuxmu = e/(1+nu)
     troisk = e/(1-2*nu)

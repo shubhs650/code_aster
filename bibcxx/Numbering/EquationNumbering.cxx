@@ -523,6 +523,8 @@ EquationNumbering::getDOFsWithDescription( const VectorString &cmps, const Vecto
     VectorLong nodes;
     if ( groupNames.size() == 0 ) {
         nodes = _mesh->getNodes( "", true );
+        // pour les MPC
+        nodes.push_back( -1 );
     } else {
         nodes = _mesh->getNodes( groupNames, true );
     }

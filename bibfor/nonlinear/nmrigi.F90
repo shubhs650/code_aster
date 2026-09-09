@@ -80,7 +80,7 @@ subroutine nmrigi(modelz, cara_elem, &
     character(len=1) :: base
     character(len=24) :: model
     character(len=16) :: optrig
-    aster_logical :: lendo, l_xfem, l_macr_elem
+    aster_logical :: l_xfem, l_macr_elem
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -100,14 +100,11 @@ subroutine nmrigi(modelz, cara_elem, &
 !
     l_xfem = isfonc(list_func_acti, 'XFEM')
     l_macr_elem = isfonc(list_func_acti, 'MACR_ELEM_STAT')
-    lendo = isfonc(list_func_acti, 'ENDO_NO')
 !
 ! --- INCREMENT DE DEPLACEMENT NUL EN PREDICTION
 !
-    if (.not. lendo) then
-        if (optrig(1:9) .eq. 'RIGI_MECA') then
-            call nmdep0('ON ', hval_algo)
-        end if
+    if (optrig(1:9) .eq. 'RIGI_MECA') then
+        call nmdep0('ON ', hval_algo)
     end if
 !
 ! - Init timer

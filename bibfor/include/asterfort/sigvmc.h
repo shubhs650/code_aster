@@ -17,18 +17,18 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine sigvmc(fami, nno, ndim, nbsig, npg, &
+    subroutine sigvmc(materPara, &
+                      nno, ndim, nbsig, npg, &
                       jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                       nodeCoor, nodeDisp, &
-                      time, anglNaut, jvMaterCode, nharm, &
+                      time, nharm, &
                       sigm)
-        character(len=*), intent(in) :: fami
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
         integer(kind=8), intent(in) :: nno, ndim, nbsig, npg
         integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
         real(kind=8), intent(in) :: nodeCoor(ndim*nno), nodeDisp(ndim*nno)
-        real(kind=8), intent(in) :: time, anglNaut(3)
-        integer(kind=8), intent(in) :: jvMaterCode
-        real(kind=8), intent(in) :: nharm
+        real(kind=8), intent(in) :: time, nharm
         real(kind=8), intent(out) :: sigm(nbsig*npg)
     end subroutine sigvmc
 end interface

@@ -35,7 +35,7 @@ subroutine insema(elem_nbnode, elem_dime, elem_coor, pair_tole, &
     real(kind=8), intent(in) :: xp2
     real(kind=8), intent(in) :: yp2
     integer(kind=8), intent(inout) :: nb_poin_inte
-    real(kind=8), intent(inout) :: poin_inte(elem_dime-1, 16)
+    real(kind=8), intent(inout) :: poin_inte(2, 16)
     integer(kind=8), optional, intent(inout) :: inte_neigh_(4)
 !
 ! --------------------------------------------------------------------------------------------------

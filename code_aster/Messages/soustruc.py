@@ -401,6 +401,11 @@ Il y a trop de cas de charges par rapport à la définition du macro-élément.
  nombre de noeuds internes : 0
 """
     ),
+    72: _(
+        """
+Les chargements traités en simples Lagrange ne sont pas acceptés dans MACR_ELEM_STAT.
+"""
+    ),
     73: _(
         """
  la grandeur "DEPL_R" doit avoir les composantes (1 a 6) : DX,DY, ..., DRZ

@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine nmnoli(sddisc, sderro, ds_print, sdcrit, &
-                  fonact, sddyna, modele, ds_material, &
+                  listFuncActi, sddyna, modele, ds_material, &
                   carele, sdpilo, ds_measure, ds_energy, ds_inout, &
                   ds_errorindic)
 !
@@ -43,7 +43,7 @@ subroutine nmnoli(sddisc, sderro, ds_print, sdcrit, &
     type(NL_DS_ErrorIndic), intent(in) :: ds_errorindic
     type(NL_DS_Measure), intent(inout) :: ds_measure
     type(NL_DS_InOut), intent(inout) :: ds_inout
-    integer(kind=8) :: fonact(*)
+    integer(kind=8) :: listFuncActi(*)
     type(NL_DS_Print), intent(in) :: ds_print
 !
 ! --------------------------------------------------------------------------------------------------
@@ -72,10 +72,11 @@ subroutine nmnoli(sddisc, sderro, ds_print, sdcrit, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: numeInst = 0
     character(len=19) :: sdarch
     character(len=24) :: sdarchAinfJv
     integer(kind=8), pointer :: sdarchAinf(:) => null()
-    integer(kind=8) :: numeStoring, numeInst
+    integer(kind=8) :: numeStore
     integer(kind=8) :: ifm, niv
     aster_logical :: lreuse
     character(len=8) :: result
@@ -86,13 +87,9 @@ subroutine nmnoli(sddisc, sderro, ds_print, sdcrit, &
     if (niv .ge. 2) then
         call utmess('I', 'MECANONLINE13_25')
     end if
-!
-! --- FONCTIONNALITES ACTIVEES
-!
-    lreuse = isfonc(fonact, 'REUSE')
 
-! - Initial state
-    numeInst = 0
+! - Active functionalities
+    lreuse = isfonc(listFuncActi, 'REUSE')
 
 ! - Get name of result's datastructure
     result = ds_inout%result
@@ -103,24 +100,24 @@ subroutine nmnoli(sddisc, sderro, ds_print, sdcrit, &
 
 ! - Current storing index
     call jeveuo(sdarchAinfJv, 'L', vi=sdarchAinf)
-    numeStoring = sdarchAinf(1)
+    numeStore = sdarchAinf(1)
 
 ! - Create new datastructure
     if (lreuse) then
-        ASSERT(numeStoring .ne. 0)
-        call rsrusd(result, numeStoring)
+        ASSERT(numeStore .ne. 0)
+        call rsrusd(result, numeStore)
     else
-        ASSERT(numeStoring .eq. 0)
+        ASSERT(numeStore .eq. 0)
         call rscrsd('G', result, 'EVOL_NOLI', 100)
     end if
 
 ! - Save initial state
     if (.not. lreuse) then
         call utmess('I', 'ARCHIVAGE_4')
-        call nmarch(numeInst, modele, ds_material, carele, fonact, &
+        call nmarch(numeInst, modele, ds_material, carele, listFuncActi, &
                     ds_print, sddisc, sdcrit, &
                     ds_measure, sderro, sddyna, sdpilo, ds_energy, &
-                    ds_inout, ds_errorindic, lStoringInitState_=ASTER_TRUE)
+                    ds_inout, ds_errorindic, lStoreInitState_=ASTER_TRUE)
     end if
 !
 end subroutine

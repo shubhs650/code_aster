@@ -15,32 +15,34 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine pmfmcf(ip, nbgf, nbfib, nugf, sdcomp, &
-                  crit, option, instam, instap, icdmat, &
+! aslint: disable=W1504
+!
+subroutine pmfmcf(materPara, &
+                  option, carcri, &
+                  kpg, nbgf, nbfib, nugf, sdcomp, &
+                  instam, instap, &
                   nbvalc, defam, defap, varim, varimp, &
                   contm, defm, defp, epsm, modf, &
                   sigf, varip, codret)
 !
-! aslint: disable=W1504
+    use MaterialPara_type
+    implicit none
+!
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/pmfcom.h"
+#include "MultiFiber_type.h"
+!
+    type(Material_Para), intent(inout) :: materPara
+    character(len=16), intent(in) :: option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    integer(kind=8) :: kpg, nbgf, nbfib, nbvalc, nugf(*), codret
+    character(len=24) :: sdcomp(*)
+    real(kind=8) :: varim(*), varimp(*), varip(*), contm(*), defm(*), defp(*)
+    real(kind=8) :: instam, instap, defap(*), defam(*), epsm
+    real(kind=8) :: sigf(*), modf(*)
 ! --------------------------------------------------------------------------------------------------
 !
 !       APPEL AU COMPORTEMENT DU GROUPE DE FIBRE
-!
-! --------------------------------------------------------------------------------------------------
-!
-!
-    implicit none
-
-#include "MultiFiber_type.h"
-#include "asterfort/pmfcom.h"
-!
-    integer(kind=8) :: ip, nbgf, nbfib, nbvalc, nugf(*), icdmat, codret
-    character(len=16) :: option
-    character(len=24) :: sdcomp(*)
-    real(kind=8) :: varim(*), varimp(*), varip(*), contm(*), defm(*), defp(*)
-    real(kind=8) :: crit(*), instam, instap, defap(*), defam(*), epsm
-    real(kind=8) :: sigf(*), modf(*)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -53,7 +55,7 @@ subroutine pmfmcf(ip, nbgf, nbfib, nugf, sdcomp, &
 !
     codrep = 0
 !
-    idcipc = nbfib*(ip-1)
+    idcipc = nbfib*(kpg-1)
     idcipv = nbvalc*idcipc
     idecc = 1
     idecv = 1
@@ -68,8 +70,10 @@ subroutine pmfmcf(ip, nbgf, nbfib, nugf, sdcomp, &
 !           attention à la position du pointeur contrainte et variables internes
         iposv = idecv+idcipv
         iposc = idecc+idcipc
-        call pmfcom(ip, idecc, option, sdcomp(icp), crit, &
-                    nbfig, instam, instap, icdmat, nbvalc, &
+        call pmfcom(materPara, &
+                    option, carcri, &
+                    kpg, idecc, sdcomp(icp), &
+                    nbfig, instam, instap, nbvalc, &
                     defam, defap, varim(iposv), varimp(iposv), contm(iposc), &
                     defm(idecc), defp(idecc), epsm, modf(idecc), sigf(idecc), &
                     varip(iposv), codrep)

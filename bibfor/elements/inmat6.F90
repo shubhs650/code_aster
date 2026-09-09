@@ -45,8 +45,8 @@ subroutine inmat6(elrefa, fapg, mganos)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ndim, nno, nnos
-    integer(kind=8) :: i, kp, kdim, ln, j, lm, npg, iret
+    integer(kind=8) :: ndim, nno, nnos, nnosc, nnosp
+    integer(kind=8) :: i, kp, kdim, ln, j, lm, npg, iret, innos
     real(kind=8) :: ff(MT_NNOMAX), m(MT_NBPGMX*MT_NNOMAX)
     real(kind=8) :: p(MT_NBPGMX*MT_NNOMAX)
     real(kind=8) :: xpg(3*MT_NBPGMX), poipg(MT_NBPGMX), xg(3), det
@@ -57,6 +57,9 @@ subroutine inmat6(elrefa, fapg, mganos)
     call elrfno(elrefa, nno, nnos, ndim)
     call elraga(elrefa, fapg, ndim, npg, xpg, poipg)
     ASSERT(npg .le. MT_NBPGMX)
+    nnosc = 1
+    nnosp = 1
+    innos = 1
 !
 ! - Lobatto schemes => not inversible !
 !
@@ -70,6 +73,19 @@ subroutine inmat6(elrefa, fapg, mganos)
         end do
         elref2 = elrefa
         goto 100
+    end if
+!
+! - H10/FIS* => not inversible !
+!
+    if (elrefa .eq. 'H10' .and. ((fapg .eq. 'FIS2') .or. (fapg .eq. 'FIS3') &
+                                 .or. (fapg .eq. 'FIS4'))) then
+        mganos = 0.d0
+        ! shape functions to calculate inverse matrix are on nodes 23 and 25
+        nnosc = 23
+        nnos = 2
+        ! nodes to project on in mesh are nodes 23 and 25
+        nnosp = 23
+        innos = 2
     end if
 !
 ! - QU4/FIS2 NON INVERSIBLE => not inversible !
@@ -123,10 +139,10 @@ subroutine inmat6(elrefa, fapg, mganos)
         call elrfvf(elref2, xg, ff)
         ln = (kp-1)*nnos
         do i = 1, nnos
-            p(ln+i) = ff(i)
+            p(ln+i) = ff(nnosc+(i-1)*innos)
             do j = 1, nnos
                 lm = nnos*(i-1)+j
-                m(lm) = m(lm)+ff(i)*ff(j)
+                m(lm) = m(lm)+ff(nnosc+(i-1)*innos)*ff(nnosc+(j-1)*innos)
             end do
         end do
     end do
@@ -138,7 +154,7 @@ subroutine inmat6(elrefa, fapg, mganos)
 !
     do i = 1, nnos
         do kp = 1, npg
-            mganos(kp, i) = p((kp-1)*nnos+i)
+            mganos(kp, nnosp+(i-1)*innos) = p((kp-1)*nnos+i)
         end do
     end do
 !

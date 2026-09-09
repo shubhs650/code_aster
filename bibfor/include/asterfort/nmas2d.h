@@ -19,10 +19,11 @@
 !
 interface
     subroutine nmas2d(BEHinteg, &
-                      fami, nno, npg, ipoids, ivf, &
-                      idfde, geom, typmod, option, imate, &
+                      nno, npg, &
+                      ipoids, ivf, idfde, &
+                      geom, typmod, option, &
                       compor, mult_comp, lgpg, carcri, instam, instap, &
-                      deplm, deplp, angmas, sigm, vim, &
+                      deplm, deplp, sigm, vim, &
                       dfdi, def, sigp, vip, matuu, &
                       vectu, codret)
         use Behaviour_type
@@ -30,21 +31,18 @@ interface
         integer(kind=8) :: lgpg
         integer(kind=8) :: npg
         integer(kind=8) :: nno
-        character(len=*) :: fami
         integer(kind=8) :: ipoids
         integer(kind=8) :: ivf
         integer(kind=8) :: idfde
         real(kind=8) :: geom(2, nno)
         character(len=8) :: typmod(2)
         character(len=16) :: option
-        integer(kind=8) :: imate
         character(len=16), intent(in) :: compor(COMPOR_SIZE)
         character(len=16), intent(in) :: mult_comp
         real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: deplm(2, nno), deplp(2, nno)
-        real(kind=8) :: angmas(3)
         real(kind=8) :: sigm(10, npg)
         real(kind=8) :: vim(lgpg, npg)
         real(kind=8) :: dfdi(nno, 2)

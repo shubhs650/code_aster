@@ -143,4 +143,61 @@ TEST_RESU(
 )
 
 
+# Test du pilotage en déformation avec éléments d'interface
+
+temps_pilo = DEFI_LIST_INST(DEFI_LIST=_F(VALE=tuple(range(1000))))
+
+
+evol_pilo = STAT_NON_LINE(
+    MODELE=mo,
+    CHAM_MATER=cm,
+    CARA_ELEM=orie,
+    EXCIT=(
+        _F(CHARGE=pres, TYPE_CHARGE="FIXE_PILO"),
+        _F(CHARGE=encast, FONC_MULT=DEFI_CONSTANTE(VALE=0)),
+    ),
+    INCREMENT=_F(LIST_INST=temps_pilo),
+    COMPORTEMENT=(_F(GROUP_MA="spring", RELATION="CZM_ELAS_MIX"),),
+    PILOTAGE=_F(
+        TYPE="DEFORMATION",
+        GROUP_MA="spring",
+        COEF_MULT=1.0e3,
+        ETA_PILO_R_MIN=0,
+        ETA_PILO_MAX=1,
+        PROJ_BORNES="OUI",
+    ),
+)
+
+inst_pilo = evol_pilo.getAccessParameters()["INST"][-1]
+
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="A",
+            INST=inst_pilo,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=evol_pilo,
+            NOM_CHAM="DEPL",
+            NOM_CMP="DZ",
+            VALE_CALC=-0.003555555555555553,
+            VALE_REFE=-3.5555555555e-3,
+            CRITERE="RELATIF",
+            PRECISION=1.9999999999999999e-07,
+        ),
+        _F(
+            GROUP_NO="B",
+            INST=inst_pilo,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=evol_pilo,
+            NOM_CHAM="DEPL",
+            NOM_CMP="DZ",
+            VALE_CALC=0.0011851851851851837,
+            VALE_REFE=1.185185185185185e-3,
+            CRITERE="RELATIF",
+            PRECISION=1.9999999999999999e-07,
+        ),
+    )
+)
+
+
 FIN()

@@ -16,76 +16,85 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vectgt(ind, nb1, xi, ksi3s2, intsx, &
-                  zr, epais, vectn, vectg, vectt)
+subroutine vectgt(plateOrie, ptType, nb1, &
+                  nodeCoor, ksi3s2, kpg, &
+                  epais, desr, &
+                  vectBaseKpg, &
+                  vectTangKpg_)
 !
+    use plate_type
     implicit none
-    integer(kind=8) :: ind, nb1, intsx
-    real(kind=8) :: xi(3, *), zr(*), epais, vectn(9, 3)
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
-    real(kind=8) :: ksi3s2
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i1, i2, intsx1, j, k, l1, l2
+    type(plateOrie_Para), intent(in) :: plateOrie
+    integer(kind=8), intent(in) :: ptType, nb1
+    real(kind=8), intent(in) :: nodeCoor(3, *), ksi3s2
+    integer(kind=8), intent(in) :: kpg
+    real(kind=8), intent(in) :: epais
+    real(kind=8), intent(in) :: desr(*)
+    real(kind=8), intent(out) :: vectBaseKpg(3, 3)
+    real(kind=8), optional, intent(out) :: vectTangKpg_(2, 3)
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: i1, i2, j, k, l1, l2
     integer(kind=8) :: l3
-    real(kind=8) :: rnorm
-!-----------------------------------------------------------------------
-    if (ind .eq. 0) then
+    real(kind=8) :: rnorm, vectTangKpg(2, 3), vectNormKpg(3)
 !
+! --------------------------------------------------------------------------------------------------
+!
+    vectBaseKpg = 0.d0
+    vectNormKpg = 0.d0
+    vectTangKpg = 0.d0
+    if (ptType .eq. 0) then
 !     CALCULS AUX PTS D'INTEGRATION REDUITE
-!
         l1 = 12
         l2 = 44
         l3 = 76
-    else if (ind .eq. 1) then
-!
+    else if (ptType .eq. 1) then
 !     CALCULS AUX PTS D'INTEGRATION NORMALE
-!
         l1 = 135
         l2 = 207
         l3 = 279
-!
     end if
-!
-!     CONSTRUCTION DU VECTEUR N AUX X PTS DE GAUSS. X = REDUIT OU NORMAL
-!     (STOCKE DANS VECTT)
-!
-    intsx1 = 8*(intsx-1)
-    i1 = l1+intsx1
+
+! - CONSTRUCTION DU VECTEUR N AUX X PTS DE GAUSS
+    i1 = l1+8*(kpg-1)
     do k = 1, 3
-        vectt(3, k) = 0
+        vectNormKpg(k) = 0
         do j = 1, nb1
-            vectt(3, k) = vectt(3, k)+zr(i1+j)*vectn(j, k)
+            vectNormKpg(k) = vectNormKpg(k)+ &
+                             desr(i1+j)*plateOrie%vectNorm(j, k)
         end do
     end do
-!
-!     CONSTRUCTION DES VECTEURS GA AUX X PTS DE GAUSS
-!
-    i1 = l2+intsx1
-    i2 = l3+intsx1
+    vectBaseKpg(3, :) = vectNormKpg(:)
+
+! - CONSTRUCTION DES VECTEURS GA AUX X PTS DE GAUSS
+    i1 = l2+8*(kpg-1)
+    i2 = l3+8*(kpg-1)
     do k = 1, 3
-        vectg(1, k) = 0.d0
-        vectg(2, k) = 0.d0
+        vectTangKpg(1, k) = 0.d0
+        vectTangKpg(2, k) = 0.d0
         do j = 1, nb1
-            vectg(1, k) = vectg(1, k)+zr(i1+j)*(xi(k, j)+ksi3s2*epais* &
-                                                vectn(j, k))
-            vectg(2, k) = vectg(2, k)+zr(i2+j)*(xi(k, j)+ksi3s2*epais* &
-                                                vectn(j, k))
+            vectTangKpg(1, k) = vectTangKpg(1, k)+ &
+                                desr(i1+j)*(nodeCoor(k, j)+ksi3s2*epais*plateOrie%vectNorm(j, k))
+            vectTangKpg(2, k) = vectTangKpg(2, k)+ &
+                                desr(i2+j)*(nodeCoor(k, j)+ksi3s2*epais*plateOrie%vectNorm(j, k))
         end do
     end do
-!
-!     CONSTRUCTION DES VECTEURS TA AUX X PTS DE GAUSS (T3=N)
-!
-    rnorm = sqrt(vectg(1, 1)*vectg(1, 1)&
-     &             +vectg(1, 2)*vectg(1, 2)&
-     &             +vectg(1, 3)*vectg(1, 3))
+    rnorm = sqrt(vectTangKpg(1, 1)*vectTangKpg(1, 1)+ &
+                 vectTangKpg(1, 2)*vectTangKpg(1, 2)+ &
+                 vectTangKpg(1, 3)*vectTangKpg(1, 3))
 !
     do k = 1, 3
-        vectt(1, k) = vectg(1, k)/rnorm
+        vectBaseKpg(1, k) = vectTangKpg(1, k)/rnorm
     end do
 !
-    vectt(2, 1) = vectt(3, 2)*vectt(1, 3)-vectt(3, 3)*vectt(1, 2)
-    vectt(2, 2) = vectt(3, 3)*vectt(1, 1)-vectt(3, 1)*vectt(1, 3)
-    vectt(2, 3) = vectt(3, 1)*vectt(1, 2)-vectt(3, 2)*vectt(1, 1)
+    vectBaseKpg(2, 1) = vectNormKpg(2)*vectBaseKpg(1, 3)-vectNormKpg(3)*vectBaseKpg(1, 2)
+    vectBaseKpg(2, 2) = vectNormKpg(3)*vectBaseKpg(1, 1)-vectNormKpg(1)*vectBaseKpg(1, 3)
+    vectBaseKpg(2, 3) = vectNormKpg(1)*vectBaseKpg(1, 2)-vectNormKpg(2)*vectBaseKpg(1, 1)
+
+    if (present(vectTangKpg_)) then
+        vectTangKpg_ = vectTangKpg
+    end if
 !
 end subroutine

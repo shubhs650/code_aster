@@ -170,6 +170,11 @@
 #define EXTE_PTR 16
 !       1 for MFRONT official, 2 for MFRONT proto, 4 for UMAT (default: 0 internal)
 #define EXTE_TYPE 15
+#define SOLV_BEHAV_ASTER 0
+#define SOLV_BEHAV_MGIS_OFFI 1
+#define SOLV_BEHAV_MGIS_PROTO 2
+#define SOLV_BEHAV_UMAT 4
+
 !       Strain model for (MFRONT only)
 #define EXTE_STRAIN 21
 
@@ -178,6 +183,9 @@
 ! For external state variables
 !
 ! --------------------------------------------------------------------------------------------------
+
+! Number of different type of external states variables
+#define VARC_EXTE_NBTYPE 31
 
 ! Maximum number of external state variables in external solvers
 #define VARC_EXTE_NBMAXI 8
@@ -270,3 +278,15 @@
 #define LDC_ERROR_QUAL 2
 #define LDC_ERROR_CPLA 3
 #define LDC_ERROR_DVAL 4
+
+! --------------------------------------------------------------------------------------------------
+! Local time step division
+!
+! 0 => No time step division
+! 1 => Forced time step division
+! 2 => Automatic time step division
+!
+! --------------------------------------------------------------------------------------------------
+#define LDC_TIMEDIV_NONE 0
+#define LDC_TIMEDIV_FORC 1
+#define LDC_TIMEDIV_AUTO 2

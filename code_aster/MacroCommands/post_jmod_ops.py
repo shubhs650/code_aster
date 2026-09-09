@@ -32,12 +32,10 @@ from ..CodeCommands import (
     CREA_TABLE,
     CREA_RESU,
     DEFI_GROUP,
-    DETRUIRE,
     FORMULE,
     POST_ELEM,
     POST_RELEVE_T,
 )
-
 
 # Define global variable to unit test all functions that have been used
 # Help with NON-REGRESSION
@@ -635,9 +633,7 @@ def calc_area(self, MAILAREA, nameGroupMa):
 
     __AREA = __POST_AREA.EXTR_TABLE().values()["INTE_X1"][0]
 
-    DETRUIRE(
-        CONCEPT=(_F(NOM=__MODE), _F(NOM=__FIELD_AREA), _F(NOM=__RESU_AREA), _F(NOM=__POST_AREA))
-    )
+    del __MODE, __FIELD_AREA, __RESU_AREA, __POST_AREA
 
     return __AREA
 
@@ -1073,7 +1069,7 @@ def cal_strain_energy(self, MODE, __EPSI_ELGA, __SIGF):
         OPERATION="EVAL", TYPE_CHAM="ELGA_NEUT_R", CHAM_F=__CHFMUW, CHAM_PARA=(__CHW,)
     )
 
-    DETRUIRE(CONCEPT=(_F(NOM=__CHW), _F(NOM=__FMULTW), _F(NOM=__CHFMUW)))
+    del __CHW, __FMULTW, __CHFMUW
 
     return __WELAS
 
@@ -1211,7 +1207,7 @@ def grad_u(self, MAIL, MODE, MATE, namePara, DEPL, lInst):
         INST=lInst,
     )
 
-    DETRUIRE(CONCEPT=(_F(NOM=__U1), _F(NOM=__U2), _F(NOM=__U3), _F(NOM=__CHU), _F(NOM=__DEPU)))
+    del __U1, __U2, __U3, __CHU, __DEPU
 
     return __GRADEP
 
@@ -1252,7 +1248,7 @@ def grad_q(self, MAIL, MODE, MATE, nameGroupNo, nameCmp, value, lInst):
         INST=lInst,
     )
 
-    DETRUIRE(CONCEPT=(_F(NOM=__DEPQ), _F(NOM=__RDEPQ)))
+    del __DEPQ, __RDEPQ
 
     return __GRAQ
 
@@ -1294,7 +1290,7 @@ def grad_q_glob(self, MAIL, MODE, MATE, NPP, nameCmp, value, index, lInst):
         NOM_CHAM="EPSI_ELGA",
     )
 
-    DETRUIRE(CONCEPT=(_F(NOM=__DEPQ), _F(NOM=__RDEPQ)))
+    del __DEPQ, __RDEPQ
 
     return __GRAQ
 
@@ -1356,16 +1352,7 @@ def grad_noeu(self, MAIL, MODE, MATE, __FIELD, inst):
         NOM_CHAM="EPSI_ELGA",
     )
 
-    DETRUIRE(
-        CONCEPT=(
-            _F(NOM=__FIELD_CAL),
-            _F(NOM=__FIELD_NOEU_X1),
-            _F(NOM=__FIELD_NOEU_X2),
-            _F(NOM=__FIELD_NOEU_X3),
-            _F(NOM=__FIELD_CALX),
-            _F(NOM=__RFIELD),
-        )
-    )
+    del __FIELD_CAL, __FIELD_NOEU_X1, __FIELD_NOEU_X2, __FIELD_NOEU_X3, __FIELD_CALX, __RFIELD
 
     return __GRAD_FIELD
 
@@ -1469,7 +1456,7 @@ def grad_elno(self, MAIL, MODE, MATE, listElemTMAIL, __EPSI_ELGA, __FIELD_CAL, i
         TYPE_CHAM="ELGA_EPSI_R", OPERATION="ASSE", MODELE=MODE, ASSE=__tmpGlob
     )
 
-    DETRUIRE(CONCEPT=(_F(NOM=__DEPE), _F(NOM=__RDEPE), _F(NOM=__GRAE)))
+    del __DEPE, __RDEPE, __GRAE
 
     return __GRAD_FIELD_CAL
 
@@ -1522,15 +1509,7 @@ def cal_j01(self, MODE, TMAIL, lInst, __WELAS, __GQX, __GQY, __GQZ):
         INTEGRALE=_F(NOM_CHAM="VARI_ELGA", GROUP_MA=TMAIL, NOM_CMP="X5", TYPE_MAILLE="3D"),
     )
 
-    DETRUIRE(
-        CONCEPT=(
-            _F(NOM=__CHJ01),
-            _F(NOM=__FMULTJ01),
-            _F(NOM=__CHFMUJ01),
-            _F(NOM=__CHJ01INT),
-            _F(NOM=__RESUJ01),
-        )
-    )
+    del __CHJ01, __FMULTJ01, __CHFMUJ01, __CHJ01INT, __RESUJ01
 
     __J01_J = __J01.EXTR_TABLE().values()["INTE_X5"]
 
@@ -1637,20 +1616,18 @@ def cal_j02(self, MODE, TMAIL, lInst, __SIGF, __GDEPX, __GDEPY, __GDEPZ, __GQX, 
         OPERATION="EVAL", TYPE_CHAM="ELGA_NEUT_R", CHAM_F=__CHFMUGRAUQ, CHAM_PARA=(__CHGRAUQ,)
     )
 
-    DETRUIRE(
-        CONCEPT=(
-            _F(NOM=__CHGRAUQ),
-            _F(NOM=__FMULTGRAUQ_X19),
-            _F(NOM=__FMULTGRAUQ_X20),
-            _F(NOM=__FMULTGRAUQ_X21),
-            _F(NOM=__FMULTGRAUQ_X22),
-            _F(NOM=__FMULTGRAUQ_X23),
-            _F(NOM=__FMULTGRAUQ_X24),
-            _F(NOM=__FMULTGRAUQ_X25),
-            _F(NOM=__FMULTGRAUQ_X26),
-            _F(NOM=__FMULTGRAUQ_X27),
-            _F(NOM=__CHFMUGRAUQ),
-        )
+    del (
+        __CHGRAUQ,
+        __FMULTGRAUQ_X19,
+        __FMULTGRAUQ_X20,
+        __FMULTGRAUQ_X21,
+        __FMULTGRAUQ_X22,
+        __FMULTGRAUQ_X23,
+        __FMULTGRAUQ_X24,
+        __FMULTGRAUQ_X25,
+        __FMULTGRAUQ_X26,
+        __FMULTGRAUQ_X27,
+        __CHFMUGRAUQ,
     )
 
     __CHJ02 = CREA_CHAMP(
@@ -1724,16 +1701,7 @@ def cal_j02(self, MODE, TMAIL, lInst, __SIGF, __GDEPX, __GDEPY, __GDEPZ, __GQX, 
         INTEGRALE=_F(NOM_CHAM="VARI_ELGA", GROUP_MA=TMAIL, NOM_CMP="X7", TYPE_MAILLE="3D"),
     )
 
-    DETRUIRE(
-        CONCEPT=(
-            _F(NOM=__CHGRAUMQ),
-            _F(NOM=__CHJ02),
-            _F(NOM=__FMULTJ02),
-            _F(NOM=__CHFMUJ02),
-            _F(NOM=__CHJ02INT),
-            _F(NOM=__RESUJ02),
-        )
-    )
+    del __CHGRAUMQ, __CHJ02, __FMULTJ02, __CHFMUJ02, __CHJ02INT, __RESUJ02
 
     __J02_J = __J02.EXTR_TABLE().values()["INTE_X7"]
 
@@ -1824,15 +1792,7 @@ def cal_j04(
             INTEGRALE=_F(NOM_CHAM="VARI_ELGA", GROUP_MA=TMAIL, NOM_CMP="X8", TYPE_MAILLE="3D"),
         )
 
-        DETRUIRE(
-            CONCEPT=(
-                _F(NOM=__CHJ04),
-                _F(NOM=__FMULTJ04),
-                _F(NOM=__CHFMUJ04),
-                _F(NOM=__CHJ04INT),
-                _F(NOM=__RESUJ04),
-            )
-        )
+        del __CHJ04, __FMULTJ04, __CHFMUJ04, __CHJ04INT, __RESUJ04
 
         __IJ04_J = __J04.EXTR_TABLE().values()["INTE_X8"]
 
@@ -1896,15 +1856,7 @@ def cal_j05(self, MODE, TMAIL, lInst, __GRAD_WELAS, __QX_GAUSS, __QY_GAUSS, __QZ
         INTEGRALE=_F(NOM_CHAM="VARI_ELGA", GROUP_MA=TMAIL, NOM_CMP="X7", TYPE_MAILLE="3D"),
     )
 
-    DETRUIRE(
-        CONCEPT=(
-            _F(NOM=__CHJ05),
-            _F(NOM=__FMULTJ05),
-            _F(NOM=__CHFMUJ05),
-            _F(NOM=__CHJ05INT),
-            _F(NOM=__RESUJ05),
-        )
-    )
+    del __CHJ05, __FMULTJ05, __CHFMUJ05, __CHJ05INT, __RESUJ05
 
     __J05_J = __J05.EXTR_TABLE().values()["INTE_X7"]
 
@@ -1920,26 +1872,29 @@ def list_inst_calc(self, dico, NUME_ORDRE, INST, PRECISION):
     """
 
     lInst = list(dico["INST"])
+    lOrd = list(dico["NUME_ORDRE"])
 
     if (NUME_ORDRE is not None) and (INST is None):
-        for iord in dico["NUME_ORDRE"]:
-            if iord not in NUME_ORDRE:
-                lInst.remove(lInst[dico["NUME_ORDRE"].index(iord)])
+        lInstc_comp = list(dico["INST"])
+        lInst = [lInstc_comp[dico["NUME_ORDRE"].index(iord)] for iord in NUME_ORDRE]
+        lOrd = dico["NUME_ORDRE"]
 
         if lInst == []:
             UTMESS("F", "RUPTURE4_5")
 
     elif (NUME_ORDRE is None) and (INST is not None):
         lInst = []
-        for iinst in dico["INST"]:
+        lOrd = []
+        for ii, iinst in enumerate(dico["INST"]):
             for jinst in INST:
                 if abs(iinst - jinst) <= PRECISION:
                     lInst.append(iinst)
+                    lOrd.append(dico["NUME_ORDRE"][ii])
 
         if lInst == []:
             UTMESS("F", "RUPTURE4_6")
 
-    return lInst
+    return (lOrd, lInst)
 
 
 # -----------------------------------------------------------------------------
@@ -2499,7 +2454,7 @@ def post_jmod_ops(
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         if ETAT_INIT is not None:
-            DATAINIT = ETAT_INIT[0].cree_dict_valeurs(ETAT_INIT[0].mc_liste)
+            DATAINIT = ETAT_INIT[0]
 
             __INITEPSI = DATAINIT["EPSI"]
 
@@ -2570,7 +2525,7 @@ def post_jmod_ops(
             OPERATION="DISC", TYPE_CHAM="ELGA_EPSI_R", MODELE=MODE, CHAM_GD=__QY_NOEU
         )
 
-        DETRUIRE(CONCEPT=(_F(NOM=__QX_NOEU), _F(NOM=__QY_NOEU)))
+        del __QX_NOEU, __QY_NOEU
 
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # GET COORDINATES IN 2D AXIS
@@ -2608,37 +2563,13 @@ def post_jmod_ops(
         # GET INSTANTS
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        if PropadirSup is not None:
-            tinst = __ncoorfisSup.EXTR_TABLE().NUME_ORDRE == dicLPfissSup["NUME_ORDRE"]
-            tinst = tinst["INST"].values()["INST"]
-            l_inst = [tinst[i] for i in range(len(tinst)) if tinst[i] not in tinst[:i]]
+        dico = __RESU.getAccessParameters()
 
-        if (PropadirSup is None) and (PropadirInf is not None):
-            tinst = __ncoorfisInf.EXTR_TABLE().NUME_ORDRE == dicLPfissInf["NUME_ORDRE"]
-            tinst = tinst["INST"].values()["INST"]
-            l_inst = [tinst[i] for i in range(len(tinst)) if tinst[i] not in tinst[:i]]
-
-        liord = []
-        linst = []
-
-        if NUME_ORDRE is None:
-            for iordre, iinst in enumerate(l_inst):
-                liord.append(iordre)
-                linst.append(iinst)
-
-            if (len(linst) == 1) and (linst[0] == 0.0):
-                liord[0] = 1
-
+        if INST is not None:
+            PRECISION = args["PRECISION"]
         else:
-            for iordre, iinst in enumerate(l_inst):
-                for inume in range(len(NUME_ORDRE)):
-                    if iordre == NUME_ORDRE[inume]:
-                        liord.append(iordre)
-                        linst.append(iinst)
-
-            if len(linst) == 0:
-                liord.append(1)
-                linst.append(0.0)
+            PRECISION = None
+        liord, linst = list_inst_calc(self, dico, NUME_ORDRE, INST, PRECISION)
 
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # LOOP ON THE INSTANTS
@@ -2684,7 +2615,7 @@ def post_jmod_ops(
                 INST=inst,
             )
 
-            DETRUIRE(CONCEPT=(_F(NOM=__DEPIX), _F(NOM=__RDEPIX)))
+            del __DEPIX, __RDEPIX
 
             # GRAD QY,Y  QY,X
 
@@ -2720,7 +2651,7 @@ def post_jmod_ops(
                 INST=inst,
             )
 
-            DETRUIRE(CONCEPT=(_F(NOM=__DEPIY), _F(NOM=__RDEPIY)))
+            del __DEPIY, __RDEPIY
 
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             # GET DISPLACEMENT U AND CALCUL GRAD U
@@ -2783,7 +2714,7 @@ def post_jmod_ops(
                 INST=inst,
             )
 
-            DETRUIRE(CONCEPT=(_F(NOM=__CHUX), _F(NOM=__UX1), _F(NOM=__UX2), _F(NOM=__DEPUX)))
+            del __CHUX, __UX1, __UX2, __DEPUX
 
             # creat (0,UY) and calcul GRAD UY,Y  UY,X
 
@@ -2832,7 +2763,7 @@ def post_jmod_ops(
                 INST=inst,
             )
 
-            DETRUIRE(CONCEPT=(_F(NOM=__CHUY), _F(NOM=__UY1), _F(NOM=__UY2), _F(NOM=__DEPUY)))
+            del __CHUY, __UY1, __UY2, __DEPUY
 
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             # GET STRESS
@@ -2945,7 +2876,7 @@ def post_jmod_ops(
                     OPERATION="EVAL", TYPE_CHAM="ELGA_NEUT_R", CHAM_F=__CHFMUW, CHAM_PARA=(__CHW,)
                 )
 
-                DETRUIRE(CONCEPT=(_F(NOM=__CHW), _F(NOM=__CHFMUW)))
+                del __CHW, __CHFMUW
 
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             # CALCUL J
@@ -3015,15 +2946,7 @@ def post_jmod_ops(
                 ),
             )
 
-            DETRUIRE(
-                CONCEPT=(
-                    _F(NOM=__CHJ01),
-                    _F(NOM=__FMULTJ01),
-                    _F(NOM=__CHFMUJ01),
-                    _F(NOM=__CHJ01INT),
-                    _F(NOM=__RESUJ01),
-                )
-            )
+            del __CHJ01, __FMULTJ01, __CHFMUJ01, __CHJ01INT, __RESUJ01
 
             __J01_J = __J01.EXTR_TABLE().values()["INTE_X4"]
 
@@ -3087,15 +3010,13 @@ def post_jmod_ops(
                 CHAM_PARA=(__CHGRAUQ,),
             )
 
-            DETRUIRE(
-                CONCEPT=(
-                    _F(NOM=__CHGRAUQ),
-                    _F(NOM=__FMULTGRAUQ_X9),
-                    _F(NOM=__FMULTGRAUQ_X10),
-                    _F(NOM=__FMULTGRAUQ_X11),
-                    _F(NOM=__FMULTGRAUQ_X12),
-                    _F(NOM=__CHFMUGRAUQ),
-                )
+            del (
+                __CHGRAUQ,
+                __FMULTGRAUQ_X9,
+                __FMULTGRAUQ_X10,
+                __FMULTGRAUQ_X11,
+                __FMULTGRAUQ_X12,
+                __CHFMUGRAUQ,
             )
 
             # SIGMA * (GRAD U * GRAD Q)
@@ -3174,16 +3095,7 @@ def post_jmod_ops(
                 ),
             )
 
-            DETRUIRE(
-                CONCEPT=(
-                    _F(NOM=__CHGRAUMQ),
-                    _F(NOM=__CHJ02),
-                    _F(NOM=__FMULTJ02),
-                    _F(NOM=__CHFMUJ02),
-                    _F(NOM=__CHJ02INT),
-                    _F(NOM=__RESUJ02),
-                )
-            )
+            del __CHGRAUMQ, __CHJ02, __FMULTJ02, __CHFMUJ02, __CHJ02INT, __RESUJ02
 
             __J02_J = __J02.EXTR_TABLE().values()["INTE_X16"]
 
@@ -3274,15 +3186,7 @@ def post_jmod_ops(
                         INST=inst,
                     )
 
-                    DETRUIRE(
-                        CONCEPT=(
-                            _F(NOM=__CHEPS0),
-                            _F(NOM=__EPS0NOEUX1),
-                            _F(NOM=__EPS0NOEUX2),
-                            _F(NOM=__CHEPS0X),
-                            _F(NOM=__REPS0),
-                        )
-                    )
+                    del __CHEPS0, __EPS0NOEUX1, __EPS0NOEUX2, __CHEPS0X, __REPS0
 
                     if MODELISATION != "AXIS":
                         # SIGMA*(GRAD EPSI_0*Q)
@@ -3412,16 +3316,7 @@ def post_jmod_ops(
                         ),
                     )
 
-                    DETRUIRE(
-                        CONCEPT=(
-                            _F(NOM=__GREPS0),
-                            _F(NOM=__CHJ03),
-                            _F(NOM=__FMULTJ03),
-                            _F(NOM=__CHFMUJ03),
-                            _F(NOM=__CHJ03INT),
-                            _F(NOM=__RESUJ03),
-                        )
-                    )
+                    del __GREPS0, __CHJ03, __FMULTJ03, __CHFMUJ03, __CHJ03INT, __RESUJ03
 
                     __IJ03_J = __J03.EXTR_TABLE().values()["INTE_X6"]
 
@@ -3549,7 +3444,7 @@ def post_jmod_ops(
                             ),
                         )
 
-                        DETRUIRE(CONCEPT=(_F(NOM=__CHEPSNOEU0), _F(NOM=__CHFMUEPS)))
+                        del __CHEPSNOEU0, __CHFMUEPS
 
                         __CHEPS = CREA_CHAMP(
                             OPERATION="ASSE",
@@ -3635,15 +3530,7 @@ def post_jmod_ops(
                         INST=inst,
                     )
 
-                    DETRUIRE(
-                        CONCEPT=(
-                            _F(NOM=__CHEPS),
-                            _F(NOM=__EPSNOEUX1),
-                            _F(NOM=__EPSNOEUX2),
-                            _F(NOM=__CHEPSX),
-                            _F(NOM=__REPS),
-                        )
-                    )
+                    del __CHEPS, __EPSNOEUX1, __EPSNOEUX2, __CHEPSX, __REPS
 
                     if MODELISATION != "AXIS":
                         # SIGMA * (GRAD EPSI * Q)
@@ -3776,16 +3663,7 @@ def post_jmod_ops(
                         ),
                     )
 
-                    DETRUIRE(
-                        CONCEPT=(
-                            _F(NOM=__GREPS),
-                            _F(NOM=__CHJ04),
-                            _F(NOM=__FMULTJ04),
-                            _F(NOM=__CHFMUJ04),
-                            _F(NOM=__CHJ04INT),
-                            _F(NOM=__RESUJ04),
-                        )
-                    )
+                    del __GREPS, __CHJ04, __FMULTJ04, __CHFMUJ04, __CHJ04INT, __RESUJ04
 
                     __IJ04_J = __J04.EXTR_TABLE().values()["INTE_X6"]
 
@@ -3870,15 +3748,7 @@ def post_jmod_ops(
                     INST=inst,
                 )
 
-                DETRUIRE(
-                    CONCEPT=(
-                        _F(NOM=__CHWELASNOEU),
-                        _F(NOM=__WELASNOEUX1),
-                        _F(NOM=__WELASNOEUX2),
-                        _F(NOM=__CHWELASNOEUX),
-                        _F(NOM=__RWELASNOEU),
-                    )
-                )
+                del __CHWELASNOEU, __WELASNOEUX1, __WELASNOEUX2, __CHWELASNOEUX, __RWELASNOEU
 
                 if MODELISATION != "AXIS":
                     # GRAD W * Q
@@ -3994,15 +3864,7 @@ def post_jmod_ops(
                     ),
                 )
 
-                DETRUIRE(
-                    CONCEPT=(
-                        _F(NOM=__CHJ05),
-                        _F(NOM=__FMULTJ05),
-                        _F(NOM=__CHFMUJ05),
-                        _F(NOM=__CHJ05INT),
-                        _F(NOM=__RESUJ05),
-                    )
-                )
+                del __CHJ05, __FMULTJ05, __CHFMUJ05, __CHJ05INT, __RESUJ05
 
                 __J05_J = __J05.EXTR_TABLE().values()["INTE_X5"]
 
@@ -4084,16 +3946,7 @@ def post_jmod_ops(
                     ),
                 )
 
-                DETRUIRE(
-                    CONCEPT=(
-                        _F(NOM=__DEPINT_NEUT),
-                        _F(NOM=__CHJ06),
-                        _F(NOM=__FMULTJ06),
-                        _F(NOM=__CHFMUJ06),
-                        _F(NOM=__CHJ06INT),
-                        _F(NOM=__RESUJ06),
-                    )
-                )
+                del __DEPINT_NEUT, __CHJ06, __FMULTJ06, __CHFMUJ06, __CHJ06INT, __RESUJ06
 
                 __J06_J = __J06.EXTR_TABLE().values()["INTE_X5"]
 
@@ -4153,15 +4006,7 @@ def post_jmod_ops(
                     ),
                 )
 
-                DETRUIRE(
-                    CONCEPT=(
-                        _F(NOM=__CHJ07),
-                        _F(NOM=__FMULTJ07),
-                        _F(NOM=__CHFMUJ07),
-                        _F(NOM=__CHJ07INT),
-                        _F(NOM=__RESUJ07),
-                    )
-                )
+                del __CHJ07, __FMULTJ07, __CHFMUJ07, __CHJ07INT, __RESUJ07
 
                 __J07_J = __J07.EXTR_TABLE().values()["INTE_X3"]
 
@@ -5315,7 +5160,7 @@ def post_jmod_ops(
         else:
             PRECISION = None
 
-        lInst = list_inst_calc(self, dico, NUME_ORDRE, INST, PRECISION)
+        lOrd, lInst = list_inst_calc(self, dico, NUME_ORDRE, INST, PRECISION)
 
         #   --------------------------------------------------------------------------
         #   GET CALCULATED NODES OF CRACK FRONT
@@ -5393,7 +5238,7 @@ def post_jmod_ops(
             else:
                 __EPSI_TOTA = get_deformation(self, __RESU, "ELGA", inst)
 
-                DATA_INIT = ETAT_INIT[0].cree_dict_valeurs(ETAT_INIT[0].mc_liste)
+                DATA_INIT = ETAT_INIT[0]
                 # print ("^^^^^^^^^^^^^^^^^^^^^^")
                 # print ("dir EPSI_INIT",dir(DATA_INIT['EPSI']))
                 # print ("dir EPSI_INIT",DATA_INIT['EPSI'].keys()))

@@ -236,7 +236,8 @@ contains
             keywordSuffix = keywordSuffixZ_
         end if
         call jedetr(nodeSlavJv)
-        call getnode(mesh, factorKeywordZ, iOcc, 'F', nodeSlavJv, nbNodeSlav, suffix=keywordSuffix)
+        call getnode(mesh, factorKeywordZ, iOcc, 'F', nodeSlavJv, nbNodeSlav, &
+                     suffixZ_=keywordSuffix)
         call jeveuo(nodeSlavJv, 'L', vi=nodeSlav)
 !
 !   ------------------------------------------------------------------------------------------------
@@ -374,7 +375,8 @@ contains
             keywordSuffix = keywordSuffixZ_
         end if
         call jedetr(nodeMastJv)
-        call getnode(mesh, factorKeywordZ, iOcc, ' ', nodeMastJv, nbNodeMast, suffix=keywordSuffix)
+        call getnode(mesh, factorKeywordZ, iOcc, ' ', nodeMastJv, nbNodeMast, &
+                     suffixZ_=keywordSuffix)
         call jeveuo(nodeMastJv, 'L', vi=nodeMast)
 !
 !   ------------------------------------------------------------------------------------------------

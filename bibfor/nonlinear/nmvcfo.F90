@@ -15,9 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nmvcfo(type_comp, model, mater, mateco, cara_elem, compor, &
-                  varc_refe, hval_incr, vect_elem)
+!
+subroutine nmvcfo(poum, model, materField, materCode, caraElem, compor, &
+                  varcRefe, hval_incr, vectElem)
 !
     implicit none
 !
@@ -31,16 +31,13 @@ subroutine nmvcfo(type_comp, model, mater, mateco, cara_elem, compor, &
 #include "asterfort/reajre.h"
 #include "asterfort/vemare.h"
 !
-!
-    character(len=1), intent(in) :: type_comp
+    character(len=1), intent(in) :: poum
     character(len=24), intent(in) :: model
-    character(len=24), intent(in) :: mater
-    character(len=24), intent(in) :: mateco
-    character(len=24), intent(in) :: varc_refe
-    character(len=24), intent(in) :: cara_elem
+    character(len=24), intent(in) :: materField, materCode, caraElem
+    character(len=24), intent(in) :: varcRefe
     character(len=24), intent(in) :: compor
     character(len=19), intent(in) :: hval_incr(*)
-    character(len=19), intent(in) :: vect_elem
+    character(len=19), intent(in) :: vectElem
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -50,76 +47,74 @@ subroutine nmvcfo(type_comp, model, mater, mateco, cara_elem, compor, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  type_comp      : type of computation
+! In  poum      : type of computation
 !                      '-' - Previous step
 !                      '+' - Current step
 ! In  model          : name of model
-! In  mater          : name of material characteristics (field)
-! In  mateco         : name of coded material
-! In  cara_elem      : name of elementary characteristics (field)
-! In  varc_refe      : name of reference command variables vector
+! In  materField     : name of material characteristics (field)
+! In  materCode      : name of coded material
+! In  caraElem       : name of elementary characteristics (field)
+! In  varcRefe       : name of reference command variables vector
 ! In  compor         : name of comportment definition (field)
 ! In  hval_incr      : hat-variable for incremental values
-! In  vect_elem      : name of elementary vectors
+! In  vectElem      : name of elementary vectors
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: mxchin, mxchout, nbin, nbout
-    parameter(mxchout=2, mxchin=37)
-    character(len=8) :: lpaout(mxchout), lpain(mxchin)
-    character(len=19) :: lchout(mxchout), lchin(mxchin)
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
+    character(len=8) :: lpaout(nbFieldOutMax), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOutMax), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn, nbFieldout
 !
     aster_logical :: exis_temp, exis_hydr, exis_ptot, exis_sech, exis_epsa
     aster_logical :: exis_meta_zirc, exis_meta_acier, exis_meta, calc_meta
-    character(len=19) :: sigm_prev, vari_prev, varc_prev, varc_curr
-    integer(kind=8) :: iret, nume_harm
+    character(len=19) :: sigmPrev, variPrev, varcPrev, varcCurr
+    integer(kind=8) :: iret
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!
+
 ! - Get fields from hat-variables - Begin of time step
-!
-    call nmchex(hval_incr, 'VALINC', 'SIGMOI', sigm_prev)
-    call nmchex(hval_incr, 'VALINC', 'VARMOI', vari_prev)
-    call nmchex(hval_incr, 'VALINC', 'COMMOI', varc_prev)
-    call nmchex(hval_incr, 'VALINC', 'COMPLU', varc_curr)
-!
-! - Command variables affected
-!
-    call nmvcd2('HYDR', mater, exis_hydr)
-    call nmvcd2('PTOT', mater, exis_ptot)
-    call nmvcd2('SECH', mater, exis_sech)
-    call nmvcd2('EPSA', mater, exis_epsa)
-    call nmvcd2('M_ZIRC', mater, exis_meta_zirc)
-    call nmvcd2('M_ACIER', mater, exis_meta_acier)
-    call nmvcd2('TEMP', mater, exis_temp)
+    call nmchex(hval_incr, 'VALINC', 'SIGMOI', sigmPrev)
+    call nmchex(hval_incr, 'VALINC', 'VARMOI', variPrev)
+    call nmchex(hval_incr, 'VALINC', 'COMMOI', varcPrev)
+    call nmchex(hval_incr, 'VALINC', 'COMPLU', varcCurr)
+
+! - Get state of external state variables
+    call nmvcd2('HYDR', materField, exis_hydr)
+    call nmvcd2('PTOT', materField, exis_ptot)
+    call nmvcd2('SECH', materField, exis_sech)
+    call nmvcd2('EPSA', materField, exis_epsa)
+    call nmvcd2('M_ZIRC', materField, exis_meta_zirc)
+    call nmvcd2('M_ACIER', materField, exis_meta_acier)
+    call nmvcd2('TEMP', materField, exis_temp)
     exis_meta = exis_temp .and. (exis_meta_zirc .or. exis_meta_acier)
-    calc_meta = .false.
-    if (exis_meta .and. type_comp .eq. '+') then
-        calc_meta = .true.
+    calc_meta = ASTER_FALSE
+    if (exis_meta .and. poum .eq. '+') then
+        calc_meta = ASTER_TRUE
     end if
-!
+
 ! - Prepare elementary vectors
-!
-    call jeexin(vect_elem(1:19)//'.RELR', iret)
+    call jeexin(vectElem(1:19)//'.RELR', iret)
     if (iret .eq. 0) then
-        call vemare('V', vect_elem, model)
+        call vemare('V', vectElem, model)
     end if
-    call jedetr(vect_elem(1:19)//'.RELR')
-    call reajre(vect_elem, ' ', 'V')
-!
+    call jedetr(vectElem(1:19)//'.RELR')
+    call reajre(vectElem, ' ', 'V')
+
 ! - Fields preparation of elementary vectors
-!
-    nume_harm = 0
-    call nmvarc_prep(type_comp, model, cara_elem, mateco, varc_refe, &
-                     compor, exis_temp, mxchin, nbin, lpain, &
-                     lchin, mxchout, nbout, lpaout, lchout, &
-                     sigm_prev, vari_prev, varc_prev, varc_curr, nume_harm)
-!
+    call nmvarc_prep(poum, model, caraElem, materCode, varcRefe, &
+                     compor, exis_temp, &
+                     nbFieldInMax, nbFieldIn, lpain, lchin, &
+                     nbFieldOutMax, nbFieldout, lpaout, lchout, &
+                     sigmPrev, variPrev, varcPrev, varcCurr)
+
 ! - Computation of elementary vectors
-!
-    call nmvccc(model, nbin, nbout, lpain, lchin, &
-                lpaout, lchout, exis_temp, exis_hydr, exis_ptot, &
-                exis_sech, exis_epsa, calc_meta, 'V', vect_elem)
+    call nmvccc(model, &
+                nbFieldInMax, nbFieldIn, lpain, lchin, &
+                nbFieldOutMax, nbFieldout, lpaout, lchout, &
+                exis_temp, exis_hydr, exis_ptot, &
+                exis_sech, exis_epsa, calc_meta, &
+                vectElem)
 !
 end subroutine

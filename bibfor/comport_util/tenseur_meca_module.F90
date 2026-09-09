@@ -134,7 +134,7 @@ module tenseur_meca_module
         module procedure tenseur4_contract2_tenseur2
     end interface
 
-    interface Transpose
+    interface TransposeTens
         module procedure tenseur2_transpose
     end interface
 
@@ -152,9 +152,6 @@ module tenseur_meca_module
         module procedure tenseur2_TracComp
     end interface
 
-    interface operator(.X.)
-        module procedure vecteur_ptens_vecteur
-    end interface
     interface ProduitTensorielVecteur
         module procedure vecteur_ptens_vecteur
     end interface
@@ -499,7 +496,7 @@ contains
         X = Y%deviateur+Y%spherique*Identite()
     end function tenseur_deviateur_spherique_T2
     ! ------------------------------------------------------------------------------------------
-    ! tenseur(ordre=2) à partire des vecteurs déviateur et sphérique
+    ! tenseur(ordre=2) à partir des vecteurs déviateur et sphérique
     type(tenseur2) function tenseur_deviateur_spherique_Vect(Ydev, Ysph) result(X)
         real(kind=8), intent(in), dimension(:) :: Ydev
         real(kind=8), intent(in) :: Ysph
@@ -709,7 +706,7 @@ contains
         type(basepropre), intent(in) :: Basep
         type(tenseur2), intent(in) :: Tens
         !
-        X = (transpose(Basep%basep)*Tens)*Basep%basep
+        X = (TransposeTens(Basep%basep)*Tens)*Basep%basep
         !
     end function passage_vers_base_propre
     !
@@ -717,7 +714,7 @@ contains
         type(basepropre), intent(in) :: Basep
         type(tenseur2), intent(in) :: Tens
         !
-        X = (Basep%basep*Tens)*transpose(Basep%basep)
+        X = (Basep%basep*Tens)*TransposeTens(Basep%basep)
         !
     end function retour_vers_base_initiale
     !
@@ -728,12 +725,12 @@ contains
         !
         do ii = 1, dimspace
             if (Bp%valep%vect(ii) .gt. 0.0d0) then
-                Matp = Bp%vectp(ii) .X.Bp%vectp(ii)
+                Matp = ProduitTensorielVecteur(Bp%vectp(ii), Bp%vectp(ii))
                 X%traction = X%traction+Matp*Bp%valep%vect(ii)
                 X%valept%vect(ii) = Bp%valep%vect(ii)
                 X%istraction = .true.
             else if (Bp%valep%vect(ii) .lt. 0.0d0) then
-                Matp = Bp%vectp(ii) .X.Bp%vectp(ii)
+                Matp = ProduitTensorielVecteur(Bp%vectp(ii), Bp%vectp(ii))
                 X%compress = X%compress+Matp*Bp%valep%vect(ii)
                 X%valepc%vect(ii) = Bp%valep%vect(ii)
                 X%iscompress = .true.

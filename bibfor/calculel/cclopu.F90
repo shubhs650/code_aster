@@ -69,7 +69,7 @@ subroutine cclopu(resuin, resuou, lisord, nbordr, lisopt, &
 !   NBOPT  I    NOMBRE D'OPTIONS
 ! ----------------------------------------------------------------------
     integer(kind=8) :: ntymax
-    parameter(ntymax=12)
+    parameter(ntymax=13)
 !
     integer(kind=8) :: i, ityp, n1, jopt, postmp, nbopfa, ioc, ibid
     integer(kind=8) :: nuti, nsup, jord, iordr, iret
@@ -87,7 +87,8 @@ subroutine cclopu(resuin, resuou, lisord, nbordr, lisopt, &
     data tygrop/'CONTRAINTE  ', 'DEFORMATION ', 'ENERGIE     ', &
         'CRITERES    ', 'VARI_INTERNE', 'HYDRAULIQUE ', &
         'THERMIQUE   ', 'ACOUSTIQUE  ', 'FORCE       ', &
-        'PROPRIETES  ', 'SOUS_POINT  ', 'SECHAGE     '/
+        'PROPRIETES  ', 'SOUS_POINT  ', 'SECHAGE     ', &
+        'DEPLACEMENT '/
 !
     call jemarq()
 !

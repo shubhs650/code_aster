@@ -58,7 +58,7 @@ subroutine te0476(option, nomte)
     type(HHO_Data) :: hhoData
     type(HHO_Cell) :: hhoCell
     type(HHO_Quadrature) :: hhoQuadCell
-    real(kind=8) :: rhs_forces(MSIZE_CELL_VEC), rhs(MSIZE_TDOFS_VEC), VoluValQP(3, MAX_QP_CELL)
+    real(kind=8) :: rhs_forces(MSIZE_CELL_VEC), rhs(MSIZE_TDOFS_VEC), VoluValQP(3, MSIZE_QP_CELL)
     integer(kind=8) :: fbs, total_dofs, cbs, nbpara, idim
     integer(kind=8) :: j_time, j_forc
 !
@@ -66,7 +66,7 @@ subroutine te0476(option, nomte)
 !
     call hhoInfoInitCell(hhoCell, hhoData, hhoQuad=hhoQuadCell)
 !
-    ASSERT(hhoQuadCell%nbQuadPoints <= MAX_QP_CELL)
+    ASSERT(hhoQuadCell%nbQuadPoints <= MSIZE_QP_CELL)
 !
     VoluValQP = 0.d0
     nompar(:) = 'XXXXXXXX'
@@ -102,7 +102,7 @@ subroutine te0476(option, nomte)
 !
         do idim = 1, hhocell%ndim
             call hhoFuncFScalEvalQp(hhoQuadCell, zk8(j_forc-1+idim), nbpara, nompar, valpar, &
-                                    hhocell%ndim, VoluValQP(idim, 1:MAX_QP_CELL))
+                                    hhocell%ndim, VoluValQP(idim, 1:MSIZE_QP_CELL))
         end do
 !
     else if (option .eq. 'CHAR_MECA_FR2D2D' .or. option .eq. 'CHAR_MECA_FR3D3D') then

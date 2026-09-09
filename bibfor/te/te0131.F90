@@ -31,7 +31,7 @@ subroutine te0131(nomopt, nomte)
 ! -- HHO_DEPL_MECA: copy field only
 !-------------------------------------------------------
     integer(kind=8) :: ndim, nno, nsize
-    real(kind=8) :: field(MAX_BV)
+    real(kind=8) :: field(MAX_BV_CG)
 !
     call elrefe_info(fami="RIGI", ndim=ndim, nno=nno)
     nsize = nno*ndim

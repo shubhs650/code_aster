@@ -15,10 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine pjmasp(moa2, masp, corres, noca)
+!
+subroutine pjmasp(model2, masp, corres, caraElem)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
 #include "asterfort/celces.h"
@@ -36,79 +38,87 @@ subroutine pjmasp(moa2, masp, corres, noca)
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/jexnum.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/wkvect.h"
+#include "jeveux.h"
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 ! COMMANDE PROJ_CHAMP / METHODE='SOUS_POINT'
 !
 ! BUT :  CREER UN MAILLAGE (MASP) DONT LES NOEUDS SONT POSITIONNES SUR
 !        LES SOUS-POINTS DE GAUSS D'UN MODELE (MOA2) POUR CHAQUE
 !        FAMILLE DE POINTS DE LA LISTE MATER.
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN MOA2 : MODELE "2"
 ! IN/JXOUT MASP : MAILLAGE 2 PRIME (OBTENU A PARTIR DES PG DU MODELE 2)
 ! IN/JXVAR : ON CREE L'OBJET CORRES.PJEF_SP
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: option = 'COOR_ELGA_MATER'
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
     character(len=16) :: corres
-    character(len=8) :: masp, moa2, noca
-! ----------------------------------------------------------------------
+    character(len=8) :: masp, model2, caraElem
     integer(kind=8) :: ntgeo, ipo, ipg, nuno2
     integer(kind=8) ::  nbnosp, nno2, ino2p
     integer(kind=8) ::  j1, ipoi1
-    integer(kind=8) :: nbma, nbpt, nbsp, nbcmp
+    integer(kind=8) :: nbCell, nbpt, nbsp, nbcmp
     integer(kind=8) :: ima, ipt, isp, icmp, iad, iadime
-    integer(kind=8) :: jtypma, jpo2
-    integer(kind=8) :: jcesd, jcesl, iatypm
-    integer(kind=8) :: nchi, nbpgmx, nbspmx
-    character(len=8) ::  mail2, lpain(6)
-    character(len=19) :: chamg, ces, chgeom, ligrel
+    integer(kind=8) :: jpo2, jcesd, jcesl, iatypm
+    integer(kind=8) :: nbpgmx, nbspmx
+    character(len=8) :: mesh2
+    character(len=19) :: chgeom, modelLigrel
     character(len=24) :: coodsc
-    character(len=24) :: lchin(6)
+    character(len=19), parameter :: chamg = '&&PJMASP.PGCOOR', ces = '&&PJMASP.PGCORS'
     real(kind=8), pointer :: cesv(:) => null()
     integer(kind=8), pointer :: connex(:) => null()
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     call jemarq()
-!
-!
-!     -- RECUPERATION DU NOM DU MAILLAGE 2
-    call dismoi('NOM_MAILLA', moa2, 'MODELE', repk=mail2)
-    call jeveuo(mail2//'.TYPMAIL', 'L', jtypma)
-!
-!     -- RECUPERATION DU CHAMP DE COORDONNEES DU MAILLAGE 2
-    chgeom = mail2//'.COORDO'
-!
-    call dismoi('NOM_LIGREL', moa2, 'MODELE', repk=ligrel)
-!     1.  CALCUL DU CHAMP DE COORDONNEES DES ELGA (CHAMG):
-!     -------------------------------------------------------
-!
-    nchi = 6
+
+! - Initializations
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
+    call dismoi('NOM_LIGREL', model2, 'MODELE', repk=modelLigrel)
+
+! - Get mesh
+    call dismoi('NOM_MAILLA', model2, 'MODELE', repk=mesh2)
+    chgeom = mesh2//'.COORDO'
+
+! - Add input fields
     lchin(1) = chgeom(1:19)
     lpain(1) = 'PGEOMER'
-    lchin(2) = noca//'.CARORIEN'
-    lpain(2) = 'PCAORIE'
-    lchin(3) = noca//'.CAFIBR'
-    lpain(3) = 'PFIBRES'
-    lchin(4) = noca//'.CANBSP'
-    lpain(4) = 'PNBSP_I'
-    lchin(5) = noca//'.CARCOQUE'
-    lpain(5) = 'PCACOQU'
-    lchin(6) = noca//'.CARGEOPO'
-    lpain(6) = 'PCAGEPO'
-    chamg = '&&PJMASP.PGCOOR'
-    call cesvar(noca, ' ', ligrel, chamg)
-    call calcul('S', 'COOR_ELGA_MATER', ligrel, nchi, lchin, &
-                lpain, 1, chamg, 'PCOOPGM', 'V', &
-                'OUI')
+    nbFieldIn = 1
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+    call cesvar(caraElem, ' ', modelLigrel, chamg)
+    call calcul('S', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, chamg, 'PCOOPGM', &
+                'V', 'OUI')
 !
 !     -- TRANSFORMATION DE CE CHAMP EN CHAM_ELEM_S
-    ces = '&&PJMASP.PGCORS'
     call celces(chamg, 'V', ces)
-!
-!
     call jeveuo(ces//'.CESD', 'L', jcesd)
     call jeveuo(ces//'.CESL', 'L', jcesl)
     call jeveuo(ces//'.CESV', 'E', vr=cesv)
-    nbma = zi(jcesd-1+1)
+    nbCell = zi(jcesd-1+1)
 !
 !
 !     2. CALCUL DE NBNOSP : NOMBRE DE NOEUDS (ET DE MAILLES) DE MASP
@@ -129,14 +139,13 @@ subroutine pjmasp(moa2, masp, corres, noca)
 !      DE PG IPG = NB DE PG DE LA FAMILLE 1 + 3
 !      * LA TROISIEME VALEUR EST LE NUMERO DU SOUS-POINT
 !
-    call wkvect(corres//'.PJEF_SP', 'V V I', nbma*nbpgmx*nbspmx*3, jpo2)
+    call wkvect(corres//'.PJEF_SP', 'V V I', nbCell*nbpgmx*nbspmx*3, jpo2)
 !
     ipo = 1
-    do ima = 1, nbma
+    do ima = 1, nbCell
         nbpt = zi(jcesd-1+5+4*(ima-1)+1)
         nbsp = zi(jcesd-1+5+4*(ima-1)+2)
-!          IF (NBPT.LT.1) GOTO 100
-        if (nbsp .lt. 1) goto 100
+        if (nbsp .lt. 1) cycle
         do ipg = 1, nbpt
             do isp = 1, nbsp
                 zi(jpo2-1+ipo) = ima
@@ -146,7 +155,6 @@ subroutine pjmasp(moa2, masp, corres, noca)
             end do
         end do
         nbnosp = nbnosp+nbpt*nbsp
-100     continue
     end do
 !
 !     3. CREATION DU .DIME DU NOUVEAU MAILLAGE
@@ -187,7 +195,7 @@ subroutine pjmasp(moa2, masp, corres, noca)
     call wkvect(masp//'.COORDO    .VALE', 'V V R', 3*nbnosp, j1)
 !
     ino2p = 0
-    do ima = 1, nbma
+    do ima = 1, nbCell
         nbpt = zi(jcesd-1+5+4*(ima-1)+1)
         nbsp = zi(jcesd-1+5+4*(ima-1)+2)
         nbcmp = zi(jcesd-1+5+4*(ima-1)+3)

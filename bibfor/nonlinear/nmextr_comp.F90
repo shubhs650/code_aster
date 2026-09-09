@@ -16,35 +16,32 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmextr_comp(field, field_disc, field_type, meshz, modelz, &
-                       cara_elemz, ds_material, ds_constitutive, disp_curr, strx_curr, &
-                       varc_curr, time, ligrelz)
+subroutine nmextr_comp(field, field_disc, field_type, &
+                       meshZ, modelZ, caraElemZ, &
+                       ds_material, ds_constitutive, &
+                       dispCurrZ, strxCurrZ, varcCurrZ, time, ligrelZ_)
 !
     use NonLin_Datastructure_type
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
-#include "asterfort/inical.h"
+#include "asterfort/dismoi.h"
 #include "asterfort/megeom.h"
-#include "asterfort/mecara.h"
 #include "asterfort/meharm.h"
 #include "asterfort/mecact.h"
+#include "asterfort/setStructFields.h"
 !
     character(len=19), intent(in) :: field
     character(len=24), intent(in) :: field_type
     character(len=4), intent(in) :: field_disc
-    character(len=*), intent(in) :: modelz
-    character(len=*), intent(in) :: meshz
-    character(len=*), intent(in) :: cara_elemz
+    character(len=*), intent(in) :: modelZ, meshZ, caraElemZ
     type(NL_DS_Material), intent(in) :: ds_material
     type(NL_DS_Constitutive), intent(in) :: ds_constitutive
-    character(len=*), intent(in) :: disp_curr
-    character(len=*), intent(in) :: strx_curr
-    character(len=*), intent(in) :: varc_curr
+    character(len=*), intent(in) :: dispCurrZ, strxCurrZ, varcCurrZ
     real(kind=8), intent(in) :: time
-    character(len=*), optional, intent(in) :: ligrelz
+    character(len=*), optional, intent(in) :: ligrelZ_
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -61,105 +58,91 @@ subroutine nmextr_comp(field, field_disc, field_type, meshz, modelz, &
 ! In  field_type       : type of field (name in results datastructure)
 ! In  model            : name of model
 ! In  mesh             : name of mesh
-! In  cara_elem        : name of datastructure for elementary parameters (CARTE)
+! In  caraElem         : name of datastructure for elementary parameters (CARTE)
 ! In  ds_material      : datastructure for material parameters
 ! In  ds_constitutive  : datastructure for constitutive laws management
-! In  disp_curr        : current displacements
-! In  varc_curr        : command variable for current time
+! In  dispCurr         : current displacements
+! In  varcCurr         : command variable for current time
 ! In  time             : current time
-! In  strx_curr        : fibers information for current time
+! In  strxCurr         : fibers information for current time
 ! In  ligrel           : current LIGREL (if not present: on all model)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbout, nbin
-    parameter(nbout=1, nbin=15)
-    character(len=8) :: lpaout(nbout), lpain(nbin)
-    character(len=19) :: lchout(nbout), lchin(nbin)
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
 !
-    character(len=24) :: chgeom, chcara(18), chharm, chtime
-    integer(kind=8) :: n_harm
-    character(len=19) :: ligrel
-    character(len=16) :: option
+    character(len=16), parameter :: option = 'EPSI_ELGA'
+    character(len=24), parameter :: chtime = '&&NMEXTR_COMP.CHTIME'
+    integer(kind=8), parameter :: numeHarm = 0
+    character(len=24) :: chgeom, chharm
+    character(len=19) :: ligrel, modelLigrel
+    integer(kind=8) :: nbFieldIn
 !
 ! --------------------------------------------------------------------------------------------------
 !
     ASSERT(field_type .eq. 'EPSI_ELGA')
     ASSERT(field_disc .eq. 'ELGA')
-    option = 'EPSI_ELGA'
-    chtime = '&&NMEXTR_COMP.CHTIME'
-    chharm = '&&NMEXTR_COMP.CHHARM'
-    if (present(ligrelz)) then
-        ligrel = ligrelz
+
+! - Initializations
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
+    if (present(ligrelZ_)) then
+        ligrel = ligrelZ_
     else
-        ligrel = modelz(1:8)//'.MODELE'
+        ligrel = modelLigrel
     end if
-    n_harm = 0
-!
-! - Time field
-!
-    call mecact('V', chtime, 'MAILLA', meshz, 'INST_R', &
+
+! - Create time field
+    call mecact('V', chtime, 'MAILLA', meshZ, 'INST_R', &
                 ncmp=1, nomcmp='INST', sr=time)
-!
-! - Geometry field
-!
-    call megeom(modelz, chgeom)
-!
-! - Elementary characteristics fields
-!
-    call mecara(cara_elemz, chcara)
-!
-! - Fourier field
-!
-    call meharm(modelz, n_harm, chharm)
-!
-! - Init fields
-!
-    call inical(nbin, lpain, lchin, nbout, lpaout, &
-                lchout)
-!
-! - Input fields
-!
+
+! - Get geometry field
+    call megeom(modelZ, chgeom)
+
+! - Create Fourier field
+    call meharm(modelZ, numeHarm, chharm)
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom(1:19)
     lpain(2) = 'PDEPLAR'
-    lchin(2) = disp_curr(1:19)
+    lchin(2) = dispCurrZ(1:19)
     lpain(3) = 'PMATERC'
     lchin(3) = ds_material%mateco(1:19)
     lpain(4) = 'PINSTR'
     lchin(4) = chtime(1:19)
     lpain(5) = 'PVARCPR'
-    lchin(5) = varc_curr(1:19)
+    lchin(5) = varcCurrZ(1:19)
     lpain(6) = 'PVARCRR'
     lchin(6) = ds_material%varc_refe(1:19)
-    lpain(7) = 'PCACOQU'
-    lchin(7) = chcara(7) (1:19)
-    lpain(8) = 'PCOMPOR'
-    lchin(8) = ds_constitutive%compor(1:19)
-    lpain(9) = 'PCAGEPO'
-    lchin(9) = chcara(5) (1:19)
-    lpain(10) = 'PCAORIE'
-    lchin(10) = chcara(1) (1:19)
-    lpain(11) = 'PNBSP_I'
-    lchin(11) = chcara(16) (1:19)
-    lpain(12) = 'PFIBRES'
-    lchin(12) = chcara(17) (1:19)
-    lpain(13) = 'PCAMASS'
-    lchin(13) = chcara(12) (1:19)
-    lpain(14) = 'PHARMON'
-    lchin(14) = chharm(1:19)
-    lpain(15) = 'PSTRXMR'
-    lchin(15) = strx_curr(1:19)
-!
-! - Output field
-!
+    lpain(7) = 'PCOMPOR'
+    lchin(7) = ds_constitutive%compor(1:19)
+    lpain(8) = 'PHARMON'
+    lchin(8) = chharm(1:19)
+    lpain(9) = 'PSTRXMR'
+    lchin(9) = strxCurrZ(1:19)
+    nbFieldIn = 9
+
+! - Add fields for structural elements
+    call setStructFields(caraElemZ, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElemZ)
+
+! - Set output field
     lpaout(1) = 'PDEFOPG'
     lchout(1) = field
-!
+
 ! - Computation
-!
-    call calcul('S', option, ligrel, nbin, lchin, &
-                lpain, nbout, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', option, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 !
 end subroutine

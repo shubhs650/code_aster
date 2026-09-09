@@ -15,12 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0190(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterc/r8vide.h"
 #include "asterfort/bmatmc.h"
 #include "asterfort/btdbmc.h"
@@ -28,12 +29,9 @@ subroutine te0190(option, nomte)
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
-#include "asterfort/getElemOrientation.h"
-#include "asterfort/get_elas_id.h"
+#include "jeveux.h"
 !
-!
-    character(len=16), intent(in) :: option
-    character(len=16), intent(in) :: nomte
+    character(len=16), intent(in) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -44,84 +42,66 @@ subroutine te0190(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: i, igau, igeom, iharmo, imate, imatuu, j
-    integer(kind=8) :: k, nbinco, nbsig, nh
-    character(len=4) :: fami
+    integer(kind=8), parameter :: ksp = 1
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8) :: i, kpg, jvGeom, jvHarmon, jvMaterc, imatuu, j
+    integer(kind=8) :: k, nbinco, nbsig
     real(kind=8) :: b(486), btdb(81, 81), d(36), jacgau
-    real(kind=8) :: angl_naut(3), instan, nharm
-    integer(kind=8) :: ndim, nno, nnos, npg1, ipoids, ivf, idfde, dimmod
-    integer(kind=8) :: elas_id
+    real(kind=8) :: time, nharm
+    integer(kind=8) :: ndim, nno, npg, ipoids, ivf, idfde, dimmod
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!
-! - Finite element informations
-!
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg1, jpoids=ipoids, jvf=ivf, jdfde=idfde)
-!
-! - CAREFUL ! Dimension of model is 3, not 2
-!
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
     dimmod = 3
-!
+
 ! - Initializations
-!
-    instan = r8vide()
-    nbinco = dimmod*nno
-    nharm = 0.d0
-    btdb(:, :) = 0.d0
-!
-! - Number of stress components
-!
     nbsig = nbsigm()
-!
+    nbinco = dimmod*nno
+    btdb = 0.d0
+
 ! - Geometry
-!
-    call jevech('PGEOMER', 'L', igeom)
-!
-! - Material parameters
-!
-    call jevech('PMATERC', 'L', imate)
-!
-! - Get type of elasticity (Isotropic/Orthotropic/Transverse isotropic)
-!
-    call get_elas_id(zi(imate), elas_id)
-!
-! - Orthotropic parameters
-!
-    call getElemOrientation(ndim, nno, igeom, angl_naut)
-!
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get current time
+    time = r8vide()
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
 ! - Harmonic coefficient
-!
-    call jevech('PHARMON', 'L', iharmo)
-    nh = zi(iharmo)
-    nharm = dble(nh)
-!
+    nharm = 0.d0
+    call jevech('PHARMON', 'L', jvHarmon)
+    nharm = dble(zi(jvHarmon))
+
 ! - Compute RIGI_MECA
-!
-    do igau = 1, npg1
-!
+    do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! ----- Compute matrix [B]: displacement -> strain (first order)
-!
-        call bmatmc(igau, nbsig, zr(igeom), ipoids, ivf, &
+        call bmatmc(kpg, nbsig, zr(jvGeom), ipoids, ivf, &
                     idfde, nno, nharm, jacgau, b)
-!
+
 ! ----- Compute Hooke matrix [D]
-!
-        call dmatmc(fami, zi(imate), instan, '+', &
-                    igau, 1, angl_naut, nbsig, &
-                    d)
-!
+        call dmatmc(materPara, "+", time, &
+                    nbsig, d)
+
 ! ----- Compute rigidity matrix [K] = [B]Tx[D]x[B]
-!
         call btdbmc(b, d, jacgau, dimmod, nno, &
-                    nbsig, elas_id, btdb)
-!
+                    nbsig, materPara%elasID, btdb)
+
     end do
-!
+
 ! - Set matrix in output field
-!
     call jevech('PMATUUR', 'E', imatuu)
     k = 0
     do i = 1, nbinco

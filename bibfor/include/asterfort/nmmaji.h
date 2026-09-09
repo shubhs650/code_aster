@@ -21,11 +21,10 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine nmmaji(numedd, lgrot, lendo, sdnume, coef,&
+    subroutine nmmaji(numedd, lgrot, sdnume, coef,&
                       incmoz, ddincz, incplz, ordre)
         character(len=24) :: numedd
         aster_logical :: lgrot
-        aster_logical :: lendo
         character(len=19) :: sdnume
         real(kind=8) :: coef
         character(len=*) :: incmoz

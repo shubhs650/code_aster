@@ -202,7 +202,7 @@ subroutine nmdata(model, mesh, mater, mateco, cara_elem, ds_constitutive, &
 !
 ! - Read parameters for convergence
 !
-    call nmdocn(ds_conv)
+    call nmdocn(ds_conv, mesh)
 
 ! - Create datastructure for dynamic
     call ndcrdy(result, sddyna)

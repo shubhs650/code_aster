@@ -1,0 +1,69 @@
+ TITRE
+SSLL110B                                                                       
+3 barres en U soumises a la pesanteur                                           
+ FINSF
+ %
+ COOR_2D
+ N1        0.00000000000000E+00  1.00000000000000E+01
+ N2        0.00000000000000E+00  0.00000000000000E+00
+ N3        1.00000000000000E+01  0.00000000000000E+00
+ N4        1.00000000000000E+01  1.00000000000000E+01
+ FINSF
+ %
+ SEG2    
+ M1       N1       N2      
+ M2       N2       N3      
+ M3       N3       N4      
+ FINSF
+ %
+ GROUP_NO
+ A                       
+ N1      
+ FINSF
+ %
+ GROUP_NO
+ B                       
+ N4      
+ FINSF
+ %
+ GROUP_NO
+ N3                      
+ N3      
+ FINSF
+ %
+ GROUP_NO
+ N2                      
+ N2      
+ FINSF
+ %
+ GROUP_NO
+ N4                      
+ N4      
+ FINSF
+ %
+ GROUP_NO
+ N1                      
+ N1      
+ FINSF
+ %
+ GROUP_MA
+ PESA                    
+ M2      
+ FINSF
+ %
+ GROUP_MA
+ VERT                    
+ M1       M3      
+ FINSF
+ %
+ GROUP_MA
+ M1                      
+ M1      
+ FINSF
+ %
+ GROUP_MA
+ M3                      
+ M3      
+ FINSF
+ %
+ FIN

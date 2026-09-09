@@ -105,23 +105,22 @@ class FieldOnNodes : public DataField, private AllowedFieldType< ValueType > {
      * @brief Constructor
      * @param name Jeveux name of the field
      */
-    FieldOnNodes( const std::string name )
+    FieldOnNodes( const std::string name, const EquationNumberingPtr nume = nullptr )
         : DataField( name, "CHAM_NO" ),
           _reference( JeveuxVectorChar24( getName() + ".REFE" ) ),
           _values( JeveuxVector< ValueType >( getName() + ".VALE" ) ),
-          _dofDescription( nullptr ) {};
+          _dofDescription( nume ) {};
 
     /** @brief Constructor with automatic name */
     FieldOnNodes() : FieldOnNodes( DataStructureNaming::getNewName() ) {};
 
     /** @brief Copy constructor */
-    FieldOnNodes( const std::string &name, const FieldOnNodes &toCopy ) : FieldOnNodes( name ) {
+    FieldOnNodes( const std::string &name, const FieldOnNodes &toCopy )
+        : FieldOnNodes( name, toCopy.getDescription() ) {
         // JeveuxVector to be duplicated
         *( _reference ) = *( toCopy._reference );
         *( _values ) = *( toCopy._values );
         *( _title ) = *( toCopy._title );
-        // Pointers to be copied
-        _dofDescription = toCopy._dofDescription;
 
         this->updateValuePointers();
     }
@@ -241,6 +240,14 @@ class FieldOnNodes : public DataField, private AllowedFieldType< ValueType > {
 
         this->updateValuePointers();
     };
+
+    /** @brief restricted constructor (Set) and method (Get) to support pickling */
+    FieldOnNodes( const py::tuple &tup )
+        : FieldOnNodes( tup[0].cast< std::string >(), tup[1].cast< EquationNumberingPtr >() ) {
+        this->updateValuePointers();
+    };
+
+    py::tuple _getState() const { return py::make_tuple( getName(), getDescription() ); };
 
     /**
      * @brief Wrap of copy constructor

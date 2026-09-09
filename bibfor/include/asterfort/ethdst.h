@@ -17,16 +17,17 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine ethdst(fami, nno, ndim, nbsig, npg, &
+    subroutine ethdst(materPara, &
+                      nno, ndim, nbsig, npg, &
                       jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
-                      nodeCoor, time, anglNaut, jvMaterCode, &
+                      nodeCoor, time, &
                       enerTherTher)
-        character(len=*), intent(in) :: fami
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
         integer(kind=8), intent(in) :: nno, ndim, nbsig, npg
         integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
         real(kind=8), intent(in) :: nodeCoor(ndim*nno)
-        real(kind=8), intent(in) :: time, anglNaut(3)
-        integer(kind=8), intent(in) :: jvMaterCode
+        real(kind=8), intent(in) :: time
         real(kind=8), intent(out) :: enerTherTher
     end subroutine ethdst
 end interface

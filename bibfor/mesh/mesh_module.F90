@@ -26,7 +26,7 @@ module mesh_module
     public :: getSkinCell
     public :: checkNormalOnSkinCell, checkInclude, getCellOptionForName, createNameOfCell
     public :: getNodeOptionForName, createNameOfNode, getGroupsFromCell, getMeshDimension
-    public :: getFirstNodeFromNodeGroup, getListOfCellGroup, checkCellsAreSkin
+    public :: getFirstNodeFromNodeGroup, getListOfCellGroup, checkCellsAreSkin, checkCellsAreVolume
     public :: compMinMaxEdges
     public :: getCellsFromGroup
     public :: hasCellsDefinedFromCmd, allCellsDefinedFromCmd
@@ -944,6 +944,69 @@ contains
 !
         if (onlySkin1D .and. hasSkin2D) then
             call utmess('F', 'MESH3_92')
+        end if
+!
+!   ------------------------------------------------------------------------------------------------
+    end subroutine
+! --------------------------------------------------------------------------------------------------
+!
+! checkCellsAreVolume
+!
+! Check if cells are volumes' ones
+!
+! In  mesh             : mesh
+!
+! --------------------------------------------------------------------------------------------------
+    subroutine checkCellsAreVolume(meshZ, nbCell, listCellNume, onlyHexaBiQuad, listCellType, &
+                                   hasVolume, hasVoluNotHexaBiQ)
+!   ------------------------------------------------------------------------------------------------
+! ----- Parameters
+        character(len=*), intent(in) :: meshZ
+        integer(kind=8), intent(in) :: nbCell
+        integer(kind=8), pointer :: listCellNume(:)
+        aster_logical, intent(in) :: onlyHexaBiQuad
+        character(len=8), pointer :: listCellType(:)
+        aster_logical, intent(out) :: hasVolume, hasVoluNotHexaBiQ
+! ----- Local
+        character(len=8) :: mesh
+        integer(kind=8) :: cellNume, iCell, cellTypeNume
+        character(len=8) :: cellTypeName
+        integer(kind=8), pointer :: meshTypmail(:) => null()
+!
+!   ------------------------------------------------------------------------------------------------
+!
+        mesh = meshZ
+        hasVolume = ASTER_FALSE
+        hasVoluNotHexaBiQ = ASTER_FALSE
+!
+! ----- Access to mesh datastructures
+        call jeveuo(mesh//'.TYPMAIL', 'L', vi=meshTypmail)
+!
+! ----- Check cells
+        do iCell = 1, nbCell
+            cellNume = listCellNume(iCell)
+!
+! --------- Get type of cell
+            cellTypeNume = meshTypmail(cellNume)
+            call jenuno(jexnum('&CATA.TM.NOMTM', cellTypeNume), cellTypeName)
+            listCellType(iCell) = cellTypeName
+!
+! --------- Detect type
+            if (cellTypeName(1:4) .eq. 'HEXA') then
+                hasVolume = ASTER_TRUE
+                if (cellTypeName(5:6) .ne. '27') then
+                    hasVoluNotHexaBiQ = ASTER_TRUE
+                end if
+            else if (cellTypeName(1:4) .eq. 'PENTA') then
+                hasVolume = ASTER_TRUE
+                hasVoluNotHexaBiQ = ASTER_TRUE
+            else
+                call utmess('F', 'MESH3_84', sk=cellTypeName)
+            end if
+        end do
+!
+        if (onlyHexaBiQuad .and. hasVoluNotHexaBiQ) then
+            call utmess('F', 'MESH3_82')
         end if
 !
 !   ------------------------------------------------------------------------------------------------

@@ -68,10 +68,6 @@ def coupled_thermics(cpl):
 
     t5 = 90.0
 
-    t4 = 85.0
-
-    t2 = t1 + ((t3 - t1) / 2.0)
-
     L_INST = DEFI_LIST_REEL(
         DEBUT=0.0,
         INTERVALLE=(_F(JUSQU_A=t1, NOMBRE=1), _F(JUSQU_A=t3, NOMBRE=2), _F(JUSQU_A=t5, NOMBRE=2)),
@@ -104,8 +100,8 @@ def coupled_thermics(cpl):
 
             self._medcpl = cpl.medcpl
 
-            mc_temp = self._medcpl.export_temperature(T0, "TEMP")
-            cpl.send_output_fields({"TEMP": mc_temp})
+            self._medcpl.export_temperature("TEMP", T0)
+            cpl.send_output_fields()
 
         def run_iteration(self, i_iter, current_time, delta_t, data):
             """Execute one iteration.
@@ -118,7 +114,6 @@ def coupled_thermics(cpl):
 
             Returns:
                 bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingField*]: Output fields, on nodes.
             """
 
             assert len(data) == 1, "expecting one field"
@@ -126,7 +121,7 @@ def coupled_thermics(cpl):
             mc_depl = data["DEPL"]
             if mc_depl:
                 # MEDC field => .med => code_aster field
-                depl = self._medcpl.import_displacement(mc_depl)
+                depl = self._medcpl.import_displacement("DEPL")
 
             previous_time = current_time - delta_t
 
@@ -144,11 +139,11 @@ def coupled_thermics(cpl):
             )
 
             temp = self.result.getField("TEMP", self.result.getLastIndex())
-            mc_temp = self._medcpl.export_temperature(temp, "TEMP")
+            self._medcpl.export_temperature("TEMP", temp)
             print("[Convert] Temperature field info:")
-            print(mc_temp.simpleRepr(), flush=True)
+            print(self._medcpl.get_field("TEMP").getField().simpleRepr(), flush=True)
 
-            return True, {"TEMP": mc_temp}
+            return True
 
     ################################################################################
     # loop on time steps

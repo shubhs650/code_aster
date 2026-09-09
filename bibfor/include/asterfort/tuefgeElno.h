@@ -18,6 +18,7 @@
 !
 interface
     subroutine tuefgeElno(lLine, nbNode, nbDof, nbFourier)
+#include "asterf_types.h"
         aster_logical, intent(in) :: lLine
         integer(kind=8), intent(in) :: nbNode, nbDof, nbFourier
     end subroutine tuefgeElno

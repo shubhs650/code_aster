@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine mmcalg(ndim     , l_large_slip,&
@@ -31,10 +32,11 @@ interface
                       mprt1n   , mprt2n      , mprnt1, mprnt2,&
                       taujeu1  , taujeu2     ,&
                       dnepmait1, dnepmait2)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: ndim, nnm
         aster_logical, intent(in) :: l_large_slip
-        real(kind=8), intent(in) :: dffm(2, 9), ddffm(3,9)
-        real(kind=8), intent(in) :: elem_mast_coor(9, 3), ddepmam(9, 3)
+        real(kind=8), intent(in) :: dffm(2, MT_NNOMAX2D), ddffm(3,MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_mast_coor(3,MT_NNOMAX2D), ddepmam(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: tau1(3), tau2(3), norm(3)
         real(kind=8), intent(in) :: jeu, djeu(3)
         real(kind=8), intent(out) :: gene11(3, 3), gene21(3, 3), gene22(3, 3)

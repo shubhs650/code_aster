@@ -61,7 +61,7 @@ subroutine te0096(option, nomte)
 ! DECLARATION VARIABLES LOCALES
 !
     integer(kind=8) :: icodre(1), kpg, spt
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: nompar(3), typmod(2), famil, poum
     character(len=16) :: phenom
 !
@@ -86,7 +86,7 @@ subroutine te0096(option, nomte)
     integer(kind=8) :: i, j, k, kk, l, m, kp, ndim, compt
     integer(kind=8) :: ij, ij1, matcod, i1, iret, iret1, npg1
     character(len=16), pointer :: compor(:) => null()
-    type(Behaviour_Integ) :: BEHinteg
+    type(Behaviour_Integ) :: BEHInteg
 !
     aster_logical :: grand, axi, cp, fonc, incr, epsini
 !
@@ -110,7 +110,7 @@ subroutine te0096(option, nomte)
 !
 ! - Initialisation of behaviour datastructure
 !
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
 !
     if (lteatt('AXIS', 'OUI')) then
         typmod(1) = 'AXIS'
@@ -422,7 +422,7 @@ subroutine te0096(option, nomte)
             end do
             sigl(4) = zr(isigm+ncmp*(kp-1)+3)*rac2
         else
-            call nmelnl(BEHinteg, &
+            call nmelnl(BEHInteg, &
                         fami, kp, 1, &
                         ndim, typmod, matcod, compor, &
                         eps, 0.d0, 0.d0, sigl, energi)

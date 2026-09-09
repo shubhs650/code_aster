@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 !
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine mmGetShapeFunctions(laxis, typmae, typmam, &
@@ -28,7 +29,8 @@ interface
         character(len=8), intent(in) :: typmae, typmam
         integer(kind=8), intent(in) :: ndim, nne, nnm
         real(kind=8), intent(in) :: xpc, ypc, xpr, ypr
-        real(kind=8), intent(out) :: ffe(9), ffm(9), dffm(2,9), ddffm(3, 9), ffl(9)
+        real(kind=8), intent(out) :: ffe(9), ffm(9), ffl(9)
+        real(kind=8), intent(out) :: dffm(2,MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
         real(kind=8), intent(out) :: jacobi
     end subroutine mmGetShapeFunctions
 end interface

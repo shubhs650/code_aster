@@ -18,20 +18,20 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine getExternalBehaviourPara(mesh, v_model_elem, rela_comp, defo_comp, &
-                                        kit_comp, prepExte, keywf_, i_comp_, &
-                                        elem_type_, type_cpla_in_, type_cpla_out_)
+    subroutine getExternalBehaviourPara(mesh, modelCell, &
+                                        cellAffeJv, lAllCellAffe, nbCellAffe, &
+                                        relaComp, relaCompPY, relaMeca, defoComp, &
+                                        factorKeyword, iFactorKeyword, &
+                                        prepExte)
         use BehaviourPrepare_type
         character(len=8), intent(in) :: mesh
-        integer(kind=8), pointer :: v_model_elem(:)
-        character(len=16), intent(in) :: rela_comp
-        character(len=16), intent(in) :: defo_comp
-        character(len=16), intent(in) :: kit_comp(4)
+        integer(kind=8), pointer :: modelCell(:)
+        character(len=24), intent(in) :: cellAffeJv
+        aster_logical, intent(in) :: lAllCellAffe
+        integer(kind=8), intent(in):: nbCellAffe
+        character(len=16), intent(in) :: relaComp, relaCompPY, relaMeca, defoComp
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
         type(BehaviourPrep_Exte), intent(inout) :: prepExte
-        character(len=16), optional, intent(in) :: keywf_
-        integer(kind=8), optional, intent(in) :: i_comp_
-        integer(kind=8), optional, intent(in) :: elem_type_
-        character(len=16), optional, intent(in) :: type_cpla_in_
-        character(len=16), optional, intent(out) :: type_cpla_out_
     end subroutine getExternalBehaviourPara
 end interface

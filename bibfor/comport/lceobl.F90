@@ -15,17 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1501,W0413
 !
-subroutine lceobl(ndim, typmod, imate, crit, epsm, &
+subroutine lceobl(ndim, imate, carcri, epsm, &
                   deps, vim, option, sigm, vip, &
                   dsidep, iret)
 !
-!
-!
-! aslint: disable=W1501
     implicit none
-#include "asterf_types.h"
+!
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/dfmdf.h"
 #include "asterfort/dfpdf.h"
 #include "asterfort/diago3.h"
@@ -39,10 +39,11 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/sigeob.h"
-    character(len=8) :: typmod(*)
+!
     character(len=16) :: option
     integer(kind=8) :: ndim, imate, iret
-    real(kind=8) :: epsm(6), deps(6), vim(7), crit(*)
+    real(kind=8) :: epsm(6), deps(6), vim(7)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: sigm(6), vip(7), dsidep(6, 6)
 ! ----------------------------------------------------------------------
 !     LOI DE COMPORTEMENT DU MODELE D'ENDOMMAGEMENT ANISOTROPE
@@ -167,8 +168,8 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
     ecrob = valres(5)
     ecrod = valres(6)
 !
-    toler = crit(3)
-    intmax = int(crit(1))
+    toler = carcri(3)
+    intmax = int(carcri(1))
 !
     elas = .true.
 !
@@ -535,7 +536,8 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
     if (rigi) then
 !
         call r8inir(36, 0.d0, dsidep, 1)
-        if ((b(1) .eq. 1.d0) .and. (b(2) .eq. 1.d0) .and. (b(3) .eq. 1.d0) .and. (d .eq. 0.d0)) then
+        if ((b(1) .eq. 1.d0) .and. (b(2) .eq. 1.d0) .and. &
+            (b(3) .eq. 1.d0) .and. (d .eq. 0.d0)) then
             do i = 1, 6
                 dsidep(i, i) = dsidep(i, i)+deux*mu
             end do
@@ -643,15 +645,18 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
                                         else
                                             rtemp6 = 1/rac2
                                         end if
-                                        bobo(t(i, j), t(p, q)) = bobo(t(i, &
-                                                               j), t(p, q))+(zaza(t(i, k), t(m, n) &
-                                                                      )*(b(t(m, p))*kron(t(q, n))+ &
-                                                                        kron(t(m, p))*b(t(q, n)))* &
-                                                                   rtemp4*b(t(k, j))+(zaza(t(k, j) &
-                                                                    , t(m, n))*rtemp5*(b(t(m, p))* &
-                                                                      kron(t(q, n))+kron(t(m, p))* &
-                                                                  b(t(q, n)))*b(t(i, k))))*rtemp2* &
-                                                                 rtemp3*rtemp6
+                                        bobo(t(i, j), t(p, q)) = bobo(t(i, j), t(p, q))+ &
+                                                                 (zaza(t(i, k), t(m, n))* &
+                                                                  (b(t(m, p))*kron(t(q, n))+ &
+                                                                   kron(t(m, p))*b(t(q, n)))* &
+                                                                  rtemp4*b(t(k, j))+ &
+                                                                  (zaza(t(k, j), t(m, n))* &
+                                                                   rtemp5*(b(t(m, p))* &
+                                                                           kron(t(q, n))+ &
+                                                                           kron(t(m, p))* &
+                                                                           b(t(q, n)))* &
+                                                                   b(t(i, k))))* &
+                                                                 rtemp2*rtemp3*rtemp6
                                     end do
                                 end do
                             end do
@@ -826,12 +831,13 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
                                             do l = 1, 3
                                                 do m = 1, 3
                                                     do n = 1, 3
-!
-                                                        dsisup(t(i, j), t(p, q)) = dsisup( &
-                                                                     t(i, j), t(p, q))+vecb(i, k)* &
-                                                                  vecb(j, l)*vecb(p, m)*vecb(q, n) &
-                                                                 *dsimed(t(k, l), t(m, n))*rtemp1* &
-                                                                                   rtemp2
+                                                        dsisup(t(i, j), t(p, q)) = &
+                                                            dsisup(t(i, j), t(p, q))+ &
+                                                            vecb(i, k)* &
+                                                            vecb(j, l)*vecb(p, m)* &
+                                                            vecb(q, n) &
+                                                            *dsimed(t(k, l), t(m, n))* &
+                                                            rtemp1*rtemp2
                                                     end do
                                                 end do
                                             end do
@@ -986,12 +992,12 @@ subroutine lceobl(ndim, typmod, imate, crit, epsm, &
                                             do l = 1, 3
                                                 do m = 1, 3
                                                     do n = 1, 3
-!
-                                                        dsisup(t(i, j), t(p, q)) = dsisup( &
-                                                                     t(i, j), t(p, q))+vecb(i, k)* &
-                                                                  vecb(j, l)*vecb(p, m)*vecb(q, n) &
-                                                                 *dsimed(t(k, l), t(m, n))*rtemp1* &
-                                                                                   rtemp2
+                                                        dsisup(t(i, j), t(p, q)) = &
+                                                            dsisup(t(i, j), t(p, q))+ &
+                                                            vecb(i, k)* &
+                                                            vecb(j, l)*vecb(p, m)*vecb(q, n) &
+                                                            *dsimed(t(k, l), t(m, n))*rtemp1* &
+                                                            rtemp2
                                                     end do
                                                 end do
                                             end do

@@ -81,16 +81,6 @@ Instant de calcul: %(r1)19.12e
   Critère(s) de convergence atteint(s)
 """
     ),
-    61: _(
-        """
-      Attention ! Convergence atteinte avec RESI_GLOB_RELA car on est au premier instant avec RESI_COMP_RELA.
-"""
-    ),
-    62: _(
-        """
-      Attention ! Convergence atteinte avec RESI_GLOB_MAXI au lieu de RESI_GLOB_RELA pour cause de chargement presque nul.
-"""
-    ),
     70: _(
         """    Le résidu de type <%(k1)s> vaut %(r1)19.12e au noeud et degré de liberté <%(k2)s>"""
     ),

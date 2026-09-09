@@ -15,28 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmsfin(fami, option, typmod, ndim, nno, &
-                      npg, nddl, iw, vff, idff, &
-                      geomi, compor, &
-                      mate, lgpg, crit, angmas, instm, &
-                      instp, ddlm, ddld, siefm, &
-                      vim, siefp, vip, fint, matr, &
-                      lMatr, lVect, lSigm, lVari, &
+    subroutine nmsfin(BEHInteg, &
+                      option, typmod, &
+                      compor, carcri, &
+                      ndim, nno, npg, nddl, &
+                      iw, vff, idff, &
+                      geomi, ddlm, ddld, &
+                      instm, instp, &
+                      lgpg, siefm, vim, &
+                      siefp, vip, &
+                      fint, matr, &
+                      lMatr, lVect, lSigm, &
                       codret)
-        character(len=8), intent(in) :: typmod(*)
-        character(len=*), intent(in) :: fami
-        character(len=16), intent(in):: option, compor(*)
-        integer(kind=8), intent(in)          :: ndim, nno, npg, nddl, lgpg
-        integer(kind=8), intent(in)          :: mate, iw, idff
-        real(kind=8), intent(in)     :: geomi(ndim, nno), crit(*), instm, instp
-        real(kind=8), intent(in)     :: vff(nno, npg)
-        real(kind=8), intent(in)     :: angmas(3), ddlm(nddl), ddld(nddl), siefm(3*ndim+2, npg)
-        real(kind=8), intent(in)     :: vim(lgpg, npg)
-        real(kind=8), intent(out)    :: fint(nddl), matr(nddl, nddl)
-        real(kind=8), intent(out)    :: siefp(3*ndim+2, npg), vip(lgpg, npg)
-        aster_logical, intent(in)    :: lMatr, lVect, lSigm, lVari
-        integer(kind=8), intent(out)         :: codret
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        integer(kind=8), intent(in) :: ndim, nno, npg, nddl, lgpg
+        integer(kind=8), intent(in) :: iw, idff
+        real(kind=8), intent(in) :: geomi(ndim, nno), instm, instp
+        real(kind=8), intent(in) :: vff(nno, npg)
+        real(kind=8), intent(in) :: ddlm(nddl), ddld(nddl), siefm(3*ndim+2, npg)
+        real(kind=8), intent(in) :: vim(lgpg, npg)
+        real(kind=8), intent(out) :: fint(nddl), matr(nddl, nddl)
+        real(kind=8), intent(out) :: siefp(3*ndim+2, npg), vip(lgpg, npg)
+        aster_logical, intent(in) :: lMatr, lVect, lSigm
+        integer(kind=8), intent(out)  :: codret
     end subroutine nmsfin
 end interface

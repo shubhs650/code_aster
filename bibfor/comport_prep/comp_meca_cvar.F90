@@ -19,7 +19,6 @@
 subroutine comp_meca_cvar(prepMapCompor)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -40,11 +39,11 @@ subroutine comp_meca_cvar(prepMapCompor)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: iFactorKeyword, nbFactorKeyword
-    character(len=16) :: post_iter, extern_addr
-    character(len=16) :: rela_comp, defo_comp, mult_comp, kit_comp(4), type_cpla
-    character(len=16) :: regu_visc, post_incr
+    character(len=16) :: relaComp, defoComp, multComp, kitComp(4), typeCpla
+    character(len=16) :: reguVisc, postIter, postIncr
     integer(kind=8) :: numeLawKit(4), nbVari, nbVariKit(4), numeLaw, nbVariUMAT
-    integer(kind=8) :: extern_type
+    integer(kind=8) :: solvBehavType
+    character(len=16) :: adrsMGIS
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -56,22 +55,22 @@ subroutine comp_meca_cvar(prepMapCompor)
         numeLawKit = 0
 
 ! ----- Get parameters
-        rela_comp = prepMapCompor%prepPara(iFactorKeyword)%rela_comp
-        defo_comp = prepMapCompor%prepPara(iFactorKeyword)%defo_comp
-        type_cpla = prepMapCompor%prepPara(iFactorKeyword)%type_cpla
-        kit_comp = prepMapCompor%prepPara(iFactorKeyword)%kit_comp
-        mult_comp = prepMapCompor%prepPara(iFactorKeyword)%mult_comp
-        post_iter = prepMapCompor%prepPara(iFactorKeyword)%post_iter
-        regu_visc = prepMapCompor%prepPara(iFactorKeyword)%regu_visc
-        post_incr = prepMapCompor%prepPara(iFactorKeyword)%post_incr
+        relaComp = prepMapCompor%prepPara(iFactorKeyword)%rela_comp
+        defoComp = prepMapCompor%prepPara(iFactorKeyword)%defo_comp
+        typeCpla = prepMapCompor%prepPara(iFactorKeyword)%type_cpla
+        kitComp = prepMapCompor%prepPara(iFactorKeyword)%kit_comp
+        multComp = prepMapCompor%prepPara(iFactorKeyword)%mult_comp
+        postIter = prepMapCompor%prepPara(iFactorKeyword)%post_iter
+        reguVisc = prepMapCompor%prepPara(iFactorKeyword)%regu_visc
+        postIncr = prepMapCompor%prepPara(iFactorKeyword)%post_incr
         nbVariUMAT = prepMapCompor%prepExte(iFactorKeyword)%nbVariUMAT
-        extern_addr = prepMapCompor%prepExte(iFactorKeyword)%extern_addr
-        extern_type = prepMapCompor%prepExte(iFactorKeyword)%extern_type
+        adrsMGIS = prepMapCompor%prepExte(iFactorKeyword)%adrsMGIS
+        solvBehavType = prepMapCompor%prepExte(iFactorKeyword)%solvBehavType
 
 ! ----- Count the number of internal state variables and index of behaviours
-        call comp_nbvari(rela_comp, defo_comp, type_cpla, kit_comp, &
-                         post_iter, mult_comp, regu_visc, post_incr, &
-                         extern_type, extern_addr, &
+        call comp_nbvari(relaComp, defoComp, typeCpla, kitComp, &
+                         postIter, multComp, reguVisc, postIncr, &
+                         solvBehavType, adrsMGIS, &
                          nbVariUMAT, &
                          nbVari, numeLaw, nbVariKit, numeLawKit)
 

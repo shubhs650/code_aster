@@ -18,11 +18,11 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                              post_iter, regu_visc, post_incr, &
-                              comp_code_py)
-        character(len=16), intent(in) :: rela_comp, defo_comp, type_cpla, kit_comp(4)
-        character(len=16), intent(in) :: post_iter, regu_visc, post_incr
-        character(len=16), intent(out) :: comp_code_py
+    subroutine comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                              postIter, reguVisc, postIncr, &
+                              compCodePY)
+        character(len=16), intent(in) :: relaComp, defoComp, typeCpla, kitComp(4)
+        character(len=16), intent(in) :: postIter, reguVisc, postIncr
+        character(len=16), intent(out) :: compCodePY
     end subroutine comp_meca_code
 end interface

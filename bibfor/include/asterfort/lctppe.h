@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine lctppe(side      , l_axis    , l_upda_jaco,&
@@ -27,12 +28,12 @@ interface
         integer(kind=8), intent(in) :: elem_dime
         aster_logical, intent(in) :: l_axis, l_upda_jaco
         integer(kind=8), intent(in) :: nb_node
-        real(kind=8), intent(in) :: elem_init(nb_node, elem_dime)
-        real(kind=8), intent(in) :: elem_coor(nb_node, elem_dime)
+        real(kind=8), intent(in) :: elem_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_code
         real(kind=8), intent(in) :: gauss_coor(2)
-        real(kind=8), intent(out) :: shape_func(9)
-        real(kind=8), intent(out) :: jacobian 
+        real(kind=8), intent(out) :: shape_func(MT_NNOMAX2D)
+        real(kind=8), intent(out) :: jacobian
         real(kind=8), intent(out) :: norm_g(3)
     end subroutine lctppe
 end interface

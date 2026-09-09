@@ -15,17 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine comp_mfront_modelem(elem_type_name, l_mfront_cp, &
-                                   model_mfront, &
-                                   codret, type_cpla)
-        character(len=16), intent(in) :: elem_type_name
+    subroutine comp_mfront_modelem(elemTypeName, l_mfront_cp, &
+                                   modelMGIS, cplaMGIS, codret)
+        character(len=16), intent(in) :: elemTypeName
         aster_logical, intent(in) :: l_mfront_cp
-        integer(kind=8), intent(out) :: model_mfront
+        integer(kind=8), intent(out) :: modelMGIS
+        character(len=16), intent(out) :: cplaMGIS
         integer(kind=8), intent(out) :: codret
-        character(len=16), intent(out) :: type_cpla
     end subroutine comp_mfront_modelem
 end interface

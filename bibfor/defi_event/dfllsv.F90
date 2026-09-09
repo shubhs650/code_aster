@@ -22,8 +22,7 @@ subroutine dfllsv(v_sdlist_linfor, v_sdlist_eevenr, v_sdlist_eevenk, sdlist_loca
                   event_typek, vale_ref, nom_cham, nom_cmp, &
                   crit_cmp, lst_loca, etat_loca, pene_maxi, resi_glob_maxi, &
                   action_typek, subd_methode, subd_auto, subd_pas_mini, &
-                  subd_pas, subd_niveau, pcent_iter_plus, coef_maxi, &
-                  subd_inst, subd_duree)
+                  subd_pas, subd_niveau, subd_inst, subd_duree)
 !
     implicit none
 !
@@ -60,8 +59,6 @@ subroutine dfllsv(v_sdlist_linfor, v_sdlist_eevenr, v_sdlist_eevenk, sdlist_loca
     character(len=16), intent(in) :: subd_auto
     real(kind=8), intent(in) :: subd_inst
     real(kind=8), intent(in) :: subd_duree
-    real(kind=8), intent(in) :: pcent_iter_plus
-    real(kind=8), intent(in) :: coef_maxi
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -93,8 +90,6 @@ subroutine dfllsv(v_sdlist_linfor, v_sdlist_eevenr, v_sdlist_eevenk, sdlist_loca
 ! In  subd_auto        : value of SUBD_AUTO for ACTION=DECOUPE
 ! In  subd_inst        : value of SUBD_INST for ACTION=DECOUPE
 ! In  subd_duree       : value of SUBD_DUREE for ACTION=DECOUPE
-! In  pcent_iter_plus  : value of PCENT_ITER_PLUS for ACTION=ITER_SUPPL
-! In  coef_maxi        : value of COEF_MAXI for ACTION=ADAPT_COEF_PENA
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -141,12 +136,10 @@ subroutine dfllsv(v_sdlist_linfor, v_sdlist_eevenr, v_sdlist_eevenk, sdlist_loca
         v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_STOP
     else if (action_typek .eq. failActionKeyword(FAIL_ACT_CUT)) then
         v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_CUT
-    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ITER)) then
-        v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_ITER
-    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ADAPT_COEF)) then
-        v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_ADAPT_COEF
     else if (action_typek .eq. failActionKeyword(FAIL_ACT_CONTINUE)) then
         v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_CONTINUE
+    else if (action_typek .eq. failActionKeyword(FAIL_ACT_ARCHI)) then
+        v_sdlist_eevenr(SIZE_LEEVR*(i_fail_save-1)+2) = FAIL_ACT_ARCHI
     else
         ASSERT(.false.)
     end if
@@ -211,16 +204,6 @@ subroutine dfllsv(v_sdlist_linfor, v_sdlist_eevenr, v_sdlist_eevenk, sdlist_loca
                 ASSERT(ASTER_FALSE)
             end if
         end if
-    end if
-
-! - Parameters for ACTION = 'ITER_SUPPL'
-    if (action_typek .eq. failActionKeyword(FAIL_ACT_ITER)) then
-        v_sdlist_esubdr(SIZE_LESUR*(i_fail_save-1)+7) = pcent_iter_plus
-    end if
-
-! - Parameters for ACTION = 'ADAPT_COEF_PENA'
-    if (action_typek .eq. failActionKeyword(FAIL_ACT_ADAPT_COEF)) then
-        v_sdlist_esubdr(SIZE_LESUR*(i_fail_save-1)+8) = coef_maxi
     end if
 !
     call jedema()

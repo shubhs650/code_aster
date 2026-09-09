@@ -19,10 +19,10 @@
 !
 interface
     subroutine lcconv(rela_comp, yd, dy, ddy, &
-                      nr, itmax, toler, iter, intg,&
-                      nmat, mater, r, rini, epstr,&
-                      typess, essai, icomp, nvi,&
-                      vinf,&
+                      nr, itmax, toler, iter, intg, &
+                      nmat, mater, r, rini, epstr, &
+                      typess, essai, cutLevel, nvi, &
+                      vinf, &
                       iret)
         integer(kind=8) :: nvi
         integer(kind=8) :: nmat
@@ -41,7 +41,7 @@ interface
         real(kind=8) :: epstr(6)
         integer(kind=8) :: typess
         real(kind=8) :: essai
-        integer(kind=8) :: icomp
+        integer(kind=8) :: cutLevel
         real(kind=8) :: vinf(nvi)
         real(kind=8) :: vind1(nvi)
         integer(kind=8) :: indi(7)

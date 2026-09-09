@@ -17,30 +17,27 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 !
-interface 
-    subroutine comthm_vf(ds_thm   , &
-                         lMatr    , lVect, lSigm    ,&
-                         lVari    , lMatrPred,&
-                         option   , j_mater  ,&
-                         type_elem, angl_naut,&
-                         ndim     , nbvari   ,&
-                         dimdef   , dimcon   ,&
-                         ifa      , valfac   , valcen, &
-                         adcome   , adcote   , adcp11, adcp12, adcp21, adcp22,&
-                         addeme   , addete   , addep1, addep2,&
-                         carcri   ,&
-                         defgem   , defgep   ,& 
-                         congem   , congep   ,&
-                         vintm    , vintp    ,&
-                         time_prev, time_curr,&
-                         dsde     , gravity  , retcom)
+interface
+    subroutine comthm_vf(ds_thm, &
+                         lMatr, lVect, lSigm, &
+                         lVari, lMatrPred, &
+                         option, typmod, &
+                         ndim, nbvari, &
+                         dimdef, dimcon, &
+                         ifa, valfac, valcen, &
+                         adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
+                         addeme, addete, addep1, addep2, &
+                         carcri, &
+                         defgem, defgep, &
+                         congem, congep, &
+                         vintm, vintp, &
+                         time_prev, time_curr, &
+                         dsde, gravity, retcom)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
         aster_logical, intent(in) :: lMatr, lVect, lSigm, lVari, lMatrPred
         character(len=16), intent(in) :: option
-        integer(kind=8), intent(in) :: j_mater
-        character(len=8), intent(in) :: type_elem(2)
-        real(kind=8), intent(in) :: angl_naut(3)
+        character(len=8), intent(in) :: typmod(2)
         integer(kind=8), intent(in) :: ndim, nbvari
         integer(kind=8), intent(in) :: dimdef, dimcon
         integer(kind=8), intent(in) :: adcome, adcote, adcp11, adcp12, adcp21, adcp22
@@ -60,4 +57,4 @@ interface
         real(kind=8), intent(inout) :: valcen(14, 6)
         real(kind=8), intent(inout) :: valfac(maxfa, 14, 6)
     end subroutine comthm_vf
-end interface 
+end interface

@@ -1,0 +1,171 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------------------------
+#  Test de la loi VMIS_ISOT_NL en 1D
+# --------------------------------------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+msh = LIRE_MAILLAGE(FORMAT="MED")
+
+mdl = AFFE_MODELE(
+    MAILLAGE=msh, AFFE=_F(GROUP_MA="line", PHENOMENE="MECANIQUE", MODELISATION="BARRE_2D_NL")
+)
+
+cara = AFFE_CARA_ELEM(MODELE=mdl, BARRE=_F(GROUP_MA="line", SECTION="GENERALE", AIRE=5.0))
+
+
+steel = DEFI_MATERIAU(ELAS=_F(E=2.0e5, NU=0.3), ECRO_NL=_F(R0=400, RH=2.0e3))
+
+
+mat = AFFE_MATERIAU(MAILLAGE=msh, AFFE=_F(GROUP_MA="line", MATER=steel))
+
+eps = 52.5e-3  # Correspond à kappa = 5.e-2 et sigma = 500 MPa
+
+ux = FORMULE(NOM_PARA="X", VALE="(X-2)*eps", eps=eps)
+uy = FORMULE(NOM_PARA="Y", VALE="(Y-1)*eps", eps=eps)
+
+load = AFFE_CHAR_MECA_F(MODELE=mdl, DDL_IMPO=_F(GROUP_MA="line", DX=ux, DY=uy))
+
+
+ampl = DEFI_FONCTION(
+    NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0), PROL_DROITE="LINEAIRE", PROL_GAUCHE="LINEAIRE"
+)
+
+
+time = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=(_F(JUSQU_A=1.0, NOMBRE=1),))
+
+disc = DEFI_LIST_INST(
+    METHODE="MANUEL", DEFI_LIST=_F(LIST_INST=time), ECHEC=_F(SUBD_PAS=5, SUBD_NIVEAU=5)
+)
+
+resu = MECA_NON_LINE(
+    MODELE=mdl,
+    CHAM_MATER=mat,
+    CARA_ELEM=cara,
+    EXCIT=_F(CHARGE=load, FONC_MULT=ampl),
+    COMPORTEMENT=_F(GROUP_MA="line", RELATION="VMIS_ISOT_NL", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=disc),
+    NEWTON=_F(PREDICTION="TANGENTE", MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(EFFORT_REFE=5e3, RESI_REFE_RELA=1.0e-3),
+)
+
+
+CALC_CHAMP(reuse=resu, RESULTAT=resu, CONTRAINTE="SIEF_NOEU")
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            RESULTAT=resu,
+            INST=1,
+            NOM_CHAM="SIEF_NOEU",
+            NOM_CMP="N",
+            GROUP_NO="extr",
+            CRITERE="ABSOLU",
+            REFERENCE="ANALYTIQUE",
+            PRECISION=1.0e-6,
+            VALE_CALC=2500,
+            VALE_REFE=2500,
+        ),
+    )
+)
+
+# --------------------------------------------------------------------------------------------------
+#  Le même calcul avec pilotage PRED_ELAS
+# --------------------------------------------------------------------------------------------------
+
+time_pilo = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=_F(JUSQU_A=1000.0, NOMBRE=1000))
+
+disc_pilo = DEFI_LIST_INST(
+    METHODE="MANUEL", DEFI_LIST=_F(LIST_INST=time_pilo), ECHEC=_F(SUBD_PAS=5, SUBD_NIVEAU=5)
+)
+
+resu_pilo = STAT_NON_LINE(
+    MODELE=mdl,
+    CHAM_MATER=mat,
+    CARA_ELEM=cara,
+    EXCIT=_F(CHARGE=load, TYPE_CHARGE="FIXE_PILO"),
+    COMPORTEMENT=_F(GROUP_MA="line", RELATION="VMIS_ISOT_NL", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=disc_pilo),
+    PILOTAGE=_F(
+        TYPE="PRED_ELAS",
+        ETA_PILO_MAX=1,
+        ETA_PILO_R_MIN=0,
+        PROJ_BORNES="OUI",
+        GROUP_MA="line",
+        COEF_MULT=10,
+    ),
+    NEWTON=_F(PREDICTION="TANGENTE", MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(EFFORT_REFE=5e3, RESI_REFE_RELA=1.0e-3),
+)
+
+
+CALC_CHAMP(reuse=resu_pilo, RESULTAT=resu_pilo, CONTRAINTE="SIEF_NOEU")
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            RESULTAT=resu_pilo,
+            INST=resu_pilo.getAccessParameters()["INST"][-1],
+            NOM_CHAM="SIEF_NOEU",
+            NOM_CMP="N",
+            GROUP_NO="extr",
+            CRITERE="ABSOLU",
+            REFERENCE="ANALYTIQUE",
+            PRECISION=1.0e-6,
+            VALE_CALC=2500,
+            VALE_REFE=2500,
+        ),
+    )
+)
+
+# COEF_MULT=10 -> DKA=5.e-3 -> NBR_PAS = 10 (cible finale ka=5.e-2)
+nbr_pas = CREA_TABLE(
+    LISTE=_F(PARA="NBR_PAS", LISTE_R=resu_pilo.getAccessParameters()["NUME_ORDRE"][-1:])
+)
+
+TEST_TABLE(
+    TABLE=nbr_pas,
+    NOM_PARA="NBR_PAS",
+    TYPE_TEST="MAX",
+    CRITERE="ABSOLU",
+    REFERENCE="ANALYTIQUE",
+    PRECISION=1.0e-6,
+    VALE_CALC=10,
+    VALE_REFE=10,
+)
+
+
+plas = POST_ELEM(MINMAX=_F(GROUP_MA="line", RESULTAT=resu_pilo, NOM_CHAM="VARI_ELGA", NOM_CMP="V1"))
+
+
+TEST_TABLE(
+    TABLE=plas,
+    NOM_PARA="MAX_V1",
+    REFERENCE="ANALYTIQUE",
+    VALE_CALC=0.005000000000000002,
+    VALE_REFE=0.05 / 10,
+    FILTRE=_F(NOM_PARA="NUME_ORDRE", VALE_I=1),
+)
+
+
+FIN()

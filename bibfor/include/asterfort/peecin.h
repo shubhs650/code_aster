@@ -15,17 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine peecin(resu, modele, mate, mateco, cara, nh,&
-                      nbocc)
-        character(len=*) :: resu
-        character(len=*) :: modele
-        character(len=*) :: mate, mateco
-        character(len=*) :: cara
-        integer(kind=8) :: nh
-        integer(kind=8) :: nbocc
+    subroutine peecin(tablOutZ, &
+                      modelZ, materFieldZ, materCodeZ, caraElemZ, numeHarm, nbFactorKeyword)
+        character(len=*), intent(in) :: tablOutZ, modelZ, materFieldZ, materCodeZ, caraElemZ
+        integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
     end subroutine peecin
 end interface

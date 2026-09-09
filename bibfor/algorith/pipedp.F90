@@ -16,34 +16,34 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine pipedp(BEHinteg, kpg, ksp, ndim, typmod, &
-                  mate, epsm, sigm, vim, epsp, &
+subroutine pipedp(BEHInteg, ndim, typmod, &
+                  epsm, sigm, vim, epsp, &
                   epsd, a0, a1)
 !
     use Behaviour_type
-!
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/matfpe.h"
+#include "asterf_types.h"
 #include "asterfort/betfpp.h"
 #include "asterfort/betmat.h"
 #include "asterfort/zerop2.h"
 #include "blas/ddot.h"
 #include "blas/dnrm2.h"
-    character(len=8) :: typmod(*)
-    integer(kind=8) :: ndim, mate, kpg, ksp
+!
+    type(Behaviour_Integ), intent(in) :: BEHInteg
+    character(len=8) :: typmod(2)
+    integer(kind=8) :: ndim
     real(kind=8) :: epsp(6), epsd(6)
     real(kind=8) :: epsm(6), vim(2), sigm(6), a0, a1
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
 ! ROUTINE MECA_NON_LINE (PILOTAGE - PRED_ELAS)
 !
 ! LOI DE COMPORTEMENT BETON_DOUBLE_DP
 !
-! ----------------------------------------------------------------------
-!
+! --------------------------------------------------------------------------------------------------
 !
 ! IN  NDIM   : DIMENSION DE L'ESPACE
 ! IN  TYPMOD : TYPE DE MODELISATION
@@ -60,53 +60,43 @@ subroutine pipedp(BEHinteg, kpg, ksp, ndim, typmod, &
 ! OUT A0     : LINEARISATION DU CRITERE : FEL = A0 + A1*ETA
 ! OUT A1     : IDEM A0
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    real(kind=8), parameter :: un = 1.d0, deux = 2.d0, trois = 3.d0, neuf = 9.d0
+    real(kind=8), parameter :: d23 = .66666666666666d0, d13 = .33333333333333d0
+    real(kind=8), parameter :: raci2 = sqrt(2.d0)
     integer(kind=8) :: ndimsi, k, nrac1, nrac2
     aster_logical :: trac, comp, notrac, nocomp
     real(kind=8) :: trsigp, trsigd, sigelp(6), sigeld(6)
     real(kind=8) :: eps1(6), eps2(6), pp(6), dd(6)
     real(kind=8) :: d1, d2, g1, g2, g3, g4
-    real(kind=8) :: kron(6)
     real(kind=8) :: p0, p1, p2, q0, q1, q2, eta, eta1, eta2
     real(kind=8) :: rac1(2), rac2(2)
     real(kind=8) :: e, nu, lambda, deuxmu
     real(kind=8) :: fc, ft, beta
     real(kind=8) :: a, b, c, d
-    real(kind=8) :: un, d23, d13, raci2, deux, trois, neuf
-    parameter(un=1.d0)
-    parameter(deux=2.d0)
-    parameter(trois=3.d0)
-    parameter(neuf=9.d0)
-    parameter(d23=.66666666666666d0)
-    parameter(d13=.33333333333333d0)
-!
-!
-    integer(kind=8) :: ndt, ndi, nr, nvi, nmat
-    parameter(nmat=90)
+    integer(kind=8) :: ndt, ndi, nr, nvi
+    integer(kind=8), parameter :: nmat = 90
     real(kind=8) :: materd(nmat, 2), materf(nmat, 2)
     real(kind=8) :: pc, pt, kuc, kut, ke, tbid, rbid, fcp, ftp
-    character(len=8) :: mod, fami
+    character(len=8) :: mod
     character(len=3) :: matcst
     blas_int :: b_incx, b_incy, b_n
-    data kron/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/
+    real(kind=8), parameter :: kron(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call matfpe(-1)
-!
-! --  OPTION ET MODELISATION
-!
+
+! - OPTION ET MODELISATION
     ndimsi = 2*ndim
-!
-! --  RECUPERATION MATERIAU
-    raci2 = sqrt(deux)
-!
+
     tbid = 0.d0
-    fami = 'RIGI'
     mod = typmod(1)
-    call betmat(fami, kpg, ksp, mod, mate, &
+    call betmat(BEHInteg%materPara%schemePara%fami, &
+                BEHInteg%materPara%schemePara%kpg, &
+                BEHInteg%materPara%schemePara%ksp, &
+                mod, BEHInteg%materPara%jvMaterCode, &
                 nmat, tbid, tbid, materd, materf, &
                 matcst, ndt, ndi, nr, nvi)
 !
@@ -116,7 +106,7 @@ subroutine pipedp(BEHinteg, kpg, ksp, ndim, typmod, &
 !
     pc = vim(1)
     pt = vim(2)
-    call betfpp(BEHinteg, materf, nmat, pc, pt, &
+    call betfpp(BEHInteg, materf, nmat, pc, pt, &
                 3, fc, ft, rbid, rbid, &
                 kuc, kut, ke)
 !

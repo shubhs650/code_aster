@@ -28,6 +28,7 @@ subroutine xcinem(axi, igeom, nnop, nnos, idepl, &
 #include "asterfort/assert.h"
 #include "asterfort/indent.h"
 #include "asterfort/xcalc_code.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xcalc_heav.h"
 !
     aster_logical, intent(in) :: axi
@@ -43,8 +44,8 @@ subroutine xcinem(axi, igeom, nnop, nnos, idepl, &
     integer(kind=8), intent(in) :: ddls
     integer(kind=8), intent(in) :: ddlm
     integer(kind=8), intent(in) :: heavn(nnop, 5)
-    real(kind=8), intent(in) :: fk(27, 3, 3)
-    real(kind=8), intent(in) :: dkdgl(27, 3, 3, 3)
+    real(kind=8), intent(in) :: fk(MT_NNOMAX3D, 3, 3)
+    real(kind=8), intent(in) :: dkdgl(MT_NNOMAX3D, 3, 3, 3)
     real(kind=8), intent(in) :: ff(nnop)
     real(kind=8), intent(in) :: dfdi(nnop, ndim)
     real(kind=8), intent(out) :: f(3, 3)

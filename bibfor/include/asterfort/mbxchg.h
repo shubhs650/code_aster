@@ -15,18 +15,22 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mbxchg(option, fami, nddl, nno, ncomp, kpg, npg, iepsin, itemps, ipoids, &
-                      igeom, imate, ipesa, ivectu, jvSief, vff, dff, alpha, beta)
-        character(len=16) :: option
-        character(len=4) :: fami
-        integer(kind=8) :: nddl, nno, ncomp, npg
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ipoids, igeom, imate, ipesa, iepsin, itemps
-        integer(kind=8) :: ivectu, jvSief
-        real(kind=8) :: dff(2, nno), alpha, beta, vff(nno)
+    subroutine mbxchg(plateOrie, &
+                      option, fami, &
+                      nddl, nno, ncomp, kpg, npg, &
+                      jvEpsi, jvInst, ipoids, jvGeom, &
+                      jvMaterc, jvPesa, jvVect, jvSief, &
+                      vff, dff)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: fami
+        integer(kind=8), intent(in) :: nddl, nno, ncomp, npg
+        integer(kind=8), intent(in) :: kpg
+        integer(kind=8), intent(in) :: ipoids, jvGeom, jvMaterc, jvPesa, jvEpsi, jvInst
+        integer(kind=8), intent(in) :: jvVect, jvSief
+        real(kind=8), intent(in) :: dff(2, nno), vff(nno)
     end subroutine mbxchg
 end interface

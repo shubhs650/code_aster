@@ -25,14 +25,9 @@ subroutine tuefge(nbNode, nbFourier)
 !
     implicit none
 !
-#include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/pipeElem_type.h"
-#include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
-#include "asterfort/utmess.h"
-#include "blas/daxpy.h"
 #include "jeveux.h"
 !
     integer(kind=8), intent(in) :: nbNode, nbFourier
@@ -46,7 +41,7 @@ subroutine tuefge(nbNode, nbFourier)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     real(kind=8) :: weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
     real(kind=8) :: efgeElga(PIPE_MAX_NPG, PIPE_NBDOF_BEAM)

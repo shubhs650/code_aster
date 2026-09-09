@@ -17,7 +17,9 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine tufull(option, nbFourier, nbDof)
+    subroutine tufull(materPara, option, nbFourier, nbDof)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
         character(len=16), intent(in) :: option
         integer(kind=8), intent(in) :: nbDof, nbFourier
     end subroutine tufull

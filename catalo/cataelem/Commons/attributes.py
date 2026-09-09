@@ -303,9 +303,13 @@ FORMULATION = Attribute(
     value=(
         "HHO_CSTE",
         "HHO_LINE",
+        "HHO_MLINE",
         "HHO_QUAD",
+        "HHO_MQUAD",
         "HHO_CUBI",
+        "HHO_MCUBI",
         "HHO_QUAR",
+        "HHO_MQUAR",
         "U_P_PHI",
         "U_P",
         "U_PSI",
@@ -317,9 +321,13 @@ FORMULATION = Attribute(
     comment="""
   FORMULATION =  'HHO_CSTE'  : formulation constante for HHO (0/0/0)
   FORMULATION =  'HHO_LINE'  : formulation linear for HHO (1/1/1)
+  FORMULATION =  'HHO_MLINE'  : formulation linear for HHO (1/2/1)
   FORMULATION =  'HHO_QUAD'  : formulation quadratic for HHO (2/2/2)
+  FORMULATION =  'HHO_MQUAD'  : formulation quadratic for HHO (2/3/2)
   FORMULATION =  'HHO_CUBI'  : formulation cubic for HHO (3/3/3)
+  FORMULATION =  'HHO_MCUBI'  : formulation cubic for HHO (3/4/3)
   FORMULATION =  'HHO_QUAR'  : formulation order 4 for HHO (4/4/4)
+  FORMULATION =  'HHO_MQUAR'  : formulation order 4 for HHO (4/5/4)
   FORMULATION =  'U_P_PHI' : formulation displacement/pressure/disp potential
   FORMULATION =  'U_P'    : formulation displacement/pressure
   FORMULATION =  'U_PSI'  : formulation displacement/speed potential
@@ -579,8 +587,9 @@ TYPMOD2 = Attribute(
         "ELEMJOIN",
         "GRADVARI",
         "GRADSIGM",
-        "GDVARINO",
         "INTERFAC",
+        "INTSOLPI",
+        "CABLE_GA",
         "PMF",
         "THM",
         "HHO",
@@ -595,6 +604,7 @@ TYPMOD2 = Attribute(
   TYPMOD2= GRADVARI l'element utilise des comportements non locaux (TYPMOD(2)='GRADVARI' pour NMCOMP)
            ELEMJOIN l'element utilise des comportements d'elements de joints (CZM sur des modelisations *_JOINT)
            INTERFAC l'element utilise des comportements d'elements d'interface (CZM sur des modelisations *_INTERFACE)
+           INTSOLPI l'element utilise des comportements d'elements d'interface sol-pieu (SP_* sur une modelisation 3D_SOLPIEUINT)
            PMF      l'element fait appel a des comportements 1D PMF
            THM      thermo-hydro-mechanic
            HHO      Hybrid High-Order elements

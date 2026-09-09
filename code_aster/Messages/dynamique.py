@@ -48,22 +48,22 @@ cata_msg = {
     ),
     5: _(
         """
- Pas de temps maximal (condition CFL) pour le schéma des différences centrées : %(r1)g s, sur la maille : %(k1)s
+Pas de temps maximal (condition CFL) pour le schéma des différences centrées : %(r1)g s, sur la maille %(i1)d
 """
     ),
     6: _(
         """
-  Pas de temps maximal (condition CFL) pour le schéma de Tchamwa-Wilgosz : %(r1)g s, sur la maille : %(k1)s
+Pas de temps maximal (condition CFL) pour le schéma de Tchamwa-Wilgosz : %(r1)g s, sur la maille %(i1)d
 """
     ),
     7: _(
         """
- Pas de temps maximal (condition CFL) pour le schéma des différences centrées : %(r1)g s
+Pas de temps maximal (condition CFL) pour le schéma des différences centrées : %(r1)g s
 """
     ),
     8: _(
         """
-  Pas de temps maximal (condition CFL) pour le schéma de Tchamwa-Wilgosz : %(r1)g s
+Pas de temps maximal (condition CFL) pour le schéma de Tchamwa-Wilgosz : %(r1)g s
 """
     ),
     9: _(

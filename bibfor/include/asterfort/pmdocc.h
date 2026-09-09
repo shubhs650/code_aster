@@ -18,9 +18,9 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine pmdocc(comporList, nbVari, multComp)
+    subroutine pmdocc(comporList, nbVari, relaComp, defoComp, multComp)
         character(len=16), intent(out) :: comporList(COMPOR_SIZE)
         integer(kind=8), intent(out) :: nbVari
-        character(len=16), intent(out) :: multComp
+        character(len=16), intent(out) :: relaComp, defoComp, multComp
     end subroutine pmdocc
 end interface

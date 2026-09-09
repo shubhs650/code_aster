@@ -17,14 +17,13 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine sigtmc(fami, nbsig, npg, ndim, &
-                      time, jvMaterCode, anglNaut, &
+    subroutine sigtmc(materPara, time, &
+                      nbsig, npg, ndim, &
                       indxVarcStrain, sigmVarc)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: nbsig, npg, ndim
+        use MaterialPara_type
         real(kind=8), intent(in) :: time
-        integer(kind=8), intent(in) :: jvMaterCode
-        real(kind=8), intent(in) :: anglNaut(3)
+        type(Material_Para), intent(inout) :: materPara
+        integer(kind=8), intent(in) :: nbsig, npg, ndim
         integer(kind=8), intent(in) :: indxVarcStrain
         real(kind=8), intent(out) :: sigmVarc(nbsig*npg)
     end subroutine sigtmc

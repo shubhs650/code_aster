@@ -117,11 +117,6 @@ SYC ne doit pas être valorisé pour NU nul dans DEFI_MATERIAU
  la méthode de localisation  %(k1)s  est indisponible actuellement
 """
     ),
-    65: _(
-        """
-  %(k1)s  impossible actuellement
-"""
-    ),
     72: _(
         """
   jacobien du système non linéaire à résoudre nul

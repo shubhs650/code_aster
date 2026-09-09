@@ -25,6 +25,7 @@ module contact_type
 !
 #include "asterf_types.h"
 #include "contact_module.h"
+#include "MeshTypes_type.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -36,6 +37,9 @@ module contact_type
 ! --------------------------------------------------------------------------------------------------
 !
     type ContactParameters
+    !! Reso Geom parameters
+        integer(kind=8)                             :: reso_geom = 0
+
     !! Contact parameters
         integer(kind=8)                             :: algo_cont = 0
         integer(kind=8)                             :: type_cont = 0
@@ -43,14 +47,14 @@ module contact_type
         integer(kind=8)                             :: jac_type = 0
         integer(kind=8)                             :: inte_type = 0
         real(kind=8)                        :: vari_cont_coef = 0.d0
-        real(kind=8), dimension(9)          :: coef_cont = 0.d0
+        real(kind=8), dimension(MT_NNOMAX2D)          :: coef_cont = 0.d0
 
     !! Friction paramaters
         aster_logical                       :: l_fric = ASTER_FALSE
         integer(kind=8)                             :: algo_fric = 0
         integer(kind=8)                             :: type_fric = 0
-        real(kind=8), dimension(9)          :: coef_fric = 0.d0
-        real(kind=8), dimension(9)          :: threshold = 0.d0
+        real(kind=8), dimension(MT_NNOMAX2D)          :: coef_fric = 0.d0
+        real(kind=8), dimension(MT_NNOMAX2D)          :: threshold = 0.d0
         real(kind=8)                        :: threshold_given = 0.d0
 
     !! Other
@@ -63,34 +67,34 @@ module contact_type
     !! Slave side parameters
         integer(kind=8)                             :: nb_node_slav = 0
         character(len=8)                    :: elem_slav_code = " "
-        real(kind=8), dimension(3, 9)        :: coor_slav_init = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_slav_prev = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_slav_curr = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_slav_pair = 0.d0
-        real(kind=8), dimension(3, 9)        :: depl_slav_curr = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_slav_init = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_slav_prev = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_slav_curr = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_slav_pair = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: depl_slav_curr = 0.d0
         real(kind=8), dimension(4)          :: lagc_slav_curr = 0.d0
         real(kind=8), dimension(2, 4)        :: lagf_slav_curr = 0.d0
         integer(kind=8)                             :: nb_lagr_c = 0
-        integer(kind=8), dimension(9)               :: indi_lagc = 0
+        integer(kind=8), dimension(MT_NNOMAX2D)               :: indi_lagc = 0
 
     !! Slave cell volu
         integer(kind=8)                             :: nb_node_volu = 0
         character(len=8)                    :: elem_volu_code = " "
-        real(kind=8), dimension(3, 27)        :: coor_volu_init = 0.d0
-        real(kind=8), dimension(3, 27)        :: coor_volu_prev = 0.d0
-        real(kind=8), dimension(3, 27)        :: coor_volu_curr = 0.d0
-        real(kind=8), dimension(3, 27)        :: coor_volu_pair = 0.d0
-        real(kind=8), dimension(3, 27)        :: depl_volu_curr = 0.d0
-        integer(kind=8), dimension(9)                :: mapVolu2Surf = 0
+        real(kind=8), dimension(3, MT_NNOMAX3D)        :: coor_volu_init = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX3D)        :: coor_volu_prev = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX3D)        :: coor_volu_curr = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX3D)        :: coor_volu_pair = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX3D)        :: depl_volu_curr = 0.d0
+        integer(kind=8), dimension(MT_NNOMAX2D)        :: mapVolu2Surf = 0
 
     !! Master side paramaters
         integer(kind=8)                             :: nb_node_mast = 0
         character(len=8)                    :: elem_mast_code = " "
-        real(kind=8), dimension(3, 9)        :: coor_mast_init = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_mast_prev = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_mast_curr = 0.d0
-        real(kind=8), dimension(3, 9)        :: coor_mast_pair = 0.d0
-        real(kind=8), dimension(3, 9)        :: depl_mast_curr = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_mast_init = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_mast_prev = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_mast_curr = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: coor_mast_pair = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D)        :: depl_mast_curr = 0.d0
 
     !! Time
         real(kind=8) :: time_prev = 0.d0, time_curr = 0.d0
@@ -105,8 +109,8 @@ module contact_type
         integer(kind=8) :: cellDime = 0
         integer(kind=8) :: nbNode = 0
         character(len=8) :: cellCode = " "
-        real(kind=8), dimension(3, 9) :: coorNodeGlob = 0.d0
-        real(kind=8), dimension(2, 9) :: coorNodePara = 0.d0
+        real(kind=8), dimension(3, MT_NNOMAX2D) :: coorNodeGlob = 0.d0
+        real(kind=8), dimension(2, MT_NNOMAX2D) :: coorNodePara = 0.d0
     end type Cell_GeomC
 
     type Contact_CellGeom

@@ -16,45 +16,47 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine te0425(nomopt, nomte)
+subroutine te0425(option, nomte)
 !
-    use HHO_type
+    use HHO_basis_module
     use HHO_compor_module
-    use HHO_utils_module
-    use HHO_size_module
-    use HHO_quadrature_module
-    use HHO_Meca_module
+    use HHO_eval_module
+    use HHO_GV_module
     use HHO_init_module, only: hhoInfoInitCell
     use HHO_LargeStrainMeca_module
-    use HHO_GV_module
-    use HHO_basis_module
-    use HHO_eval_module
     use HHO_matrix_module
-!
+    use HHO_Meca_module
+    use HHO_quadrature_module
+    use HHO_size_module
+    use HHO_type
+    use HHO_utils_module
     implicit none
 !
-#include "jeveux.h"
-#include "asterf_types.h"
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/jevech.h"
-#include "asterfort/pil000.h"
+#include "asterfort/pi0000.h"
+#include "asterfort/pidefo_hho.h"
 #include "asterfort/readVector.h"
+#include "jeveux.h"
+!
+    character(len=16), intent(in) :: nomte, option
 !
 ! --------------------------------------------------------------------------------------------------
-!  HHO
-!  Mechanics - STAT_NON_LINE - Pilotage - GRAD_HHO
+!
+! HHO
+! Mechanics - STAT_NON_LINE - Pilotage - GRAD_HHO
 !
 ! In  option           : name of option to compute
 ! In  nomte            : type of finite element
+!
 ! --------------------------------------------------------------------------------------------------
-    character(len=16) :: nomte, nomopt
 !
-! --- Local variables
-!
+    character(len=8), parameter :: fami = "RIGI", typmod2 = "GRADVARI"
     type(HHO_Data) :: hhoDataMk, hhoDataGv
     type(HHO_Cell) :: hhoCell
     type(HHO_Meca_State) :: hhoMecaState
@@ -62,7 +64,6 @@ subroutine te0425(nomopt, nomte)
     type(HHO_Compor_State) :: hhoCS
     type(HHO_basis_cell) :: hhoBasisCell
     type(HHO_GV_State):: hhoGVState
-!
     integer(kind=8), parameter :: nmax = 11
     real(kind=8), parameter :: rac2 = sqrt(2.d0)
     real(kind=8) :: BSCEval(MSIZE_CELL_SCAL)
@@ -76,55 +77,52 @@ subroutine te0425(nomopt, nomte)
     real(kind=8), dimension(MSIZE_CELL_MAT) :: E_0_coeff, E_pilo_coeff
     real(kind=8) :: tau, etamin, etamax, coorpg(3)
     real(kind=8) :: E_prev(nmax), E_cste(nmax), E_pilo(nmax), E_0(nmax), E_incr(nmax)
-    real(kind=8) :: copilo(5, MAX_QP_CELL), sigma(nmax)
+    real(kind=8) :: copilo(5, MSIZE_QP_CELL), sigma(nmax)
     real(kind=8) :: G_prev(3, 3), G_incr(3, 3), G_pilo(3, 3), G_0(3, 3)
     real(kind=8) :: F_prev(3, 3), F_incr(3, 3), F_pilo(3, 3), F_0(3, 3)
     real(kind=8) :: GV_prev(3), GV_incr(3), GV_0(3), GV_pilo(3), GV_cste(3)
     real(kind=8) :: var_prev, var_incr, var_0, var_pilo, var_cste
     real(kind=8) :: lag_prev, lag_incr, lag_0, lag_pilo, lag_cste
-    integer(kind=8) :: mk_cbs, mk_fbs, mk_total_dofs, mk_gbs, mk_gbs_sym
+    integer(kind=8) :: ndimsi
+    integer(kind=8) :: mk_cbs, mk_fbs, mk_total_dofs, mk_gbs, mk_gbs_sym, mkb_gbs_axis
     integer(kind=8) :: gv_cbs, gv_fbs, gv_total_dofs, gv_gbs, total_dofs
     integer(kind=8) :: ipg, npg, k, neps, nmk, gv_faces_dofs, gv_cell_offset
-    integer(kind=8) :: iborne, ictau, itype, imate
-    character(len=4), parameter :: fami = 'RIGI'
+    integer(kind=8) :: iborne, ictau, itype, jvMaterc
     character(len=16) :: pilo
     real(kind=8), pointer :: v_copilo(:) => null()
 !
-! --- Get HHO informations
+! --------------------------------------------------------------------------------------------------
 !
+    if (option /= "PILO_PRED_DEFO" .and. option /= "PILO_PRED_ELAS") then
+        ASSERT(ASTER_FALSE)
+    end if
+
+! - Get element parameters
+    call elrefe_info(fami=fami, npg=npg)
+
+! - Get HHO data on the modelisation
     call hhoInfoInitCell(hhoCell, hhoDataMk)
     call hhoDataGVInit(hhoDataGv)
-!
-! --- Get element parameters
-!
-    call elrefe_info(fami=fami, npg=npg)
-!
-! --- Number of dofs
+
+! - Number of dofs
     call hhoMecaNLDofs(hhoCell, hhoDataMk, mk_cbs, mk_fbs, mk_total_dofs, &
-                       mk_gbs, mk_gbs_sym)
+                       mk_gbs, mk_gbs_sym, mkb_gbs_axis)
     call hhoTherNLDofs(hhoCell, hhoDataGv, gv_cbs, gv_fbs, gv_total_dofs, gv_gbs)
     total_dofs = mk_total_dofs+gv_total_dofs
     gv_faces_dofs = gv_total_dofs-gv_cbs
     gv_cell_offset = gv_faces_dofs+1
-!
-    if (nomopt /= "PILO_PRED_DEFO" .and. nomopt /= "PILO_PRED_ELAS") then
-        ASSERT(ASTER_FALSE)
-    end if
-!
-! --- Initialize quadrature for the rigidity
-!
+
+! - Initialize quadrature for the rigidity
     call hhoQuadCellRigi%initCell(hhoCell, npg)
-!
-! --- Type of finite element
-!
-    call hhoCS%initialize(fami, nomopt, hhoCell%ndim, hhoCell%barycenter)
+
+! - Type of finite element
+    call hhoCS%initialize(fami, option, hhoCell%ndim, hhoCell%barycenter, typmod2)
     hhoCS%typmod(2) = 'GRADVARI'
     call hhoMecaState%initialize(hhoCell, hhoDataMk, hhoCS, hhoDataGv)
     call hhoGVState%initialize(hhoCell, hhoDataMk, hhoDataGv, hhoCS)
     call hhoBasisCell%initialize(hhoCell)
-!
-! --- Compute Operators
-!
+
+! - Compute Operators
     call hhoCalcOpGv(hhoCell, hhoDataMk, hhoDataGv, hhoCS%l_largestrain, &
                      hhoMecaState, hhoGvState)
 !
@@ -136,20 +134,19 @@ subroutine te0425(nomopt, nomte)
     call hhoExtrField(hhoCell, hhoDataMk, hhoDataGv, &
                       tmp_pilo, depl_pilo, vari_pilo, lagv_pilo)
 !
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PMATERC', 'L', jvMaterc)
     call jevech('PTYPEPI', 'L', itype)
 !
     pilo = zk16(itype)
+    call jevech('PCDTAU', 'L', ictau)
+    tau = zr(ictau)
     if (pilo .eq. 'PRED_ELAS') then
-        call jevech('PCDTAU', 'L', ictau)
         call jevech('PBORNPI', 'L', iborne)
-!
-        tau = zr(ictau)
         etamin = zr(iborne+1)
         etamax = zr(iborne)
     end if
-!
-! ----- compute E_prev = gradrec_sym * depl_prev
+
+! - Compute E_prev = gradrec_sym * depl_prev
     call hhoMecaState%grad%dot(hhoMecaState%depl_prev, E_prev_coeff)
     call hhoMecaState%grad%dot(hhoMecaState%depl_incr, E_incr_coeff)
     call hhoMecaState%grad%dot(depl_0, E_0_coeff)
@@ -234,17 +231,25 @@ subroutine te0425(nomopt, nomte)
 !
 ! --- PILOTAGE PAR L'INCREMENT DE DEFORMATION
 !
-        if (pilo == "PRED_ELAS") then
+        ndimsi = 2*hhoCell%ndim
+        if (option == "PILO_PRED_ELAS") then
             sigma(1:neps) = hhoCS%sig_prev((ipg-1)*neps+1:ipg*neps)
-            do k = 4, 2*hhoCell%ndim
+            do k = 4, ndimsi
                 sigma(k) = sigma(k)*rac2
             end do
+            call pi0000(hhoCS%BEHInteg, hhoCS%compor, hhoCS%typmod, hhoCell%ndim, &
+                        E_prev(1:ndimsi), E_cste(1:ndimsi), E_pilo(1:ndimsi), &
+                        sigma(1:ndimsi), hhoCS%vari_prev((ipg-1)*hhoCS%lgpg+1:ipg*hhoCS%lgpg), &
+                        tau, etamin, etamax, copilo(:, ipg))
+
+        else if (option == "PILO_PRED_DEFO") then
+            call pidefo_hho(hhoCS%compor, &
+                            hhoCell%ndim, ipg, F_prev, &
+                            E_prev, E_cste, E_pilo, tau, copilo)
+
+        else
+            ASSERT(ASTER_FALSE)
         end if
-!
-        call pil000(pilo, hhoCS%compor, neps, tau, zi(imate), &
-                    hhoCS%vari_prev((ipg-1)*hhoCS%lgpg+1:ipg*hhoCS%lgpg), sigma, &
-                    E_prev, E_cste, E_pilo, &
-                    hhoCS%typmod, etamin, etamax, copilo(1:5, ipg))
     end do
 !
     call jevech('PCOPILO', 'E', vr=v_copilo)

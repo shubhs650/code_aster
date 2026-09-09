@@ -17,8 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine vdxedg(nomte, option, nodeCoor, &
+    subroutine vdxedg(plateCara, plateOrie, &
+                      nomte, option, nodeCoor, &
                       degeElga, degeElno)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         character(len=16), intent(in) :: nomte, option
         real(kind=8), intent(in) :: nodeCoor(3, 9)
         real(kind=8), intent(out) :: degeElga(72), degeElno(8, 9)

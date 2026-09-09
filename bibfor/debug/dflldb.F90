@@ -57,7 +57,7 @@ subroutine dflldb(sdlist)
     real(kind=8), pointer :: sdlistInfor(:) => null()
     character(len=24) :: sdlistAEvenrName
     real(kind=8), pointer :: sdlistAEvenr(:) => null()
-    real(kind=8) :: valeRefe, peneMaxi, resiGlobMaxi, pcent_iter_plus, coef_maxi
+    real(kind=8) :: valeRefe, peneMaxi, resiGlobMaxi
     character(len=16):: fieldName, cmpName, cmpCrit
     integer(kind=8) :: nb_incr_seuil, nb_iter_newt, crit_compi
     integer(kind=8) :: eventType, action_type
@@ -131,27 +131,16 @@ subroutine dflldb(sdlist)
             end if
 
 ! --------- Action
-            pcent_iter_plus = sdlistESubdr(SIZE_LESUR*(iFail-1)+7)
-            coef_maxi = sdlistESubdr(SIZE_LESUR*(iFail-1)+8)
             action_type = nint(sdlistEEvenr(SIZE_LEEVR*(iFail-1)+2))
             if (action_type .eq. FAIL_ACT_STOP) then
                 call utmess('I', 'DISCRETISATION3_30')
             else if (action_type .eq. FAIL_ACT_CUT) then
                 call utmess('I', 'DISCRETISATION3_31')
                 call dflld2(sdlist, iFail)
-            else if (action_type .eq. FAIL_ACT_ITER) then
-                call utmess('I', 'DISCRETISATION3_32')
-                if (nint(sdlistESubdr(SIZE_LESUR*(iFail-1)+1)) .eq. 0) then
-                    call utmess('I', 'DISCRETISATION3_41', sr=pcent_iter_plus)
-                else
-                    call utmess('I', 'DISCRETISATION3_42', sr=pcent_iter_plus)
-                    call dflld2(sdlist, iFail)
-                end if
-            else if (action_type .eq. FAIL_ACT_ADAPT_COEF) then
-                call utmess('I', 'DISCRETISATION3_35')
-                call utmess('I', 'DISCRETISATION3_45', sr=coef_maxi)
             else if (action_type .eq. FAIL_ACT_CONTINUE) then
                 call utmess('I', 'DISCRETISATION3_36')
+            else if (action_type .eq. FAIL_ACT_ARCHI) then
+                call utmess('I', 'DISCRETISATION3_37')
             else
                 ASSERT(.false.)
             end if

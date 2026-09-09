@@ -100,6 +100,7 @@ CALC_CHAMP = OPER(
             AU_MOINS_UN(
                 "CONTRAINTE",
                 "DEFORMATION",
+                "DEPLACEMENT",
                 "ENERGIE",
                 "CRITERES",
                 "VARI_INTERNE",
@@ -123,6 +124,14 @@ CALC_CHAMP = OPER(
             max="**",
             fr=tr("Options pour le calcul de deformations"),
             into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEFORMATION, categorie="lin"),
+        ),
+        DEPLACEMENT=SIMP(
+            statut="f",
+            typ="TXM",
+            validators=NoRepeat(),
+            max="**",
+            fr=tr("Options pour le calcul de deplacements"),
+            into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEPLACEMENT, categorie="lin"),
         ),
         ENERGIE=SIMP(
             statut="f",
@@ -212,6 +221,7 @@ CALC_CHAMP = OPER(
             AU_MOINS_UN(
                 "CONTRAINTE",
                 "DEFORMATION",
+                "DEPLACEMENT",
                 "ENERGIE",
                 "CRITERES",
                 "VARI_INTERNE",
@@ -236,6 +246,14 @@ CALC_CHAMP = OPER(
             max="**",
             fr=tr("Options pour le calcul de deformations"),
             into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEFORMATION, categorie="lin"),
+        ),
+        DEPLACEMENT=SIMP(
+            statut="f",
+            typ="TXM",
+            validators=NoRepeat(),
+            max="**",
+            fr=tr("Options pour le calcul de deplacement"),
+            into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEPLACEMENT, categorie="lin"),
         ),
         ENERGIE=SIMP(
             statut="f",
@@ -339,6 +357,7 @@ CALC_CHAMP = OPER(
                 "SOUS_POINT",
                 "CONTRAINTE",
                 "DEFORMATION",
+                "DEPLACEMENT",
                 "ENERGIE",
                 "CRITERES",
                 "VARI_INTERNE",
@@ -371,6 +390,14 @@ CALC_CHAMP = OPER(
             max="**",
             fr=tr("Options pour le calcul de deformations"),
             into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEFORMATION, categorie="nonlin"),
+        ),
+        DEPLACEMENT=SIMP(
+            statut="f",
+            typ="TXM",
+            validators=NoRepeat(),
+            max="**",
+            fr=tr("Options pour le calcul de deplacement"),
+            into=C_NOM_CHAM_INTO(phenomene=Phenomenon.DEPLACEMENT, categorie="nonlin"),
         ),
         ENERGIE=SIMP(
             statut="f",

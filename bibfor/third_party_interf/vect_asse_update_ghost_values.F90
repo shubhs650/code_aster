@@ -22,7 +22,6 @@ subroutine vect_asse_update_ghost_values(vasse, nume_equa)
 #include "asterf_debug.h"
 #include "asterf.h"
 #include "asterfort/dismoi.h"
-#include "asterfort/isParallelMesh.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"

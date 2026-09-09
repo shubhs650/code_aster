@@ -27,9 +27,13 @@ module crea_maillage_module
 !
 #include "jeveux.h"
 #include "asterf_types.h"
+#include "asterc/asmpi_allgather_i.h"
+#include "asterc/asmpi_allgatherv_r.h"
 #include "asterc/asmpi_comm.h"
 #include "asterc/asmpi_sendrecv_i.h"
 #include "asterc/asmpi_sendrecv_r.h"
+#include "asterc/asmpi_split_comm.h"
+#include "asterc/asmpi_barrier_wrap.h"
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/asmpi_comm_vect.h"
@@ -185,6 +189,7 @@ module crea_maillage_module
         integer(ip), allocatable :: faces(:)
         integer(ip), allocatable :: edges(:)
         integer(ip), allocatable :: volumes(:)
+        integer(ip) :: global_id
     end type
 !
     type Mmesh
@@ -217,6 +222,7 @@ module crea_maillage_module
         integer(kind=8), pointer :: v_typema(:) => null()
         aster_logical :: debug = ASTER_FALSE
         aster_logical :: isHPC, convert_max = ASTER_TRUE
+        aster_logical :: isGlobNumSet = ASTER_FALSE
         integer(kind=8) :: info = 0
 ! ----- member functions
     contains
@@ -246,8 +252,8 @@ module crea_maillage_module
         procedure, private, pass :: convert_face
         procedure, private, pass :: convert_volume
         procedure, private, pass :: convert_one_cell
-        procedure, private, pass :: copy_group_ma
-        procedure, private, pass :: copy_group_no
+        procedure, public, pass :: copy_group_ma
+        procedure, public, pass :: copy_group_no
         procedure, private, pass :: find_edge
         procedure, private, pass :: find_face
         procedure, private, pass :: find_volume
@@ -260,6 +266,7 @@ module crea_maillage_module
         procedure, private, pass :: fix_measure
         procedure, private, pass :: fix_normal_face
         procedure, private, pass :: build_inv_conn
+        procedure, private, pass :: barycenter_alge
     end type
 !
 !===================================================================================================
@@ -269,8 +276,32 @@ module crea_maillage_module
     public :: Medge, Mface, Mcell, Mmesh, Mconverter
     private :: numbering_edge, numbering_face, dividing_cell, mult_elem
     private :: sort_nodes_face, check_conformity_cell, check_conformity_face
-    private :: sort_nodes_edge
+    private :: sort_nodes_edge, barycenter_alge, search_in_list
 contains
+!
+!===================================================================================================
+!
+!===================================================================================================
+    integer(ip) function search_in_list(name, nb_grp, list_name)
+!
+        implicit none
+!
+        integer(kind=8), intent(in) :: nb_grp
+        character(len=24), intent(in) :: name, list_name(*)
+!
+        integer(kind=8) :: i_name
+!
+        search_in_list = -one_ip
+!
+        do i_name = 1, nb_grp
+            if (name .eq. list_name(i_name)) then
+                search_in_list = int(i_name, kind=ip)
+                exit
+            end if
+        end do
+!
+    end function
+
 !
 !===================================================================================================
 !
@@ -2279,9 +2310,9 @@ contains
         character(len=24) :: cooval, coodsc, grpnoe
         character(len=24) :: gpptnn, grpmai, gpptnm, connex, titre, typmai, adapma
         character(len=4) :: dimesp
-        integer(ip) :: i_node, nno, i_cell, node_id, cell_id
+        integer(ip) :: i_node, nno, i_cell, node_id, cell_id, cell_id2
         integer(kind=8) :: rank, nbproc, nb_no_loc, deca, ntgeo, nbnoma
-        integer(kind=8) :: pCellShift, hugeValue, iProc, iCount
+        integer(kind=8) :: nb_ma_loc
         mpi_int :: mrank, msize, i_proc
         real(kind=8):: start, end
         real(kind=8), pointer :: v_coor(:) => null()
@@ -2290,9 +2321,8 @@ contains
         integer(kind=8), pointer :: v_noex(:) => null()
         integer(kind=8), pointer :: v_maex(:) => null()
         integer(kind=8), allocatable :: v_nuloc(:)
-        integer(kind=8), pointer :: v_nulogl(:) => null()
+        integer(kind=8), pointer :: v_nunogl(:) => null()
         integer(kind=8), pointer :: v_numagl(:) => null()
-        integer(kind=8), pointer :: nbCellPerProc(:) => null()
         integer(kind=4), pointer :: v_lastlayer(:) => null()
 !
         call jemarq()
@@ -2315,9 +2345,16 @@ contains
 ! --- Create nodes
 !
 ! ------ Copy coordinates
-        call wkvect(cooval, 'G V R', this%nb_nodes*3, vr=v_coor)
+        call wkvect(cooval, 'G V R', max(this%nb_nodes*3, 1), vr=v_coor)
+        call jeecra(cooval, 'LONUTI', this%nb_nodes*3)
         if (this%isHPC) then
-            call wkvect(mesh_out//'.NOEX', 'G V I', to_aster_int(this%nb_nodes), vi=v_noex)
+            call wkvect(mesh_out//'.NOEX', 'G V I', max(to_aster_int(this%nb_nodes), 1), vi=v_noex)
+            call jeecra(mesh_out//'.NOEX', 'LONUTI', to_aster_int(this%nb_nodes))
+            if (this%isGlobNumSet) then
+                call wkvect(mesh_out//'.NUNOLG', 'G V I', max(to_aster_int(this%nb_nodes), 1), &
+                            vi=v_nunogl)
+                call jeecra(mesh_out//'.NUNOLG', 'LONUTI', to_aster_int(this%nb_nodes))
+            end if
         end if
         call codent(to_aster_int(this%dim_mesh), 'G', dimesp)
         call jeecra(cooval, 'DOCU', cval=dimesp)
@@ -2330,6 +2367,9 @@ contains
                 v_coor(3*(node_id-1)+1:3*(node_id-1)+3) = this%nodes(i_node)%coor(1:3)
                 if (this%isHPC) then
                     v_noex(node_id) = to_aster_int(this%nodes(i_node)%owner)
+                    if (this%isGlobNumSet) then
+                        v_nunogl(node_id) = to_aster_int(this%nodes(i_node)%global_id)
+                    end if
                     if (v_noex(node_id) == rank) then
                         nb_no_loc = nb_no_loc+1
                     end if
@@ -2337,8 +2377,8 @@ contains
             end if
         end do
         ASSERT(node_id == this%nb_nodes)
-! ------ Create Global numbering
-        if (this%isHPC) then
+! ! ------ Create Global node numbering
+        if (this%isHPC .and. .not. this%isGlobNumSet) then
             allocate (v_nuloc(nbproc))
             v_nuloc = 0
             v_nuloc(rank+1) = nb_no_loc
@@ -2349,11 +2389,13 @@ contains
             end do
             deallocate (v_nuloc)
 !
-            call wkvect(mesh_out//'.NUNOLG', 'G V I', to_aster_int(this%nb_nodes), vi=v_nulogl)
-            v_nulogl = -1
+            call wkvect(mesh_out//'.NUNOLG', 'G V I', max(to_aster_int(this%nb_nodes), 1), &
+                        vi=v_nunogl)
+            call jeecra(mesh_out//'.NUNOLG', 'LONUTI', to_aster_int(this%nb_nodes))
+            v_nunogl = -1
             do i_node = one_ip, this%nb_nodes
                 if (v_noex(i_node) == rank) then
-                    v_nulogl(i_node) = deca
+                    v_nunogl(i_node) = deca
                     deca = deca+1
                 end if
             end do
@@ -2376,34 +2418,24 @@ contains
             end if
         end do
 ! ------ Create connectivity
-        call wkvect(typmai, 'G V I', to_aster_int(this%nb_cells), vi=v_int)
-        call jecrec(connex, 'G V I', 'NU', 'CONTIG', 'VARIABLE', to_aster_int(this%nb_cells))
+        call wkvect(typmai, 'G V I', max(to_aster_int(this%nb_cells), 1), vi=v_int)
+        call jeecra(typmai, 'LONUTI', to_aster_int(this%nb_cells))
+        call jecrec(connex, 'G V I', 'NU', 'CONTIG', 'VARIABLE', &
+                    max(to_aster_int(this%nb_cells), 1))
         call jeecra(connex, 'NUTIOC', to_aster_int(this%nb_cells))
         call jeecra(connex, 'LONT', nbnoma)
         if (this%isHPC) then
-            call wkvect(mesh_out//'.MAEX', 'G V I', to_aster_int(this%nb_cells), vi=v_maex)
-            call wkvect(mesh_out//'.NUMALG', 'G V I', to_aster_int(this%nb_cells), vi=v_numagl)
-            AS_ALLOCATE(vi=nbCellPerProc, size=nbproc+1)
-            nbCellPerProc(rank+2) = to_aster_int(this%nb_total_cells)
-            call asmpi_comm_vect('MPI_SUM', 'I', nbval=nbproc+1, vi=nbCellPerProc)
-            do iProc = one_ip, nbproc
-                nbCellPerProc(iProc+1) = nbCellPerProc(iProc+1)+nbCellPerProc(iProc)
-            end do
-            pCellShift = nbCellPerProc(rank+1)
-! --------- A huge value is used for global numbering of cells which are not
-!           owned by current processor because to obtain the true value
-!           it must be mandatory to communicate (#34152)
-            hugeValue = huge(pCellShift)
-            AS_DEALLOCATE(vi=nbCellPerProc)
-        else
-            pCellShift = 0
-            hugeValue = 0
+            call wkvect(mesh_out//'.MAEX', 'G V I', max(to_aster_int(this%nb_cells), 1), vi=v_maex)
+            call jeecra(mesh_out//'.MAEX', 'LONUTI', to_aster_int(this%nb_cells))
         end if
 !
-        iCount = pCellShift+1
+        nb_ma_loc = 0
+        cell_id2 = 0
         do i_cell = one_ip, this%nb_total_cells
             if (this%cells(i_cell)%keep) then
+                cell_id2 = cell_id2+one_ip
                 cell_id = this%cells(i_cell)%id
+                ASSERT(cell_id == cell_id2)
                 v_int(cell_id) = this%converter%cata_type(this%cells(i_cell)%type)
                 nno = this%converter%nno(this%cells(i_cell)%type)
                 call jeecra(jexnum(connex, to_aster_int(cell_id)), 'LONMAX', to_aster_int(nno))
@@ -2418,14 +2450,34 @@ contains
                 if (this%isHPC) then
                     v_maex(cell_id) = this%owner_cell(nno, this%cells(i_cell)%nodes)
                     if (v_maex(cell_id) .eq. rank) then
-                        v_numagl(cell_id) = iCount
-                        iCount = iCount+1
-                    else
-                        v_numagl(cell_id) = hugeValue
+                        nb_ma_loc = nb_ma_loc+1
                     end if
                 end if
             end if
         end do
+!
+! ------ Create Global cell numbering
+        if (this%isHPC) then
+            allocate (v_nuloc(nbproc))
+            v_nuloc = 0
+            v_nuloc(rank+1) = nb_ma_loc
+            call asmpi_comm_vect('MPI_SUM', 'I', nbval=nbproc, vi=v_nuloc)
+            deca = 0
+            do i_proc = one_ip, mrank
+                deca = deca+v_nuloc(i_proc)
+            end do
+            deallocate (v_nuloc)
+            call wkvect(mesh_out//'.NUMALG', 'G V I', max(to_aster_int(this%nb_cells), 1), &
+                        vi=v_numagl)
+            call jeecra(mesh_out//'.NUMALG', 'LONUTI', to_aster_int(this%nb_cells))
+            v_numagl = -1
+            do i_cell = one_ip, this%nb_cells
+                if (v_maex(i_cell) == rank) then
+                    v_numagl(i_cell) = deca
+                    deca = deca+1
+                end if
+            end do
+        end if
 !
 ! --- Create groups
 !
@@ -2442,7 +2494,6 @@ contains
 ! --- Create joint for ParallelMesh
 !
         call this%create_joints(mesh_out)
-!
 !
 ! --- Create .LASTGHOLAYER
 !
@@ -2861,6 +2912,27 @@ contains
         else
             ASSERT(ASTER_FALSE)
         end if
+    end function
+!
+! ==================================================================================================
+!
+    function barycenter_alge(this, nb_nodes, nodes) result(coor)
+!
+        implicit none
+!
+        class(Mmesh), intent(in) :: this
+        integer(ip), intent(in) :: nb_nodes
+        integer(ip), intent(in) :: nodes(:)
+        real(kind=8) :: coor(3)
+! ---------------------------------------------------------------------------------
+!
+        integer(ip) :: i_node
+!
+        coor = 0.d0
+        do i_node = 1, nb_nodes
+            coor = coor+this%nodes(nodes(i_node))%coor
+        end do
+        coor = coor/real(nb_nodes, kind=8)
     end function
 !
 ! ==================================================================================================
@@ -3726,7 +3798,9 @@ contains
             end do
         end if
         ASSERT(this%nb_nodes <= this%nb_total_nodes)
-        ASSERT(this%nb_nodes > zero_ip)
+        if (.not. this%isHPC) then
+            ASSERT(this%nb_nodes > zero_ip)
+        end if
     end subroutine
 !
 ! ==================================================================================================
@@ -4036,12 +4110,14 @@ contains
 !
 ! ==================================================================================================
 !
-    subroutine copy_group_no(this, grpnoe, gpptnn)
+    subroutine copy_group_no(this, grpnoe, gpptnn, nb_grp, list_grps)
 !
         implicit none
 !
         class(Mmesh), intent(in) :: this
         character(len=24), intent(in) :: grpnoe, gpptnn
+        integer(kind=8), optional, intent(in) :: nb_grp
+        character(len=24), optional, intent(in) :: list_grps(*)
 ! -----------------------------------------------------------------------
         integer(kind=8) :: codret, i_group, nb_nodes_in, nb_grno_out
         integer(kind=8) :: nb_grno_in
@@ -4067,6 +4143,12 @@ contains
 !
 ! --- Find groups
         do i_group = 1, nb_grno_in
+            call jenuno(jexnum(grno_in, i_group), nomgrp)
+            if (present(list_grps)) then
+                if (search_in_list(nomgrp, nb_grp, list_grps) < one_ip) then
+                    cycle
+                end if
+            end if
             call jeveuo(jexnum(grno_in, i_group), 'L', vi=nodes_in)
             call jelira(jexnum(grno_in, i_group), 'LONUTI', nb_nodes_in)
             do i_node = one_ip, int(nb_nodes_in, kind=ip)
@@ -4117,12 +4199,14 @@ contains
 !
 ! ==================================================================================================
 !
-    subroutine copy_group_ma(this, grpmai, gpptnm)
+    subroutine copy_group_ma(this, grpmai, gpptnm, nb_grp, list_grps)
 !
         implicit none
 !
         class(Mmesh), intent(inout) :: this
         character(len=24), intent(in) :: grpmai, gpptnm
+        integer(kind=8), optional, intent(in) :: nb_grp
+        character(len=24), optional, intent(in) :: list_grps(*)
 ! -----------------------------------------------------------------------
         integer(kind=8) :: nb_cells_in, nb_cells_out, codret, nb_grma_out
         integer(kind=8) :: i_group, nb_grma_in, i_cell
@@ -4150,6 +4234,12 @@ contains
 !
 ! --- Find groups
         do i_group = 1, nb_grma_in
+            call jenuno(jexnum(grma_in, i_group), nomgrp)
+            if (present(list_grps)) then
+                if (search_in_list(nomgrp, nb_grp, list_grps) < one_ip) then
+                    cycle
+                end if
+            end if
             call jeveuo(jexnum(grma_in, i_group), 'L', vi=cells_in)
             call jelira(jexnum(grma_in, i_group), 'LONUTI', nb_cells_in)
             do i_cell = 1, nb_cells_in
@@ -4333,13 +4423,15 @@ contains
         character(len=19) :: joints
         integer(kind=8), allocatable :: v_rnode(:)
         integer(kind=8), pointer :: v_noex(:) => null()
+        integer(kind=8), pointer :: v_maex(:) => null()
         integer(kind=8), pointer :: v_nojoin(:) => null()
         integer(kind=8), allocatable :: v_snume(:)
         integer(kind=8), allocatable :: v_rnume(:)
         aster_logical, allocatable :: v_keep(:)
         integer(ip), allocatable :: v_nkeep(:)
         integer(ip), allocatable :: v_ckeep(:)
-        integer(kind=8), pointer :: v_nulogl(:) => null()
+        integer(kind=8), pointer :: v_nunolg(:) => null()
+        integer(kind=8), pointer :: v_numalg(:) => null()
         integer(kind=8), pointer :: v_proc(:) => null()
         integer(kind=4), pointer :: v_pgid(:) => null()
         integer(kind=8), pointer :: v_gcom(:) => null()
@@ -4349,12 +4441,16 @@ contains
         real(kind=8), allocatable :: v_send(:)
         real(kind=8), allocatable :: v_recv(:)
         mpi_int, parameter :: mpi_one = to_mpi_int(1)
-        mpi_int :: msize, mrank, count_send, count_recv, id, tag, mpicou
+        mpi_int :: msize, mrank, count_send, count_recv, id, tag, mpicou, mpiloc
+        mpi_int :: color, key, ierror
+        mpi_int, allocatable :: v_count(:)
+        mpi_int, allocatable :: v_displ(:)
+
         integer(kind=8) :: nbproc, rank, nb_recv, n_coor_send, n_coor_recv
         integer(kind=8) :: i_comm, proc_id, domj_i, recv1(1), owner, i_proc, ind
-        integer(kind=8) :: nb_pts, list_pts(50)
+        integer(kind=8) :: nb_pts, list_pts(50), nb_ma_send, nb_ma_recv_tot
         integer(ip) :: i_node, nb_nodes_keep, i_node_r, node_id
-        integer(ip) :: i_cell, nno, nb_cells_keep, cell_id, i_layer
+        integer(ip) :: i_cell, nno, nnos, nb_cells_keep, cell_id, i_layer
         real(kind=8) :: coor(3), start, end
         real(kind=8), parameter :: tole = 1.d-9
         real(kind=8), allocatable :: coordinates(:, :)
@@ -4382,6 +4478,7 @@ contains
             call asmpi_info(rank=mrank, size=msize)
             rank = to_aster_int(mrank)
             nbproc = to_aster_int(msize)
+            mpiloc = to_mpi_int(0)
 !
 ! --- 0: On enregiste le nombre de couches de ghost
             call wkvect(nblg, 'G V I', 1, vi=v_nblg)
@@ -4390,20 +4487,23 @@ contains
             call wkvect(pgin, 'G V S', nbproc, vi4=v_pgid)
             v_pgid(1:nbproc) = to_mpi_int(-1)
 !
-! --- 1: On commence par compter le nombre de noeuds que l'on doit recevoir
+! --- 1: On commence par compter ce que l'on doit recevoir
 !
             call jeveuo(mesh_out//".NOEX", 'L', vi=v_noex)
-            call jeveuo(mesh_out//".NUNOLG", 'L', vi=v_nulogl)
-
-            if (nbproc == 1) goto 100
+            call jeveuo(mesh_out//".NUNOLG", 'E', vi=v_nunolg)
+            call jeveuo(mesh_out//".MAEX", 'L', vi=v_maex)
+            call jeveuo(mesh_out//".NUMALG", 'E', vi=v_numalg)
 !
             allocate (v_rnode(nbproc))
+            if (nbproc == 1) goto 100
+!
             v_rnode = 0
             do i_node = one_ip, this%nb_nodes
                 owner = v_noex(i_node)
                 v_rnode(owner+1) = v_rnode(owner+1)+1
             end do
             v_rnode(rank+1) = 0
+!
 ! --- On compte combien on doit recevoir et envoyer
 !
             nb_recv = 0
@@ -4416,11 +4516,9 @@ contains
                 call wkvect(domj, 'G V I', nb_recv, vi=v_proc)
                 call jecrec(send, 'G V I', 'NU', 'DISPERSE', 'VARIABLE', nb_recv)
                 call jecrec(recv, 'G V I', 'NU', 'DISPERSE', 'VARIABLE', nb_recv)
-                call jeveuo(gcom, 'E', vi=v_gcom)
-                v_gcom(1) = mpicou
-            else
-                goto 100
             end if
+            call jeveuo(gcom, 'E', vi=v_gcom)
+            v_gcom(1) = mpicou
             nb_recv = 0
             do i_proc = 0, nbproc-1
                 if (v_rnode(i_proc+1) > 0) then
@@ -4433,9 +4531,23 @@ contains
             end do
             call sort_i8(v_proc, nb_recv)
 !
+            if (nb_recv > 0) then
+                color = 1
+                key = 1
+                call asmpi_split_comm(mpicou, color, key, "TMPCOMM", mpiloc)
+                call asmpi_comm('SET', mpiloc)
+            else
+                color = 0
+                key = 0
+                call asmpi_split_comm(mpicou, color, key, "TMPCOMM", mpiloc)
+                call asmpi_comm('SET', mpiloc)
+                go to 100
+            end if
+!
             allocate (v_comm(nbproc))
             allocate (v_tag(nbproc))
-            call build_tree_comm(v_proc, nb_recv, v_pgid, mpicou, v_comm, v_tag)
+!
+            call build_tree_comm(v_proc, nb_recv, v_pgid, mpiloc, v_comm, v_tag)
 ! --- Pour accélérer la recherche, on garde les cells avec un noeud non-proprio
             allocate (v_ckeep(this%nb_total_cells))
             nb_cells_keep = zero_ip
@@ -4538,7 +4650,7 @@ contains
 ! --- Send and Receive size
                 n_coor_send = v_rnode(proc_id+1)
                 call asmpi_sendrecv_i([n_coor_send], mpi_one, id, tag, &
-                                      recv1, mpi_one, id, tag, mpicou)
+                                      recv1, mpi_one, id, tag, mpiloc)
                 n_coor_recv = recv1(1)
 !
                 allocate (v_send(4*n_coor_send))
@@ -4561,7 +4673,7 @@ contains
                 count_send = to_mpi_int(4*n_coor_send)
                 count_recv = to_mpi_int(4*n_coor_recv)
                 call asmpi_sendrecv_r(v_send, count_send, id, tag, &
-                                      v_recv, count_recv, id, tag, mpicou)
+                                      v_recv, count_recv, id, tag, mpiloc)
 !
                 if (this%info >= 2) then
                     print *, "-Domaine: ", proc_id, &
@@ -4591,7 +4703,7 @@ contains
                     v_nojoin(2*(i_node_r-1)+1) = node_id
                     v_nojoin(2*(i_node_r-1)+2) = int(v_recv(4*(i_node_r-1)+1))
                     v_snume(2*(i_node_r-1)+1) = node_id
-                    v_snume(2*(i_node_r-1)+2) = v_nulogl(node_id)
+                    v_snume(2*(i_node_r-1)+2) = v_nunolg(node_id)
                 end do
 !
 ! --- Send and recv data
@@ -4600,7 +4712,7 @@ contains
                 count_send = to_mpi_int(2*n_coor_recv)
                 count_recv = to_mpi_int(2*n_coor_send)
                 call asmpi_sendrecv_i(v_snume, count_send, id, tag, &
-                                      v_rnume, count_recv, id, tag, mpicou)
+                                      v_rnume, count_recv, id, tag, mpiloc)
 !
 ! --- Create joint .R
                 call jecroc(jexnum(recv, i_comm))
@@ -4611,8 +4723,10 @@ contains
                 do i_node = one_ip, int(n_coor_send, ip)
                     v_nojoin(2*(i_node-1)+1) = int(v_send(4*(i_node-1)+1))
                     v_nojoin(2*(i_node-1)+2) = v_rnume(2*(i_node-1)+1)
-                    ASSERT(v_nulogl(v_nojoin(2*(i_node-1)+1)) == -1)
-                    v_nulogl(v_nojoin(2*(i_node-1)+1)) = v_rnume(2*(i_node-1)+2)
+                    if (.not. this%isGlobNumSet) then
+                        ASSERT(v_nunolg(v_nojoin(2*(i_node-1)+1)) == -1)
+                        v_nunolg(v_nojoin(2*(i_node-1)+1)) = v_rnume(2*(i_node-1)+2)
+                    end if
                 end do
 ! --- Cleaning
                 deallocate (v_send)
@@ -4622,25 +4736,121 @@ contains
             end do
 ! --- Cleaning
             call n_octree%free()
-            deallocate (v_keep)
             deallocate (v_nkeep)
             deallocate (v_ckeep)
-            deallocate (v_rnode)
             deallocate (v_tag)
             deallocate (v_comm)
 !
+! ---- Create a global mesh with shared cells
+! ---- Prepare data to send (global_id, coor(1:3))
+            nb_ma_send = 0
+            allocate (v_send(4*this%nb_cells))
+            do i_cell = one_ip, this%nb_total_cells
+                if (this%cells(i_cell)%keep) then
+                    nno = this%converter%nno(this%cells(i_cell)%type)
+                    nnos = this%converter%nnos(this%cells(i_cell)%type)
+                    cell_id = this%cells(i_cell)%id
+                    owner = v_maex(cell_id)
+                    if (owner == rank) then
+                        do i_node = 1, nno
+                            node_id = this%cells(i_cell)%nodes(i_node)
+                            if (v_keep(node_id)) then
+                                nb_ma_send = nb_ma_send+1
+                                v_send(4*(nb_ma_send-1)+1) = real(v_numalg(cell_id), kind=8)
+                                coor = this%barycenter_alge(nnos, this%cells(i_cell)%nodes)
+                                v_send(4*(nb_ma_send-1)+2:4*nb_ma_send) = coor
+                                exit
+                            end if
+                        end do
+                    end if
+                end if
+            end do
+            ASSERT(nb_ma_send <= this%nb_cells)
+            deallocate (v_keep)
+!
+! --- Send number of cells
+            allocate (v_rnume(nbproc))
+            allocate (v_displ(nbproc+1))
+            allocate (v_count(nbproc))
+            v_rnume = 0
+            call asmpi_allgather_i([nb_ma_send], mpi_one, v_rnume, mpi_one, mpiloc)
+!
+! ---- Compute offset
+            nb_ma_recv_tot = 0
+            v_displ = 0
+            do i_proc = 1, nbproc
+                nb_ma_recv_tot = nb_ma_recv_tot+v_rnume(i_proc)
+                v_count(i_proc) = to_mpi_int(4*v_rnume(i_proc))
+                v_displ(i_proc+1) = to_mpi_int(4*nb_ma_recv_tot)
+            end do
+            deallocate (v_rnume)
+            allocate (v_recv(4*nb_ma_recv_tot))
+            count_send = to_mpi_int(4*nb_ma_send)
+! --- Send id and coordinates
+            call asmpi_allgatherv_r(v_send, count_send, v_recv, v_count, v_displ, mpiloc)
+            deallocate (v_send)
+            deallocate (v_displ)
+            deallocate (v_count)
+!
+! --- Create octree
+!
+            allocate (coordinates(3, nb_ma_recv_tot))
+            do i_cell = one_ip, int(nb_ma_recv_tot, kind=ip)
+                coordinates(:, i_cell) = v_recv(4*(i_cell-1)+2:4*i_cell)
+            end do
+!
+            call n_octree%init(nb_ma_recv_tot, coordinates, 5, 8)
+            deallocate (coordinates)
+!
+! --- Search cells with coordinates
+!
+            do i_cell = one_ip, this%nb_total_cells
+                if (this%cells(i_cell)%keep) then
+                    nnos = this%converter%nnos(this%cells(i_cell)%type)
+                    cell_id = this%cells(i_cell)%id
+                    owner = v_maex(cell_id)
+                    if (owner .ne. rank) then
+                        coor = this%barycenter_alge(nnos, this%cells(i_cell)%nodes)
+                        call n_octree%get_pts_around(coor, tole, nb_pts, list_pts)
+                        ASSERT(nb_pts > 0)
+                        if (nb_pts > 1) then
+                                !! Verif pas de mailles doubles à l'interface
+                            call utmess('F', 'MAILLAGE1_4')
+                        end if
+                        v_numalg(cell_id) = to_aster_int(v_recv(4*(list_pts(1)-1)+1))
+                    end if
+                end if
+            end do
+!
+! --- Cleaning
+            call n_octree%free()
+            deallocate (v_recv)
+!
 100         continue
+            deallocate (v_rnode)
 !
             if (nbproc == 1) then
                 do i_node = one_ip, this%nb_nodes
-                    v_nulogl(i_node) = to_aster_int(i_node)
+                    v_nunolg(i_node) = to_aster_int(i_node-1)
+                end do
+                do i_cell = one_ip, this%nb_cells
+                    v_numalg(i_cell) = to_aster_int(i_cell-1)
                 end do
             end if
 !
 ! --- verify
             do i_node = one_ip, this%nb_nodes
-                ASSERT(v_nulogl(i_node) >= 0)
+                ASSERT(v_nunolg(i_node) >= 0)
             end do
+            do i_cell = one_ip, this%nb_cells
+                ASSERT(v_numalg(i_cell) >= 0)
+            end do
+!
+            call asmpi_barrier_wrap(mpicou, ierror)
+            call asmpi_comm('SET', mpicou)
+            if (mpiloc .ne. 0) then
+                call asmpi_comm('FREE', mpiloc)
+            end if
 !
             if (this%info >= 2) then
                 call cpu_time(end)

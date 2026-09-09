@@ -51,7 +51,7 @@ subroutine te0274(option, nomte)
     real(kind=8) :: theta, alpha, dalpha, tpg
     integer(kind=8) :: iflux, itemps, kp
     character(len=8) :: coef
-    real(kind=8) :: rhs(MAX_BS), valQP(MAX_QP)
+    real(kind=8) :: rhs(MAX_BS_CG), valQP(MAX_QP)
     real(kind=8), pointer :: tempi(:) => null()
 !
     call FESkin%init()

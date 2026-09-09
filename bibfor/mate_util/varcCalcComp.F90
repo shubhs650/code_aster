@@ -16,13 +16,13 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine varcCalcComp(modelz, chsithz, &
+subroutine varcCalcComp(modelZ, chsithz, &
                         l_temp, l_hydr, l_ptot, &
                         l_sech, l_epsa, &
-                        nbin, nbout, &
+                        nbFieldIn, nbFieldOut, &
                         lpain, lchin, &
                         lpaout, lchout, &
-                        base, vect_elemz)
+                        vectElemZ)
 !
     implicit none
 !
@@ -33,14 +33,13 @@ subroutine varcCalcComp(modelz, chsithz, &
 #include "asterfort/gcnco2.h"
 #include "asterfort/reajre.h"
 !
-    character(len=*), intent(in) :: modelz, chsithz
+    character(len=*), intent(in) :: modelZ, chsithz
     aster_logical, intent(in)  :: l_temp, l_hydr, l_ptot, l_sech, l_epsa
-    integer(kind=8), intent(in) :: nbin, nbout
+    integer(kind=8), intent(in) :: nbFieldIn, nbFieldOut
     character(len=8), intent(in) :: lpain(*), lpaout(*)
     character(len=19), intent(in) :: lchin(*)
     character(len=19), intent(inout) :: lchout(*)
-    character(len=1), intent(in) :: base
-    character(len=*), intent(in) :: vect_elemz
+    character(len=*), intent(in) :: vectElemZ
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -57,98 +56,98 @@ subroutine varcCalcComp(modelz, chsithz, &
 ! In  l_ptot           : .true. if total pressure (THM) exists
 ! In  l_sech           : .true. if drying exists
 ! In  l_epsa           : .true. if non-elastic strain exists
-! In  nbin             : effective number of input fields
-! In  nbout            : effective number of output fields
+! In  nbFieldIn        : effective number of input fields
+! In  nbFieldOut       : effective number of output fields
 ! In  lpain            : list of input parameters
 ! In  lchin            : list of input fields
 ! In  lpaout           : list of output parameters
 ! IO  lchout           : list of output fields
-! In  base             : JEVEUX base to create objects
 ! In  vect_elem        : name of elementary vectors
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=1), parameter :: jvBase = "V"
     character(len=8) :: newnom
     character(len=16) :: option
-    character(len=19) :: resu_elem, ligrmo
+    character(len=19) :: resuElem, modelLigrel
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call dismoi('NOM_LIGREL', modelz, 'MODELE', repk=ligrmo)
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
     newnom = '.0000000'
-    resu_elem = vect_elemz(1:8)//'.0000000'
-!
+    resuElem = vectElemZ(1:8)//'.0000000'
+
 ! - Temperature
-!
     if (l_temp) then
         call gcnco2(newnom)
-        resu_elem(10:16) = newnom(2:8)
-        call corich('E', resu_elem, ichin_=-1)
-        lchout(1) = resu_elem
+        resuElem(10:16) = newnom(2:8)
+        call corich('E', resuElem, ichin_=-1)
+        lchout(1) = resuElem
         option = 'CHAR_MECA_TEMP_R'
-        if (nbout .eq. 2) then
+        if (nbFieldOut .eq. 2) then
             lchout(2) = chsithz(1:19)
         end if
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elemz, resu_elem, base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElemZ, resuElem, jvBase)
     end if
-!
+
 ! - Hydratation
-!
     if (l_hydr) then
         call gcnco2(newnom)
-        resu_elem(10:16) = newnom(2:8)
-        call corich('E', resu_elem, ichin_=-1)
-        lchout(1) = resu_elem
+        resuElem(10:16) = newnom(2:8)
+        call corich('E', resuElem, ichin_=-1)
+        lchout(1) = resuElem
         option = 'CHAR_MECA_HYDR_R'
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elemz, resu_elem, base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElemZ, resuElem, jvBase)
     end if
-!
+
 ! - Total pressure (THM)
-!
     if (l_ptot) then
         call gcnco2(newnom)
-        resu_elem(10:16) = newnom(2:8)
-        call corich('E', resu_elem, ichin_=-1)
-        lchout(1) = resu_elem
+        resuElem(10:16) = newnom(2:8)
+        call corich('E', resuElem, ichin_=-1)
+        lchout(1) = resuElem
         option = 'CHAR_MECA_PTOT_R'
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elemz, resu_elem, base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElemZ, resuElem, jvBase)
     end if
-!
+
 ! - Drying
-!
     if (l_sech) then
         call gcnco2(newnom)
-        resu_elem(10:16) = newnom(2:8)
-        call corich('E', resu_elem, ichin_=-1)
-        lchout(1) = resu_elem
+        resuElem(10:16) = newnom(2:8)
+        call corich('E', resuElem, ichin_=-1)
+        lchout(1) = resuElem
         option = 'CHAR_MECA_SECH_R'
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elemz, resu_elem, base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElemZ, resuElem, jvBase)
     end if
-!
+
 ! - Non-elastic strain
-!
     if (l_epsa) then
         call gcnco2(newnom)
-        resu_elem(10:16) = newnom(2:8)
-        call corich('E', resu_elem, ichin_=-1)
-        lchout(1) = resu_elem
+        resuElem(10:16) = newnom(2:8)
+        call corich('E', resuElem, ichin_=-1)
+        lchout(1) = resuElem
         option = 'CHAR_MECA_EPSA_R'
-        call calcul('C', option, ligrmo, nbin, lchin, &
-                    lpain, nbout, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(vect_elemz, resu_elem, base)
+        call calcul('C', option, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    jvBase, 'OUI')
+        call reajre(vectElemZ, resuElem, jvBase)
     end if
 !
 end subroutine

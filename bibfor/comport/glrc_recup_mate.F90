@@ -15,8 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
+! aslint: disable=W0413
+!
+subroutine glrc_recup_mate(jvMaterCode, relaComp, lrgm, ep, lambda, &
                            deuxmu, lamf, deumuf, gt, gc, &
                            gf, seuil, alpha, alfmc, epsic, &
                            epsiels, epsilim, is_param_opt_, val_param_opt_)
@@ -28,8 +29,8 @@ subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
 #include "asterfort/rcvala.h"
 #include "asterfort/utmess.h"
     aster_logical, intent(in) :: lrgm
-    character(len=16), intent(in) :: compor
-    integer(kind=8), intent(in) :: imate
+    character(len=16), intent(in) :: relaComp
+    integer(kind=8), intent(in) :: jvMaterCode
     real(kind=8), intent(in) :: ep
     real(kind=8), optional, intent(out) :: lambda, deuxmu, deumuf, lamf
     real(kind=8), optional, intent(out) :: gt, gc, gf, seuil, alpha, alfmc
@@ -68,8 +69,8 @@ subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
     real(kind=8) :: epsi_c, epsi_els, epsi_lim
     character(len=16) :: nomres(16)
 !
-    if ((.not. (compor(1:7) .eq. 'GLRC_DM'))) then
-        call utmess('F', 'ELEMENTS4_65', sk=compor)
+    if ((.not. (relaComp(1:7) .eq. 'GLRC_DM'))) then
+        call utmess('F', 'ELEMENTS4_65', sk=relaComp)
     end if
 !
     call r8inir(6*6, 0.0d0, delas, 1)
@@ -79,7 +80,7 @@ subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
     nomres(1) = 'E_M'
     nomres(2) = 'NU_M'
 !
-    call rcvala(imate, ' ', 'ELAS_GLRC', 0, ' ', &
+    call rcvala(jvMaterCode, ' ', 'ELAS_GLRC', 0, ' ', &
                 [0.d0], 2, nomres, valres, icodre, 1)
 !
     e = valres(1)
@@ -90,7 +91,7 @@ subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
     nomres(1) = 'E_F'
     nomres(2) = 'NU_F'
 !
-    call rcvala(imate, ' ', 'ELAS_GLRC', 0, ' ', &
+    call rcvala(jvMaterCode, ' ', 'ELAS_GLRC', 0, ' ', &
                 [0.d0], 2, nomres, valres, icodre, &
                 0)
 !
@@ -126,7 +127,7 @@ subroutine glrc_recup_mate(imate, compor, lrgm, ep, lambda, &
     nomres(14) = 'SY'
     nomres(15) = 'FTJ'
     nomres(16) = 'FCJ'
-    call rcvala(imate, ' ', 'GLRC_DM', 0, ' ', &
+    call rcvala(jvMaterCode, ' ', 'GLRC_DM', 0, ' ', &
                 [0.d0], 16, nomres, valres, icodre, &
                 0)
 !

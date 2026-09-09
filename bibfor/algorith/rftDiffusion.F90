@@ -20,7 +20,6 @@ subroutine rftDiffusion(fami, kpg, ksp, poum, imate, c, &
                         temp, diff, difl, difv)
     implicit none
 #include "asterc/r8t0.h"
-#include "asterfort/assert.h"
 #include "asterfort/leverettIsotTher.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"

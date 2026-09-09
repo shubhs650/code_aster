@@ -175,10 +175,7 @@ def fichier_sol(tab, struct, param=None):
 
     #
     if (param and param.get("OFFSET_MAX")) or (param and param.get("AUTO") == "OUI"):
-        # ALGO
-        if param and param.get("ALGO"):
-            content.append("ALGO %s" % param["ALGO"])
-        elif param["SURF"] == "OUI":
+        if param["SURF"] == "OUI":
             content.append("ALGO DEPL")
         else:
             content.append("ALGO REGU")

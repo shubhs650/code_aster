@@ -896,6 +896,7 @@ FieldOnNodesRealPtr DiscreteComputation::getTransientThermalForces(
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
     calcul->addXFEMField( currModel );
 
@@ -964,6 +965,7 @@ DiscreteComputation::getInternalThermalForces( const FieldOnNodesRealPtr temp_pr
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addXFEMField( currModel );
@@ -1043,6 +1045,7 @@ FieldOnNodesRealPtr DiscreteComputation::getNonLinearCapacityForces(
 
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     calcul->addXFEMField( currModel );

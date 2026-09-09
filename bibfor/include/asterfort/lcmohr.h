@@ -15,25 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lcmohr(ndim,&
-                      typmod, imate, carcri, option,&
-                      dstrai0, stresm0, stres, vim, vip,&
+    subroutine lcmohr(ndim, &
+                      typmod, imate, carcri, option, &
+                      dstrai0, stresm0, stres, vim, vip, &
                       dsidep, codret)
         integer(kind=8) :: ndim
         character(len=8) :: typmod(*)
         integer(kind=8) :: imate
         character(len=16) :: option
-        real(kind=8) :: carcri(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: dstrai0(6)
         real(kind=8) :: stresm0(6)
         real(kind=8) :: stres(6)
         real(kind=8) :: vim(*)
         real(kind=8) :: vip(*)
-        real(kind=8) :: dsidep(6,6)
+        real(kind=8) :: dsidep(6, 6)
         integer(kind=8) :: codret
     end subroutine lcmohr
 end interface

@@ -15,21 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine lceiex(fami, kpg, ksp, mat, option, &
                   mu, su, de, ddedt, vim, &
                   vip, r, carcri, codret)
 !
-!
     implicit none
+!
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
-
+!
     character(len=16) :: option
     integer(kind=8) :: mat, kpg, ksp, i, codret
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: mu(3), su(3), de(6), ddedt(6, 6), vim(*), vip(*), bmin, bmax, res, deriv
     character(len=*) :: fami
 !
@@ -95,7 +97,7 @@ subroutine lceiex(fami, kpg, ksp, mat, option, &
     character(len=1) :: poum
     data nom/'GC', 'SIGM_C', 'PENA_LAGR', 'RIGI_GLIS'/
 
-    iter_inte_maxi = abs(carcri(1))
+    iter_inte_maxi = abs(nint(carcri(1)))
     resi_inte = carcri(3)
 !
 ! OPTION CALCUL DU RESIDU OU CALCUL DE LA MATRICE TANGENTE

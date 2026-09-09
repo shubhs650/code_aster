@@ -9,7 +9,7 @@ x = sympy.Symbol("x", real=True)
 y = sympy.Symbol("y", real=True)
 
 # temperature a renseigner
-u =  (x-5)*(x+5)*(y-5)
+u =  (x-5)*(x+5)*(y-5)*(y+5)*(x-5)
 
 # calcul G
 G = simplify(sympy.Matrix([diff(u, x), diff(u, y)]))

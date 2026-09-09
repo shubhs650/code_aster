@@ -15,17 +15,26 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine rk21co(fami, kpg, ksp, rela_comp, mod, &
-                  imat, matcst, nbcomm, cpmono, nfs, &
+! aslint: disable=W1306,W1504
+!
+subroutine rk21co(materPara, &
+                  relaComp, typmod1, &
+                  matcst, nbcomm, cpmono, nfs, &
                   nsg, toutms, nvi, nmat, y, &
                   kp, ee, a, h, pgl, &
                   nbphas, cothe, coeff, dcothe, dcoeff, &
                   coel, x, pas, neps, epsd, &
                   detot, nhsr, numhsr, hsr, itmax, &
                   toler, iret)
-! aslint: disable=W1306,W1504
+!
+    use MaterialPara_type
     implicit none
+!
+#include "asterfort/rdif01.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: relaComp
+    character(len=8), intent(in) :: typmod1
 !     INTEGRATION DE LOIS DE COMPORTEMENT ELASTO-VISCOPLASTIQUE
 !     PAR UNE METHODE DE RUNGE KUTTA D'ORDRE 2 A 2 PAS EMBOITES
 !
@@ -56,13 +65,9 @@ subroutine rk21co(fami, kpg, ksp, rela_comp, mod, &
 !         DETOT   :  INCREMENT DE DEFORMATION TOTALE
 !     ----------------------------------------------------------------
 !
-#include "asterfort/rdif01.h"
-    integer(kind=8) :: kpg, ksp, nmat, imat, nbcomm(nmat, 3), kp, nvi, i, nfs, nsg
+    integer(kind=8) :: nmat, nbcomm(nmat, 3), kp, nvi, i, nfs, nsg
     integer(kind=8) :: nbphas, itmax, iret, nhsr, numhsr(*), neps
-    character(len=16) :: rela_comp
     character(len=24) :: cpmono(5*nmat+1)
-    character(len=8) :: mod
-    character(len=*) :: fami
     character(len=3) :: matcst
     real(kind=8) :: pgl(3, 3), coel(nmat), cothe(nmat), dcothe(nmat)
     real(kind=8) :: x, pas, h, hs2, epsd(6), detot(6), y(nvi)
@@ -78,8 +83,9 @@ subroutine rk21co(fami, kpg, ksp, rela_comp, mod, &
 !
     if (kp .eq. 1) then
 !        INTEGRATION Y1=F(Y,T)
-        call rdif01(fami, kpg, ksp, rela_comp, mod, &
-                    imat, matcst, nbcomm, cpmono, nfs, &
+        call rdif01(materPara, &
+                    relaComp, typmod1, &
+                    matcst, nbcomm, cpmono, nfs, &
                     nsg, toutms, nvi, nmat, y, &
                     cothe, coeff, dcothe, dcoeff, pgl, &
                     nbphas, coel, x, pas, neps, &
@@ -98,8 +104,9 @@ subroutine rk21co(fami, kpg, ksp, rela_comp, mod, &
     x = x+h
 !     INTEGRATION Y2=F(Y1,T+H)
 !
-    call rdif01(fami, kpg, ksp, rela_comp, mod, &
-                imat, matcst, nbcomm, cpmono, nfs, &
+    call rdif01(materPara, &
+                relaComp, typmod1, &
+                matcst, nbcomm, cpmono, nfs, &
                 nsg, toutms, nvi, nmat, y, &
                 cothe, coeff, dcothe, dcoeff, pgl, &
                 nbphas, coel, x, pas, neps, &

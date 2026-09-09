@@ -17,9 +17,9 @@
 ! --------------------------------------------------------------------
 !
 subroutine mbgnlr(lVect, lMatr, &
-                  nno, ncomp, imate, icompo, &
+                  nno, ncomp, imate, jvCompor, &
                   dff, alpha, beta, h, &
-                  preten, igeom, ideplm, ideplp, &
+                  preten, jvGeom, ideplm, ideplp, &
                   kpg, fami, ipoids, icontp, &
                   ivectu, imatuu)
 !
@@ -38,19 +38,22 @@ subroutine mbgnlr(lVect, lMatr, &
 #include "asterfort/subacv.h"
 !
     aster_logical, intent(in) :: lVect, lMatr
-    character(len=4) :: fami
+    character(len=8) :: fami
     integer(kind=8) :: nno, ncomp, kpg
-    integer(kind=8) :: imate, icompo, igeom, ideplm, ideplp, ipoids, icontp, ivectu
+    integer(kind=8) :: imate, jvCompor, jvGeom, ideplm, ideplp, ipoids, icontp, ivectu
     integer(kind=8) :: imatuu
     real(kind=8) :: dff(2, nno), alpha, beta, h, preten
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 !    - FONCTION REALISEE:  CALCUL DES OPTIONS DE COMPORTEMENT :
 !                            - FULL_MECA
 !                            - RAPH_MECA
 !                            - RIGI_MECA_TANG
 !                          POUR LES MEMBRANES EN GRANDES DEFORMATIONS
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  NOMTE             NOM DU TYPE ELEMENT
 !     VECTEU            BOOL: 1 SI FULL_MECA OU RAPH_MECA
 !     MATRIC            BOOL: 1 SI FULL_MECA OU RIGI_MECA
@@ -74,9 +77,8 @@ subroutine mbgnlr(lVect, lMatr, &
 !     IVECTU            ADRESSE DANS ZR DU TABLEAU PMATUUR
 !     IMATUU            ADRESSE DANS ZR DU TABLEAU PMATUUR
 !
-! OUT ***          ***
-! ----------------------------------------------------------------------
-
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8) :: n, nn, c, incm
     real(kind=8) :: posdef(3*nno)
     real(kind=8) :: covaini(3, 3), metrini(2, 2), jacini, cnvaini(3, 2), aini(2, 2)
@@ -85,42 +87,40 @@ subroutine mbgnlr(lVect, lMatr, &
     real(kind=8) :: ktgt(3*nno, 3*nno)
     real(kind=8) :: vecfie(3*nno)
 
+!
+! --------------------------------------------------------------------------------------------------
+!
+
 ! - CALCUL DES COORDONNEES COVARIANTES ET CONTRAVARIANTES DE LA SURFACE INITIALE
-    call subaco(nno, dff, zr(igeom), covaini)
+    call subaco(nno, dff, zr(jvGeom), covaini)
     call sumetr(covaini, metrini, jacini)
     call subacv(covaini, metrini, jacini, cnvaini, aini)
 
 ! - CALCUL DES COORDONNEES COVARIANTES ET CONTRAVARIANTES DE LA SURFACE DEFORMEE
-!
     do n = 1, 3*nno
-        posdef(n) = zr(igeom+n-1)+zr(ideplm+n-1)+zr(ideplp+n-1)
+        posdef(n) = zr(jvGeom+n-1)+zr(ideplm+n-1)+zr(ideplp+n-1)
     end do
-
     call subaco(nno, dff, posdef, covadef)
     call sumetr(covadef, metrdef, jacdef)
-
     call subacv(covadef, metrdef, jacdef, cnvadef, adef)
 
 ! - ON APPELLE LA LDC HYPERELASTIQUE NEO-HOOKEENE
 ! - ON OBTIENT LES CONTRAINTES A L'ITERATION DE NEWTON (i-1) (SIGPK2: TENSEUR SYM)
-!
-    if (zk16(icompo) (1:16) .eq. 'ELAS_MEMBRANE_SV') then
+    if (zk16(jvCompor) (1:16) .eq. 'ELAS_MEMBRANE_SV') then
         call mbhesv(imate, kpg, fami, aini, metrini, metrdef, sigpk2, dsigpk2)
-    elseif (zk16(icompo) (1:16) .eq. 'ELAS_MEMBRANE_NH') then
+    elseif (zk16(jvCompor) (1:16) .eq. 'ELAS_MEMBRANE_NH') then
         call mbhenh(imate, kpg, fami, aini, adef, jacini, jacdef, sigpk2, dsigpk2)
     else
         ASSERT(.false.)
     end if
 
 ! - SI LA NORME EUCLIDIENNE DE SIGPK2 EST NULLE, ON APPLIQUE DES PRECONTRAINTES
-
     if (sqrt(sigpk2(1, 1)**2+2*sigpk2(1, 2)**2+sigpk2(2, 2)**2) .lt. 1.0d-6) then
         sigpk2(1, 1) = sigpk2(1, 1)+preten
         sigpk2(2, 2) = sigpk2(2, 2)+preten
     end if
 
-! - ON CALCUL LA MATRICE TANGENTE ELEMENTAIRE DUE AUX EFFORTS INTERNES
-!
+! - ON CALCULE LA MATRICE TANGENTE ELEMENTAIRE DUE AUX EFFORTS INTERNES
     if (lMatr) then
         call mbtgin(nno, kpg, dff, sigpk2, dsigpk2, ipoids, h, covadef, ktgt)
     end if
@@ -142,7 +142,6 @@ subroutine mbgnlr(lVect, lMatr, &
     end if
 
 ! - RANGEMENT DES RESULTATS
-!
     if (lVect) then
         do n = 1, 3*nno
             zr(ivectu+n-1) = zr(ivectu+n-1)+vecfie(n)*jacini

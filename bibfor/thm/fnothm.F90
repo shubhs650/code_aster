@@ -17,7 +17,8 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
+subroutine fnothm(ds_thm, &
+                  ndim, l_axi, fnoevo, &
                   mecani, press1, press2, tempe, second, &
                   nno, nnos, npi, npg, &
                   elem_coor, deltat, dimdef, dimcon, dimuel, &
@@ -27,7 +28,6 @@ subroutine fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
                   congem, congep, b, r, vectu)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -36,7 +36,6 @@ subroutine fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 #include "asterfort/fonoda.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8), intent(in) :: jv_mater
     integer(kind=8), intent(in) :: ndim
     aster_logical, intent(in) :: l_axi
     aster_logical, intent(in) :: fnoevo
@@ -65,7 +64,7 @@ subroutine fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
-! In  jv_mater         : coded material address
+! In  jvMaterCode         : coded material address
 ! In  ndim             : dimension of element (2 ou 3)
 ! In  l_axi            : flag is axisymmetric model
 ! In  l_steady         : .true. for steady state
@@ -143,11 +142,14 @@ subroutine fnothm(ds_thm, jv_mater, ndim, l_axi, fnoevo, &
                     dfdi, dfdi2, &
                     poids, poids2, &
                     b)
+
 ! ----- Compute stress vector {R}
-        call fonoda(ds_thm, jv_mater, ndim, fnoevo, &
+        call fonoda(ds_thm, &
+                    ndim, fnoevo, &
                     mecani, press1, press2, tempe, second, &
                     dimdef, dimcon, deltat, congem((kpi-1)*dimcon+1), &
                     congep((kpi-1)*dimcon+1), r)
+
 ! ----- Compute residual = [B]^T.{R}
         do i = 1, dimuel
             do n = 1, dimdef

@@ -18,9 +18,10 @@
 !
 subroutine te0592(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
@@ -28,36 +29,42 @@ subroutine te0592(option, nomte)
 #include "asterfort/lteatt.h"
 #include "asterfort/niinit.h"
 #include "asterfort/nirmtd.h"
-#include "asterfort/utmess.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! FONCTION REALISEE:  CALCUL DE LA RIGIDITE MECANIQUE POUR LES ELEMENTS
 !                     INCOMPRESSIBLES A 3 CHAMPS UGP
 !                     EN 3D/D_PLAN/AXI
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ndim, nno1, nno2, nno3, nnos, npg, jgn, ntrou
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8) :: ndim, nno1, nno2, nno3, npg, ntrou
     integer(kind=8) :: iw, ivf1, ivf2, ivf3, idf1, idf2, idf3
     integer(kind=8) :: vu(3, 27), vg(27), vp(27), vpi(3, 27)
-    integer(kind=8) :: igeom, imate, imatuu
+    integer(kind=8) :: jvGeom, jvMaterc, jvMatr
     character(len=8) :: lielrf(10), typmod(2)
-! ----------------------------------------------------------------------
+    type(Material_Para) :: materPara
 !
-! - FONCTIONS DE FORMES ET POINTS DE GAUSS
+! --------------------------------------------------------------------------------------------------
+!
     call elref2(nomte, 10, lielrf, ntrou)
     ASSERT(ntrou .ge. 3)
-    call elrefe_info(elrefe=lielrf(3), fami='RIGI', ndim=ndim, nno=nno3, nnos=nnos, npg=npg, &
-                     jpoids=iw, jvf=ivf3, jdfde=idf3, jgano=jgn)
-    call elrefe_info(elrefe=lielrf(2), fami='RIGI', ndim=ndim, nno=nno2, nnos=nnos, npg=npg, &
-                     jpoids=iw, jvf=ivf2, jdfde=idf2, jgano=jgn)
-    call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nno1, nnos=nnos, npg=npg, &
-                     jpoids=iw, jvf=ivf1, jdfde=idf1, jgano=jgn)
-!
+    call elrefe_info(elrefe=lielrf(3), fami=fami, ndim=ndim, nno=nno3, &
+                     jvf=ivf3, jdfde=idf3)
+    call elrefe_info(elrefe=lielrf(2), fami=fami, ndim=ndim, nno=nno2, &
+                     jvf=ivf2, jdfde=idf2)
+    call elrefe_info(elrefe=lielrf(1), fami=fami, ndim=ndim, nno=nno1, npg=npg, &
+                     jpoids=iw, jvf=ivf1, jdfde=idf1)
+
 ! - TYPE DE MODELISATION
     if (ndim .eq. 2 .and. lteatt('AXIS', 'OUI')) then
         typmod(1) = 'AXIS  '
@@ -66,22 +73,30 @@ subroutine te0592(option, nomte)
     else if (ndim .eq. 3) then
         typmod(1) = '3D'
     else
-        call utmess('F', 'ELEMENTS_34', sk=nomte)
+        ASSERT(ASTER_FALSE)
     end if
     typmod(2) = '        '
-!
+
 ! - Get index of dof
-!
-    call niinit(nomte, ndim, nno1, nno2, nno3, 0, vu, vg, vp, vpi)
-!
-! - PARAMETRES EN ENTREE
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PMATUUR', 'E', imatuu)
-!
+    call niinit(typmod, ndim, &
+                nno1, nno2, nno3, 0, &
+                vu, vg, vp, vpi)
+
+! - Input fields
+    call jevech('PGEOMER', 'L', jvGeom)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call jevech('PMATUUR', 'E', jvMatr)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno1, jvGeom, materPara%lcsPara)
+
+! - Compute rigidity matrix
     call nirmtd(ndim, nno1, nno2, nno3, npg, &
                 iw, zr(ivf2), zr(ivf3), ivf1, idf1, &
-                vu, vg, vp, igeom, zi(imate), &
-                zr(imatuu))
+                vu, vg, vp, jvGeom, materPara, &
+                zr(jvMatr))
 !
 end subroutine

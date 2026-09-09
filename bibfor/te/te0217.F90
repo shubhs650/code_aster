@@ -55,7 +55,7 @@ subroutine te0217(option, nomte)
 !
     real(kind=8) :: valres(1), valpar(4), lambda
     real(kind=8) :: grx, gry, grz, time
-    real(kind=8) :: load(MAX_BS), valQP(3, MAX_QP)
+    real(kind=8) :: load(MAX_BS_CG), valQP(3, MAX_QP)
 !
     aster_logical :: fonc
 !-----------------------------------------------------------------------

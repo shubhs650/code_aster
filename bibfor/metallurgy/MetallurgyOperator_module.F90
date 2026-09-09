@@ -42,7 +42,6 @@ module MetallurgyOperator_module
 #include "asterfort/copisd.h"
 #include "asterfort/detrsd.h"
 #include "asterfort/dismoi.h"
-#include "asterfort/exlima.h"
 #include "asterfort/gettco.h"
 #include "asterfort/getvid.h"
 #include "asterfort/getvis.h"

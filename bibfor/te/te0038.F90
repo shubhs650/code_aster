@@ -24,7 +24,6 @@ subroutine te0038(option, nomte)
 !
 #include "asterc/r8prem.h"
 #include "asterfort/assert.h"
-#include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lonele.h"
 #include "asterfort/lteatt.h"

@@ -33,6 +33,7 @@ subroutine dtmprep_noli(sd_dtm_)
 !       (7)     F(V) relationship           / RELA_EFFO_VITE
 !       (8)     F(X) relationship           / RELA_EFFO_DEPL
 !       (9)     Elastic nonlinear springs   / CHOC_ELAS_TRAC
+!      (10)     Cinematic nonlinear springs / DIS_ECRO_CINE
 !   --------------------------------------------------------------------------------------
 !
 !   Note : Information about these 6 nonlinearity types are read using mdchoc
@@ -48,6 +49,7 @@ subroutine dtmprep_noli(sd_dtm_)
 #include "asterfort/dtmprep_noli_flam.h"
 #include "asterfort/dtmprep_noli_ants.h"
 #include "asterfort/dtmprep_noli_decr.h"
+#include "asterfort/dtmprep_noli_deci.h"
 #include "asterfort/dtmprep_noli_dvis.h"
 #include "asterfort/dtmprep_noli_rede.h"
 #include "asterfort/dtmprep_noli_revi.h"
@@ -108,6 +110,7 @@ subroutine dtmprep_noli(sd_dtm_)
     call nlsav(sd_nl, _NB_REL_FX, 1, iscal=0)
     call nlsav(sd_nl, _NB_REL_FV, 1, iscal=0)
     call nlsav(sd_nl, _NB_DIS_CHOC_ELAS, 1, iscal=0)
+    call nlsav(sd_nl, _NB_DIS_ECRO_CINE, 1, iscal=0)
 !
     do icomp = 1, nbcomp
 
@@ -146,6 +149,9 @@ subroutine dtmprep_noli(sd_dtm_)
 !
         case (NL_DIS_CHOC_ELAS)
             call dtmprep_noli_galet(sd_dtm, sd_nl, icomp)
+!
+        case (NL_DIS_ECRO_CINE)
+            call dtmprep_noli_deci(sd_dtm, sd_nl, icomp)
 !
         case default
             ASSERT(.false.)

@@ -17,14 +17,11 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmmaba(icodma, rela_comp, e, dsde, sigy,&
-                      ncstpm, cstpm)
-        integer(kind=8) :: ncstpm
-        integer(kind=8) :: icodma
-        character(len=16) :: rela_comp
+    subroutine nmmaba(jvMaterCode, relaComp, e, dsde, sigy)
+        integer(kind=8) :: jvMaterCode
+        character(len=16) :: relaComp
         real(kind=8) :: e
         real(kind=8) :: dsde
         real(kind=8) :: sigy
-        real(kind=8) :: cstpm(ncstpm)
     end subroutine nmmaba
 end interface

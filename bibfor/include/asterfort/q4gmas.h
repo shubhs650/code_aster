@@ -15,15 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine q4gmas(xyzl, option, pgl, mas, ener)
-        real(kind=8) :: xyzl(3, *)
+    subroutine q4gmas(plateCara, &
+                      xyzl, option, pgl, &
+                      mas, ener)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
         character(len=16) :: option
-        real(kind=8) :: pgl(*)
-        real(kind=8) :: mas(*)
-        real(kind=8) :: ener(*)
     end subroutine q4gmas
 end interface

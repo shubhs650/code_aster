@@ -15,16 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, crit, deps, sigm, &
+                  imate, relaComp, carcri, deps, sigm, &
                   vim, option, sigp, vip, dsidep, &
                   iret)
 !
-! aslint: disable=
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmcri5.h"
 #include "asterfort/radial.h"
 #include "asterfort/rcfon2.h"
@@ -35,12 +36,13 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
 #include "asterfort/zerofr.h"
+#include "jeveux.h"
 !
     integer(kind=8) :: kpg, ksp, ndim, imate, iret, iret1, iret2
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
-    real(kind=8) :: crit(10), tp2, line, radi
+    character(len=16) :: relaComp, option
+    real(kind=8) :: carcri(CARCRI_SIZE), tp2, line, radi
     real(kind=8) :: deps(6), prec, dx, deuxmu
     real(kind=8) :: sigm(6), vim(8), sigp(6), vip(8), dsidep(6, 6)
 ! ----------------------------------------------------------------------
@@ -119,9 +121,6 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
     dp = 0.d0
 !
 !
-    if (.not. (compor(1) (1:9) .eq. 'VMIS_ECMI')) then
-        call utmess('F', 'ALGORITH4_50', sk=compor(1))
-    end if
 !
 !
 !
@@ -131,7 +130,7 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
     nomres(2) = 'NU'
     nomres(3) = 'ALPHA'
 !
-    if (compor(1) (1:14) .eq. 'VMIS_ECMI_TRAC') then
+    if (relaComp(1:14) .eq. 'VMIS_ECMI_TRAC') then
         call rcvalb(fami, kpg, ksp, '-', imate, &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
                     1, nomres(2), valres(2), icodre(2), 2)
@@ -171,7 +170,7 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
                 1, nomres, valres, icodre, 1)
     pragm = valres(1)
     line = 0.d0
-    if (compor(1) (10:14) .eq. '_LINE') then
+    if (relaComp(10:14) .eq. '_LINE') then
         line = 1.d0
         nomres(1) = 'D_SIGM_EPSI'
         nomres(2) = 'SY'
@@ -277,13 +276,13 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
         else
             plast = 1.d0
             if (cplan) then
-                prec = abs(crit(3))
-                niter = abs(nint(crit(1)))
+                prec = abs(carcri(3))
+                niter = abs(nint(carcri(1)))
                 precr = prec*sigy
 !
 !             CALCUL DE L'APPROXIMATION : DP SANS CONTRAINTE PLANE
 !
-                if (compor(1) (10:14) .eq. '_LINE') then
+                if (relaComp(10:14) .eq. '_LINE') then
                     dp0 = sieleq-sigy-rprim*pm
                     dp0 = dp0/(rprim+1.5d0*(deuxmu+prag))
                 else
@@ -305,7 +304,7 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
                                 rp=rp, rprim=rprim, c=prag)
                 end if
             else
-                if (compor(1) (10:14) .eq. '_LINE') then
+                if (relaComp(10:14) .eq. '_LINE') then
                     dp = sieleq-sigy-rprim*pm
                     dp = dp/(rprim+1.5d0*(deuxmu+prag))
                     rp = sigy+rprim*(pm+dp)
@@ -405,10 +404,10 @@ subroutine nmecmi(fami, kpg, ksp, ndim, typmod, &
     end if
 !
     if (option(1:9) .ne. 'RIGI_MECA') then
-        if (crit(10) .gt. 0.d0) then
+        if (carcri(10) .gt. 0.d0) then
             call radial(ndimsi, sigm, sigp, vim(2), plast, &
                         1, vim(3), vip(3), radi)
-            if (radi .gt. crit(10)) then
+            if (radi .gt. carcri(10)) then
                 iret = 2
             end if
         end if

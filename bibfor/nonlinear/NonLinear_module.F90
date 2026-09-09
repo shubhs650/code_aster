@@ -34,7 +34,6 @@ module NonLinear_module
                isMatrUpdate, &
                isRigiMatrCompute, isInteVectCompute, &
                factorSystem, &
-               setNodalValuesGDVARINO, &
                inteForceGetOption, &
                updateLoadBCMatrix, compElemGeom
 ! ==================================================================================================
@@ -42,10 +41,8 @@ module NonLinear_module
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/diinst.h"
-#include "asterfort/dismoi.h"
 #include "asterfort/infdbg.h"
 #include "asterfort/isfonc.h"
-#include "asterfort/jeveuo.h"
 #include "asterfort/mtdscr.h"
 #include "asterfort/ndynlo.h"
 #include "asterfort/nmchex.h"
@@ -769,41 +766,6 @@ contains
 !   only increase nb of factorization if the matrix has indeed been factored
 !   this can not be the case with the use of LDLT_SP/DP
         if (really_factored) call nmrinc(ds_measure, 'Factor')
-!
-!   -----------------------------------------------------------------------------------------------
-    end subroutine
-! --------------------------------------------------------------------------------------------------
-!
-! setNodalValuesGDVARINO
-!
-! Set damage nodal values to positive value in nodal force vector
-!
-! In  sdnume           : datastructure for dof positions
-! In  numeDof          : name of numbering object (NUME_DDL)
-! In  cnforc           : nodal force vector
-!
-! --------------------------------------------------------------------------------------------------
-    subroutine setNodalValuesGDVARINO(numeDof, sdnume, cnforc)
-! - Parameters
-        character(len=24), intent(in) :: numeDof
-        character(len=19), intent(in) :: sdnume, cnforc
-!   ------------------------------------------------------------------------------------------------
-! - Local
-        integer(kind=8) :: nb_equa, i_equa
-        real(kind=8), pointer :: v_cnforc(:) => null()
-        integer(kind=8), pointer :: v_endo(:) => null()
-!   ------------------------------------------------------------------------------------------------
-!
-        call jeveuo(sdnume(1:19)//'.ENDO', 'L', vi=v_endo)
-        call jeveuo(cnforc(1:19)//'.VALE', 'E', vr=v_cnforc)
-        call dismoi('NB_EQUA', numeDof, 'NUME_DDL', repi=nb_equa)
-        do i_equa = 1, nb_equa
-            if (v_endo(i_equa) .eq. 2) then
-                if (v_cnforc(i_equa) .ge. 0.d0) then
-                    v_cnforc(i_equa) = 0.d0
-                end if
-            end if
-        end do
 !
 !   -----------------------------------------------------------------------------------------------
     end subroutine

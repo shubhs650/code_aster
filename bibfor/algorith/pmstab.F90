@@ -20,7 +20,7 @@
 subroutine pmstab(sigmPrev, sigmCurr, epsiPrev, epsiIncr, &
                   nbVari, vim, vip, &
                   timePrev, timeCurr, iterNewt, &
-                  tablName, tablType, tablNbParaMaxi, tablNbPara, &
+                  tablName, tablType, tablNbPara, &
                   tablParaName, tablVale, &
                   lLoadGrad, valeImpo, lPrintMatr, dsidep, variName, &
                   nbVariTabl)
@@ -43,9 +43,9 @@ subroutine pmstab(sigmPrev, sigmCurr, epsiPrev, epsiIncr, &
     integer(kind=8), intent(in) :: iterNewt
     character(len=8), intent(in) :: tablName
     integer(kind=8), intent(in) :: tablType
-    integer(kind=8), intent(in) :: tablNbParaMaxi, tablNbPara
-    character(len=16), intent(in) :: tablParaName(tablNbParaMaxi)
-    real(kind=8), intent(inout) :: tablVale(tablNbParaMaxi)
+    integer(kind=8), intent(in) :: tablNbPara
+    character(len=16), dimension(:), intent(in) :: tablParaName
+    real(kind=8), dimension(:), intent(inout) :: tablVale
     aster_logical, intent(in) :: lLoadGrad
     real(kind=8), intent(in) :: valeImpo(9)
     aster_logical, intent(in) :: lPrintMatr
@@ -148,42 +148,30 @@ subroutine pmstab(sigmPrev, sigmCurr, epsiPrev, epsiIncr, &
     call fgequi(sigmTabl, 'SIGM_DIR', 3, sigmEqui)
 
     if (tablType .eq. 0) then
+! ----- Save time
+        tablVale(1) = timeCurr
 
 ! ----- Save strains in table
-        b_n = to_blas_int(nbCmpEpsi)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, epsiTabl, b_incx, tablVale(2), b_incy)
+        tablVale(2:2+nbCmpEpsi-1) = epsiTabl(1:nbCmpEpsi)
 
 ! ----- Save stresses in table
-        b_n = to_blas_int(6)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, sigmTabl, b_incx, tablVale(nbCmpEpsi+2), b_incy)
+        tablVale(2+nbCmpEpsi:2+nbCmpEpsi+6-1) = sigmTabl(1:6)
 
 ! ----- Save invariants of stress in table
         tablVale(nbCmpEpsi+8) = sigmEqui(16)
         tablVale(nbCmpEpsi+9) = sigmEqui(1)
 
 ! ----- Save internal state variables
-        b_n = to_blas_int(nbVariTabl)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, vip, b_incx, tablVale(1+nbCmpEpsi+6+2+1), b_incy)
-
-! ----- Save time
-        tablVale(1) = timeCurr
+        tablVale(2+nbCmpEpsi+8:2+nbCmpEpsi+8+nbVariTabl-1) = vip(1:nbVariTabl)
 
 ! ----- Save iteration of Newton
         tablVale(tablNbPara) = iterNewt
 
 ! ----- Save tangent matrix
         if (lPrintMatr) then
-            b_n = to_blas_int(36)
-            b_incx = to_blas_int(1)
-            b_incy = to_blas_int(1)
-            call dcopy(b_n, dsidep, b_incx, tablVale(1+6+6+3+nbVari), b_incy)
+            tablVale(2+nbCmpEpsi+8+nbVariTabl:2+nbCmpEpsi+8+nbVariTabl+36-1) = dsidep(1:36)
         end if
+
         call tbajli(tablName, tablNbPara, tablParaName, [0], tablVale, &
                     [c16Dummy], k8b, 0)
     else

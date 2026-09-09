@@ -109,6 +109,7 @@ CARA_EL0 = AFFE_CARA_ELEM(
         GROUP_MA="RADIER",
         GROUP_MA_POI1="PRADIER",
         GROUP_NO_CENTRE="P3",
+        METHODE="UNIFORME",
     ),
 )
 

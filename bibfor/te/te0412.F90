@@ -15,14 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0412(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate, &
+                                isPlateTria, isPlateQuad, isPlateQ4GG, isPlateDKTG
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cosiro.h"
 #include "asterfort/dkqbf.h"
 #include "asterfort/dkqedg.h"
@@ -34,9 +40,7 @@ subroutine te0412(option, nomte)
 #include "asterfort/dxefro.h"
 #include "asterfort/dxmate.h"
 #include "asterfort/dxqbm.h"
-#include "asterfort/dxqpgl.h"
 #include "asterfort/dxtbm.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/gquad4.h"
 #include "asterfort/gtria3.h"
@@ -49,34 +53,27 @@ subroutine te0412(option, nomte)
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
-#include "asterfort/Behaviour_type.h"
-    character(len=16) :: option, nomte
+#include "jeveux.h"
 !
+    character(len=16), intent(in) :: option, nomte
 !
-! FONCTIONS REALISEES:
+! --------------------------------------------------------------------------------------------------
 !
-!      CALCUL DE LA DENSITE D'ENERGIE POTENTIELLE THERMOELASTIQUE
-!      A L'EQUILIBRE POUR LES ELEMENTS :
-!             - LINEAIRE      : DKT, DST, Q4GG, DKTG ET Q4GG
-!             - NON-LINEAIRE  : DKT, DKTG ET Q4GG
-!      .SOIT AUX POINTS D'INTEGRATION : OPTION 'ENEL_ELGA'
-!      .SOIT AUX NOEUDS               : OPTION 'ENEL_ELNO'
-!      .SOIT L INTEGRALE PAR ELEMENT  : OPTION 'ENEL_ELEM'
+! Elementary computation
 !
-!      OPTIONS : 'ENEL_ELGA'
-!                'ENEL_ELEM'
+! Elements: DKT/DKTG/DST/Q4G/Q4GG
 !
-! ENTREES  ---> OPTION : OPTION DE CALCUL
-!          ---> NOMTE  : NOM DU TYPE ELEMENT
-!.......................................................................
+! Options: ENEL_ELGA/ENEL_ELEM
 !
-    integer(kind=8) :: nnomx
-    parameter(nnomx=4)
-    integer(kind=8) :: nbsm, nbsig
-    parameter(nbsm=3)
-    integer(kind=8) :: npgmx
-    parameter(npgmx=4)
+! --------------------------------------------------------------------------------------------------
 !
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nnomx = 4, nbsm = 3, npgmx = 4
+    integer(kind=8) :: nbsig, ndim
     real(kind=8) :: pgl(3, 3)
     real(kind=8) :: eps(3), khi(3), gam(2)
     real(kind=8) :: bf(3, 3*nnomx), bm(3, 2*nnomx), um(2, nnomx), uf(3, nnomx)
@@ -87,64 +84,54 @@ subroutine te0412(option, nomte)
     real(kind=8) :: enelt(npgmx), enelc(npgmx), enemf(npgmx)
     real(kind=8) :: ent, enm, enf, enc, enmf
     real(kind=8) :: effint(32), effort(32), degpg(32)
-    real(kind=8) :: alpha, beta
-    real(kind=8) :: t2iu(4), t2ui(4), c, s
     real(kind=8) :: dmeps(3), dfkhi(3), dcgam(3)
     real(kind=8) :: df(9), dm(9), dmf(9), dc(4), dci(4)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
-    real(kind=8) :: t1ve(9)
-!
-!
-    integer(kind=8) :: ndim, nno, nnoel, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: jgeom, ipg, ino, jdepm, isig, jsig, idener, iret
+    integer(kind=8) :: nno, nnoel, npg, ipoids, icoopg
+    integer(kind=8) :: jvGeom, kpg, ino, jvDisp, isig, jsig, jvEner, iret
     integer(kind=8) :: icompo, icontp, jvari, nbvar, ivpg
     integer(kind=8) :: multic
-    integer(kind=8) :: jcara
+    character(len=16), pointer :: compor(:) => null()
+    character(len=16) :: optio2, relaComp, relaFlua
+    aster_logical ::  lKitDDI, coupmf
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    character(len=16) :: valk(3), optio2, rela_comp, rela_flua
-    aster_logical :: dkq, dkg, lkit, coupmf
+! --------------------------------------------------------------------------------------------------
 !
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
     nbsig = 6
-    if (nomte .eq. 'MEDKQU4 ' .or. nomte .eq. 'MEDSQU4 ' .or. nomte .eq. 'MEQ4QU4 ') then
-        dkq = .true.
-        dkg = .false.
-    else if (nomte .eq. 'MEDKQG4 ' .or. nomte .eq. 'MEQ4GG4') then
-        dkq = .true.
-        dkg = .true.
+    if (isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara)) then
         nbsig = 8
-    else if (nomte .eq. 'MEDKTR3 ' .or. nomte .eq. 'MEDSTR3 ' .or. nomte .eq. 'MET3TR3 ') then
-        dkq = .false.
-        dkg = .false.
-    else if (nomte .eq. 'MEDKTG3 ' .or. nomte .eq. 'MET3GG3 ') then
-        dkq = .false.
-        dkg = .true.
-        nbsig = 8
-    else
-        call utmess('F', 'ELEMENTS_34', sk=nomte)
     end if
-!
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnoel, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
-!
-    call jevech('PGEOMER', 'L', jgeom)
-!
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-    if (dkq) then
+                     jpoids=ipoids, jcoopg=icoopg)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! - Compute geometric parametres of plate
+    if (isPlateQuad(plateCara)) then
         call gquad4(xyzl, cara)
-    else
+    elseif (isPlateTria(plateCara)) then
         call gtria3(xyzl, cara)
+    else
+        ASSERT(ASTER_FALSE)
     end if
-!
+
 ! --- INITIALISATION
-!
     call r8inir(npgmx, 0.d0, enelt, 1)
     call r8inir(npgmx, 0.d0, enelm, 1)
     call r8inir(npgmx, 0.d0, enelf, 1)
@@ -155,56 +142,52 @@ subroutine te0412(option, nomte)
     enf = 0.0d0
     enc = 0.0d0
     enmf = 0.0d0
-!
+
 ! - ON REGARDE SI ON EST EN LINEAIRE OU ENN NON-LINEAIRE
-!
     call tecach('NNO', 'PCOMPOR', 'L', iret, iad=icompo)
-!
     if (iret .eq. 0) then
-!
-        rela_comp = zk16(icompo-1+RELA_NAME)
-        rela_flua = zk16(icompo-1+CREEP_NAME)
-        lkit = rela_comp(1:7) .eq. 'KIT_DDI'
-!
-        if (rela_comp(1:4) .eq. 'ELAS' .or. rela_comp(1:4) .eq. 'ENDO' .or. &
-            rela_comp(1:6) .eq. 'MAZARS' .or. rela_comp(1:7) .eq. 'GLRC_DM' .or. &
-            rela_comp(1:11) .eq. 'GLRC_DAMAGE' .or. &
-            (lkit .and. rela_flua .eq. 'GLRC_DM')) then
-!
+        call jevech('PCOMPOR', 'L', vk16=compor)
+        relaComp = compor(RELA_NAME)
+        relaFlua = compor(CREEP_NAME)
+        lKitDDI = relaComp(1:7) .eq. 'KIT_DDI'
+        if (relaComp(1:4) .eq. 'ELAS' .or. relaComp(1:4) .eq. 'ENDO' .or. &
+            relaComp(1:6) .eq. 'MAZARS' .or. relaComp(1:7) .eq. 'GLRC_DM' .or. &
+            relaComp(1:11) .eq. 'GLRC_DAMAGE' .or. &
+            (lKitDDI .and. relaFlua .eq. 'GLRC_DM')) then
             if (option .eq. 'ENEL_ELGA') then
-                call jevech('PDEPLAR', 'L', jdepm)
-                if (.not. dkg) then
-! ---     PASSAGE DES CONTRAINTES DANS LE REPERE INTRINSEQUE :
-                    call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', &
-                                icontp, 'S')
+                call jevech('PDEPLAR', 'L', jvDisp)
+                if (.not. (isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara))) then
+                    call cosiro(plateCara, plateOrie, &
+                                'PCONTRR', 'L', 'UI', 'G', &
+                                icontp)
                 else
                     call jevech('PCONTRR', 'L', icontp)
                 end if
             else if (option .eq. 'ENEL_ELEM') then
-                call jevech('PDEPLR', 'L', jdepm)
-                if (.not. dkg) then
-! ---     PASSAGE DES CONTRAINTES DANS LE REPERE INTRINSEQUE :
-                    call cosiro(nomte, 'PCONTPR', 'L', 'UI', 'G', &
-                                icontp, 'S')
+                call jevech('PDEPLR', 'L', jvDisp)
+                if (.not. (isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara))) then
+                    call cosiro(plateCara, plateOrie, &
+                                'PCONTPR', 'L', 'UI', 'G', &
+                                icontp)
                 else
                     call jevech('PCONTPR', 'L', icontp)
                 end if
+            else
+                ASSERT(ASTER_FALSE)
             end if
-!
-!
-            if (dkg .and. &
-                ( &
-                lkit .or. rela_comp(1:11) .eq. 'GLRC_DAMAGE' .or. rela_comp(1:4) .eq. &
-                'ELAS' &
-                )) then
+            if (((isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara)) .and. lKitDDI) .or. &
+                relaComp .eq. 'GLRC_DAMAGE') then
                 if (option .eq. 'ENEL_ELGA') then
                     call jevech('PVARIGR', 'L', jvari)
                 else if (option .eq. 'ENEL_ELEM') then
                     call jevech('PVARIPR', 'L', jvari)
                 end if
             end if
-            if ((.not. lkit) .or. (.not. dkg)) then
-                call utpvgl(nno, 6, pgl, zr(jdepm), ul)
+
+            if ((.not. lKitDDI) .or. &
+                (.not. (isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara)))) then
+! ------------- Change coordinates of displacements
+                call utpvgl(nno, 6, pgl, zr(jvDisp), ul)
 !
 !       -- PARTITION DU DEPLACEMENT EN MEMBRANE/FLEXION :
 !       -------------------------------------------------
@@ -219,52 +202,37 @@ subroutine te0412(option, nomte)
 !
 !     -- CALCUL DES CONTRAINTES GENERALISEES :
 !     -------------------------------------------------
-            if (dkg) then
-                do ipg = 1, npg
+            if (isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara)) then
+                do kpg = 1, npg
                     do isig = 1, nbsig
-                        effort((ipg-1)*nbsig+isig) = zr(icontp-1+(ipg-1)*8+isig)
+                        effort((kpg-1)*nbsig+isig) = zr(icontp-1+(kpg-1)*8+isig)
                     end do
                 end do
-! --- CALCUL DES MATRICES DE CHANGEMENT DE REPERES
-!
-!     T2UI : LA MATRICE DE PASSAGE (2X2) : UTILISATEUR -> INTRINSEQUE
-!     T2IU : LA MATRICE DE PASSAGE (2X2) : INTRINSEQUE -> UTILISATEUR
-!
-                call jevech('PCACOQU', 'L', jcara)
-                alpha = zr(jcara+1)*r8dgrd()
-                beta = zr(jcara+2)*r8dgrd()
-                call coqrep(pgl, alpha, beta, t2iu, t2ui, &
-                            c, s)
-!
-! --- PASSAGE DU VECTEUR DES EFFORTS GENERALISES AUX POINTS
-! --- D'INTEGRATION DU REPERE LOCAL AU REPERE INTRINSEQUE
-!
-                call dxefro(npg, t2ui, effort, effint)
+                call dxefro(npg, plateOrie%t2ui, effort, effint)
             else
-                call dxeffi(option, nomte, pgl, zr(icontp), nbsig, &
+                call dxeffi(plateCara, plateOrie, &
+                            option, nomte, zr(icontp), nbsig, &
                             effint)
             end if
+
+            do kpg = 1, npg
 !
-! ---- BOUCLE SUR LES POINTS D'INTEGRATION :
-!      ===================================
-            do ipg = 1, npg
-!
-                qsi = zr(icoopg-1+ndim*(ipg-1)+1)
-                eta = zr(icoopg-1+ndim*(ipg-1)+2)
-                if (dkq) then
+                qsi = zr(icoopg-1+ndim*(kpg-1)+1)
+                eta = zr(icoopg-1+ndim*(kpg-1)+2)
+                if (isPlateQuad(plateCara)) then
                     call jquad4(xyzl, qsi, eta, jacob)
-                    poids = zr(ipoids+ipg-1)*jacob(1)
+                    poids = zr(ipoids+kpg-1)*jacob(1)
                     call dxqbm(qsi, eta, jacob(2), bm)
                     call dkqbf(qsi, eta, jacob(2), cara, bf)
                 else
-                    poids = zr(ipoids+ipg-1)*cara(7)
+                    poids = zr(ipoids+kpg-1)*cara(7)
                     call dxtbm(cara(9), bm)
                     call dktbf(qsi, eta, cara, bf)
                 end if
 !
-                if (dkg .and. lkit) then
+                if ((isPlateDKTG(plateCara) .or. isPlateQ4GG(plateCara)) .and. lKitDDI) then
                     read (zk16(icompo-1+NVAR), '(I16)') nbvar
-                    ivpg = jvari+(ipg-1)*nbvar+24
+                    ivpg = jvari+(kpg-1)*nbvar+24
                     do isig = 1, nbsm
                         eps(isig) = zr(ivpg+isig)
                         khi(isig) = zr(ivpg+isig+3)
@@ -273,14 +241,11 @@ subroutine te0412(option, nomte)
 !
 !         -- CALCUL DE EPS, KHI :
 !         -----------------------------------
-                    call pmrvec('ZERO', 3, 2*nnoel, bm, um, &
-                                eps)
-                    call pmrvec('ZERO', 3, 3*nnoel, bf, uf, &
-                                khi)
-!
-                    if (rela_comp(1:11) .eq. 'GLRC_DAMAGE') then
+                    call pmrvec('ZERO', 3, 2*nnoel, bm, um, eps)
+                    call pmrvec('ZERO', 3, 3*nnoel, bf, uf, khi)
+                    if (relaComp .eq. 'GLRC_DAMAGE') then
                         read (zk16(icompo-1+NVAR), '(I16)') nbvar
-                        ivpg = jvari+(ipg-1)*nbvar-1
+                        ivpg = jvari+(kpg-1)*nbvar-1
                         do isig = 1, nbsm
                             eps(isig) = eps(isig)-zr(ivpg+isig)
                             khi(isig) = khi(isig)-zr(ivpg+isig+3)
@@ -299,81 +264,85 @@ subroutine te0412(option, nomte)
                     call r8inir(nbsm, 0.d0, mff, 1)
 !
                     do isig = 1, nbsm
-                        nmm(isig) = effint((ipg-1)*nbsig+isig)
-                        mff(isig) = effint((ipg-1)*nbsig+isig+3)
+                        nmm(isig) = effint((kpg-1)*nbsig+isig)
+                        mff(isig) = effint((kpg-1)*nbsig+isig+3)
                     end do
 !
                     do jsig = 1, nbsm
-                        enelm(ipg) = enelm(ipg)+0.5d0*nmm(jsig)*eps(jsig)
-                        enelf(ipg) = enelf(ipg)+0.5d0*mff(jsig)*khi(jsig)
+                        enelm(kpg) = enelm(kpg)+0.5d0*nmm(jsig)*eps(jsig)
+                        enelf(kpg) = enelf(kpg)+0.5d0*mff(jsig)*khi(jsig)
                     end do
-                    enelt(ipg) = enelm(ipg)+enelf(ipg)
+                    enelt(kpg) = enelm(kpg)+enelf(kpg)
 !
-                    enm = enm+enelm(ipg)*poids
-                    enf = enf+enelf(ipg)*poids
-                    ent = ent+enelt(ipg)*poids
+                    enm = enm+enelm(kpg)*poids
+                    enf = enf+enelf(kpg)*poids
+                    ent = ent+enelt(kpg)*poids
                 end if
             end do
         end if
-!
-! --- CALCUL DES OPTIONS ENEL_ELGA ELEM_ELEM DANS LE CAS LINEAIRE
-!     POUR LES ELEMENTS DKT, DST, Q4G, DKTG ET Q4GG
-!
+
     else
 !
         if (option .eq. 'ENEL_ELGA') then
-            call jevech('PDEPLAR', 'L', jdepm)
+            call jevech('PDEPLAR', 'L', jvDisp)
         else if (option .eq. 'ENEL_ELEM') then
-            call jevech('PDEPLR', 'L', jdepm)
+            call jevech('PDEPLR', 'L', jvDisp)
         end if
+! ----- Change coordinates of displacements
+        call utpvgl(nno, 6, pgl, zr(jvDisp), ul)
 !
-        call utpvgl(nno, 6, pgl, zr(jdepm), ul)
-!
-        call dxmate('RIGI', df, dm, dmf, dc, &
-                    dci, dmc, dfc, nno, pgl, &
-                    multic, coupmf, t2iu, t2ui, t1ve)
+        call dxmate(plateCara, plateOrie, &
+                    'RIGI', df, dm, dmf, dc, &
+                    dci, dmc, dfc, &
+                    multic, coupmf)
 !
 !     -- CALCUL DES DEFORMATIONS GENERALISEES AUX POINTS DE GAUSS
 !     -----------------------------------------------------------
         optio2 = 'DEGE_ELGA'
         if (nomte .eq. 'MEDKTR3' .or. nomte .eq. 'MEDKTG3') then
-            call dktedg(xyzl, optio2, pgl, ul, degpg, &
-                        multic)
+            call dktedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg, multic)
         else if (nomte .eq. 'MEDSTR3') then
-            call dstedg(xyzl, optio2, pgl, ul, degpg)
+            call dstedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg)
         else if (nomte .eq. 'MEDKQU4' .or. nomte .eq. 'MEDKQG4') then
-            call dkqedg(xyzl, optio2, pgl, ul, degpg)
+            call dkqedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg)
         else if (nomte .eq. 'MEDSQU4') then
-            call dsqedg(xyzl, optio2, pgl, ul, degpg)
+            call dsqedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg)
         else if (nomte .eq. 'MEQ4QU4' .or. nomte .eq. 'MEQ4GG4') then
-            call q4gedg(xyzl, optio2, pgl, ul, degpg)
+            call q4gedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg)
         else if (nomte .eq. 'MET3TR3' .or. nomte .eq. 'MET3GG3') then
-            call t3gedg(xyzl, optio2, pgl, ul, degpg)
+            call t3gedg(plateCara, plateOrie, &
+                        xyzl, optio2, ul, &
+                        degpg)
         end if
-!
-! ---- BOUCLE SUR LES POINTS D'INTEGRATION :
-!      ===================================
-        do ipg = 1, npg
-!
-            qsi = zr(icoopg-1+ndim*(ipg-1)+1)
-            eta = zr(icoopg-1+ndim*(ipg-1)+2)
-            if (dkq) then
+
+        do kpg = 1, npg
+            qsi = zr(icoopg-1+ndim*(kpg-1)+1)
+            eta = zr(icoopg-1+ndim*(kpg-1)+2)
+            if (isPlateQuad(plateCara)) then
                 call jquad4(xyzl, qsi, eta, jacob)
-                poids = zr(ipoids+ipg-1)*jacob(1)
+                poids = zr(ipoids+kpg-1)*jacob(1)
             else
-                poids = zr(ipoids+ipg-1)*cara(7)
+                poids = zr(ipoids+kpg-1)*cara(7)
             end if
-!
-!  --    CALCUL DE LA DENSITE D'ENERGIE POTENTIELLE ELASTIQUE :
-!        ==========================================================
+
+!  --    CALCUL DE LA DENSITE D'ENERGIE POTENTIELLE ELASTIQUE
             if ((option .eq. 'ENEL_ELGA') .or. (option .eq. 'ENEL_ELEM')) then
-!
                 do isig = 1, nbsm
-                    eps(isig) = degpg((ipg-1)*8+isig)
-                    khi(isig) = degpg((ipg-1)*8+isig+3)
+                    eps(isig) = degpg((kpg-1)*8+isig)
+                    khi(isig) = degpg((kpg-1)*8+isig+3)
                 end do
                 do isig = 1, 2
-                    gam(isig) = degpg((ipg-1)*8+isig+6)
+                    gam(isig) = degpg((kpg-1)*8+isig+6)
                 end do
 !
 ! --- CALCUL DES PRODUITS :
@@ -384,40 +353,36 @@ subroutine te0412(option, nomte)
                 eps(3) = eps(3)*2.d0
                 khi(3) = khi(3)*2.d0
 !
-                call pmrvec('ZERO', 3, 3, dm, eps, &
-                            dmeps)
-                call pmrvec('ZERO', 3, 3, df, khi, &
-                            dfkhi)
-                call pmrvec('ZERO', 2, 2, dc, gam, &
-                            dcgam)
+                call pmrvec('ZERO', 3, 3, dm, eps, dmeps)
+                call pmrvec('ZERO', 3, 3, df, khi, dfkhi)
+                call pmrvec('ZERO', 2, 2, dc, gam, dcgam)
 !
                 do isig = 1, nbsm
-                    enelm(ipg) = enelm(ipg)+0.5d0*eps(isig)*dmeps(isig)
-                    enelf(ipg) = enelf(ipg)+0.5d0*khi(isig)*dfkhi(isig)
+                    enelm(kpg) = enelm(kpg)+0.5d0*eps(isig)*dmeps(isig)
+                    enelf(kpg) = enelf(kpg)+0.5d0*khi(isig)*dfkhi(isig)
                 end do
                 do isig = 1, 2
-                    enelc(ipg) = enelc(ipg)+0.5d0*gam(isig)*dcgam(isig)
+                    enelc(kpg) = enelc(kpg)+0.5d0*gam(isig)*dcgam(isig)
                 end do
 !
 ! --- COUPLAGE MEMBRANE - FLEXION (ELAS_COQUE)
 !
                 if (coupmf) then
-                    call pmrvec('ZERO', 3, 3, dmf, eps, &
-                                dmeps)
-                    call pmrvec('ZERO', 3, 3, dmf, khi, &
-                                dfkhi)
+                    call pmrvec('ZERO', 3, 3, dmf, eps, dmeps)
+                    call pmrvec('ZERO', 3, 3, dmf, khi, dfkhi)
 !
                     do isig = 1, nbsm
-                        enemf(ipg) = enemf(ipg)+0.5d0*(eps(isig)*dfkhi(isig)+khi(isig)*dmeps(isig))
+                        enemf(kpg) = enemf(kpg)+ &
+                                     0.5d0*(eps(isig)*dfkhi(isig)+khi(isig)*dmeps(isig))
                     end do
                 end if
 !
-                enelt(ipg) = enelm(ipg)+enelf(ipg)+enelc(ipg)+enemf(ipg)
-                enm = enm+enelm(ipg)*poids
-                enf = enf+enelf(ipg)*poids
-                enc = enc+enelc(ipg)*poids
-                enmf = enmf+enemf(ipg)*poids
-                ent = ent+enelt(ipg)*poids
+                enelt(kpg) = enelm(kpg)+enelf(kpg)+enelc(kpg)+enemf(kpg)
+                enm = enm+enelm(kpg)*poids
+                enf = enf+enelf(kpg)*poids
+                enc = enc+enelc(kpg)*poids
+                enmf = enmf+enemf(kpg)*poids
+                ent = ent+enelt(kpg)*poids
             end if
         end do
     end if
@@ -426,38 +391,27 @@ subroutine te0412(option, nomte)
 ! ---- ELASTIQUE EN SORTIE
 !      -------------------
     if (option .eq. 'ENEL_ELGA') then
-        call jevech('PENERDR', 'E', idener)
+        call jevech('PENERDR', 'E', jvEner)
     else if (option .eq. 'ENEL_ELEM') then
-        call jevech('PENERD1', 'E', idener)
+        call jevech('PENERD1', 'E', jvEner)
     end if
-!
-! --- OPTION ENEL_ELGA
-!     ================
+
     if (option .eq. 'ENEL_ELGA') then
-        do ipg = 1, npg
-            zr(idener-1+(ipg-1)*5+1) = enelt(ipg)
-            zr(idener-1+(ipg-1)*5+2) = enelm(ipg)
-            zr(idener-1+(ipg-1)*5+3) = enelf(ipg)
-            zr(idener-1+(ipg-1)*5+4) = enelc(ipg)
-            zr(idener-1+(ipg-1)*5+5) = enemf(ipg)
+        do kpg = 1, npg
+            zr(jvEner-1+(kpg-1)*5+1) = enelt(kpg)
+            zr(jvEner-1+(kpg-1)*5+2) = enelm(kpg)
+            zr(jvEner-1+(kpg-1)*5+3) = enelf(kpg)
+            zr(jvEner-1+(kpg-1)*5+4) = enelc(kpg)
+            zr(jvEner-1+(kpg-1)*5+5) = enemf(kpg)
         end do
-!
-! --- OPTION ENEL_ELEM
-!     ================
     else if (option .eq. 'ENEL_ELEM') then
-        zr(idener) = ent
-        zr(idener+1) = enm
-        zr(idener+2) = enf
-        zr(idener+3) = enc
-        zr(idener+4) = enmf
+        zr(jvEner) = ent
+        zr(jvEner+1) = enm
+        zr(jvEner+2) = enf
+        zr(jvEner+3) = enc
+        zr(jvEner+4) = enmf
     else
-!
-!  --- OPTION NON DISPONIBLE
-!      =====================
-        valk(1) = option
-        valk(2) = nomte
-        valk(3) = rela_comp
-        call utmess('F', 'ELEMENTS_88', nk=3, valk=valk)
+        ASSERT(ASTER_FALSE)
     end if
 !
 end subroutine

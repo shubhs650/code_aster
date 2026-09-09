@@ -138,6 +138,8 @@ cata_msg = {
     ),
     50: _("""Arrêt par échec de l'action <%(k1)s>  pour le traitement de l'évènement <%(k2)s>. """),
     51: _("""Arrêt demandé pour le déclenchement de l'évènement <%(k1)s>. """),
+    52: _("""Arrêt demandé pour le déclenchement de l'évènement <DELTA_GRANDEUR>."""),
+    53: _("""Arrêt demandé pour le déclenchement de l'évènement <NB_PAS_MAXI>."""),
     60: _(
         """
    Les forces de contact sont mal définies dans le domaine de Fourier.

@@ -18,14 +18,15 @@
 !
 subroutine te0562(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrefv.h"
 #include "asterfort/jevech.h"
 #include "asterfort/massup.h"
-#include "asterfort/teattr.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -33,8 +34,9 @@ subroutine te0562(option, nomte)
 !
 ! Elementary computation
 !
-! Elements: 3D_GVNO
-!           D_PLAN_GVNO
+! Elements: 3D_GRAD_VARI, 3D_GRAD_INCO
+!           D_PLAN_GRAD_VARI, D_PLAN_GRAD_INCO
+!           AXIS_GRAD_VARI, AXIS_GRAD_INCO
 !
 ! Options: MASS_MECA
 !
@@ -45,45 +47,37 @@ subroutine te0562(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = "MASS"
     integer(kind=8) :: nb_DOF
     integer(kind=8) :: nnoQ, npg, imatuu, ndim, nnos, jv_ganoQ, icodr1(1)
-    integer(kind=8) :: jv_poids, jv_vfQ, jv_dfdeQ, igeom, imate
+    integer(kind=8) :: jv_poids, jv_vfQ, jv_dfdeQ, jvGeom, jvMaterc
     integer(kind=8) :: nnoL, jv_vfL, jv_dfdeL, jv_ganoL
-    character(len=8) :: typmod(2)
-    character(len=16) :: phenom
 !
 ! --------------------------------------------------------------------------------------------------
 !
 
-!
-! - Type of modelling
-!
-    call teattr('S', 'TYPMOD', typmod(1))
-    call teattr('S', 'TYPMOD2', typmod(2))
-!
 ! - Get parameters of element
-!
-    call elrefv('MASS', ndim, &
+    call elrefv(fami, ndim, &
                 nnoL, nnoQ, nnos, &
                 npg, jv_poids, &
                 jv_vfL, jv_vfQ, &
                 jv_dfdeL, jv_dfdeQ, &
                 jv_ganoL, jv_ganoQ)
     ASSERT(ndim .eq. 2 .or. ndim .eq. 3)
-!
+
 ! - Input fields
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
+    call jevech('PMATERC', 'L', jvMaterc)
     call jevech('PMATUUR', 'E', imatuu)
-!
+
 ! - nb_DOF: displacements (2 or 3) + LAMBDA + VAR_REG
-!
     nb_DOF = ndim+2
-!
-    call massup(option, ndim, nb_DOF, nnoQ, nnoL, &
-                zi(imate), phenom, npg, jv_poids, jv_dfdeQ, &
-                zr(igeom), zr(jv_vfQ), imatuu, icodr1, igeom, &
+
+! - Compute mass matrix
+    call massup(zi(jvMaterc), &
+                option, ndim, nb_DOF, nnoQ, nnoL, &
+                npg, jv_poids, jv_dfdeQ, &
+                zr(jvGeom), zr(jv_vfQ), imatuu, icodr1, jvGeom, &
                 jv_vfQ)
 !
 end subroutine

@@ -131,6 +131,12 @@ subroutine nmactf(ds_print, sddisc, sderro, ds_contact, &
 ! ----- ARRET DU CALCUL
 !
         actfix = 3
+    else if (retact .eq. 5) then
+!
+! ----- TOUT EST OK -> ON PASSE A LA SUITE
+!
+        actfix = 0
+
     else
         ASSERT(.false.)
     end if

@@ -15,27 +15,27 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmhuj(fami, kpg, ksp, typmod, imat,&
-                     carcri, &
-                     angmas, epsd,&
-                     deps, sigd, vind, opt, sigf,&
+    subroutine nmhuj(BEHInteg, &
+                     fami, kpg, ksp, typmod, jvMaterCode, &
+                     carcri, epsd, &
+                     deps, sigd, vind, option, sigf, &
                      vinf, dsde, iret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: imat
-        real(kind=8) :: carcri(*)
-        real(kind=8) :: angmas(3)
+        character(len=8) :: typmod(2)
+        integer(kind=8) :: jvMaterCode
+        real(kind=8) :: carcri(CARCRI_SIZE)
         real(kind=8) :: epsd(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: sigd(6)
         real(kind=8) :: vind(50)
-        character(len=16) :: opt
+        character(len=16) :: option
         real(kind=8) :: sigf(6)
         real(kind=8) :: vinf(50)
         real(kind=8) :: dsde(6, 6)

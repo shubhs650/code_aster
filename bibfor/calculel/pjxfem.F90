@@ -57,13 +57,14 @@ subroutine pjxfem(correz, ch1z, ch2z, tychv, prfchz, &
 #include "asterfort/utmess.h"
 #include "asterfort/xcalfev_wrap.h"
 #include "asterfort/xellin.h"
+#include "MeshTypes_type.h"
 !
     character(len=*) :: correz, ch1z, ch2z, prfchz, modz
     integer(kind=8) :: iret
     real(kind=8) :: inst
 !
     integer(kind=8) :: ddlmax, nbnomax
-    parameter(ddlmax=27, nbnomax=27)
+    parameter(ddlmax=MT_NNOMAX, nbnomax=MT_NNOMAX)
     character(len=3) :: tsca
     character(len=8) :: ma1, ma2, nomgd
     character(len=19) :: ch1, ch2, cns1, cns2, prfchn, ligrel
@@ -80,7 +81,7 @@ subroutine pjxfem(correz, ch1z, ch2z, tychv, prfchz, &
     aster_logical :: vide, lvarc, cplan, poiss, young
     real(kind=8) :: dx(3), h1(3), ff(nbnomax), geom(nbnomax*3), baslo(nbnomax*9)
     real(kind=8) :: lsn(nbnomax), lst(nbnomax)
-    real(kind=8) :: fk_escl(27, 3, 3), fk_mait(27, 3, 3), ka, mu, ff2(8)
+    real(kind=8) :: fk_escl(MT_NNOMAX, 3, 3), fk_mait(MT_NNOMAX, 3, 3), ka, mu, ff2(8)
     integer(kind=8), pointer :: pjef_nu(:) => null()
     character(len=8), pointer :: cns1k(:) => null()
     integer(kind=8), pointer :: pjef_nb(:) => null()

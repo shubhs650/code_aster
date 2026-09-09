@@ -19,13 +19,14 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmnewd(type_elem, nb_node  , nb_dim   , elem_coor, pt_coor,&
                       iter_maxi, tole_maxi, proj_dire, ksi1     , ksi2   ,&
                       tang_1   , tang_2   , error,  dist_, ksi1_init, ksi2_init, beta)
         character(len=8), intent(in) :: type_elem
         integer(kind=8), intent(in) :: nb_node
         integer(kind=8), intent(in) :: nb_dim
-        real(kind=8), intent(in) :: elem_coor(27)
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         real(kind=8), intent(in) :: pt_coor(3)
         integer(kind=8), intent(in) :: iter_maxi
         real(kind=8), intent(in) :: tole_maxi

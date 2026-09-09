@@ -18,14 +18,13 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine fonoda(ds_thm  ,&
-                      jv_mater, ndim  , fnoevo,&
-                      mecani  , press1, press2  , tempe ,second, &
-                      dimdef  , dimcon, dt      , congem, congep, &
+    subroutine fonoda(ds_thm, &
+                      ndim, fnoevo, &
+                      mecani, press1, press2, tempe, second, &
+                      dimdef, dimcon, dt, congem, congep, &
                       r)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        integer(kind=8), intent(in) :: jv_mater
         integer(kind=8), intent(in) :: ndim
         aster_logical, intent(in) :: fnoevo
         integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5)

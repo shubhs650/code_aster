@@ -15,29 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine dxmate(fami, df, dm, dmf, dc,&
-                      dci, dmc, dfc, nno, pgl,&
-                      multic, coupmf, t2iu, t2ui, t1ve)
-        character(len=4) :: fami
-        real(kind=8) :: df(3, 3)
-        real(kind=8) :: dm(3, 3)
-        real(kind=8) :: dmf(3, 3)
-        real(kind=8) :: dc(2, 2)
-        real(kind=8) :: dci(2, 2)
-        real(kind=8) :: dmc(3, 2)
-        real(kind=8) :: dfc(3, 2)
-        integer(kind=8) :: nno
-        real(kind=8) :: pgl(3, 3)
-        integer(kind=8) :: multic
-        aster_logical :: coupmf
-        real(kind=8) :: t2iu(4)
-        real(kind=8) :: t2ui(4)
-        real(kind=8) :: t1ve(9)
+    subroutine dxmate(plateCara, plateOrie, &
+                      famiZ, df, dm, dmf, dc, &
+                      dci, dmc, dfc, &
+                      multic, coupmf)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=*), intent(in) :: famiZ
+        real(kind=8), intent(out) :: df(3, 3), dm(3, 3), dmf(3, 3)
+        real(kind=8), intent(out) :: dc(2, 2), dci(2, 2)
+        real(kind=8), intent(out) :: dmc(3, 2), dfc(3, 2)
+        integer(kind=8), intent(out) :: multic
+        aster_logical, intent(out) :: coupmf
     end subroutine dxmate
 end interface

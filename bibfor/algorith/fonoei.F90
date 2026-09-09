@@ -16,24 +16,31 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine fonoei(ds_thm, ndim, dt, fnoevo, dimdef, dimcon, &
+subroutine fonoei(ds_thm, &
+                  ndim, dimdef, dimcon, &
                   addeme, &
                   addep1, addep2, addlh1, adcome, &
-                  adcp11, &
                   adcop1, adcop2, congem, &
                   r)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 !
-!    BUT : CALCUL DU TERME DE CHARGEMENT EXTERIEUR AUX POINTS
-!    D'INTEGRATION
+    type(THM_DS), intent(in) :: ds_thm
+    integer(kind=8) :: ndim, dimdef, dimcon
+    integer(kind=8) :: addeme, adcome
+    integer(kind=8) :: addep1, addep2
+    integer(kind=8) :: adcop1, adcop2, addlh1
+    real(kind=8) :: congem(dimcon), r(dimdef)
 !
+! --------------------------------------------------------------------------------------------------
 !
-! ======================================================================
+! CALCUL DU TERME DE CHARGEMENT EXTERIEUR AUX POINTS D'INTEGRATION
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! In  ds_thm           : datastructure for THM
 ! IN NDIM  : DIMENSION ESPACE
 ! IN DT    : INCREMENT DE TEMPS
@@ -43,31 +50,22 @@ subroutine fonoei(ds_thm, ndim, dt, fnoevo, dimdef, dimcon, &
 ! IN ADDEME : ADRESSE DES DEFORMATIONS MECANIQUES
 ! IN ADDEP1 : ADRESSE DES DEFORMATIONS CORRESPONDANT A LA PRESSION 1
 ! IN ADDEP2 : ADRESSE DES DEFORMATIONS CORRESPONDANT A LA PRESSION 2
-! IN ADDETE : ADRESSE DES DEFORMATIONS THERMIQUES
+! IN ADDETE : ADRESSE DES DEFi, ORMATIONS THERMIQUES
 ! IN ADCOME : ADRESSE DES CONTRAINTES MECANIQUES
 ! IN ADCP11 : ADRESSE DES CONTRAINTES FLUIDE 1 PHASE 1
 ! IN ADCOP1 : ADRESSE DES CONTRAINTES CORRESPONDANT AU SAUT DE PRE1
 ! IN ADCOP2 : ADRESSE DES CONTRAINTES CORRESPONDANT AU SAUT DE PRE2
 ! IN CONGEM : CONTRAINTES GENERALISEES AU TEMPS MOINS
-! ======================================================================
 ! OUT R : VECTEUR FORCES EXTERIEURES
-! ======================================================================
-    type(THM_DS), intent(in) :: ds_thm
-    aster_logical :: fnoevo
-    integer(kind=8) :: dimdef, dimcon
-    integer(kind=8) :: ndim
-    real(kind=8) :: dt, congem(dimcon), r(dimdef)
-! ======================================================================
-    integer(kind=8) :: addeme, adcome
-    integer(kind=8) :: addep1, adcp11, addep2
-    integer(kind=8) :: i, adcop1, adcop2, f, addlh1
 !
-! ======================================================================
-! --- CALCUL DU RESIDU R -----------------------------------------------
-! ======================================================================
-! ======================================================================
-! -------------------------------------
-! ======================================================================
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: i, f
+!
+! --------------------------------------------------------------------------------------------------
+!
+
+! - CALCUL DU RESIDU R
     do i = 1, ndim
         r(addeme+i-1) = r(addeme+i-1)+congem(adcome-1+i)
     end do
@@ -81,21 +79,6 @@ subroutine fonoei(ds_thm, ndim, dt, fnoevo, dimdef, dimcon, &
         do f = 1, 2
             r(addep2+ndim+1+f) = r(addep1+ndim+1+f)+congem(adcop2+1+f)
         end do
-    end if
-!
-    if (fnoevo) then
-! ======================================================================
-! --- TERMES DEPENDANT DE DT DANS FORC_NODA POUR STAT_NON_LINE ---------
-! ======================================================================
-        if (ds_thm%ds_elem%l_dof_pre1) then
-            do f = 1, 2
-                r(addep1) = r(addep1)+dt*congem(adcop1-1+f)
-                r(addlh1-1+f) = -dt*congem(adcop1-1+f)
-            end do
-            do i = 1, ndim-1
-                r(addep1+i) = dt*congem(adcp11+i)
-            end do
-        end if
     end if
 !
 end subroutine

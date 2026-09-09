@@ -15,13 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine betcvx(BEHinteg, &
+subroutine betcvx(BEHInteg, &
                   nmat, mater, sig, vind, vinf, &
                   nvi, nseuil)
 !
     use Behaviour_type
-!
     implicit none
 !
 #include "asterfort/betfpp.h"
@@ -52,7 +52,7 @@ subroutine betcvx(BEHinteg, &
 !       IN  MATER  :  COEFFICIENTS MATERIAU A TEMP
 !       VAR NSEUIL :  SEUIL ELASTIQUE PRECEDENT / NOUVEAU SEUIL CALCULE
 !       ----------------------------------------------------------------
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: nvi, nmat, nseuil
     real(kind=8) :: pc, pt, sig(6), dev(6), vind(*), vinf(*)
     real(kind=8) :: mater(nmat, 2)
@@ -113,7 +113,7 @@ subroutine betcvx(BEHinteg, &
 !
 ! ---   ECROUISSAGE EN TRACTION ET EN COMPRESSION
 !
-    call betfpp(BEHinteg, &
+    call betfpp(BEHInteg, &
                 mater, nmat, pc, pt, &
                 3, fc, ft, dfcdlc, dftdlt, &
                 kuc, kut, ke)

@@ -29,13 +29,15 @@ subroutine mmGetShapeFunctions(laxis, typmae, typmam, &
 #include "asterfort/jevech.h"
 #include "asterfort/mmform.h"
 #include "asterfort/mmmjac.h"
+#include "MeshTypes_type.h"
 #include "asterfort/utmess.h"
 !
     aster_logical, intent(in) :: laxis
     character(len=8), intent(in) :: typmae, typmam
     integer(kind=8), intent(in) :: ndim, nne, nnm
     real(kind=8), intent(in) :: xpc, ypc, xpr, ypr
-    real(kind=8), intent(out) :: ffe(9), ffm(9), dffm(2, 9), ddffm(3, 9), ffl(9)
+    real(kind=8), intent(out) :: ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), dffm(2, MT_NNOMAX2D)
+    real(kind=8), intent(out) :: ddffm(3, MT_NNOMAX2D), ffl(MT_NNOMAX2D)
     real(kind=8), intent(out) :: jacobi
 !
 ! --------------------------------------------------------------------------------------------------
@@ -67,9 +69,9 @@ subroutine mmGetShapeFunctions(laxis, typmae, typmam, &
 !
     integer(kind=8) :: i_node, i_dime
     integer(kind=8) :: jgeom
-    real(kind=8) :: slav_coor_init(3, 9)
-    real(kind=8) :: dffe(2, 9), ddffe(3, 9)
-    real(kind=8) :: dffl(2, 9), ddffl(3, 9)
+    real(kind=8) :: slav_coor_init(3, MT_NNOMAX2D)
+    real(kind=8) :: dffe(2, MT_NNOMAX2D), ddffe(3, MT_NNOMAX2D)
+    real(kind=8) :: dffl(2, MT_NNOMAX2D), ddffl(3, MT_NNOMAX2D)
     aster_logical :: l_axis_warn
 !
 ! --------------------------------------------------------------------------------------------------

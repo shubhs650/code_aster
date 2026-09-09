@@ -102,7 +102,7 @@ subroutine nonlinLoadCompute(mode, list_load, &
     character(len=19) :: disp_prev, strx_prev
     character(len=19) :: vite_curr, varc_curr, disp_curr, acce_curr
     character(len=19) :: disp_cumu_inst
-    character(len=24) :: vrcplu
+    character(len=24) :: varcAllCurr
     type(HHO_Field) :: hhoField
 !
 ! --------------------------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ subroutine nonlinLoadCompute(mode, list_load, &
     end if
 !
     call nmchex(hval_incr, 'VALINC', 'COMPLU', varc_curr)
-    call nmvcex('TOUT', varc_curr, vrcplu)
+    call nmvcex('TOUT', varc_curr, varcAllCurr)
 !
 ! - Time
 !
@@ -200,7 +200,7 @@ subroutine nonlinLoadCompute(mode, list_load, &
                     model, cara_elem, ds_material%mater, ds_material%mateco, &
                     lload_name, lload_info, &
                     time_list, &
-                    vect_elem, varcCurrZ_=vrcplu)
+                    vect_elem, varcCurrZ_=varcAllCurr)
         call asasve(vect_elem, nume_dof, 'R', 'D', vect_alem)
         call ascova('D', vect_alem, lload_func, 'INST', time_curr, &
                     'R', vect_asse)
@@ -236,7 +236,7 @@ subroutine nonlinLoadCompute(mode, list_load, &
                         lload_name, lload_info, &
                         time_list, &
                         disp_prev, disp_cumu_inst, &
-                        vrcplu, &
+                        varcAllCurr, &
                         vect_elem)
             call asasve(vect_elem, nume_dof, 'R', 'D', vect_alem)
             call ascova('D', vect_alem, lload_func, 'INST', time_curr, &

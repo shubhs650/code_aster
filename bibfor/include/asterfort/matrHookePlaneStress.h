@@ -15,14 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
 !
 interface
-    subroutine matrHookePlaneStress(elas_type, angl_naut,&
-                                    h, g, g1,&
+    subroutine matrHookePlaneStress(materPara, &
+                                    h, g, g1, &
                                     matr_elas)
-        integer(kind=8), intent(in) :: elas_type
-        real(kind=8), intent(in) :: angl_naut(3)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         real(kind=8), intent(in) :: h(3), g
         real(kind=8), intent(in) :: g1
         real(kind=8), intent(out) :: matr_elas(4, 4)

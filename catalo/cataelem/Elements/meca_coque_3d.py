@@ -32,12 +32,6 @@ from cataelem.Options.options import OP
 
 CCACO3D = LocatedComponents(phys=PHY.CACO3D_R, type="ELEM", components=("CRF",))
 
-CCACOQU = LocatedComponents(
-    phys=PHY.CACOQU_R,
-    type="ELEM",
-    components=("EP", "ALPHA", "BETA", "KAPPA", "CTOR", "EXCENT", "INERTIE"),
-)
-
 CCAORIE = LocatedComponents(phys=PHY.CAORIE_R, type="ELEM", components=("ALPHA", "BETA", "REP"))
 
 # - Warning ! non-standard / located_components.py (MASS instead of RIGI)
@@ -305,7 +299,7 @@ class TemplateElement(Element):
         OP.CHAR_MECA_PESA_R(
             te=403,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PPESANR, LC.CPESANR),
@@ -320,7 +314,7 @@ class TemplateElement(Element):
         ),
         OP.CHAR_MECA_PRES_R(
             te=403,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, NGEOMER), (SP.PPRESSR, EPRESNO)),
+            para_in=((SP.PCACOQU, LC.CSHL3D), (SP.PGEOMER, NGEOMER), (SP.PPRESSR, EPRESNO)),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_F(
@@ -347,7 +341,7 @@ class TemplateElement(Element):
         OP.CHAR_MECA_ROTA_R(
             te=403,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PROTATR, LC.CROTATR),
@@ -383,7 +377,7 @@ class TemplateElement(Element):
         OP.CHAR_MECA_TEMP_R(
             te=419,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.CHAR_MECA_TEMP_R.PNBSP_I, ENBSP_I),
@@ -395,13 +389,17 @@ class TemplateElement(Element):
         ),
         OP.COOR_ELGA(
             te=488,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, NGEOMER), (OP.COOR_ELGA.PNBSP_I, ENBSP_I)),
+            para_in=(
+                (SP.PCACOQU, LC.CSHL3D),
+                (SP.PGEOMER, NGEOMER),
+                (OP.COOR_ELGA.PNBSP_I, ENBSP_I),
+            ),
             para_out=((OP.COOR_ELGA.PCOORPG, EGGEOP_R), (OP.COOR_ELGA.PCOORSU, EGGEOP_R)),
         ),
         OP.DEGE_ELGA(
             te=410,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -414,7 +412,7 @@ class TemplateElement(Element):
         OP.DEGE_ELNO(
             te=410,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -427,7 +425,7 @@ class TemplateElement(Element):
         OP.ECIN_ELEM(
             te=406,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -440,7 +438,7 @@ class TemplateElement(Element):
         OP.EFGE_ELGA(
             te=451,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.EFGE_ELGA.PNBSP_I, ENBSP_I),
                 (SP.PSIEFR, ECONTPG),
@@ -450,7 +448,7 @@ class TemplateElement(Element):
         OP.EFGE_ELNO(
             te=185,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.EFGE_ELNO.PCOMPOR, LC.CCOMPOR),
                 (OP.EFGE_ELNO.PCONTRR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -477,7 +475,7 @@ class TemplateElement(Element):
         OP.EPOT_ELEM(
             te=401,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -490,7 +488,7 @@ class TemplateElement(Element):
         OP.EPSI_ELGA(
             te=410,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -504,7 +502,7 @@ class TemplateElement(Element):
         OP.EPSI_ELNO(
             te=40,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.EPSI_ELNO.PDEFOPG, EDEFOPG),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
@@ -515,7 +513,7 @@ class TemplateElement(Element):
         OP.FERR_ELEM(
             te=146,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.FERR_ELEM.PEFFORR, EEFGENOR),
                 (SP.PFERRA1, LC.CFER1_R),
             ),
@@ -524,7 +522,7 @@ class TemplateElement(Element):
         OP.FORC_NODA(
             te=416,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCOMPOR, LC.CCOMPOR),
                 (SP.PSIEFR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -538,7 +536,7 @@ class TemplateElement(Element):
         OP.FULL_MECA(
             te=414,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA.PCONTMR, ECONTPG),
@@ -568,7 +566,7 @@ class TemplateElement(Element):
         OP.FULL_MECA_ELAS(
             te=414,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.FULL_MECA_ELAS.PCONTMR, ECONTPG),
@@ -599,7 +597,7 @@ class TemplateElement(Element):
         OP.MASS_INER(
             te=417,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.MASS_INER.PVARCPR, LC.ZVARCPG),
@@ -609,7 +607,7 @@ class TemplateElement(Element):
         OP.MASS_MECA(
             te=406,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.MASS_MECA.PCOMPOR, LC.CCOMPOR),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -622,7 +620,7 @@ class TemplateElement(Element):
             te=406,
             para_in=(
                 (SP.PACCELR, DDL_MECA),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.M_GAMMA.PVARCPR, LC.ZVARCPG),
@@ -642,7 +640,7 @@ class TemplateElement(Element):
         OP.PREP_VRC(
             te=408,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.PREP_VRC.PINST_R, CTEMPSR),
                 (OP.PREP_VRC.PNBSP_I, ENBSP_I),
                 (SP.PTEMPEF, LC.CTEMPEF),
@@ -655,7 +653,7 @@ class TemplateElement(Element):
             te=414,
             para_in=(
                 (OP.RAPH_MECA.PCACO3D, CCACO3D),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
                 (OP.RAPH_MECA.PCONTMR, ECONTPG),
@@ -682,26 +680,27 @@ class TemplateElement(Element):
         OP.REFE_FORC_NODA(
             te=416,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.REFE_FORC_NODA.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLMR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.REFE_FORC_NODA.PNBSP_I, ENBSP_I),
-                (SP.PREFCO, LC.CRESSIG),
+                (SP.PRESIREF, LC.CRESIREF),
+                (SP.PRESICMP, LC.CRESICMP),
             ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.REPERE_LOCAL(
             te=134,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, NGEOMER)),
+            para_in=((SP.PCACOQU, LC.CSHL3D), (SP.PGEOMER, NGEOMER)),
             para_out=((SP.PREPLO1, LC.CGEOM3D), (SP.PREPLO2, LC.CGEOM3D), (SP.PREPLO3, LC.CGEOM3D)),
         ),
         OP.REPE_GENE(
             te=443,
             para_in=(
                 (SP.PANGREP, CCAORIE),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDGGAIN, EDEFGPG),
                 (SP.PDGGAINC, EDEFGPC),
                 (SP.PDGNOIN, EDEFGNO),
@@ -727,7 +726,7 @@ class TemplateElement(Element):
             te=443,
             para_in=(
                 (SP.PANGREP, CCAORIE),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCOGAIN, ECONTPG),
                 (SP.PCONOIN, ESIGMNOR),
                 (SP.PDEGAIN, EDEFOPG),
@@ -744,7 +743,7 @@ class TemplateElement(Element):
         OP.RIGI_MECA(
             te=401,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PNBSP_I, ENBSP_I),
@@ -756,7 +755,7 @@ class TemplateElement(Element):
         OP.RIGI_MECA_ELAS(
             te=414,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_ELAS.PCONTMR, ECONTPG),
@@ -781,7 +780,11 @@ class TemplateElement(Element):
         ),
         OP.RIGI_GEOM(
             te=402,
-            para_in=((SP.PCACOQU, CCACOQU), (OP.RIGI_GEOM.PCONTRR, ECONTPG), (SP.PGEOMER, NGEOMER)),
+            para_in=(
+                (SP.PCACOQU, LC.CSHL3D),
+                (OP.RIGI_GEOM.PCONTRR, ECONTPG),
+                (SP.PGEOMER, NGEOMER),
+            ),
             para_out=((SP.PMATUUR, MMATUUR),),
         ),
         OP.RIGI_MECA_HYST(
@@ -839,7 +842,7 @@ class TemplateElement(Element):
         OP.RIGI_MECA_TANG(
             te=414,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
                 (OP.RIGI_MECA_TANG.PCONTMR, ECONTPG),
@@ -869,7 +872,7 @@ class TemplateElement(Element):
         OP.SIEF_ELGA(
             te=410,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, NGEOMER),
                 (SP.PMATERC, LC.CMATERC),
@@ -883,7 +886,7 @@ class TemplateElement(Element):
         OP.SIEF_ELNO(
             te=40,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.SIEF_ELNO.PCOMPOR, LC.CCOMPOR),
                 (OP.SIEF_ELNO.PCONTRR, ECONTPG),
                 (SP.PDEPPLU, DDL_MECA),
@@ -911,7 +914,7 @@ class TemplateElement(Element):
         OP.SIGM_ELNO(
             te=40,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.SIGM_ELNO.PCOMPOR, LC.CCOMPOR),
                 (OP.SIGM_ELNO.PCONTRR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -923,7 +926,7 @@ class TemplateElement(Element):
         OP.TEMP_ELGA(
             te=126,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHL3D),
                 (OP.TEMP_ELGA.PNBSP_I, ENBSP_I),
                 (OP.TEMP_ELGA.PVARCPR, LC.ZVARCPG),
             ),
@@ -931,25 +934,34 @@ class TemplateElement(Element):
         ),
         OP.TOU_INI_ELEM(
             te=99,
-            para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D), (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I)),
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PPRES_R, EPRESNO),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARI_ELNO(
@@ -963,7 +975,7 @@ class TemplateElement(Element):
         ),
         OP.VERI_CARA_ELEM(
             te=119,
-            para_in=((SP.PCACOQU, CCACOQU),),
+            para_in=((SP.PCACOQU, LC.CSHL3D),),
             para_out=((SP.PCODRET, LC.ECODRET), (SP.PINDICR, LC.CINDICR)),
         ),
     )

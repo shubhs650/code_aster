@@ -114,6 +114,8 @@ class BehaviourProperty : public DataStructure {
     /** @brief Detect non-linear behaviour */
     bool hasBehaviour( const std::string &behaviour ) const;
 
+    VectorString variNameToCmp( const VectorLong &cells, const VectorString &variNames ) const;
+
     /** @brief Detect annealing as post-treatment */
     bool hasAnnealing() const { return _annealing; };
 };

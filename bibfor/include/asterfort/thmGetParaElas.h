@@ -16,13 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
+interface
+    subroutine thmGetParaElas(temp, ndim, ds_thm)
         use THM_type
-        type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        integer(kind=8), intent(in) :: kpi
+        use MaterialPara_type
         real(kind=8), intent(in) :: temp
         integer(kind=8), intent(in) :: ndim
+        type(THM_DS), intent(inout) :: ds_thm
     end subroutine thmGetParaElas
-end interface 
+end interface

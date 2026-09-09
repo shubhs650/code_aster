@@ -17,20 +17,19 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine lcplnl(BEHinteg, &
-                  fami, kpg, ksp, rela_comp, toler, &
+subroutine lcplnl(BEHInteg, &
+                  fami, kpg, ksp, relaComp, toler, &
                   itmax, mod, imat, nmat, materd, &
                   materf, nr, nvi, timed, timef, &
                   deps, epsd, sigd, vind, compor, &
                   nbcomm, cpmono, pgl, nfs, nsg, &
-                  toutms, hsr, sigf, vinf, icomp, &
+                  toutms, hsr, sigf, vinf, &
                   codret, drdy, carcri)
 !
     use Behaviour_type
-!
     implicit none
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
 !
 !     INTEGRATION ELASTO-PLASTIQUE ET VISCO-PLASTICITE
 !           SUR DT DE Y = ( SIG , VIN )
@@ -68,7 +67,6 @@ subroutine lcplnl(BEHinteg, &
 !         PGL    :  MATRICE DE PASSAGE
 !         TOUTMS :  TENSEURS D'ORIENTATION monocristal
 !         HSR    :  MATRICE D'INTERACTION monocristal
-!         ICOMP  :  COMPTEUR POUR LE REDECOUPAGE DU PAS DE TEMPS
 !     VAR DEPS   :  INCREMENT DE DEFORMATION
 !     OUT SIGF   :  CONTRAINTE A T+DT
 !         VINF   :  VARIABLES INTERNES A T+DT
@@ -100,7 +98,7 @@ subroutine lcplnl(BEHinteg, &
 #include "asterfort/r8inir.h"
 #include "asterfort/utlcal.h"
 #include "asterfort/Behaviour_type.h"
-    integer(kind=8) :: imat, nmat, icomp
+    integer(kind=8) :: imat, nmat, cutLevel
     integer(kind=8) :: typess, itmax, iret, kpg, ksp
     integer(kind=8) :: nr, ndt, ndi, nvi, iter
 !
@@ -117,7 +115,7 @@ subroutine lcplnl(BEHinteg, &
     aster_logical :: lreli
 !
     character(len=8) :: mod
-    character(len=16), intent(in) :: rela_comp
+    character(len=16), intent(in) :: relaComp
     character(len=16), intent(in) :: compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     character(len=*) :: fami
@@ -137,6 +135,7 @@ subroutine lcplnl(BEHinteg, &
 !
 !     ACTIVATION OU PAS DE LA RECHERCHE LINEAIRE
     lreli = .false.
+    cutLevel = BEHInteg%behavPara%cutLevel
     call utlcal('VALE_NOM', algo, carcri(6))
     if (algo .eq. 'NEWTON_RELI') lreli = .true.
 !
@@ -170,7 +169,7 @@ subroutine lcplnl(BEHinteg, &
                 sigd, nr1, yd)
 !
 !     CHOIX DES PARAMETRES DE LANCEMENT DE MGAUSS
-    call lccaga(rela_comp, cargau)
+    call lccaga(relaComp, cargau)
 !
     if (mod(1:6) .eq. 'C_PLAN') yd(nr) = epsd(3)
 !
@@ -189,7 +188,7 @@ subroutine lcplnl(BEHinteg, &
     call r8inir(ndt+nvi, 0.d0, yf, 1)
 !
 !     CALCUL DE LA SOLUTION D ESSAI INITIALE DU SYSTEME NL EN DY
-    call lcinit(fami, kpg, ksp, rela_comp, typess, &
+    call lcinit(fami, kpg, ksp, relaComp, typess, &
                 essai, mod, nmat, materf, &
                 timed, timef, nr1, nvi, &
                 yd, epsd, deps, dy, compor, &
@@ -216,7 +215,7 @@ subroutine lcplnl(BEHinteg, &
         yf(1:nr) = yd(1:nr)+dy(1:nr)
 !
 !        CALCUL DES TERMES DU SYSTEME A T+DT = -R(DY)
-        call lcresi(fami, kpg, ksp, rela_comp, mod, &
+        call lcresi(fami, kpg, ksp, relaComp, mod, &
                     imat, nmat, materd, materf, &
                     nbcomm, cpmono, pgl, nfs, nsg, &
                     toutms, hsr, nr, nvi, vind, &
@@ -237,7 +236,7 @@ subroutine lcplnl(BEHinteg, &
 !
     if (verjac .ne. 2) then
 !         CALCUL DU JACOBIEN DU SYSTEME A T+DT = DRDY(DY)
-        call lcjacb(fami, kpg, ksp, rela_comp, mod, &
+        call lcjacb(fami, kpg, ksp, relaComp, mod, &
                     nmat, materf, timed, timef, &
                     yf, deps, itmax, toler, nbcomm, &
                     cpmono, pgl, nfs, nsg, toutms, &
@@ -251,7 +250,7 @@ subroutine lcplnl(BEHinteg, &
     end if
 !
     if (verjac .ge. 1) then
-        call lcjacp(fami, kpg, ksp, rela_comp, toler, &
+        call lcjacp(fami, kpg, ksp, relaComp, toler, &
                     itmax, mod, imat, nmat, materd, &
                     materf, nr, nvi, timed, timef, &
                     deps, epsd, vind, vinf, yd, &
@@ -277,7 +276,7 @@ subroutine lcplnl(BEHinteg, &
         dy(1:nr) = ddy(1:nr)+dy(1:nr)
     else if (lreli) then
 !        RECHERCHE LINEAIRE : RENVOIE DY, YF ET R RE-ACTUALISES
-        call lcreli(fami, kpg, ksp, rela_comp, mod, &
+        call lcreli(fami, kpg, ksp, relaComp, mod, &
                     imat, nmat, materd, materf, &
                     nbcomm, cpmono, pgl, nfs, nsg, &
                     toutms, hsr, nr, nvi, vind, &
@@ -289,10 +288,10 @@ subroutine lcplnl(BEHinteg, &
     if (mod(1:6) .eq. 'C_PLAN') deps(3) = dy(nr)
 !
 !     VERIFICATION DE LA CONVERGENCE EN DY  ET RE-INTEGRATION ?
-    call lcconv(rela_comp, yd, dy, ddy, &
+    call lcconv(relaComp, yd, dy, ddy, &
                 nr, itmax, toler, iter, intg, &
                 nmat, materf, r, rini, epstr, &
-                typess, essai, icomp, nvi, &
+                typess, essai, cutLevel, nvi, &
                 vinf, &
                 iret)
 !     IRET = 0 CONVERGENCE
@@ -315,8 +314,8 @@ subroutine lcplnl(BEHinteg, &
     sigf(1:ndt) = yf(1:ndt)
 !
 !     POST-TRAITEMENTS POUR DES LOIS PARTICULIERES
-    call lcplnf(BEHinteg, &
-                rela_comp, vind, nbcomm, nmat, cpmono, &
+    call lcplnf(BEHInteg, &
+                relaComp, vind, nbcomm, nmat, cpmono, &
                 materf, iter, nvi, itmax, &
                 toler, pgl, nfs, nsg, toutms, &
                 hsr, dt, dy, yd, yf, &

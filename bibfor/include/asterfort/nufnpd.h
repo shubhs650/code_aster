@@ -15,16 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine nufnpd(ndim, nno1, nno2, npg, iw,&
-                      vff1, vff2, idff1, vu, vp,&
-                      typmod, mate, compor, geomi, sig,&
-                      ddl, mini, vect)
+    subroutine nufnpd(ndim, nno1, nno2, npg, iw, &
+                      vff1, vff2, idff1, vu, vp, &
+                      typmod, relaComp, geomi, sig, &
+                      ddl, mini, vect, &
+                      materPara)
+        use MaterialPara_type
         integer(kind=8) :: npg
         integer(kind=8) :: nno2
         integer(kind=8) :: nno1
@@ -35,13 +34,13 @@ interface
         integer(kind=8) :: idff1
         integer(kind=8) :: vu(3, 27)
         integer(kind=8) :: vp(27)
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: mate
-        character(len=16) :: compor(*)
+        character(len=8) :: typmod(2)
+        character(len=16) :: relaComp
         real(kind=8) :: geomi(ndim, nno1)
         real(kind=8) :: sig(2*ndim+1, npg)
         real(kind=8) :: ddl(*)
         aster_logical :: mini
         real(kind=8) :: vect(*)
+        type(Material_Para), intent(inout) :: materPara
     end subroutine nufnpd
 end interface

@@ -81,7 +81,7 @@ subroutine addGrpNo(mesh, group_no, listNodes, nbNodes, l_added_grpno)
 !
     if (l_exi_in_grp) then
         l_added = ASTER_FALSE
-        call utmess('F', 'SOUSTRUC_37', sk=group_no)
+        call utmess('A', 'SOUSTRUC_37', sk=group_no)
     elseif (nbNodes <= 0) then
         l_added = ASTER_FALSE
         call utmess('A', 'SOUSTRUC_38', sk=group_no)

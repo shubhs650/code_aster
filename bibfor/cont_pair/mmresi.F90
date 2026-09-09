@@ -20,10 +20,11 @@ subroutine mmresi(alias, nno, ndim, coorma, coorpt, &
                   ksi1, ksi2, valeur)
     implicit none
 #include "asterfort/mmfonf.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmtang.h"
     character(len=8) :: alias
     integer(kind=8) :: nno, ndim
-    real(kind=8) :: coorma(27), coorpt(3)
+    real(kind=8) :: coorma(3, MT_NNOMAX2D), coorpt(3)
     real(kind=8) :: ksi1, ksi2
     real(kind=8) :: valeur
 ! ----------------------------------------------------------------------
@@ -51,7 +52,7 @@ subroutine mmresi(alias, nno, ndim, coorma, coorpt, &
 !
 ! ----------------------------------------------------------------------
 !
-    real(kind=8) :: ff(9), dff(2, 9), ddff(3, 9)
+    real(kind=8) :: ff(MT_NNOMAX2D), dff(2, MT_NNOMAX2D), ddff(3, MT_NNOMAX2D)
     integer(kind=8) :: ino, idim
     real(kind=8) :: vec1(3), tau1(3), tau2(3)
     real(kind=8) :: residu(2)
@@ -80,7 +81,7 @@ subroutine mmresi(alias, nno, ndim, coorma, coorpt, &
 !
     do idim = 1, ndim
         do ino = 1, nno
-            vec1(idim) = coorma(3*(ino-1)+idim)*ff(ino)+vec1(idim)
+            vec1(idim) = coorma(idim, ino)*ff(ino)+vec1(idim)
         end do
     end do
 !

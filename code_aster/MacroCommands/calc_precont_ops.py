@@ -83,7 +83,7 @@ def calc_precont_ops(
     # 1.1 Recuperation de la liste d'instants, de l'instant initial et final
     #     Creation de la nouvelle liste d'instants
     # ----------------------------------------------------------
-    dIncrement = INCREMENT[0].cree_dict_valeurs(INCREMENT[0].mc_liste)
+    dIncrement = INCREMENT[0]
     __prec = dIncrement["PRECISION"]
 
     __L0 = dIncrement["LIST_INST"]
@@ -97,12 +97,18 @@ def calc_precont_ops(
 
     # Traitement de l'etat initial
     if ETAT_INIT:
-        dEtatInit = ETAT_INIT[0].cree_dict_valeurs(ETAT_INIT[0].mc_liste)
+        dEtatInit = ETAT_INIT[0]
         for i in list(dEtatInit.keys()):
             if dEtatInit[i] is None:
                 del dEtatInit[i]
     else:
         dEtatInit = None
+
+    # Traitement de CONVERGENCE_REFE
+    if "CONVERGENCE_REFE" in args:
+        dConvergenceRefe = args["CONVERGENCE_REFE"]
+    else:
+        dConvergenceRefe = None
 
     # Teste si INST_INIT est donné ou bien recalcule __TMIN
     if dIncrement["INST_INIT"] is None:
@@ -162,12 +168,17 @@ def calc_precont_ops(
         __L2[-1:-1] = [__TINT]
 
         # __LST0 est la liste d'instants utilisée pour l'etape 1
+        # Pas de copie de la liste d'instants fournie en entrée car modèle différent pour cet étape
         __LSTR0 = DEFI_LIST_REEL(DEBUT=__TMIN, INTERVALLE=_F(JUSQU_A=__TMAX, NOMBRE=1))
         __LST0 = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=__LSTR0))
 
         # __LST et __FCT sont utilisés pour les etapes 2 et 3
-        __LSTR = DEFI_LIST_REEL(VALE=__L2)
-        __LST = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=__LSTR))
+        if type(__L0) == TimesList:
+            __LST = __L0.copy()
+            __LST.setValues(__L2)
+        else:
+            __LSTR = DEFI_LIST_REEL(VALE=__L2)
+            __LST = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=__LSTR))
         __FCT = DEFI_FONCTION(
             INTERPOL=("LIN", "LIN"), NOM_PARA="INST", VALE=(__TMIN, 0.0, __TINT, 1.0, __TMAX, 1.0)
         )
@@ -185,18 +196,18 @@ def calc_precont_ops(
         #     for j in dNewton.keys():
         #       if dNewton[j] is None : del dNewton[j]
 
-        dConvergence = CONVERGENCE[0].cree_dict_valeurs(CONVERGENCE[0].mc_liste)
+        dConvergence = CONVERGENCE[0]
         for i in list(dConvergence.keys()):
             if dConvergence[i] is None:
                 del dConvergence[i]
 
-        dSolveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+        dSolveur = SOLVEUR[0]
         for i in list(dSolveur.keys()):
             if dSolveur[i] is None:
                 del dSolveur[i]
 
         if RECH_LINEAIRE:
-            dRech_lin = RECH_LINEAIRE[0].cree_dict_valeurs(RECH_LINEAIRE[0].mc_liste)
+            dRech_lin = RECH_LINEAIRE[0]
             for i in list(dRech_lin.keys()):
                 if dRech_lin[i] is None:
                     del dRech_lin[i]
@@ -204,7 +215,7 @@ def calc_precont_ops(
             dRech_lin = None
 
         if ENERGIE:
-            dEnergie = ENERGIE[0].cree_dict_valeurs(ENERGIE[0].mc_liste)
+            dEnergie = ENERGIE[0]
             motscle4["ENERGIE"] = dEnergie
             motscle5["ENERGIE"] = dEnergie
 
@@ -288,7 +299,7 @@ def calc_precont_ops(
         # ------------------------------------------------------
         dComp_incr = []
         for j in COMPORTEMENT:
-            dComp_incr.append(j.cree_dict_valeurs(j.mc_liste))
+            dComp_incr.append(j)
             for i in list(dComp_incr[-1].keys()):
                 if dComp_incr[-1][i] is None:
                     del dComp_incr[-1][i]
@@ -477,7 +488,7 @@ def calc_precont_ops(
         # Regeneration des mots-cles EXCIT passés en argument de la macro
         dExcit = []
         for j in EXCIT:
-            dExcit.append(j.cree_dict_valeurs(j.mc_liste))
+            dExcit.append(j)
             for i in list(dExcit[-1].keys()):
                 if dExcit[-1][i] is None:
                     del dExcit[-1][i]
@@ -504,6 +515,7 @@ def calc_precont_ops(
             ETAT_INIT=dEtatInit,
             METHODE=METHODE,
             CONVERGENCE=dConvergence,
+            CONVERGENCE_REFE=dConvergenceRefe,
             RECH_LINEAIRE=dRech_lin,
             SOLVEUR=dSolveur,
             ARCHIVAGE=ARCHIVAGE,
@@ -532,6 +544,7 @@ def calc_precont_ops(
             METHODE=METHODE,
             RECH_LINEAIRE=dRech_lin,
             CONVERGENCE=dConvergence,
+            CONVERGENCE_REFE=dConvergenceRefe,
             SOLVEUR=dSolveur,
             ARCHIVAGE=ARCHIVAGE,
             INFO=INFO,
@@ -716,7 +729,7 @@ def calc_precont_ops(
 
         dExcit = []
         for j in EXCIT:
-            dExcit.append(j.cree_dict_valeurs(j.mc_liste))
+            dExcit.append(j)
             for i in list(dExcit[-1].keys()):
                 if dExcit[-1][i] is None:
                     del dExcit[-1][i]
@@ -770,9 +783,12 @@ def calc_precont_ops(
             t_fin_etape2 = __TINT2
             t_fin_etape3 = __TMAX
             # ------------------------------
-
-        __LSTR = DEFI_LIST_REEL(VALE=__L2)
-        __LST = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=__LSTR))
+        if type(__L0) == TimesList:
+            __LST = __L0.copy()
+            __LST.setValues(__L2)
+        else:
+            __LSTR = DEFI_LIST_REEL(VALE=__L2)
+            __LST = DEFI_LIST_INST(DEFI_LIST=_F(LIST_INST=__LSTR))
         dIncrement["LIST_INST"] = __LST
 
         # construction des fonctions multiplicatrices
@@ -862,6 +878,7 @@ def calc_precont_ops(
                 ETAT_INIT=ETAT_INIT,
                 METHODE=METHODE,
                 CONVERGENCE=CONVERGENCE,
+                CONVERGENCE_REFE=dConvergenceRefe,
                 RECH_LINEAIRE=RECH_LINEAIRE,
                 SOLVEUR=SOLVEUR,
                 ARCHIVAGE=ARCHIVAGE,
@@ -916,6 +933,7 @@ def calc_precont_ops(
                 NEWTON=_F(REAC_ITER=1),
                 METHODE=METHODE,
                 CONVERGENCE=CONVERGENCE,
+                CONVERGENCE_REFE=dConvergenceRefe,
                 RECH_LINEAIRE=RECH_LINEAIRE,
                 SOLVEUR=SOLVEUR,
                 ARCHIVAGE=ARCHIVAGE,
@@ -935,6 +953,7 @@ def calc_precont_ops(
                 METHODE=METHODE,
                 ETAT_INIT=ETAT_INIT,
                 CONVERGENCE=CONVERGENCE,
+                CONVERGENCE_REFE=dConvergenceRefe,
                 RECH_LINEAIRE=RECH_LINEAIRE,
                 SOLVEUR=SOLVEUR,
                 ARCHIVAGE=ARCHIVAGE,
@@ -958,6 +977,7 @@ def calc_precont_ops(
                 NEWTON=_F(REAC_ITER=1),
                 METHODE=METHODE,
                 CONVERGENCE=CONVERGENCE,
+                CONVERGENCE_REFE=dConvergenceRefe,
                 RECH_LINEAIRE=RECH_LINEAIRE,
                 SOLVEUR=SOLVEUR,
                 ARCHIVAGE=ARCHIVAGE,

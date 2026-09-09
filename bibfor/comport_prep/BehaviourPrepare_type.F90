@@ -34,30 +34,27 @@ module BehaviourPrepare_type
 ! Type: parameters for external behaviours (MFront/UMAT)
 ! ==================================================================================================
     type BehaviourPrep_Exte
-! ----- Flag for UMAT law
-        aster_logical :: l_umat = ASTER_FALSE
-! ----- Flag for non-official MFront law
-        aster_logical :: l_mfront_proto = ASTER_FALSE
-! ----- Flag for official MFront law
-        aster_logical :: l_mfront_offi = ASTER_FALSE
-! ----- Type of behaviour: 0 (internal integration), 1 (MFront official),
-!       2 (MFront proto), 4 (UMAT)
-        integer(kind=8) :: extern_type = 0
-! ----- Address to MGISBehaviour object as hexadecimal
-        character(len=16) :: extern_addr = ' '
+! ----- Type of external integrator
+        integer(kind=8) :: solvBehavType = SOLV_BEHAV_ASTER
 ! ----- Address to UMAT function
-        integer(kind=8) :: extern_ptr = 0
+        integer(kind=8) :: adrsUMAT = 0
 ! ----- Name of subroutine for external UMAT law
-        character(len=255) :: subr_name = ' '
+        character(len=255) :: subrNameUMAT = ' '
 ! ----- Name of library for external UMAT law
-        character(len=255) :: libr_name = ' '
-! ----- Model for MFront law
-        integer(kind=8) :: model_mfront = MGIS_MODEL_UNSET
+        character(len=255) :: librNameUMAT = ' '
 ! ----- Number of internal variables for UMAT
         integer(kind=8) :: nbVariUMAT = 0
+! ----- Address to MGISBehaviour object as hexadecimal of integer
+        character(len=16) :: adrsMGIS = ' '
+        integer(kind=8) :: adrsMGISInteger = 0
+! ----- Model for MFront law
+        integer(kind=8) :: modelMGIS = MGIS_MODEL_UNSET
 ! ----- Identifier for strains model
-        integer(kind=8) :: strain_model = MGIS_STRAIN_UNSET
+        integer(kind=8) :: strainMGIS = MGIS_STRAIN_UNSET
+! ----- stress plane hypothesis (for Deborst)
+        character(len=16) :: cplaMGIS = " "
     end type BehaviourPrep_Exte
+
 ! ==================================================================================================
 ! Type: behaviour parameters from user
 ! ==================================================================================================
@@ -121,9 +118,6 @@ module BehaviourPrepare_type
         real(kind=8) :: algo_inte_r = 0.d0
         real(kind=8), pointer :: resi_inte => null()
         integer(kind=8), pointer :: iter_inte_maxi => null()
-        integer(kind=8) :: extern_ptr = 0
-        integer(kind=8) :: extern_type = 0
-        integer(kind=8) :: exte_strain = 0
         integer(kind=8) :: jvariext1 = 0
         integer(kind=8) :: jvariext2 = 0
     end type BehaviourPrep_Crit

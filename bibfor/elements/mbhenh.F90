@@ -26,7 +26,7 @@ subroutine mbhenh(imate, kpg, fami, aini, adef, jacini, jacdef, sigpk2, dsigpk2)
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     integer(kind=8) :: kpg, imate
     real(kind=8) :: aini(2, 2), jacini
     real(kind=8) :: adef(2, 2), jacdef

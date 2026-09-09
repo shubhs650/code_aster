@@ -15,22 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine sigimc(fami, nno, ndim, nbsig, npg,&
-                      instan, mater, angl_naut,&
+    subroutine sigimc(materPara, &
+                      nbsig, npg, time, &
                       epsini, sigma)
-        character(len=4) :: fami
-        integer(kind=8) :: nno
-        integer(kind=8) :: ndim
-        integer(kind=8) :: nbsig
-        integer(kind=8) :: npg
-        real(kind=8) :: instan
-        integer(kind=8) :: mater
-        real(kind=8) :: angl_naut(3)
-        real(kind=8) :: epsini(1)
-        real(kind=8) :: sigma(1)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        integer(kind=8), intent(in) :: nbsig, npg
+        real(kind=8), intent(in) :: time
+        real(kind=8), intent(in) :: epsini(nbsig*npg)
+        real(kind=8), intent(out) :: sigma(nbsig*npg)
     end subroutine sigimc
 end interface

@@ -28,10 +28,11 @@ subroutine mcomce(noma, newgeo, nummai, coor, alias, &
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnum.h"
 #include "asterfort/mmelty.h"
+#include "MeshTypes_type.h"
     character(len=8) :: noma
     character(len=19) :: newgeo
     integer(kind=8) :: nummai
-    real(kind=8) :: coor(27)
+    real(kind=8) :: coor(3, MT_NNOMAX2D)
     character(len=8) :: alias
     integer(kind=8) :: nno
 !
@@ -67,7 +68,7 @@ subroutine mcomce(noma, newgeo, nummai, coor, alias, &
 !
 ! --- INITIALISATIONS
 !
-    coor(1:27) = 0.d0
+    coor = 0.d0
 !
 ! --- INFOS SUR LA MAILLE
 !
@@ -82,9 +83,9 @@ subroutine mcomce(noma, newgeo, nummai, coor, alias, &
 ! --- COORDONNEES DES NOEUDS DE LA MAILLE
 !
     do ino = 1, nno
-        coor(3*(ino-1)+1) = vale(1+3*(no(ino)-1))
-        coor(3*(ino-1)+2) = vale(1+3*(no(ino)-1)+1)
-        coor(3*(ino-1)+3) = vale(1+3*(no(ino)-1)+2)
+        coor(1, ino) = vale(1+3*(no(ino)-1))
+        coor(2, ino) = vale(1+3*(no(ino)-1)+1)
+        coor(3, ino) = vale(1+3*(no(ino)-1)+2)
     end do
 !
     call jedema()

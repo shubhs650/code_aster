@@ -15,65 +15,73 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W1306
+! aslint: disable=W1504,W1306,W1502
 !
 subroutine xasshm(ds_thm, &
                   nno, npg, npi, ipoids, ivf, &
-                  idfde, igeom, geom, carcri, deplm, &
-                  deplp, contm, contp, varim, varip, &
-                  defgem, defgep, drds, drdsr, dsde, &
-                  b, dfdi, dfdi2, r, sigbar, &
+                  idfde, igeom, geom, carcri, &
+                  deplm, deplp, &
+                  contm, contp, &
+                  varim, varip, &
+                  defgem, defgep, &
+                  drds, drdsr, dsde, &
+                  b, dfdi, dfdi2, &
+                  r, sigbar, &
                   c, ck, cs, matuu, vectu, &
-                  rinstm, rinstp, option, j_mater, mecani, &
-                  press1, press2, tempe, dimdef, dimcon, &
-                  dimuel, nbvari, nddls, nddlm, nmec, &
-                  np1, ndim, compor, axi, modint, &
-                  codret, nnop, nnops, nnopm, enrmec, &
+                  timePrev, timeCurr, option, &
+                  mecani, press1, press2, tempe, &
+                  dimdef, dimcon, dimuel, &
+                  nbvari, nddls, nddlm, nmec, &
+                  np1, ndim, compor, axi, modint, codret, &
+                  nnop, nnops, nnopm, enrmec, &
                   dimenr, heavt, lonch, cnset, jpintt, &
-                  jpmilt, jheavn, angmas, dimmat, enrhyd, &
+                  jpmilt, jheavn, dimmat, enrhyd, &
                   nfiss, nfh, jfisno, work1, work2, &
                   lVect, lMatr, lVari, lSigm)
 !
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/pmathm.h"
 #include "asterfort/reeref.h"
 #include "asterfort/tecach.h"
+#include "asterfort/thmGetBehaviour.h"
+#include "asterfort/thmGetBehaviourChck.h"
+#include "asterfort/thmGetBehaviourVari.h"
+#include "asterfort/thmGetParaCoupling.h"
+#include "asterfort/thmGetParaInit.h"
 #include "asterfort/xcabhm.h"
 #include "asterfort/xdefhm.h"
 #include "asterfort/xequhm.h"
 #include "asterfort/xlinhm.h"
-#include "asterfort/thmGetBehaviourVari.h"
-#include "asterfort/thmGetBehaviour.h"
-#include "asterfort/thmGetParaCoupling.h"
-#include "asterfort/thmGetParaInit.h"
-#include "asterfort/thmGetBehaviourChck.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
     integer(kind=8) :: dimmat, npg, dimuel
-    integer(kind=8) :: npi, ipoids, ivf, idfde, j_mater, dimdef, dimcon, nnop
+    integer(kind=8) :: npi, ipoids, ivf, idfde, dimdef, dimcon, nnop
     integer(kind=8) :: nbvari, nddls, nddlm, nmec, np1, ndim, codret
     integer(kind=8) :: mecani(5), press1(7), press2(7), tempe(5)
-    integer(kind=8) ::  nfiss, nfh, jfisno
+    integer(kind=8) :: nfiss, nfh, jfisno
     integer(kind=8) :: addeme, addep1, ii, jj, in, jheavn
-    integer(kind=8) :: kpi, ipi
+    integer(kind=8) :: kpg, ipi
     integer(kind=8) :: i, j, n, k, kji, nb_vari_meca
-    real(kind=8) :: geom(ndim, nnop), carcri(*), poids
+    real(kind=8) :: geom(ndim, nnop), poids
     real(kind=8) :: deplp(dimuel), deplm(dimuel)
     real(kind=8) :: matuu(dimuel*dimuel), matri(dimmat, dimmat)
-    real(kind=8) :: rinstp, rinstm, vectu(dimuel)
+    real(kind=8) :: timeCurr, timePrev, vectu(dimuel)
     real(kind=8) :: defgem(dimdef), defgep(dimdef)
-    real(kind=8) :: dt, parm_theta, ta1
-    real(kind=8) :: angmas(3)
+    real(kind=8) :: timeIncr, paraTheta, paraThetaCpl
     aster_logical :: axi
     character(len=3) :: modint
-    character(len=16) :: option, compor(*)
+    character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     aster_logical, intent(in) :: lVect, lMatr, lVari, lSigm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -122,6 +130,7 @@ subroutine xasshm(ds_thm, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: ksp = 1
     integer(kind=8) :: nnops, nnopm
     integer(kind=8) :: nno, ncomp
     integer(kind=8) :: heavt(*), enrmec(3), dimenr, enrhyd(3)
@@ -166,12 +175,7 @@ subroutine xasshm(ds_thm, &
     adenme = enrmec(2)
     yaenrh = enrhyd(1)
     adenhy = enrhyd(2)
-! =====================================================================
-! --- CALCUL DE CONSTANTES TEMPORELLES --------------------------------
-! =====================================================================
-    dt = rinstp-rinstm
-    parm_theta = carcri(PARM_THETA_THM)
-    ta1 = 1.d0-parm_theta
+
 ! =====================================================================
 ! --- CREATION DES MATRICES DE SELECTION ------------------------------
 ! --- (MATRICES DIAGONALES) C,CS --------------------------------------
@@ -223,29 +227,29 @@ subroutine xasshm(ds_thm, &
         end do
         matri(:, :) = 0.d0
     end if
-!
+
 ! - Get parameters for behaviour
-!
     call thmGetBehaviour(compor, ds_thm)
-!
+
 ! - Get parameters for internal variables
-!
     call thmGetBehaviourVari(ds_thm)
-!
+
 ! - Some checks between behaviour and model
-!
     call thmGetBehaviourChck(ds_thm)
-!
+
 ! - Get parameters for coupling
-!
     temp = 0.d0
-    call thmGetParaCoupling(ds_thm, j_mater, temp)
-!
+    call thmGetParaCoupling(ds_thm, temp)
+
 ! - Get initial parameters (THM_INIT)
-!
-    call thmGetParaInit(j_mater, ds_thm, l_check_=ASTER_TRUE)
-!
-!     RECUPERATION DE LA CONNECTIVITE FISSURE - DDL HEAVISIDES
+    call thmGetParaInit(ds_thm, l_check_=ASTER_TRUE)
+
+! - Time parameters
+    timeIncr = timeCurr-timePrev
+    paraTheta = carcri(PARM_THETA_THM)
+    paraThetaCpl = 1.d0-paraTheta
+
+!    RECUPERATION DE LA CONNECTIVITE FISSURE - DDL HEAVISIDES
 !     ATTENTION !!! FISNO PEUT ETRE SURDIMENTIONNE
     if (nfiss .eq. 1) then
         do ino = 1, nnop
@@ -274,10 +278,9 @@ subroutine xasshm(ds_thm, &
             heavn(in, ig) = zi(jheavn-1+ncompn*(in-1)+ig)
         end do
     end do
-!
-!     BOUCLE D'INTEGRATION SUR LES NSE SOUS-ELEMENTS
+
+!   BOUCLE D'INTEGRATION SUR LES NSE SOUS-ELEMENTS
     do ise = 1, nse
-!
 !     BOUCLE SUR LES 4/3 SOMMETS DU SOUS-TETRA/TRIA
         do in = 1, nno
             ino = cnset(nno*(ise-1)+in)
@@ -304,8 +307,11 @@ subroutine xasshm(ds_thm, &
 ! --- BOUCLE SUR LES POINTS D'INTEGRATION -----------------------------
 ! =====================================================================
         do ipi = 1, npi
-            kpi = ipi
-!
+            kpg = ipi
+
+! --------- Set main parameters for behaviour (on point)
+            call behaviourSetParaPoin(kpg, ksp, ds_thm%ds_behaviour%BEHInteg)
+
 !     COORDONNÉES DU PT DE GAUSS DANS LE REPÈRE RÉEL : XG
             xg(:) = 0.d0
             do j = 1, ndim
@@ -331,7 +337,7 @@ subroutine xasshm(ds_thm, &
 ! =====================================================================
             call xcabhm(ds_thm, &
                         nddls, nddlm, nnop, nnops, nnopm, &
-                        dimuel, ndim, kpi, ff, ff2, &
+                        dimuel, ndim, kpg, ff, ff2, &
                         dfdi, dfdi2, b, nmec, &
                         addeme, addep1, np1, axi, &
                         ivf, ipoids, idfde, poids, coorse, &
@@ -361,42 +367,44 @@ subroutine xasshm(ds_thm, &
 ! --- ELEMENT COURANT ISE ----------------------------------------------
 ! ======================================================================
             do i = 1, nbvari
-                vintm(i) = varim(npi*(ise-1)*nbvari+(kpi-1)*nbvari+i)
+                vintm(i) = varim(npi*(ise-1)*nbvari+(kpg-1)*nbvari+i)
             end do
             if (lVari) then
                 do i = 1, nbvari
-                    vintp(i) = varip(npi*(ise-1)*nbvari+(kpi-1)*nbvari+i)
+                    vintp(i) = varip(npi*(ise-1)*nbvari+(kpg-1)*nbvari+i)
                 end do
             end if
             do i = 1, dimcon
-                congem(i) = contm(npi*(ise-1)*dimcon+(kpi-1)*dimcon+i)
+                congem(i) = contm(npi*(ise-1)*dimcon+(kpg-1)*dimcon+i)
             end do
             if (lSigm) then
                 do i = 1, dimcon
-                    congep(i) = contp(npi*(ise-1)*dimcon+(kpi-1)*dimcon+i)
+                    congep(i) = contp(npi*(ise-1)*dimcon+(kpg-1)*dimcon+i)
                 end do
             end if
-            call xequhm(ds_thm, j_mater, option, parm_theta, ta1, ndim, &
-                        kpi, npg, dimenr, enrmec, &
+            call xequhm(ds_thm, option, &
+                        lVect, lMatr, lSigm, &
+                        paraTheta, paraThetaCpl, ndim, &
+                        kpg, npg, dimenr, enrmec, &
                         dimdef, dimcon, nbvari, defgem, congem, &
                         vintm, defgep, congep, &
                         vintp, mecani, press1, press2, tempe, &
-                        rinstp, dt, r, drds, dsde, &
-                        codret, angmas, enrhyd, nfh)
+                        timeCurr, timeIncr, r, drds, dsde, &
+                        codret, enrhyd, nfh)
             do i = 1, nbvari
-                varim(npi*(ise-1)*nbvari+(kpi-1)*nbvari+i) = vintm(i)
+                varim(npi*(ise-1)*nbvari+(kpg-1)*nbvari+i) = vintm(i)
             end do
             if (lVari) then
                 do i = 1, nbvari
-                    varip(npi*(ise-1)*nbvari+(kpi-1)*nbvari+i) = vintp(i)
+                    varip(npi*(ise-1)*nbvari+(kpg-1)*nbvari+i) = vintp(i)
                 end do
             end if
             do i = 1, dimcon
-                contm(npi*(ise-1)*dimcon+(kpi-1)*dimcon+i) = congem(i)
+                contm(npi*(ise-1)*dimcon+(kpg-1)*dimcon+i) = congem(i)
             end do
             if (lSigm) then
                 do i = 1, dimcon
-                    contp(npi*(ise-1)*dimcon+(kpi-1)*dimcon+i) = congep(i)
+                    contp(npi*(ise-1)*dimcon+(kpg-1)*dimcon+i) = congep(i)
                 end do
             end if
 ! ======================================================================
@@ -415,16 +423,16 @@ subroutine xasshm(ds_thm, &
 ! --- A CE JOUR ELLE VAUT : PARAMETER ( NBCOMP = 7 + 9 ) ---------------
 ! ======================================================================
             if (mecani(1) .eq. 1) then
-                if (kpi .gt. npg) then
+                if (kpg .gt. npg) then
                     if (lSigm) then
                         do i = 1, 6
-                            contp((kpi-1)*dimcon+i) = contp((kpi-npg-1)*dimcon+i)
+                            contp((kpg-1)*dimcon+i) = contp((kpg-npg-1)*dimcon+i)
                         end do
                     end if
                     nb_vari_meca = ds_thm%ds_behaviour%nb_vari_meca
                     if (lVari) then
                         do i = 1, nb_vari_meca
-                            varip((kpi-1)*nbvari+i) = varip((kpi-npg-1)*nbvari+i)
+                            varip((kpg-1)*nbvari+i) = varip((kpg-npg-1)*nbvari+i)
                         end do
                     end if
                 end if
@@ -442,7 +450,7 @@ subroutine xasshm(ds_thm, &
 ! --- SI KPI<NPG ALORS ON EST SUR UN POINT DE GAUSS: CK = C  -----------
 ! --- SINON ON EST SUR UN SOMMET                   : CK = CS -----------
 ! ======================================================================
-            if (kpi .le. npg) then
+            if (kpg .le. npg) then
                 ck(1:dimenr) = c(1:dimenr)
             else
                 ck(1:dimenr) = cs(1:dimenr)
@@ -493,8 +501,9 @@ subroutine xasshm(ds_thm, &
                 end do
             end do
         end if
-! ======================================================================
+!
 99      continue
-! ======================================================================
+!
     end do
+!
 end subroutine

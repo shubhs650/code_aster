@@ -15,8 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine lcdppa(mod, nvi, option, materf, compor, &
+subroutine lcdppa(mod, nvi, option, materf, &
                   sigm, deps, vim, vip, sig, &
                   dsidep, iret)
     implicit none
@@ -35,7 +36,7 @@ subroutine lcdppa(mod, nvi, option, materf, compor, &
     real(kind=8) :: deps(6), vim(nvi), vip(nvi), sig(6)
     real(kind=8) :: sigm(6), materf(5, 2), dsidep(6, 6)
     character(len=8) :: mod
-    character(len=16) :: option, compor(*)
+    character(len=16) :: option
 ! =====================================================================
 ! --- LOI DE COMPORTEMENT DRUCKER PRAGER ------------------------------
 ! --- ELASTICITE ISOTROPE ---------------------------------------------

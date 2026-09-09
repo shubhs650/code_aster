@@ -15,25 +15,36 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxefgv(nomte, option, xyzl, pgl, depl, effgt)
+!
+subroutine dxefgv(plateCara, plateOrie, &
+                  nomte, optionZ, xyzl, pgl, depl, effgt)
+!
+    use plate_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/dxefg2.h"
 #include "asterfort/dxefgm.h"
 #include "asterfort/dxefgt.h"
 #include "asterfort/dxefn2.h"
 #include "asterfort/dxefnt.h"
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
     character(len=16) :: nomte
-    character(len=*) :: option
+    character(len=*) :: optionZ
     real(kind=8) :: xyzl(3, 1), pgl(3, 3)
     real(kind=8) :: depl(*)
     real(kind=8) :: effgt(*)
-!     ------------------------------------------------------------------
-! --- EFFORTS GENERALISES 'VRAIS' (I.E. EFFOR_MECA - EFFOR_THERM)
-! --- AUX POINTS D'INTEGRATION POUR LES ELEMENTS COQUES A
-! --- FACETTES PLANES : DST, DKT, DSQ, DKQ, Q4G
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
+! EFFORTS GENERALISES 'VRAIS' (I.E. EFFOR_MECA - EFFOR_THERM)
+! AUX POINTS D'INTEGRATION POUR LES ELEMENTS COQUES A
+! FACETTES PLANES : DST, DKT, DSQ, DKQ, Q4G
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN  NOMTE        : NOM DU TYPE D'ELEMENT
 !     IN  OPTION       : NOM DE L'OPTION
 !     IN  XYZL(3,NNO)  : COORDONNEES DES CONNECTIVITES DE L'ELEMENT
@@ -51,43 +62,42 @@ subroutine dxefgv(nomte, option, xyzl, pgl, depl, effgt)
 !                        D'INTEGRATION (I.E.
 !                           EFFORTS_MECA - EFFORTS_THERM)
 !
-    real(kind=8) :: sigth(32)
+! --------------------------------------------------------------------------------------------------
 !
-! --- CALCUL DES EFFORTS GENERALISES D'ORIGINE MECANIQUE
-! --- AUX POINTS DE CALCUL
-!     --------------------
-!-----------------------------------------------------------------------
     integer(kind=8) :: i
-    character(len=16) :: opti16
+    character(len=16) :: option
+    real(kind=8) :: sigmTher(32)
 !
-    opti16 = option
+! --------------------------------------------------------------------------------------------------
 !
-    call dxefgm(nomte, opti16, xyzl, pgl, depl, effgt)
-!
-! --- CALCUL DES EFFORTS GENERALISES D'ORIGINE THERMIQUE
-! --- AUX POINTS DE CALCUL
-!     --------------------
-! ---     POINTS D'INTEGRATION
+    option = optionZ
+
+! - CALCUL DES EFFORTS GENERALISES
+    call dxefgm(plateCara, plateOrie, &
+                nomte, option, xyzl, depl, effgt)
+
+! - CALCUL DES EFFORTS GENERALISES D'ORIGINE THERMIQUE
     if (option(8:9) .eq. 'GA') then
         if (nomte .eq. 'MEDKQG4' .or. nomte .eq. 'MEDKTG3') then
-            call dxefg2(pgl, sigth)
+            call dxefg2(plateCara, plateOrie, &
+                        pgl, sigmTher)
         else
-            call dxefgt(pgl, sigth)
+            call dxefgt(plateCara, plateOrie, &
+                        sigmTher)
         end if
-! ---     POINTS DE CALCUL
     else if (option(8:9) .eq. 'NO') then
         if (nomte .eq. 'MEDKQG4' .or. nomte .eq. 'MEDKTG3') then
-            call dxefn2(nomte, pgl, sigth)
+            call dxefn2(plateCara, plateOrie, &
+                        nomte, pgl, sigmTher)
         else
-            call dxefnt(nomte, pgl, sigth)
+            call dxefnt(plateCara, plateOrie, &
+                        sigmTher)
         end if
     end if
-!
-! --- CALCUL DES EFFORTS GENERALISES 'VRAIS'
-! --- AUX POINTS DE CALCUL
-!     --------------------
+
+! - CALCUL DES EFFORTS GENERALISES 'VRAIS'
     do i = 1, 32
-        effgt(i) = effgt(i)-sigth(i)
+        effgt(i) = effgt(i)-sigmTher(i)
     end do
 !
 end subroutine

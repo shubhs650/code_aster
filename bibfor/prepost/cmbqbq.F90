@@ -28,7 +28,6 @@ subroutine cmbqbq(main, maout, degree, info)
 #include "asterfort/jedema.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jemarq.h"
-#include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
 !
     integer(kind=8), intent(in) :: degree, info

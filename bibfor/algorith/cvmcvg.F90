@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
-                  iter, intg, typess, essai, icomp, &
+                  iter, intg, typess, essai, cutLevel, &
                   irteti)
     implicit none
 !       VISCOCHABOCHE        : CONTROLE DE LA CONVERGENCE
@@ -49,7 +49,7 @@ subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
 #include "asterfort/codree.h"
 #include "asterfort/lcverr.h"
 #include "asterfort/utmess.h"
-    integer(kind=8) :: typess, itmax, iter, intg, nr, icomp
+    integer(kind=8) :: typess, itmax, iter, intg, nr, cutLevel
     real(kind=8) :: toler, essai, ddy(*), dy(*)
 !       ----------------------------------------------------------------
     real(kind=8) :: tolim, dplim
@@ -149,7 +149,7 @@ subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
                 goto 999
             else if (intg .eq. 8) then
 !
-                if (icomp .eq. 0 .or. icomp .eq. 1) then
+                if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                     call codent(intg, 'G', cintg)
                     call codree(abs(dp), 'E', cdp)
                     valk(1) = cintg
@@ -242,7 +242,7 @@ subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
 ! -                     SINON STOP
 !
                         else
-                            if (icomp .eq. 0 .or. icomp .eq. 1) then
+                            if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                                 call codent(iter, 'G', citer)
                                 call codree(toler, 'E', ctol)
                                 valk(1) = citer
@@ -256,7 +256,7 @@ subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
                             end if
                         end if
                     else
-                        if (icomp .eq. 0 .or. icomp .eq. 1) then
+                        if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                             call codent(iter, 'G', citer)
                             call codree(toler, 'E', ctol)
                             valk(1) = citer
@@ -273,7 +273,7 @@ subroutine cvmcvg(dy, ddy, nr, itmax, toler, &
 ! -               ITER < 6 STOP
 !
                 else
-                    if (icomp .eq. 0 .or. icomp .eq. 1) then
+                    if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                         call codent(iter, 'G', citer)
                         call codree(toler, 'E', ctol)
                         valk(1) = citer

@@ -15,21 +15,52 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
-                  imat, nmat, angmas, pgl, materd, &
+! aslint: disable=W1306
+!
+subroutine lcmmat(materPara, &
+                  multComp, typmod1, &
+                  nmat, pgl, materd, &
                   materf, matcst, nbcomm, cpmono, ndt, &
                   ndi, nr, nvi, hsr, nfs, &
                   nsg, toutms, vind, impexp)
-! aslint: disable=W1504
+!
+    use MaterialPara_type
     implicit none
+!
+#include "asterc/r8vide.h"
+#include "asterfort/assert.h"
+#include "asterfort/calcmm.h"
+#include "asterfort/d1ma3d.h"
+#include "asterfort/dmat3d.h"
+#include "asterfort/ElasticityMaterial_type.h"
+#include "asterfort/jedema.h"
+#include "asterfort/jemarq.h"
+#include "asterfort/lcmaec.h"
+#include "asterfort/lcmaei.h"
+#include "asterfort/lcmafl.h"
+#include "asterfort/lcmmjv.h"
+#include "asterfort/lcmmsg.h"
+#include "asterfort/matrot.h"
+#include "asterfort/r8inir.h"
+#include "asterfort/rcvalb.h"
+#include "asterfort/utmess.h"
+#include "jeveux.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: multComp
+    character(len=8), intent(in)  :: typmod1
+!
+! --------------------------------------------------------------------------------------------------
+!
 !       MONOCRISTAL : RECUPERATION DU MATERIAU A T(TEMPD) ET T+DT(TEMPF)
 !                    NB DE CMP DIRECTES/CISAILLEMENT , NB VAR. INTERNES
 !                    MATER(*,1) = E , NU , ALPHA
 !                    MATER(*,2) = COEFFICIENT DE CHAQUE COMPORTEMENT
 !                    VARIABLES INTERNES :
 !                     EPSVP(6)+ALPHA,GAMMA,P PAR SYSTEME DE GLISSEMENT
-!       ----------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !       IN  FAMI   : FAMILLE DE POINT DE GAUSS
 !            KPG   : NUMERO DU POINT DE GAUSS
 !            KSP   : NUMERO DU SOUS-POINT DE GAUSS
@@ -57,76 +88,69 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
 !           TOUTMS : TOUS LES TENSEURS D'ORIENTATION POUR TOUS LES
 !                    SYSTEMES DE GLISSEMENT
 !           IMPEXP : 0 IMPLICITE, 1 EXPLICITE
-!       ----------------------------------------------------------------
-#include "jeveux.h"
-#include "asterc/r8vide.h"
-#include "asterfort/calcmm.h"
-#include "asterfort/d1ma3d.h"
-#include "asterfort/dmat3d.h"
-#include "asterfort/jedema.h"
-#include "asterfort/jemarq.h"
-#include "asterfort/lcmaec.h"
-#include "asterfort/lcmaei.h"
-#include "asterfort/lcmafl.h"
-#include "asterfort/lcmmjv.h"
-#include "asterfort/lcmmsg.h"
-#include "asterfort/matrot.h"
-#include "asterfort/r8inir.h"
-#include "asterfort/rccoma.h"
-#include "asterfort/rcvalb.h"
-#include "asterfort/utmess.h"
-    integer(kind=8) :: nmat, ndt, ndi, nr, nvi, nbcomm(nmat, 3), nbval, nvini
-    integer(kind=8) :: kpg, ksp, irota, impexp, nfs, nsg
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: nfs, nsg, nmat
+    integer(kind=8) :: ndt, ndi, nr, nvi, nbcomm(nmat, 3)
+    integer(kind=8) :: irota, impexp, nbval, nvini
     real(kind=8) :: materd(nmat, 2), materf(nmat, 2)
-    real(kind=8) :: hook(6, 6)
-    real(kind=8) :: kooh(6, 6), q(3, 3)
-    real(kind=8) :: epsi, angmas(3), pgl(3, 3), hookf(6, 6)
+    real(kind=8) :: hooke(6, 6), hookef(6, 6)
+    real(kind=8) :: ekooh(6, 6), fekooh(6, 6)
+    real(kind=8) :: epsi, pgl(3, 3), q(3, 3)
     real(kind=8) :: valres(nmat), ms(6), ng(3), lg(3), vind(*)
     real(kind=8) :: hsr(nsg, nsg), toutms(nfs, nsg, 6)
-    character(len=8) :: mod, nomc(3)
+    character(len=8) :: propName(3)
     integer(kind=8) :: cerr(3)
     character(len=3) :: matcst
-    character(len=*) :: fami
     character(len=16) :: nmater, necoul, necris, necrci
-    character(len=16), intent(in) :: mult_comp
-    character(len=16) :: phenom, nomfam
+    character(len=16) :: nomfam
     character(len=24) :: cpmono(5*nmat+1)
-    integer(kind=8) :: i, imat, nbfsys, ifa, j, dimtms, itbint
+    integer(kind=8) :: i, nbfsys, ifa, j, dimtms, itbint
     integer(kind=8) :: nbsyst, nbsys
-!     ----------------------------------------------------------------
+    character(len=8) :: fami
+    integer(kind=8) :: jvMaterCode, kpg, ksp
+    character(len=16) :: elasKeyword
+    integer(kind=8) :: elasID
 !
-! -   NB DE COMPOSANTES / VARIABLES INTERNES -------------------------
-!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
-    if (mod(1:2) .eq. '3D') then
+
+! - Access to material parameters
+    jvMaterCode = materPara%jvMaterCode
+    elasKeyword = materPara%elasKeyword
+    elasID = materPara%elasID
+    fami = materPara%schemePara%fami
+    kpg = materPara%schemePara%kpg
+    ksp = materPara%schemePara%ksp
+
+! - NB DE COMPOSANTES / VARIABLES INTERNES
+    if (typmod1(1:2) .eq. '3D') then
         ndt = 6
         ndi = 3
-    else if (mod(1:6) .eq. 'D_PLAN' .or. mod(1:4) .eq. 'AXIS') then
+    else if (typmod1(1:6) .eq. 'D_PLAN' .or. typmod1(1:4) .eq. 'AXIS') then
         ndt = 6
         ndi = 3
-    else if (mod(1:6) .eq. 'C_PLAN') then
+    else if (typmod1(1:6) .eq. 'C_PLAN') then
         ndt = 6
         ndi = 3
     end if
     dimtms = nfs*nsg*6
     call r8inir(dimtms, 0.d0, toutms, 1)
-    call r8inir(2*nmat, 0.d0, materd, 1)
-    call r8inir(2*nmat, 0.d0, materf, 1)
+    materd = 0.d0
+    materf = 0.d0
 !
-    call lcmmjv(mult_comp, nmat, cpmono, nbfsys, irota, &
+    call lcmmjv(multComp, nmat, cpmono, nbfsys, irota, &
                 itbint, nsg, hsr)
-!
     if (impexp .eq. 1) then
         if (irota .ne. 0) then
             call utmess('F', 'COMPOR2_11')
         end if
     end if
-!
-!     LA DERNIERE VARIABLE INTERNE EST L'INDICATEUR PLASTIQUE
-!
-    call matrot(angmas, pgl)
+
+! - Compute matrix for rotation
+    call matrot(materPara%lcsPara%lcsAngle, pgl)
 !
     do i = 1, nmat
         do j = 1, 3
@@ -147,7 +171,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
 !
 !        COEFFICIENTS MATERIAUX LIES A L'ECOULEMENT
         call lcmafl(fami, kpg, ksp, '-', nmater, &
-                    imat, necoul, nbval, valres, nmat, &
+                    jvMaterCode, necoul, nbval, valres, nmat, &
                     itbint, nfs, nsg, hsr, nbsys)
         nvini = nbcomm(ifa, 1)
         if (necoul .eq. 'MONO_DD_KR') then
@@ -162,7 +186,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
 !
 !        COEFFICIENTS MATERIAUX LIES A L'ECROUISSAGE CINEMATIQUE
         call lcmaec(fami, kpg, ksp, '-', nmater, &
-                    imat, necrci, nbval, valres, nmat)
+                    jvMaterCode, necrci, nbval, valres, nmat)
         nvini = nbcomm(ifa, 2)
         do i = 1, nbval
             materd(nvini-1+i, 2) = valres(i)
@@ -171,7 +195,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
 !
 !        COEFFICIENTS MATERIAUX LIES A L'ECROUISSAGE ISOTROPE
         call lcmaei(fami, kpg, ksp, '-', nmater, &
-                    imat, necris, necoul, nbval, valres, &
+                    jvMaterCode, necris, necoul, nbval, valres, &
                     nmat, itbint, nfs, nsg, hsr, &
                     ifa, nomfam, nbsys)
         nbval = nbval+1
@@ -205,7 +229,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
         nbsyst = nbsyst+nbsys
 !
         call lcmafl(fami, kpg, ksp, '+', nmater, &
-                    imat, necoul, nbval, valres, nmat, &
+                    jvMaterCode, necoul, nbval, valres, nmat, &
                     itbint, nfs, nsg, hsr, nbsys)
         nvini = nbcomm(ifa, 1)
         if (necoul .eq. 'MONO_DD_KR') then
@@ -219,7 +243,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
         nbcomm(ifa, 2) = nvini+nbval
 !
         call lcmaec(fami, kpg, ksp, '+', nmater, &
-                    imat, necrci, nbval, valres, nmat)
+                    jvMaterCode, necrci, nbval, valres, nmat)
         nvini = nbcomm(ifa, 2)
         do i = 1, nbval
             materf(nvini-1+i, 2) = valres(i)
@@ -227,7 +251,7 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
         nbcomm(ifa, 3) = nvini+nbval
 !
         call lcmaei(fami, kpg, ksp, '+', nmater, &
-                    imat, necris, necoul, nbval, valres, &
+                    jvMaterCode, necris, necoul, nbval, valres, &
                     nmat, itbint, nfs, nsg, hsr, &
                     ifa, nomfam, nbsys)
         nvini = nbcomm(ifa, 3)
@@ -238,156 +262,118 @@ subroutine lcmmat(fami, kpg, ksp, mult_comp, mod, &
             materf(nvini-1+i, 2) = valres(i)
         end do
         nbcomm(ifa+1, 1) = nvini+nbval
-!
     end do
-!
-    call rccoma(imat, 'ELAS', 1, phenom, cerr(1))
-!
-    if (phenom .eq. 'ELAS') then
-!
-! -    ELASTICITE ISOTROPE
-!
-        nomc(1) = 'E       '
-        nomc(2) = 'NU      '
-        nomc(3) = 'ALPHA   '
-!
+
+    if (elasID .eq. ELAS_ISOT) then
+        propName(1) = 'E'
+        propName(2) = 'NU'
+        propName(3) = 'ALPHA'
+
 ! -     RECUPERATION MATERIAU A TEMPD (T)
-!
-        call rcvalb(fami, kpg, ksp, '-', imat, &
-                    ' ', 'ELAS', 0, ' ', [0.d0], &
-                    2, nomc(1), materd(1, 1), cerr(1), 1)
-        call rcvalb(fami, kpg, ksp, '-', imat, &
-                    ' ', 'ELAS', 0, ' ', [0.d0], &
-                    1, nomc(3), materd(3, 1), cerr(3), 0)
+        call rcvalb(fami, kpg, ksp, '-', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    2, propName(1), materd(1, 1), cerr(1), 1)
+        call rcvalb(fami, kpg, ksp, '-', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    1, propName(3), materd(3, 1), cerr(3), 0)
         if (cerr(3) .ne. 0) materd(3, 1) = 0.d0
         materd(nmat, 1) = 0
-!
+
 ! -     RECUPERATION MATERIAU A TEMPF (T+DT)
-!
-        call rcvalb(fami, kpg, ksp, '+', imat, &
-                    ' ', 'ELAS', 0, '   ', [0.d0], &
-                    2, nomc(1), materf(1, 1), cerr(1), 1)
-        call rcvalb(fami, kpg, ksp, '+', imat, &
-                    ' ', 'ELAS', 0, '  ', [0.d0], &
-                    1, nomc(3), materf(3, 1), cerr(3), 0)
+        call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    2, propName(1), materf(1, 1), cerr(1), 1)
+        call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    1, propName(3), materf(3, 1), cerr(3), 0)
         if (cerr(3) .ne. 0) materf(3, 1) = 0.d0
         materf(nmat, 1) = 0
-!
-    else if (phenom .eq. 'ELAS_ORTH') then
-!
-! -    ELASTICITE ORTHOTROPE
-!
-!
-! -     MATRICE D'ELASTICITE ET SON INVERSE A TEMPD(T)
-!
-        call dmat3d(fami, imat, r8vide(), '-', kpg, &
-                    ksp, angmas, hook)
-        call d1ma3d(fami, imat, r8vide(), '-', kpg, &
-                    ksp, angmas, kooh)
-!
+
+    else if (elasID .eq. ELAS_ORTH) then
+        call dmat3d(materPara, '-', r8vide(), hooke)
+        call d1ma3d(materPara, '-', r8vide(), ekooh)
         do j = 4, 6
             do i = 1, 6
-                hook(i, j) = hook(i, j)*sqrt(2.d0)
+                hooke(i, j) = hooke(i, j)*sqrt(2.d0)
             end do
         end do
-
         do j = 1, 6
             do i = 4, 6
-                hook(i, j) = hook(i, j)*sqrt(2.d0)
+                hooke(i, j) = hooke(i, j)*sqrt(2.d0)
             end do
         end do
-
         do j = 4, 6
             do i = 1, 6
-                kooh(i, j) = kooh(i, j)/sqrt(2.d0)
+                ekooh(i, j) = ekooh(i, j)/sqrt(2.d0)
             end do
         end do
-
         do j = 1, 6
             do i = 4, 6
-                kooh(i, j) = kooh(i, j)/sqrt(2.d0)
+                ekooh(i, j) = ekooh(i, j)/sqrt(2.d0)
             end do
         end do
-
         do i = 1, 6
             do j = 1, 6
-                materd(6*(j-1)+i, 1) = hook(i, j)
-                materd(36+6*(j-1)+i, 1) = kooh(i, j)
+                materd(6*(j-1)+i, 1) = hooke(i, j)
+                materd(36+6*(j-1)+i, 1) = ekooh(i, j)
             end do
         end do
-!
         materd(nmat, 1) = 1
-!
-        nomc(1) = 'ALPHA_L'
-        nomc(2) = 'ALPHA_T'
-        nomc(3) = 'ALPHA_N'
-!
-        call rcvalb(fami, kpg, ksp, '-', imat, &
-                    ' ', phenom, 0, ' ', [0.d0], &
-                    3, nomc, materd(73, 1), cerr, 0)
+        propName(1) = 'ALPHA_L'
+        propName(2) = 'ALPHA_T'
+        propName(3) = 'ALPHA_N'
+        call rcvalb(fami, kpg, ksp, '-', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    3, propName, materd(73, 1), cerr, 0)
         if (cerr(1) .ne. 0) materd(73, 1) = 0.d0
         if (cerr(2) .ne. 0) materd(74, 1) = 0.d0
         if (cerr(3) .ne. 0) materd(75, 1) = 0.d0
-!
-!
-!
-! -     MATRICE D'ELASTICITE ET SON INVERSE A A TEMPF (T+DT)
-!
-        call dmat3d(fami, imat, r8vide(), '+', kpg, &
-                    ksp, angmas, hookf)
-        call d1ma3d(fami, imat, r8vide(), '+', kpg, &
-                    ksp, angmas, kooh)
-!
+
+        call dmat3d(materPara, '+', r8vide(), hookef)
+        call d1ma3d(materPara, '+', r8vide(), fekooh)
         do j = 4, 6
             do i = 1, 6
-                hookf(i, j) = hookf(i, j)*sqrt(2.d0)
+                hookef(i, j) = hookef(i, j)*sqrt(2.d0)
             end do
         end do
-
         do j = 1, 6
             do i = 4, 6
-                hookf(i, j) = hookf(i, j)*sqrt(2.d0)
+                hookef(i, j) = hookef(i, j)*sqrt(2.d0)
             end do
         end do
-
         do j = 4, 6
             do i = 1, 6
-                kooh(i, j) = kooh(i, j)/sqrt(2.d0)
+                fekooh(i, j) = fekooh(i, j)/sqrt(2.d0)
             end do
         end do
-
         do j = 1, 6
             do i = 4, 6
-                kooh(i, j) = kooh(i, j)/sqrt(2.d0)
+                fekooh(i, j) = fekooh(i, j)/sqrt(2.d0)
             end do
         end do
         do i = 1, 6
             do j = 1, 6
-                materf(6*(j-1)+i, 1) = hookf(i, j)
-                materf(36+6*(j-1)+i, 1) = kooh(i, j)
+                materf(6*(j-1)+i, 1) = hookef(i, j)
+                materf(36+6*(j-1)+i, 1) = fekooh(i, j)
             end do
         end do
-!
         materf(nmat, 1) = 1
-!
-        call rcvalb(fami, kpg, ksp, '+', imat, &
-                    ' ', phenom, 0, ' ', [0.d0], &
-                    3, nomc, materf(73, 1), cerr, 0)
+        call rcvalb(fami, kpg, ksp, '+', jvMaterCode, &
+                    ' ', elasKeyword, 0, ' ', [0.d0], &
+                    3, propName, materf(73, 1), cerr, 0)
         if (cerr(1) .ne. 0) materf(73, 1) = 0.d0
         if (cerr(2) .ne. 0) materf(74, 1) = 0.d0
         if (cerr(3) .ne. 0) materf(75, 1) = 0.d0
-!
     else
-        call utmess('F', 'ALGORITH4_65', sk=phenom)
+        ASSERT(ASTER_FALSE)
     end if
 !
     nr = ndt+nbsyst
     call calcmm(nbcomm, cpmono, nmat, pgl, nfs, &
                 nsg, toutms, nvi, vind, &
                 irota)
-!
-! -   MATERIAU CONSTANT ?
-!
+
+! - MATERIAU CONSTANT ?
     matcst = 'OUI'
     epsi = 1.d-3
     do i = 1, nmat

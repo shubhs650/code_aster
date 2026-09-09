@@ -69,7 +69,6 @@ AFFE_CHAR_MECA = OPER(
             "FORCE_CONTOUR",
             "FORCE_COQUE_FO",
             "FORCE_COQUE",
-            "FORCE_ELEC",
             "FORCE_FACE",
             "FORCE_INTERNE",
             "FORCE_NODALE",
@@ -1194,38 +1193,6 @@ AFFE_CHAR_MECA = OPER(
         ),
         TYPE_EPX=SIMP(statut="f", typ="TXM", defaut="ADHE", into=("ADHE", "GLIS", "FROT")),
         DIST_MIN=SIMP(statut="f", typ="R"),
-    ),
-    FORCE_ELEC=FACT(
-        statut="f",
-        max="**",
-        fr=tr(
-            "Appliquer la force de LAPLACE agissant sur un conducteur principal, due à la présence d'un conducteur "
-            "secondaire droit"
-        ),
-        regles=(UN_PARMI("TOUT", "GROUP_MA"),),
-        TOUT=SIMP(statut="f", typ="TXM", into=("OUI",)),
-        GROUP_MA=SIMP(statut="f", typ=grma, validators=NoRepeat(), max="**"),
-        POSITION=SIMP(
-            statut="f", typ="TXM", fr=tr("Direction prédéfinie"), into=("PARA", "INFI", "FINI")
-        ),
-        b_fxyz=BLOC(
-            condition="""not exists("POSITION")""",
-            FX=SIMP(statut="f", typ="R", defaut=0.0e0),
-            FY=SIMP(statut="f", typ="R", defaut=0.0e0),
-            FZ=SIMP(statut="f", typ="R", defaut=0.0e0),
-        ),
-        b_para=BLOC(
-            condition="""equal_to("POSITION", 'PARA')""",
-            regles=(UN_PARMI("TRANS", "DIST"),),
-            TRANS=SIMP(statut="f", typ="R", max=3),
-            DIST=SIMP(statut="f", typ="R"),
-            b_point2=BLOC(condition="""exists("DIST")""", POINT2=SIMP(statut="o", typ="R", max=3)),
-        ),
-        b_fini_infi=BLOC(
-            condition="""(equal_to("POSITION", 'FINI')) or (equal_to("POSITION", 'INFI'))""",
-            POINT1=SIMP(statut="o", typ="R", max=3),
-            POINT2=SIMP(statut="o", typ="R", max=3),
-        ),
     ),
     VITE_FACE=FACT(
         statut="f",

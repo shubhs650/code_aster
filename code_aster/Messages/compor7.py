@@ -26,6 +26,9 @@ cata_msg = {
     2: _(
         """Problème lors du calcul des déformations anélastiques avec des variables de commande. Il manque la variable %(k1)s à l'instant précédent ou à l'instant suivant."""
     ),
+    3: _(
+        """La loi ELAS en 1D est appelée avec COMP_ELAS mais elle reste malgré tout incrémentale (par souci de compatibilité avec le chargement de précontrainte)."""
+    ),
     8: _(
         """
 Le calcul est thermo mécanique. Mais il manque la température de référence. On ne peut donc pas calculer de déformation thermique.

@@ -1,0 +1,163 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI", IGNORE_ALARM=("QUALITY1_2"), DEBUG=_F(SDVERI="OUI"))
+
+E = 200000
+Nu = 0.3
+coef = E / 100
+
+mesh = LIRE_MAILLAGE(UNITE=20, FORMAT="MED")
+# mesh=mesh.refine(3)
+mesh = MODI_MAILLAGE(
+    reuse=mesh,
+    MAILLAGE=mesh,
+    ORIE_PEAU=_F(GROUP_MA_PEAU=("CME2", "CME3", "CEP3", "LCD4", "CEP2", "LAB1")),
+)
+
+LINST = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=(_F(JUSQU_A=1.0, NOMBRE=1),))
+
+RAMPE = DEFI_FONCTION(
+    NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0), PROL_DROITE="CONSTANT", PROL_GAUCHE="CONSTANT"
+)
+
+mat = DEFI_MATERIAU(ELAS=_F(E=E, NU=Nu))
+
+model = AFFE_MODELE(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="AXIS"))
+
+AFFE = AFFE_MATERIAU(MAILLAGE=mesh, MODELE=model, AFFE=_F(TOUT="OUI", MATER=mat))
+
+
+CHAR1 = AFFE_CHAR_CINE(
+    MODELE=model, MECA_IMPO=(_F(GROUP_MA=("LBC4"), DX=0, DY=0), _F(GROUP_MA="LCD1", DY=-2))
+)
+CHAR2 = AFFE_CHAR_MECA(
+    MODELE=model,
+    LIAISON_DDL=(
+        _F(GROUP_NO=("PA1", "PP2"), DDL=("DY", "DY"), COEF_MULT=(1.0, -1.0), COEF_IMPO=0.0),
+        _F(GROUP_NO=("PM3", "PD4"), DDL=("DY", "DY"), COEF_MULT=(1.0, -1.0), COEF_IMPO=0.0),
+    ),
+)
+
+
+DEFICO = DEFI_CONT(
+    MODELE=model,
+    INFO=1,
+    ZONE=(
+        _F(
+            GROUP_MA_MAIT="LCD4",
+            GROUP_MA_ESCL="CME3",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="OUI",
+            AIRE_TOLE=1e-8,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+        _F(
+            GROUP_MA_MAIT="CEP3",
+            GROUP_MA_ESCL="CME2",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="OUI",
+            AIRE_TOLE=1e-8,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+        _F(
+            GROUP_MA_MAIT="CEP2",
+            GROUP_MA_ESCL="LAB1",
+            ALGO_CONT="LAGRANGIEN",
+            COEF_CONT=coef,
+            CONTACT_INIT="OUI",
+            AIRE_TOLE=1e-8,
+            TYPE_APPA="FORCEBRUTE",
+            TYPE_INTE="SEG_BASE",
+            FROTTEMENT="NON",
+        ),
+    ),
+)
+
+EVOLNOLI = MECA_NON_LINE(
+    MODELE=model,
+    CHAM_MATER=AFFE,
+    EXCIT=(_F(CHARGE=CHAR1, FONC_MULT=RAMPE), _F(CHARGE=CHAR2, FONC_MULT=RAMPE)),
+    CONTACT=_F(DEFINITION=DEFICO, ALGO_RESO_GEOM="NEWTON"),
+    NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
+    COMPORTEMENT=_F(RELATION="ELAS", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=LINST),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=50),
+    INFO=1,
+)
+
+TEST_RESU(
+    RESU=(
+        _F(
+            INST=1.0,
+            GROUP_NO="PA4",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            LEGENDE="COMPARAISON Uy",
+            NOM_CMP="DY",
+            VALE_REFE=-0.81,
+            VALE_CALC=-0.840807942,
+            PRECISION=0.04,
+            REFERENCE="SOURCE_EXTERNE",
+        ),
+    )
+)
+
+mesh = DEFI_GROUP(reuse=mesh, MAILLAGE=mesh, CREA_GROUP_NO=_F(GROUP_MA="LBC4"))
+
+F = CALC_CHAMP(FORCE="REAC_NODA", RESULTAT=EVOLNOLI)
+
+
+FY_tab = POST_RELEVE_T(
+    ACTION=(
+        _F(
+            INST=1.0,
+            GROUP_NO="LBC4",
+            INTITULE="FY",
+            RESULTAT=F,
+            NOM_CHAM="REAC_NODA",
+            RESULTANTE="DY",
+            OPERATION="EXTRACTION",
+        ),
+    )
+)
+
+
+TEST_TABLE(
+    CRITERE="RELATIF",
+    REFERENCE="SOURCE_EXTERNE",
+    PRECISION=0.016,
+    VALE_CALC=17489.2541842,
+    VALE_REFE=17229.58,
+    NOM_PARA="DY",
+    TABLE=FY_tab,
+)
+
+
+IMPR_RESU(UNITE=80, FORMAT="MED", RESU=_F(RESULTAT=EVOLNOLI))
+
+FIN()

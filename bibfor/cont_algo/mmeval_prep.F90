@@ -42,6 +42,7 @@ subroutine mmeval_prep(mesh, time_curr, model_ndim, ds_contact, &
 #include "asterfort/utmess.h"
 #include "asterfort/mmnewj.h"
 #include "asterfort/int_to_char8.h"
+#include "MeshTypes_type.h"
 !
 ! aslint: disable=W1504
 !
@@ -59,7 +60,7 @@ subroutine mmeval_prep(mesh, time_curr, model_ndim, ds_contact, &
     integer(kind=8), intent(in) :: elem_slav_nbno
     integer(kind=8), intent(in) :: elem_slav_indx
     character(len=8), intent(in) :: elem_slav_type
-    real(kind=8), intent(in) :: elem_slav_coor(27)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_mast_nume
     real(kind=8), intent(in) :: lagr_cont_node(9)
     real(kind=8), intent(out) :: norm(3)
@@ -110,12 +111,12 @@ subroutine mmeval_prep(mesh, time_curr, model_ndim, ds_contact, &
 !
 ! - Coordinates of the contact point
 !
-    call mmvalp(model_ndim, elem_slav_type, elem_slav_nbno, 3, ksipc1, &
+    call mmvalp(elem_slav_type, elem_slav_nbno, ksipc1, &
                 ksipc2, elem_slav_coor, poin_slav_coor)
 !
 ! - Coordinates of the projection of contact point
 !
-    call mcopco(mesh, newgeo, model_ndim, elem_mast_nume, ksipr1, &
+    call mcopco(mesh, newgeo, elem_mast_nume, ksipr1, &
                 ksipr2, poin_proj_coor)
 !
 ! - Local basis on master element
@@ -137,7 +138,7 @@ subroutine mmeval_prep(mesh, time_curr, model_ndim, ds_contact, &
 !
 ! - Interpolate contact pressure (Lagrange) at point
 !
-    call mmvalp_scal(model_ndim, elem_slav_type, elem_slav_nbno, ksipc1, ksipc2, &
+    call mmvalp_scal(elem_slav_type, elem_slav_nbno, ksipc1, ksipc2, &
                      lagr_cont_node, lagr_cont_poin)
 !
 end subroutine

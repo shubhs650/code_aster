@@ -69,7 +69,7 @@ load = AFFE_CHAR_MECA(
 # Orientation des repères locaux : METHODE 2
 ########################################################################
 
-chamorie = LIRE_CHAMP(
+mapOrie = LIRE_CHAMP(
     MAILLAGE=mesh,
     UNITE=21,
     NOM_MED="CHAM_ORIE",
@@ -78,7 +78,12 @@ chamorie = LIRE_CHAMP(
     TYPE_CHAM="CART_CAMA_R",
 )
 
-orien2 = AFFE_CARA_ELEM(MODELE=model, MASSIF=_F(TOUT="OUI", CHAM_ORIE=chamorie))
+fieldOrie = CREA_CHAMP(
+    OPERATION="DISC", TYPE_CHAM="ELEM_CAMA_R", CHAM_GD=mapOrie, MODELE=model, PROL_ZERO="OUI"
+)
+
+orien2 = AFFE_CARA_ELEM(MODELE=model, MASSIF=_F(TOUT="OUI", CHAM_ORIE=fieldOrie))
+
 
 IMPR_CONCEPT(UNITE=80, CONCEPT=_F(CARA_ELEM=orien2, REPERE_LOCAL="ELEM", MODELE=model))
 

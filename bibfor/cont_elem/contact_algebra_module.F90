@@ -33,7 +33,9 @@ module contact_algebra_module
 #include "blas/dgemm.h"
 #include "blas/dgemv.h"
 #include "blas/dger.h"
+#include "MeshTypes_type.h"
 #include "contact_module.h"
+#include "MeshTypes_type.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -268,7 +270,7 @@ contains
         implicit none
 !
         integer(kind=8), intent(in) :: elem_dime, nb_node
-        real(kind=8), intent(in) :: elem_coor(3, 9), norm(3), ddff(3, 9)
+        real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D), norm(3), ddff(3, MT_NNOMAX2D)
         real(kind=8) :: secondFundForm(2, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -838,8 +840,8 @@ contains
         implicit none
 !
         integer(kind=8), intent(in) :: elem_dime, nb_node
-        real(kind=8), intent(in) :: dfunc(2, 9)
-        real(kind=8) :: dT_du(27, 3, 2)
+        real(kind=8), intent(in) :: dfunc(2, MT_NNOMAX2D)
+        real(kind=8) :: dT_du(MT_NNOMAX3D, 3, 2)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -873,7 +875,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_slav(2, 9)
+        real(kind=8), intent(in) :: dfunc_slav(2, MT_NNOMAX2D)
         real(kind=8) :: dTs_du(MAX_LAGA_DOFS, 3, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -882,7 +884,7 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
 !
-        real(kind=8) :: dT(27, 3, 2)
+        real(kind=8) :: dT(MT_NNOMAX3D, 3, 2)
         integer(kind=8) :: i_node, i_dim, index, index2
 !
         dTs_du = 0.d0
@@ -917,7 +919,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_mast(2, 9)
+        real(kind=8), intent(in) :: dfunc_mast(2, MT_NNOMAX2D)
         real(kind=8) :: dTm_du(MAX_LAGA_DOFS, 3, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -926,7 +928,7 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
 !
-        real(kind=8) :: dT(27, 3, 2)
+        real(kind=8) :: dT(MT_NNOMAX3D, 3, 2)
         integer(kind=8) :: i_node, i_dim, index, index2
 !
         dTm_du = 0.d0
@@ -959,8 +961,8 @@ contains
         implicit none
 !
         integer(kind=8), intent(in) :: elem_dime, nb_node
-        real(kind=8), intent(in) :: dfunc(2, 9), norm(3)
-        real(kind=8) :: dT_du_norm(27, 2)
+        real(kind=8), intent(in) :: dfunc(2, MT_NNOMAX2D), norm(3)
+        real(kind=8) :: dT_du_norm(MT_NNOMAX3D, 2)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -994,7 +996,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_slav(2, 9), norm_slav(3)
+        real(kind=8), intent(in) :: dfunc_slav(2, MT_NNOMAX2D), norm_slav(3)
         real(kind=8) :: dTs_du_ns(MAX_LAGA_DOFS, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1003,7 +1005,7 @@ contains
 !   D tau^s (u)[v] . n^s
 ! --------------------------------------------------------------------------------------------------
 !
-        real(kind=8) :: dT_n(27, 2)
+        real(kind=8) :: dT_n(MT_NNOMAX3D, 2)
         integer(kind=8) :: i_node, i_dim, index, index2
 !
         dTs_du_ns = 0.d0
@@ -1035,7 +1037,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_slav(2, 9), norm_mast(3)
+        real(kind=8), intent(in) :: dfunc_slav(2, MT_NNOMAX2D), norm_mast(3)
         real(kind=8) :: dTs_du_nm(MAX_LAGA_DOFS, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1057,7 +1059,7 @@ contains
         implicit none
 !
         type(ContactGeom), intent(in) :: geom
-        real(kind=8), intent(in) :: dfunc_mast(2, 9), norm_mast(3)
+        real(kind=8), intent(in) :: dfunc_mast(2, MT_NNOMAX2D), norm_mast(3)
         real(kind=8) :: dTm_du_nm(MAX_LAGA_DOFS, 2)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1066,7 +1068,7 @@ contains
 !
 ! --------------------------------------------------------------------------------------------------
 !
-        real(kind=8) :: dT_n(27, 2)
+        real(kind=8) :: dT_n(MT_NNOMAX3D, 2)
         integer(kind=8) :: i_node, i_dim, index, index2
 !
         dTm_du_nm = 0.d0
@@ -1219,7 +1221,7 @@ contains
         type(ContactGeom), intent(in) :: geom
         real(kind=8), intent(in) :: tau_slav(3, 2), norm_slav(3), speed(3), coor_qp_sl(2)
         real(kind=8), intent(in) :: dGap_du_(MAX_LAGA_DOFS), dts_ns(MAX_LAGA_DOFS, 2)
-        real(kind=8), intent(in) :: proj_tole, invMetricTens(2, 2), dshape_func_ma(2, 9)
+        real(kind=8), intent(in) :: proj_tole, invMetricTens(2, 2), dshape_func_ma(2, MT_NNOMAX2D)
         real(kind=8), intent(in) :: dZetaM_du_(MAX_LAGA_DOFS, 2)
         real(kind=8) :: dvT_du2(MAX_LAGA_DOFS, 2)
 !
@@ -1265,7 +1267,7 @@ contains
         type(ContactGeom), intent(in) :: geom
         real(kind=8), intent(in) :: tau_slav(3, 2), norm_slav(3), speed(3), coor_qp_sl(2)
         real(kind=8), intent(in) :: dGap_du_(MAX_LAGA_DOFS), dts_ns(MAX_LAGA_DOFS, 2)
-        real(kind=8), intent(in) :: proj_tole, invMetricTens(2, 2), dshape_func_ma(2, 9)
+        real(kind=8), intent(in) :: proj_tole, invMetricTens(2, 2), dshape_func_ma(2, MT_NNOMAX2D)
         real(kind=8), intent(in) :: dZetaM_du_(MAX_LAGA_DOFS, 2)
         real(kind=8) :: dvT_du(MAX_LAGA_DOFS, 3)
 !
@@ -1303,7 +1305,7 @@ contains
         implicit none
         type(ContactGeom), intent(in) :: geom
         real(kind=8), intent(in) :: dGap_du_(MAX_LAGA_DOFS), proj_tole, coor_qp_sl(2)
-        real(kind=8), intent(in) :: dZetaM_du_(MAX_LAGA_DOFS, 2), dshape_func_ma(2, 9)
+        real(kind=8), intent(in) :: dZetaM_du_(MAX_LAGA_DOFS, 2), dshape_func_ma(2, MT_NNOMAX2D)
         real(kind=8) :: dv_du(MAX_LAGA_DOFS, 3)
 !
 ! --------------------------------------------------------------------------------------------------

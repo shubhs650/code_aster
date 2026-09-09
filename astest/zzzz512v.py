@@ -59,31 +59,59 @@ lamb = E * Nu / (1 + Nu) / (1 - 2 * Nu)
 mu = E / 2 / (1 + Nu)
 
 uR = {
-    "LINEAIRE": FORMULE(VALE="X", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="X", NOM_PARA=("X", "Y")),
-    "CUBIQUE": FORMULE(VALE="X", NOM_PARA=("X", "Y")),
-    "QUARTIQUE": FORMULE(VALE="X", NOM_PARA=("X", "Y")),
+    "CONSTANTE": FORMULE(VALE="X", NOM_PARA=("X", "Y")),
+    "LINEAIRE": FORMULE(VALE="X*(1+X+Y)", NOM_PARA=("X", "Y")),
+    "QUADRATIQUE": FORMULE(VALE="X*(1+X*X+Y*Y+X*Y)", NOM_PARA=("X", "Y")),
+    "CUBIQUE": FORMULE(VALE="X*(1+X*X*X+Y*Y*Y+X*Y)", NOM_PARA=("X", "Y")),
+    "QUARTIQUE": FORMULE(VALE="X*(1+X*X*X*X+Y*Y*Y*Y+X*Y)", NOM_PARA=("X", "Y")),
 }
 uZ = {
-    "LINEAIRE": FORMULE(VALE="Y+1", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="Y+1", NOM_PARA=("X", "Y")),
-    "CUBIQUE": FORMULE(VALE="Y+1", NOM_PARA=("X", "Y")),
-    "QUARTIQUE": FORMULE(VALE="Y+1", NOM_PARA=("X", "Y")),
+    "CONSTANTE": FORMULE(VALE="Y", NOM_PARA=("X", "Y")),
+    "LINEAIRE": FORMULE(VALE="Y*(Y+1)", NOM_PARA=("X", "Y")),
+    "QUADRATIQUE": FORMULE(VALE="Y*(Y*Y - X*X + 1)", NOM_PARA=("X", "Y")),
+    "CUBIQUE": FORMULE(VALE="Y*(Y*Y*Y-X*X*X + 1)", NOM_PARA=("X", "Y")),
+    "QUARTIQUE": FORMULE(VALE="Y*(Y*Y*Y*Y-X*X*X*X + 1)", NOM_PARA=("X", "Y")),
 }
 
 zero = FORMULE(VALE="0", NOM_PARA=("X", "Y"))
 
 fR = {
-    "LINEAIRE": zero,
-    "QUADRATIQUE": zero,
-    "CUBIQUE": FORMULE(VALE="0.0", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
-    "QUARTIQUE": FORMULE(VALE="0.0", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
+    "CONSTANTE": zero,
+    "LINEAIRE": FORMULE(VALE="-3*lamb-6*mu", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
+    "QUADRATIQUE": FORMULE(
+        VALE="-6*lamb*X-3*lamb*Y-16*mu*X-6*mu*Y", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu
+    ),
+    "CUBIQUE": FORMULE(
+        VALE="-12*lamb*X*X-3*lamb*Y-27*mu*X*X -6*mu*X*Y -6*mu*Y",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
+    "QUARTIQUE": FORMULE(
+        VALE="-20*lamb*X*X*X-3*lamb*Y-44*mu*X*X*X -12*mu*X*Y*Y -6*mu*Y",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
 }
 fZ = {
-    "LINEAIRE": zero,
-    "QUADRATIQUE": zero,
-    "CUBIQUE": FORMULE(VALE="0.0", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
-    "QUARTIQUE": FORMULE(VALE="0.0", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
+    "CONSTANTE": zero,
+    "LINEAIRE": FORMULE(VALE="-4*lamb-6*mu", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
+    "QUADRATIQUE": FORMULE(
+        VALE="-3*lamb*X-10*lamb*Y-3*mu*X-12*mu*Y", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu
+    ),
+    "CUBIQUE": FORMULE(
+        VALE="-3*lamb*X - 18*lamb*Y*Y+9*mu*X*Y-3*mu*X-30*mu*Y*Y",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
+    "QUARTIQUE": FORMULE(
+        VALE="-3*lamb*X-28*lamb*Y*Y*Y+16*mu*X*X*Y -3*mu*X -48*mu*Y*Y*Y",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
 }
 
 mesh0 = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
@@ -114,15 +142,15 @@ for form in ["LINEAIRE", "QUADRATIQUE", "CUBIQUE", "QUARTIQUE"]:
     load = AFFE_CHAR_MECA_F(
         MODELE=model,
         FORCE_INTERNE=_F(GROUP_MA="2D", FX=fR[form], FY=fZ[form]),
-        PRES_REP=_F(GROUP_MA="BOUNDARIES", PRES=zero),
-        FORCE_CONTOUR=_F(GROUP_MA="BOUNDARIES", FX=zero, FY=zero),
+        PRES_REP=_F(GROUP_MA="RIGHT", PRES=zero),
+        FORCE_CONTOUR=_F(GROUP_MA="RIGHT", FX=zero, FY=zero),
     )
 
-    # fake load
+    # fake load - for coverage
     load0 = AFFE_CHAR_MECA(
         MODELE=model,
         FORCE_INTERNE=_F(GROUP_MA="2D", FX=0.0, FY=0.0),
-        FORCE_CONTOUR=_F(GROUP_MA="BOUNDARIES", FX=0.0, FY=0.0),
+        FORCE_CONTOUR=_F(GROUP_MA="RIGHT", FX=0.0, FY=0.0),
     )
 
     # solve linear system

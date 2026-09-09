@@ -81,8 +81,7 @@ RES = STAT_NON_LINE(
         PRE_COND="HPDDM",
         RESI_RELA=1e-10,
         TYPE_RESOL="HARMO",
-        NB_MODE=50,
-        SEUIL=1e-6,
+        SEUIL=1e-1,
         OPTION_PETSC="-ksp_monitor_true_residual -log_view",
     ),
 )

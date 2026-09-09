@@ -207,7 +207,7 @@ class PostRocheCommon:
             args = kwargs.get("RESU_MECA_TRAN")
 
         for j in args:
-            dKey.append(j.cree_dict_valeurs(j.mc_liste))
+            dKey.append(j)
         self.dResuMeca = dKey
 
         # zone analysee
@@ -215,7 +215,7 @@ class PostRocheCommon:
         dKey = []
         args = kwargs.get("ZONE_ANALYSE")
         for j in args:
-            dKey.append(j.cree_dict_valeurs(j.mc_liste))
+            dKey.append(j)
         self.dZone = dKey
 
         # coude
@@ -224,7 +224,7 @@ class PostRocheCommon:
         args = kwargs.get("COUDE")
         if args:
             for j in args:
-                dKey.append(j.cree_dict_valeurs(j.mc_liste))
+                dKey.append(j)
         self.dCoude = dKey
 
         # pressions
@@ -233,7 +233,7 @@ class PostRocheCommon:
         args = kwargs.get("PRESSION")
         if args:
             for j in args:
-                dKey.append(j.cree_dict_valeurs(j.mc_liste))
+                dKey.append(j)
         self.dPression = dKey
 
         # Autres paramètres

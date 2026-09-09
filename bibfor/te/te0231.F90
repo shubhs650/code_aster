@@ -15,11 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0231(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     use raco3d_module
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -29,10 +30,8 @@ subroutine te0231(option, nomte)
 #include "asterfort/rco3d_infos.h"
 #include "asterfort/rco3d_calcmat.h"
 #include "jeveux.h"
-
 !
     character(len=16) :: nomte, option
-!
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -41,7 +40,7 @@ subroutine te0231(option, nomte)
 ! Link elementary matrix
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: jv_geom, jv_cacoqu, nddl
+    integer(kind=8) :: jvGeom, nddl
     integer(kind=8) :: nnco, nn3d, dim
     integer(kind=8) :: nb_gauss, ncols, nrows
     real(kind=8) :: jac_det(NB_GAUSS_MAX), gauss_weight(NB_GAUSS_MAX)
@@ -51,14 +50,22 @@ subroutine te0231(option, nomte)
     character(len=8):: typmaco, typma3d
     real(kind=8), allocatable :: mat(:, :)
     aster_logical :: skip(NB_GAUSS_MAX)
-
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+!
+! --------------------------------------------------------------------------------------------------
+!
     ! retrieve geometry
-    call jevech('PGEOMER', 'L', jv_geom)
+    call jevech('PGEOMER', 'L', jvGeom)
 
-    ! retrieve thickness
-    call jevech('PCACOQU', 'L', jv_cacoqu)
-    epai = zr(jv_cacoqu-1+1)
-    crig = zr(jv_cacoqu-1+4)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+    epai = plateCara%thick
+    crig = plateCara%coefRigiDRZ
 
     ! retrieve information about the element
     call rco3d_elem(nomte, dim, nddl, typmaco, nnco, typma3d, nn3d)
@@ -67,7 +74,7 @@ subroutine te0231(option, nomte)
     !
 
     ! retrieve gauss points
-    call rco3d_infos(typmaco, typma3d, epai, jv_geom, nb_gauss, gauss_coor, &
+    call rco3d_infos(typmaco, typma3d, epai, jvGeom, nb_gauss, gauss_coor, &
                      gauss_weight, jac_det, ff_co, ff_3d, s, t, n, skip)
 
     ! allocation and calculation of the matrix

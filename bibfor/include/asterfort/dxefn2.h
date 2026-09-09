@@ -15,11 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxefn2(nomte, pgl, sigt)
+    subroutine dxefn2(plateCara, plateOrie, &
+                      nomte, pgl, sigt)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         character(len=16) :: nomte
         real(kind=8) :: pgl(3, 3)
         real(kind=8) :: sigt(*)

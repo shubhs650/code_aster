@@ -226,7 +226,7 @@ class StorageManager:
         slot.material_field = phys_pb.getMaterialField()
         slot.elem_char = phys_pb.getElementaryCharacteristics()
         slot.load = phys_pb.getListOfLoads()
-        slot.fields = phys_state.as_dict()
+        slot.fields = phys_state.asdict()
         behav = phys_pb.getBehaviourProperty()
         if behav is not None:
             if phys_pb.isThermal():

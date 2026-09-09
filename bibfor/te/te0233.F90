@@ -15,70 +15,80 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0233(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
-#include "jeveux.h"
+!
+#include "asterfort/assert.h"
 #include "asterfort/dfdm1d.h"
-#include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/rcvalb.h"
+#include "asterfort/getDensity.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES TERMES ELEMENTAIRES EN MECANIQUE
-!                          COQUE 1D
-!                          OPTION : 'CHAR_MECA_PESA_R'
-!                          ELEMENT: MECXSE3
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
+    character(len=16), intent(in) :: option, nomte
 !
-    character(len=8) :: elrefe, fami, poum
-    integer(kind=8) :: icodre(1), kpg, spt
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: COQUE_AXIS
+! Option: CHAR_MECA_PESA_R
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: kpg
     real(kind=8) :: dfdx(3), nx, ny, poids, cour, rx
-    integer(kind=8) :: nno, kp, k, npg, i, ivectu, ipesa, icaco
-    integer(kind=8) :: ipoids, ivf, idfdk, igeom, imate
+    integer(kind=8) :: nno, npg, i, ivectu, jvPesa
+    integer(kind=8) :: ipoids, ivf, idfdk, jvGeom, jvMaterc
+    real(kind=8) :: rho
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: jgano, ndim, nnos
-    real(kind=8) :: rho(1)
-!-----------------------------------------------------------------------
-    call elref1(elrefe)
+    ASSERT(option .eq. 'CHAR_MECA_PESA_R')
+
+! - Finite element parameters
+    call elrefe_info(fami='RIGI', nno=nno, &
+                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfdk)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Load
+    call jevech('PPESANR', 'L', jvPesa)
+
+! - Get density
+    call jevech('PMATERC', 'L', jvMaterc)
+    call getDensity(zi(jvMaterc), rho)
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfdk, jgano=jgano)
-!
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PCACOQU', 'L', icaco)
-    call jevech('PPESANR', 'L', ipesa)
     call jevech('PVECTUR', 'E', ivectu)
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-    call rcvalb(fami, kpg, spt, poum, zi(imate), &
-                ' ', 'ELAS', 0, ' ', [0.d0], &
-                1, 'RHO', rho, icodre, 1)
-!
-    do kp = 1, npg
-        k = (kp-1)*nno
-        call dfdm1d(nno, zr(ipoids+kp-1), zr(idfdk+k), zr(igeom), dfdx, &
+    do kpg = 1, npg
+        call dfdm1d(nno, zr(ipoids+kpg-1), zr(idfdk+(kpg-1)*nno), zr(jvGeom), dfdx, &
                     cour, poids, nx, ny)
-        poids = poids*rho(1)*zr(ipesa)*zr(icaco)
+        poids = poids*rho*zr(jvPesa)*plateCara%thick
         rx = 0.d0
         do i = 1, nno
-            rx = rx+zr(igeom+2*i-2)*zr(ivf+k+i-1)
+            rx = rx+zr(jvGeom+2*i-2)*zr(ivf+(kpg-1)*nno+i-1)
         end do
         poids = poids*rx
         do i = 1, nno
-            zr(ivectu+3*i-2) = zr(ivectu+3*i-2)+poids*zr(ipesa+2)*zr(ivf+k+i-1)
+            zr(ivectu+3*i-2) = zr(ivectu+3*i-2)+poids*zr(jvPesa+2)*zr(ivf+(kpg-1)*nno+i-1)
         end do
-
     end do
 end subroutine

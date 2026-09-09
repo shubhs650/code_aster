@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine teattr(kstop, noattr, vattr, iret_, typel)
+subroutine teattr(kstop, noattr, vattr, iret_, typel, vattr_missing)
 
     use calcul_module, only: calcul_status, ca_jcteat_, ca_lcteat_, ca_nomte_
 
@@ -37,7 +37,7 @@ subroutine teattr(kstop, noattr, vattr, iret_, typel)
     character(len=*), intent(out) :: vattr
     integer(kind=8), optional, intent(out) :: iret_
     character(len=*), intent(in), optional :: typel
-
+    character(len=*), intent(in), optional :: vattr_missing
 !---------------------------------------------------------------------
 ! but : Recuperer la valeur d'un attribut d'un type_element
 !---------------------------------------------------------------------
@@ -46,7 +46,7 @@ subroutine teattr(kstop, noattr, vattr, iret_, typel)
 ! (o) in  kstop  (k1)  : 'S' => erreur <f> si attribut absent
 !                      : 'C' => on continue si attribut absent (iret=1)
 ! (o) in  noattr (k16) : nom de l'attribut recherche
-! (o) out vattr  (k16) : valeur de l'attribut (ou "non_defini" si absent)
+! (o) out vattr  (k16) : valeur de l'attribut (ou "non_defini" / vattr_missing si absent)
 ! (o) out iret   (i)   : code de retour :  0 -> ok
 !                                          1 -> attribut absent
 ! (f) in  typel  (k16) : Nom du type_element a interroger.
@@ -103,13 +103,17 @@ subroutine teattr(kstop, noattr, vattr, iret_, typel)
     end do
 
     iret = 1
-    vattr = 'NON_DEFINI'
+    if (present(vattr_missing)) then
+        vattr = vattr_missing
+    else
+        vattr = 'NON_DEFINI'
+    end if
     if (kstop .eq. 'S') then
         valk(1) = noatt2
         valk(2) = nomt2
         call utmess('F', 'CALCUL_28', nk=2, valk=valk)
     else
-        ASSERT(present(iret_))
+        ASSERT(present(iret_) .or. present(vattr_missing))
     end if
     ASSERT(kstop .eq. 'C')
     goto 3

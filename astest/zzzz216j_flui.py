@@ -102,7 +102,6 @@ def coupled_fluid(cpl, UNITE_MA):
 
             Returns:
                 bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingField*]: Output fields, on nodes.
             """
 
             assert len(data) == 2, "expecting one field"
@@ -111,7 +110,7 @@ def coupled_fluid(cpl, UNITE_MA):
             depl = None
             if mc_depl:
                 # MEDC field => .med => code_aster field
-                depl = self._medcpl.import_displacement(mc_depl)
+                depl = self._medcpl.import_displacement("mesh_displacement")
 
             CHINST = CA.FieldOnNodesReal(MAFLUIDE, "INST_R", {"INST": current_time})
 
@@ -146,7 +145,7 @@ def coupled_fluid(cpl, UNITE_MA):
 
             # export
 
-            mc_pres = self._medcpl.export_field(force_elem)
+            self._medcpl.set_field("boundary_stress", force_elem)
 
             # test convergence:
             has_cvg = False
@@ -158,7 +157,7 @@ def coupled_fluid(cpl, UNITE_MA):
 
             self.depl_prev = depl
 
-            return has_cvg, {"fluid_forces": mc_pres}
+            return has_cvg
 
     ################################################################################
     # loop on time steps

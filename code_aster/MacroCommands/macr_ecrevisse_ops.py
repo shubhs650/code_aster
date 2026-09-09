@@ -90,7 +90,7 @@ def macr_ecrevisse_ops(self, **args):
     IsInit = True
     # Traitement de l'etat initial en cas de poursuite
     if ETAT_INIT:
-        dEtatInit = ETAT_INIT[0].cree_dict_toutes_valeurs()
+        dEtatInit = ETAT_INIT[0]
         EVINIT = dEtatInit["EVOL_NOLI"]
         _THINIT = dEtatInit["EVOL_THER"]
         nume_ordre = dEtatInit["NUME_ORDRE"]
@@ -102,19 +102,19 @@ def macr_ecrevisse_ops(self, **args):
 
     l_dFISSURE = []
     for fissure in FISSURE:
-        dFISSURE = fissure.cree_dict_toutes_valeurs()
+        dFISSURE = fissure
         l_dFISSURE.append(dFISSURE)
 
-    dECOULEMENT = ECOULEMENT[0].cree_dict_toutes_valeurs()
+    dECOULEMENT = ECOULEMENT[0]
     # on ne supprime pas les valeurs None
-    dMODELE_ECRE = MODELE_ECRE[0].cree_dict_valeurs(MODELE_ECRE[0].mc_liste)
-    dCONVERGENCE_ECREVISSE = CONVERGENCE_ECREVISSE[0].cree_dict_toutes_valeurs()
-    dCOMPORTEMENT = COMPORTEMENT[0].cree_dict_toutes_valeurs()
-    dNEWTON = NEWTON[0].cree_dict_toutes_valeurs()
-    dCONVERGENCE = CONVERGENCE[0].cree_dict_toutes_valeurs()
+    dMODELE_ECRE = MODELE_ECRE[0]
+    dCONVERGENCE_ECREVISSE = CONVERGENCE_ECREVISSE[0]
+    dCOMPORTEMENT = COMPORTEMENT[0]
+    dNEWTON = NEWTON[0]
+    dCONVERGENCE = CONVERGENCE[0]
 
     # Recuperation des infos pour la convergence de la macro
-    dMacr_Conv = CONV_CRITERE[0].cree_dict_toutes_valeurs()
+    dMacr_Conv = CONV_CRITERE[0]
     motclefsCALC_ECREVISSE = {}
     motclefsCALC_ECREVISSE["COURBES"] = (COURBES,)
 
@@ -228,8 +228,7 @@ def macr_ecrevisse_ops(self, **args):
                 _dEXCIT_THER = []
                 if EXCIT_THER:
                     for excit_i in EXCIT_THER:
-                        dEXCIT_THER_i = excit_i.cree_dict_toutes_valeurs()
-                        _dEXCIT_THER.append(dEXCIT_THER_i)
+                        _dEXCIT_THER.append(excit_i)
 
                 # Definition des chargements thermiques venant d Ecrevisse
                 if EcrevisseExe:
@@ -339,8 +338,7 @@ def macr_ecrevisse_ops(self, **args):
                 # Recuperation des chargements mecaniques
                 if EXCIT_MECA:
                     for excit_i in EXCIT_MECA:
-                        dEXCIT_MECA_i = excit_i.cree_dict_toutes_valeurs()
-                        _dEXCIT_MECA.append(dEXCIT_MECA_i)
+                        _dEXCIT_MECA.append(excit_i)
 
                 # Definition des chargements venant d'Ecrevisse
                 if EcrevisseExe:
@@ -363,7 +361,7 @@ def macr_ecrevisse_ops(self, **args):
                         print("etat meca initial dReuseM", motclefs)
 
                 if ENERGIE:
-                    motclefs["ENERGIE"] = ENERGIE[0].cree_dict_valeurs(ENERGIE[0].mc_liste)
+                    motclefs["ENERGIE"] = ENERGIE[0]
 
                 if debug:
                     print("====> STAT_NON_LINE <====")

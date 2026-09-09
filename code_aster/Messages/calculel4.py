@@ -85,15 +85,14 @@ Risques et conseils :
     ),
     14: _(
         """
- Erreur d'utilisation de la commande CREA_RESU / PREP_VARC :
-    Le CARA_ELEM (%(k1)s) ne contient pas d'éléments à "couches"
- Il n'y a aucune raison d'utiliser l'option PREP_VARC
+Erreur d'utilisation de la commande CREA_RESU / PREP_VARC.
+Le CARA_ELEM ne contient pas d'éléments à "couches" et il n'y a donc aucune raison d'utiliser l'option PREP_VARC
 """
     ),
     15: _(
         """
- Erreur d'utilisation (CREA_RESU/PREP_VARC) :
-   Le modèle associé au CARA_ELEM (%(k1)s) est différent de celui fourni à la commande.
+Erreur d'utilisation de la commande CREA_RESU / PREP_VARC.
+Le modèle associé au CARA_ELEM est différent de celui fourni à la commande.
 """
     ),
     16: _(
@@ -310,6 +309,17 @@ Erreur utilisateur dans la commande PROJ_CHAMP :
 Conseils :
   Les champs dont vous demandez la projection (mot clé NOM_CHAM)
   ont-ils été calculés ?
+"""
+    ),
+    76: _(
+        """
+PROJ_CHAM :
+ Le champ %(k1)s présent dans la structure de données RESULTAT %(k2)s ne peut pas être 
+ projeté.
+
+ En effet, les champs de type ELGA ne peuvent pas être projetés dans le cadre
+ de la projection d'un résultat (mot-clé RESULTAT), mais seulement en temps que
+ champ isolé (mot-clé CHAM_GD), avec la méthode 'ECLA_PG'. 
 """
     ),
     78: _(

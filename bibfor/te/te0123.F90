@@ -19,25 +19,26 @@
 subroutine te0123(option, nomte)
 !
     use calcul_module, only: ca_jelvoi_, ca_jptvoi_, ca_jrepe_
-    use Behaviour_module, only: behaviourOption
-!
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/massup.h"
 #include "asterfort/nmplgs.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/tecach.h"
 #include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
 #include "asterfort/voiuti.h"
-#include "asterfort/Behaviour_type.h"
 #include "blas/dcopy.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -57,29 +58,31 @@ subroutine te0123(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: famiRigi = "RIGI"
+    integer(kind=8), parameter :: nvoima = 12, nscoma = 4
     integer(kind=8) :: dlns
     integer(kind=8) :: nno, nnob, nnos, npg, imatuu, lgpg, lgpg2
-    integer(kind=8) :: ipoids, ivf, idfde, igeom, imate
+    integer(kind=8) :: ipoids, ivf, idfde, jvGeom, jvMaterc
     integer(kind=8) :: ivfb, idfdeb
     integer(kind=8) :: icontm, ivarim
-    integer(kind=8) :: iinstm, iinstp, idplgm, iddplg, icarcr
+    integer(kind=8) :: iinstm, iinstp, idplgm, iddplg, jvCarcri
     integer(kind=8) :: ivectu, icontp, ivarip
     integer(kind=8) :: ivarix
     integer(kind=8) :: jtab(7), iadzi, iazk24, icoret, codret
-    integer(kind=8) :: ndim, iret, ntrou, vali(2)
-    real(kind=8) :: angl_naut(3)
+    integer(kind=8) :: ndim, iret, ntrou
     character(len=16) :: codvoi
-    integer(kind=8) :: nvoima, nscoma, nbvois
-    parameter(nvoima=12, nscoma=4)
+    integer(kind=8) :: nbvois
     integer(kind=8) :: livois(1:nvoima), tyvois(1:nvoima), nbnovo(1:nvoima)
     integer(kind=8) :: nbsoco(1:nvoima), lisoco(1:nvoima, 1:nscoma, 1:2)
     integer(kind=8) :: numa
     integer(kind=8) :: icodr1(1)
-    character(len=8) :: typmod(2), lielrf(10), nomail
-    character(len=16) :: phenom, rela_comp, defo_comp
+    character(len=8) :: typmod(2), lielrf(10)
+    character(len=16) :: relaComp, defoComp
     character(len=16), pointer :: compor(:) => null()
     aster_logical :: lVect, lMatr, lVari, lSigm, lMass
     blas_int :: b_incx, b_incy, b_n
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -90,12 +93,10 @@ subroutine te0123(option, nomte)
     ivarix = 1
     icoret = 1
     codret = 0
-!trav1(:) = 0.d0
 !
     lMass = option(1:9) .eq. 'MASS_MECA'
-!
+
 ! - Get element parameters
-!
     call elref2(nomte, 10, lielrf, ntrou)
     ASSERT(ntrou .ge. 2)
     if (lMass) then
@@ -107,9 +108,8 @@ subroutine te0123(option, nomte)
         call elrefe_info(elrefe=lielrf(2), fami='RIGI', ndim=ndim, nno=nnob, nnos=nnos, &
                          npg=npg, jpoids=ipoids, jvf=ivfb, jdfde=idfdeb)
     end if
-!
+
 ! - Type of finite element
-!
     if (ndim .eq. 2 .and. lteatt('C_PLAN', 'OUI')) then
         typmod(1) = 'C_PLAN  '
     else if (ndim .eq. 2 .and. lteatt('D_PLAN', 'OUI')) then
@@ -120,11 +120,10 @@ subroutine te0123(option, nomte)
         ASSERT(ndim .eq. 3)
     end if
     typmod(2) = 'GRADSIGM'
-!
+
 ! - Get input fields
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
+    call jevech('PMATERC', 'L', jvMaterc)
 !
     if (lMass) then
         call jevech('PMATUUR', 'E', imatuu)
@@ -137,37 +136,55 @@ subroutine te0123(option, nomte)
         else
             ASSERT(ndim .eq. 3)
         end if
-        call massup(option, ndim, dlns, nno, nnos, &
-                    zi(imate), phenom, npg, ipoids, idfde, &
-                    zr(igeom), zr(ivf), imatuu, icodr1, igeom, &
+        call massup(zi(jvMaterc), &
+                    option, ndim, dlns, nno, nnos, &
+                    npg, ipoids, idfde, &
+                    zr(jvGeom), zr(ivf), imatuu, icodr1, jvGeom, &
                     ivf)
     else
         call jevech('PCONTMR', 'L', icontm)
         call jevech('PVARIMR', 'L', ivarim)
         call jevech('PDEPLMR', 'L', idplgm)
         call jevech('PDEPLPR', 'L', iddplg)
-        call jevech('PCARCRI', 'L', icarcr)
         call jevech('PINSTMR', 'L', iinstm)
         call jevech('PINSTPR', 'L', iinstp)
-        call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                    itab=jtab)
+        call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
         ASSERT(jtab(1) .eq. ivarim)
         lgpg = max(jtab(6), 1)*jtab(7)
-! ----- Properties of behaviour
+
+! ----- Get fields for behaviour
         call jevech('PCOMPOR', 'L', vk16=compor)
-        rela_comp = compor(RELA_NAME)
-        defo_comp = compor(DEFO)
-        if (rela_comp .ne. 'ENDO_HETEROGENE') then
+        call jevech('PCARCRI', 'L', jvCarcri)
+        relaComp = compor(RELA_NAME)
+        defoComp = compor(DEFO)
+        if (relaComp .ne. 'ENDO_HETEROGENE') then
             call utmess('F', 'COMPOR2_13')
         end if
-        if (defo_comp .ne. 'PETIT') then
-            call utmess('F', 'ELEMENTS3_16', sk=defo_comp)
+        if (defoComp .ne. 'PETIT') then
+            call utmess('F', 'ELEMENTS3_16', sk=defoComp)
         end if
+
+! ----- Initialisation of behaviour datastructure
+        call behaviourInit(BEHInteg)
+
+! ----- Initializations of material parameters on current cell
+        call initParaCell(famiRigi, zi(jvMaterc), materPara)
+
+! ----- Set local coordinate system from user
+        call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! ----- Set main parameters for behaviour (on cell)
+        call behaviourSetParaCell(typmod, option, &
+                                  compor, zr(jvCarcri), &
+                                  zr(iinstm), zr(iinstm), &
+                                  materPara, BEHInteg)
+
 ! ----- Select objects to construct from option name
-        call behaviourOption(option, compor, lMatr, lVect, lVari, &
-                             lSigm, codret)
-! ----- Get orientation
-        call getElemOrientation(ndim, nno, igeom, angl_naut)
+        call behaviourOption(option, compor, &
+                             lMatr, lVect, &
+                             lVari, lSigm, &
+                             codret)
+
 ! ----- Get output fields
         if (lMatr) then
             call jevech('PMATUNS', 'E', imatuu)
@@ -176,8 +193,7 @@ subroutine te0123(option, nomte)
             call jevech('PVECTUR', 'E', ivectu)
         end if
         if (lVari) then
-            call tecach('OOO', 'PVARIPR', 'E', iret, nval=7, &
-                        itab=jtab)
+            call tecach('OOO', 'PVARIPR', 'E', iret, nval=7, itab=jtab)
             lgpg2 = max(jtab(6), 1)*jtab(7)
             call jevech('PVARIPR', 'E', ivarip)
             call jevech('PVARIMP', 'L', ivarix)
@@ -190,14 +206,9 @@ subroutine te0123(option, nomte)
             call jevech('PCONTPR', 'E', icontp)
         end if
         if (lVari) then
-            if (lgpg .ne. lgpg2) then
-                call tecael(iadzi, iazk24)
-                nomail = zk24(iazk24-1+3) (1:8)
-                vali(1) = lgpg
-                vali(2) = lgpg2
-                call utmess('F', 'CALCULEL6_64', sk=nomail, ni=2, vali=vali)
-            end if
+            ASSERT(lgpg .eq. lgpg2)
         end if
+
 ! ----- HYPO-ELASTICITE
         call tecael(iadzi, iazk24)
         numa = zi(iadzi-1+1)
@@ -207,14 +218,22 @@ subroutine te0123(option, nomte)
                     ca_jptvoi_, ca_jelvoi_, nbvois, livois, tyvois, &
                     nbnovo, nbsoco, lisoco)
 ! ----- Compute
-        call nmplgs(ndim, nno, zr(ivf), idfde, nnob, &
-                    zr(ivfb), idfdeb, npg, ipoids, zr(igeom), &
-                    typmod, option, zi(imate), compor, zr(icarcr), &
-                    zr(iinstm), zr(iinstp), angl_naut, zr(idplgm), zr(iddplg), &
-                    zr(icontm), lgpg, zr(ivarim), zr(icontp), zr(ivarip), &
-                    zr(imatuu), zr(ivectu), codret, livois, nbvois, &
-                    numa, lisoco, nbsoco, lVari, lSigm, &
-                    lMatr, lVect)
+        call nmplgs(BEHInteg, &
+                    ndim, nno, nnob, npg, &
+                    zr(ivf), idfde, &
+                    zr(ivfb), idfdeb, &
+                    ipoids, zr(jvGeom), &
+                    typmod, option, compor, zr(jvCarcri), &
+                    zr(iinstm), zr(iinstp), &
+                    zr(idplgm), zr(iddplg), &
+                    lgpg, zr(icontm), zr(ivarim), &
+                    zr(icontp), zr(ivarip), &
+                    zr(imatuu), zr(ivectu), &
+                    codret, &
+                    livois, nbvois, &
+                    numa, lisoco, nbsoco, &
+                    lVari, lSigm, lMatr, lVect)
+
 ! ----- Save return code
         if (lSigm) then
             call jevech('PCODRET', 'E', icoret)

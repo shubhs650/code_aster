@@ -36,10 +36,12 @@ void exportFieldOnNodesToPython( py::module_ &mod ) {
 
     py::class_< FieldOnNodesReal, FieldOnNodesRealPtr, DataField >( mod, "FieldOnNodesReal" )
         .def( py::init( &initFactoryPtr< FieldOnNodesReal > ) )
-        .def( py::init( &initFactoryPtr< FieldOnNodesReal, std::string > ) )
         .def( py::init( &initFactoryPtr< FieldOnNodesReal, const FieldOnNodesReal & > ) )
         .def( py::init( &initFactoryPtr< FieldOnNodesReal, ModelPtr > ) )
         .def( py::init( &initFactoryPtr< FieldOnNodesReal, BaseDOFNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesReal, EquationNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesReal, const py::tuple & > ) )
+        .def( define_pickling< FieldOnNodesReal >() )
         .def( py::init( []( const BaseMeshPtr mesh, const std::string &quantity,
                             const VectorString &cmps ) {
                   return FieldOnNodesPtrBuilder< ASTERDOUBLE >( mesh, quantity, cmps );
@@ -349,10 +351,12 @@ Returns:
     py::class_< FieldOnNodesComplex, FieldOnNodesComplexPtr, DataField >( mod,
                                                                           "FieldOnNodesComplex" )
         .def( py::init( &initFactoryPtr< FieldOnNodesComplex > ) )
-        .def( py::init( &initFactoryPtr< FieldOnNodesComplex, std::string > ) )
         .def( py::init< const FieldOnNodesComplex & >() )
         .def( py::init( &initFactoryPtr< FieldOnNodesComplex, ModelPtr > ) )
         .def( py::init( &initFactoryPtr< FieldOnNodesComplex, BaseDOFNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesComplex, EquationNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesComplex, const py::tuple & > ) )
+        .def( define_pickling< FieldOnNodesComplex >() )
         .def(
             "toSimpleFieldOnNodes",
             []( const FieldOnNodesComplex &f ) { return toSimpleFieldOnNodes( f ); },
@@ -527,9 +531,10 @@ Returns:
      */
     py::class_< FieldOnNodesLong, FieldOnNodesLongPtr, DataField >( mod, "FieldOnNodesLong" )
         .def( py::init( &initFactoryPtr< FieldOnNodesLong > ) )
-        .def( py::init( &initFactoryPtr< FieldOnNodesLong, std::string > ) )
         .def( py::init< const FieldOnNodesLong & >() )
         .def( py::init( &initFactoryPtr< FieldOnNodesLong, BaseDOFNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesLong, const py::tuple & > ) )
+        .def( define_pickling< FieldOnNodesLong >() )
         .def( "build", &FieldOnNodesLong::build, py::arg( "mesh" ) = nullptr )
         .def( "setDescription", &FieldOnNodesLong::setDescription )
         .def( "getDescription", &FieldOnNodesLong::getDescription )
@@ -541,9 +546,10 @@ Returns:
      */
     py::class_< FieldOnNodesChar8, FieldOnNodesChar8Ptr, DataField >( mod, "FieldOnNodesChar8" )
         .def( py::init( &initFactoryPtr< FieldOnNodesChar8 > ) )
-        .def( py::init( &initFactoryPtr< FieldOnNodesChar8, std::string > ) )
         .def( py::init< const FieldOnNodesChar8 & >() )
         .def( py::init( &initFactoryPtr< FieldOnNodesChar8, BaseDOFNumberingPtr > ) )
+        .def( py::init( &initFactoryPtr< FieldOnNodesChar8, const py::tuple & > ) )
+        .def( define_pickling< FieldOnNodesChar8 >() )
         .def( "build", &FieldOnNodesChar8::build, py::arg( "mesh" ) = nullptr )
         .def( "setDescription", &FieldOnNodesChar8::setDescription )
         .def( "getDescription", &FieldOnNodesChar8::getDescription )

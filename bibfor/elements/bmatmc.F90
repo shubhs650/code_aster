@@ -48,6 +48,7 @@ subroutine bmatmc(igau, nbsig, xyz, ipoids, ivf, &
 #include "asterfort/lteatt.h"
 #include "asterfort/utmess.h"
 #include "MeshTypes_type.h"
+#include "FE_module.h"
 !.========================= DEBUT DU CODE EXECUTABLE ==================
 !
 ! ---- INITIALISATIONS
@@ -55,7 +56,7 @@ subroutine bmatmc(igau, nbsig, xyz, ipoids, ivf, &
 !-----------------------------------------------------------------------
     integer(kind=8), intent(in) :: nbsig, igau, ipoids, ivf, idfde, nno
     real(kind=8), intent(in) :: nharm, xyz(1)
-    real(kind=8), intent(out) :: jacob, b(nbsig, 3*MT_NNOMAX3D)
+    real(kind=8), intent(out) :: jacob, b(nbsig, MAX_BV_CG)
 !
     integer(kind=8) :: i, j, k, idecno
     real(kind=8) :: dfdx(MT_NNOMAX3D), dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D)

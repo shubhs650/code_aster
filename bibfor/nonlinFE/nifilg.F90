@@ -17,18 +17,18 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504,W1501
 !
-subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
+subroutine nifilg(BEHInteg, &
+                  ndim, nnod, nnog, nnop, npg, &
                   iw, vffd, vffg, vffp, idffd, &
                   vu, vg, vp, geomi, typmod, &
-                  option, mate, compor, lgpg, carcri, &
-                  instm, instp, ddlm, ddld, angmas, &
+                  option, compor, lgpg, carcri, &
+                  instm, instp, ddlm, ddld, &
                   sigm, vim, sigp, vip, lMatr, &
                   lVect, lSigm, lVari, vect, matr, &
                   matsym, codret)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -41,20 +41,22 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
 #include "asterfort/nmcomp.h"
 #include "asterfort/nmepsi.h"
 #include "asterfort/nmmalu.h"
+#include "MeshTypes_type.h"
 #include "asterfort/poslog.h"
 #include "asterfort/prelog.h"
 #include "blas/dcopy.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
 #include "blas/dscal.h"
 !
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
     aster_logical :: matsym
     integer(kind=8) :: ndim, nnod, nnog, nnop, npg, iw, idffd, lgpg
-    integer(kind=8) :: mate
     integer(kind=8) :: vu(3, 27), vg(27), vp(27)
     integer(kind=8) :: codret
     real(kind=8) :: vffd(nnod, npg), vffg(nnog, npg), vffp(nnop, npg)
     real(kind=8) :: instm, instp
-    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*), angmas(*)
+    real(kind=8) :: geomi(ndim, nnod), ddlm(*), ddld(*)
     real(kind=8) :: sigm(2*ndim+1, npg), sigp(2*ndim+1, npg)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg)
     real(kind=8) :: vect(*), matr(*)
@@ -88,7 +90,6 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
 ! IN  GEOMI   : COORDONEES DES NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  MATE    : MATERIAU CODE
 ! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
@@ -97,7 +98,6 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
 ! IN  INSTP   : INSTANT DE CALCUL
 ! IN  DDLM    : DEGRES DE LIBERTE A L'INSTANT PRECEDENT
 ! IN  DDLD    : INCREMENT DES DEGRES DE LIBERTE
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  SIGM    : CONTRAINTES A L'INSTANT PRECEDENT
 ! IN  VIM     : VARIABLES INTERNES A L'INSTANT PRECEDENT
 ! OUT SIGP    : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
@@ -108,9 +108,9 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = 'RIGI'
-    aster_logical, parameter :: grand = ASTER_TRUE
+    aster_logical, parameter :: grand = ASTER_TRUE, lCplan = ASTER_FALSE
     aster_logical :: axi
     aster_logical :: lCorr
     integer(kind=8) :: kpg, nddl, ndu
@@ -118,7 +118,8 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
     integer(kind=8) :: lij(3, 3), os, kk
     integer(kind=8) :: viaja, vibjb, vuiana, vgra, vpsa, iret
     integer(kind=8) :: cod(npg)
-    real(kind=8) :: geomm(3*27), geomp(3*27), deplm(3*27), deplp(3*27)
+    real(kind=8) :: geomm(3*MT_NNOMAX3D), geomp(3*MT_NNOMAX3D)
+    real(kind=8) ::  deplm(3*MT_NNOMAX3D), deplp(3*MT_NNOMAX3D)
     real(kind=8) :: r, w, wp, dffd(nnod, 4)
     real(kind=8) :: presm(27), presd(27)
     real(kind=8) :: gonfm(27), gonfd(27)
@@ -135,7 +136,6 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
     real(kind=8) :: iddid, devdi(6), iddev(6)
     real(kind=8) :: ftr(3, 3), t1, t2
     real(kind=8) :: am, ap, bp, boa, aa, bb, daa, dbb, dboa, d2boa
-    type(Behaviour_Integ) :: BEHinteg
     real(kind=8), parameter :: kr(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
     real(kind=8), parameter :: id(3, 3) = reshape((/1.d0, 0.d0, 0.d0, &
                                                     0.d0, 1.d0, 0.d0, &
@@ -174,16 +174,6 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
             matr(1:nddl*nddl) = 0.d0
         end if
     end if
-!
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
 
 ! - Extract for fields
     do na = 1, nnod
@@ -202,7 +192,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         gonfm(ra) = ddlm(vg(ra))
         gonfd(ra) = ddld(vg(ra))
     end do
-!
+
 ! - Loop on Gauss points
     do kpg = 1, npg
 ! ----- Kinematic - Previous strains
@@ -211,28 +201,27 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
                     dffd)
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dffd, deplm, fPrev)
-!
+
 ! ----- Kinematic - Current strains
         call nmepsi(ndim, nnod, axi, grand, vffd(1, kpg), &
                     r, dffd, deplp, fCurr)
         call dfdmip(ndim, nnod, axi, geomp, kpg, &
                     iw, vffd(1, kpg), idffd, r, wp, &
                     dffd)
-        call nmmalu(nnod, axi, r, vffd(1, kpg), dffd, &
-                    lij)
-!
+        call nmmalu(nnod, axi, r, vffd(1, kpg), dffd, lij)
+
 ! ----- Gradient
-        jm = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))-fPrev(2, 1)*(fPrev(1, &
-             &2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+fPrev(3, 1)*(fPrev(1, 2)*fPrev(2, 3)-fPrev(&
-             &1, 3)*fPrev(2, 2))
-        jp = fCurr(1, 1)*(fCurr(2, 2)*fCurr(3, 3)-fCurr(2, 3)*fCurr(3, 2))-fCurr(2, 1)*(fCurr(1, &
-             &2)*fCurr(3, 3)-fCurr(1, 3)*fCurr(3, 2))+fCurr(3, 1)*(fCurr(1, 2)*fCurr(2, 3)-fCurr(&
-             &1, 3)*fCurr(2, 2))
+        jm = fPrev(1, 1)*(fPrev(2, 2)*fPrev(3, 3)-fPrev(2, 3)*fPrev(3, 2))- &
+             fPrev(2, 1)*(fPrev(1, 2)*fPrev(3, 3)-fPrev(1, 3)*fPrev(3, 2))+ &
+             fPrev(3, 1)*(fPrev(1, 2)*fPrev(2, 3)-fPrev(1, 3)*fPrev(2, 2))
+        jp = fCurr(1, 1)*(fCurr(2, 2)*fCurr(3, 3)-fCurr(2, 3)*fCurr(3, 2))- &
+             fCurr(2, 1)*(fCurr(1, 2)*fCurr(3, 3)-fCurr(1, 3)*fCurr(3, 2))+ &
+             fCurr(3, 1)*(fCurr(1, 2)*fCurr(2, 3)-fCurr(1, 3)*fCurr(2, 2))
         if (jp .le. 0.d0) then
             cod(kpg) = 1
             goto 999
         end if
-!
+
 ! ----- Pressure
         b_n = to_blas_int(nnop)
         b_incx = to_blas_int(1)
@@ -243,7 +232,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         b_incy = to_blas_int(1)
         pd = ddot(b_n, vffp(1, kpg), b_incx, presd, b_incy)
         pp = pm+pd
-!
+
 ! ----- Gonflement
         b_n = to_blas_int(nnog)
         b_incx = to_blas_int(1)
@@ -254,7 +243,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         b_incy = to_blas_int(1)
         gd = ddot(b_n, vffg(1, kpg), b_incx, gonfd, b_incy)
         gp = gm+gd
-!
+
 ! ----- CALCUL DES FONCTIONS A, B,... DETERMINANT LA RELATION LIANT G ET J
         call nirela(2, jp, gm, gp, am, &
                     ap, bp, boa, aa, bb, &
@@ -263,7 +252,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
             cod(kpg) = 1
             goto 999
         end if
-!
+
 ! ----- CALCUL DES DEFORMATIONS ENRICHIES
         corm = (am/jm)**(1.d0/3.d0)
         b_n = to_blas_int(9)
@@ -281,7 +270,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         b_n = to_blas_int(9)
         b_incx = to_blas_int(1)
         call dscal(b_n, corp, ftp, b_incx)
-!
+
 ! ----- Pre-treatment of kinematic quantities
         call prelog(ndim, lgpg, vim(1, kpg), gn, lamb, &
                     logl, ftm, ftp, epslPrev, epslIncr, &
@@ -291,19 +280,22 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         end if
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         cod(kpg) = 0
         dtde = 0.d0
         tlogCurr = 0.d0
         taup = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, kpg, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    6, epslPrev, epslIncr, 6, tlogPrev, &
-                    vim(1, kpg), option, angmas, &
-                    tlogCurr, vip(1, kpg), 36, dtde, cod(kpg))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    6, epslPrev, epslIncr, &
+                    6, tlogPrev, &
+                    vim(1, kpg), &
+                    tlogCurr, vip(1, kpg), &
+                    36, dtde, cod(kpg))
         if (cod(kpg) .eq. 1) then
             goto 999
         end if
@@ -313,20 +305,22 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         do ia = 4, 2*ndim
             sigm_ldc(ia) = sigm(ia, kpg)
         end do
-!
+
 ! ----- Post-treatment of sthenic quantities
-        call poslog(lCorr, lMatr, lSigm, lVari, tlogPrev, &
-                    tlogCurr, ftm, lgpg, vip(1, kpg), ndim, &
-                    ftp, kpg, dtde, sigm_ldc, .false._1, &
-                    'RIGI', mate, instp, angmas, gn, &
+        call poslog(BEHInteg, &
+                    lCorr, lMatr, lSigm, lVari, &
+                    tlogPrev, tlogCurr, ftm, &
+                    lgpg, vip(1, kpg), ndim, &
+                    ftp, dtde, sigm_ldc, lCplan, &
+                    instp, gn, &
                     lamb, logl, sigp_ldc, dsidep, pk2Prev, &
                     pk2Curr, iret)
         if (iret .eq. 1) then
             cod(kpg) = 1
             goto 999
         end if
-!
-! - CONTRAINTE HYDROSTATIQUE ET DEVIATEUR
+
+! ----- CONTRAINTE HYDROSTATIQUE ET DEVIATEUR
         b_n = to_blas_int(2*ndim)
         b_incx = to_blas_int(1)
         call dscal(b_n, exp(gp), sigp_ldc, b_incx)
@@ -338,7 +332,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
         do ia = 1, 6
             taudv(ia) = taup(ia)-tauhy*kr(ia)
         end do
-!
+
 ! ----- Cauchy stresses
         if (lSigm) then
             do ia = 1, 2*ndim
@@ -346,7 +340,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
             end do
             sigp(2*ndim+1, kpg) = (tauhy-pp*bb)/jp
         end if
-!
+
 ! ----- Internal forces
         if (lVect) then
             ASSERT(lSigm)
@@ -374,7 +368,7 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
                 vect(kk) = vect(kk)+w*t1
             end do
         end if
-!
+
 ! ----- Rigidity matrix
         if (lMatr) then
 ! Contraintes generalisees EF (bloc mecanique pour la rigidite geometrique)
@@ -682,10 +676,9 @@ subroutine nifilg(ndim, nnod, nnog, nnop, npg, &
             end if
         end if
     end do
-!
-999 continue
-!
+
 ! - Return code summary
     call codere(cod, npg, codret)
 !
+999 continue
 end subroutine

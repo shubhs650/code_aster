@@ -46,6 +46,11 @@ Un chargement de type %(k1)s a été déclaré comme étant pilotable alors que 
 Si votre chargement contient plusieurs types dont certains ne peuvent être pilotables, il faut les séparer.
 """
     ),
+    5: _(
+        """
+Pour un chargement de convection, il ne faut pas définir plus d"un champ de vitesse.
+"""
+    ),
     10: _("""Les composantes dans le champ de vent doivent être exactement DX, DY et DZ."""),
     12: _(
         """

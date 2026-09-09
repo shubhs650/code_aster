@@ -344,6 +344,14 @@ Pour information :
    Maille   : <%(k5)s>
 """
     ),
+    46: _(
+        """
+DYNA_VIBRA, comportement DIS_ECRO_CINE :
+  Vous avez fourni le paramètre %(k1)s qui est associé à un degré de liberté de rotation.
+  Or au moins un des noeuds sur lesquels ce comportement doit s'appliquer ne possède pas
+  de degré de liberté de rotation.
+"""
+    ),
     61: _(
         """
 Le prolongement à droite étant exclu pour la fonction %(k1)s, il n'est pas

@@ -183,7 +183,7 @@ Erreur d'utilisation (ou de programmation) :
     30: _(
         """
 Erreur utilisateur :
-  Le programme se sait pas interpoler entre deux champs de type "carte".
+  Le programme ne sait pas interpoler entre deux champs de type "carte".
 
 Risques et conseils :
   * Il faut faire en sorte que les champs soient des champs par éléments de type 'ELEM'.
@@ -569,8 +569,9 @@ Commande CALC_FERRAILLAGE :
     ),
     88: _(
         """
- Commande CALC_FERRAILLAGE : ATTENTION un champ de ferraillage existe déjà au numéro d'ordre %(i1)d du résultat %(k1)s
-   Ce champ de ferraillage sera écrasé !
+Commande CALC_FERRAILLAGE.
+Un champ de ferraillage existe déjà au numéro d'ordre %(i1)d.
+Ce champ de ferraillage sera écrasé !
 """
     ),
     89: _(

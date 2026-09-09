@@ -32,8 +32,8 @@ interface
         aster_logical, intent(in) :: l_pena_cont, l_pena_fric, l_large_slip
         integer(kind=8), intent(in) :: ndim, nne, nnm
         real(kind=8), intent(in) :: norm(3), tau1(3), tau2(3), mprojt(3, 3)
-        real(kind=8), intent(in) :: wpg, ffe(9), ffm(9), dffm(2,9), jacobi, jeu
-        real(kind=8), intent(in) :: coefac, coefaf, lambda, coefff
+        real(kind=8), intent(in) :: wpg, ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), dffm(2,MT_NNOMAX2D)
+        real(kind=8), intent(in) :: coefac, coefaf, lambda, coefff, jacobi, jeu
         real(kind=8), intent(in) :: dlagrc, dlagrf(2), djeu(3)
         real(kind=8), intent(in) :: rese(3), nrese
         real(kind=8), intent(in) :: mprt1n(3, 3), mprt2n(3, 3)

@@ -16,15 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo,&
+interface
+    subroutine thmGetPermeabilityTensor(ds_thm, &
+                                        ndim, phi, endo, &
                                         tperm)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         integer(kind=8), intent(in) :: ndim
-        real(kind=8), intent(in) :: angl_naut(3)
-        integer(kind=8), intent(in) :: j_mater
         real(kind=8), intent(in) :: phi, endo
         real(kind=8), intent(out) :: tperm(ndim, ndim)
     end subroutine thmGetPermeabilityTensor
-end interface 
+end interface

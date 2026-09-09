@@ -94,7 +94,7 @@ def liss_spectre_ops(
 
     dspectre = []
     for j in SPECTRE:
-        dspectre.append(j.cree_dict_valeurs(j.mc_liste))
+        dspectre.append(j)
 
     # premiere passe : evaluation du nombre de nappe a creer
     nb_nappes = 0

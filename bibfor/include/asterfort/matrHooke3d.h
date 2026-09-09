@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine matrHooke3d(elasID, anglNaut, &
+    subroutine matrHooke3d(materPara, &
                            h, g, g1, g2, g3, &
                            matr_elas)
-        integer(kind=8), intent(in) :: elasID
-        real(kind=8), intent(in) :: anglNaut(3)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         real(kind=8), intent(in) :: g, h(6)
         real(kind=8), intent(in) :: g1, g2, g3
         real(kind=8), intent(out) :: matr_elas(6, 6)

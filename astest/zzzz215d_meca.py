@@ -94,14 +94,12 @@ def coupled_mechanics(cpl):
 
             Returns:
                 bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingField*]: Output fields, on nodes.
             """
 
             assert len(data) == 1, "expecting one field"
-            mc_pres = data["PRES"]
 
             # MEDC field => .med => code_aster field
-            PRES = self._medcpl.import_pressure(mc_pres)
+            PRES = self._medcpl.import_pressure("PRES")
 
             fed = MOSOLIDE.getFiniteElementDescriptor().restrict(
                 self._medcpl.mesh_interf.getGroupsOfCells()
@@ -138,9 +136,9 @@ def coupled_mechanics(cpl):
             )
 
             displ = self.result.getField("DEPL", self.result.getLastIndex())
-            mc_displ = self._medcpl.export_displacement(displ, "Displ")
+            self._medcpl.export_displacement("DEPL", displ)
 
-            return True, {"DEPL": mc_displ}
+            return True
 
     ################################################################################
     # loop on time steps

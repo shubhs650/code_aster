@@ -20,9 +20,10 @@
 !
 interface
     subroutine clpoma(elem_dime, elem_code, elem_coor, elem_nbnode, elem_weight)
+#include "MeshTypes_type.h"
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_code
-        real(kind=8), intent(in) :: elem_coor(3,9)
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_nbnode
         real(kind=8), intent(out) :: elem_weight
     end subroutine clpoma

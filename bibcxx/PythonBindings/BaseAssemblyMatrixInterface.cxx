@@ -84,6 +84,13 @@ Returns:
         tuple(neq) = number of DOFs eliminated.
         )" )
         // -----------------------------------------------------------------------------------------
+        .def( "zeroDirichletBCDOFs", &BaseAssemblyMatrix::zeroDirichletBCDOFs, R"(
+Zero the Dirichlet BC DOFs in the given field
+
+Arguments:
+    field (FieldOnNodesReal): the field to modify
+        )" )
+        // -----------------------------------------------------------------------------------------
         .def( "getLagrangeScaling", &BaseAssemblyMatrix::getLagrangeScaling, R"(
 Return the scaling used for Lagrange multipliers. It returns 1 if no Lagrange.
 
@@ -119,5 +126,8 @@ Returns:
                 str: Name of the option.
             )" )
         // -----------------------------------------------------------------------------------------
-        .def( "transpose", &BaseAssemblyMatrix::transpose );
+        .def( "transpose", &BaseAssemblyMatrix::transpose,
+              R"(
+            Return the transpose of the matrix in place.
+            )" );
 };

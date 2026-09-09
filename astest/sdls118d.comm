@@ -95,6 +95,7 @@ CARA_EL0 = AFFE_CARA_ELEM(
         GROUP_MA="RADIER",
         GROUP_MA_POI1="PRADIER",
         GROUP_NO_CENTRE="P3",
+        METHODE="UNIFORME",
     ),
 )
 
@@ -229,15 +230,9 @@ CALC_MISS(
     PROJET="SDLS118D",
     UNITE_RESU_IMPE=32,
     UNITE_RESU_FORC=33,
+    SURF="OUI",
     PARAMETRE=_F(
-        FREQ_MIN=0.01,
-        FREQ_MAX=50.01,
-        FREQ_PAS=0.5,
-        Z0=0.0,
-        SURF="OUI",
-        DREF=5.0,
-        OFFSET_MAX=50,
-        OFFSET_NB=500,
+        FREQ_MIN=0.01, FREQ_MAX=50.01, FREQ_PAS=0.5, Z0=0.0, DREF=5.0, OFFSET_MAX=50, OFFSET_NB=500
     ),
 )
 

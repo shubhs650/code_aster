@@ -18,7 +18,7 @@
 !
 subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
                   nr, nvi, deps, sigd, vind, &
-                  seuil, icomp, sigf, vinf, devg, &
+                  seuil, cutLevel, sigf, vinf, devg, &
                   devgii, irtet)
 !
     implicit none
@@ -37,7 +37,7 @@ subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
 #include "asterfort/trace.h"
 #include "asterfort/utmess.h"
 #include "blas/ddot.h"
-    integer(kind=8) :: itmax, nbmat, nr, nvi, icomp, irtet
+    integer(kind=8) :: itmax, nbmat, nr, nvi, cutLevel, irtet
     real(kind=8) :: toler, mater(nbmat, 2), deps(6), sigd(6)
     real(kind=8) :: vind(*), sigf(6), vinf(*), seuil, devg(6), devgii
     character(len=8) :: mod
@@ -57,7 +57,6 @@ subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
 ! --- : SIGD   : CONTRAINTES A L'INSTANT PRECEDENT ---------------------
 ! --- : VIND   : VARIABLES INTERNES A L'INSTANT PRECEDENT --------------
 ! --- : SEUIL  : VARIABLE SEUIL ELASTIQUE ------------------------------
-! --- : ICOMP  : COMPTEUR POUR LE REDECOUPAGE DU PAS DE TEMPS ----------
 ! OUT : SIGF   : CONTRAINTES A L'INSTANT COURANT -----------------------
 ! --- : VINF   : VARIABLES INTERNES A L'INSTANT COURANT ----------------
 ! --- : DEVG   : DEVIATEUR DU TENSEUR G, DIRECTION D'ECOULEMENT --------
@@ -159,7 +158,7 @@ subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
 ! --- GAMP < 0 ---------------------------------------------------------
 ! --- PEUT-ON FAIRE UN DECOUPAGE DE L'INCREMENT DE DEPLACEMENT ? -------
 ! ======================================================================
-            if (icomp .eq. 0 .or. icomp .eq. 1) then
+            if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                 call codent(iter, 'G', citer)
                 call codree(toler, 'E', ctol)
                 valk(1) = citer
@@ -235,7 +234,7 @@ subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
 ! ======================================================================
 ! --- DECOUPAGE
 ! ======================================================================
-                    if (icomp .eq. 0 .or. icomp .eq. 1) then
+                    if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                         call codent(iter, 'G', citer)
                         call codree(toler, 'E', ctol)
                         valk(1) = citer
@@ -274,7 +273,7 @@ subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
 ! --- IL N'Y A PAS CONVERGENCE -----------------------------------------
 ! --- PEUT-ON FAIRE UN DECOUPAGE DE L'INCREMENT DE DEPLACEMENT ? -------
 ! ======================================================================
-                    if (icomp .eq. 0 .or. icomp .eq. 1) then
+                    if (cutLevel .eq. 0 .or. cutLevel .eq. 1) then
                         call codent(iter, 'G', citer)
                         call codree(toler, 'E', ctol)
                         valk(1) = citer

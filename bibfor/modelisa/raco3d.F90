@@ -18,6 +18,7 @@
 !
 subroutine raco3d(iocc, listRelaZ, loadZ)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterfort/alchml.h"
@@ -37,7 +38,8 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
 #include "asterfort/rco3d_crch.h"
 #include "asterfort/rco3d_crealigrel.h"
 #include "asterfort/rco3d_crep.h"
-#include "asterfort/reliem.h"
+#include "asterfort/getelem.h"
+#include "asterfort/getnode.h"
 #include "jeveux.h"
 #include "MeshTypes_type.h"
 !
@@ -59,17 +61,22 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=16), parameter :: factorKeyword = "LIAISON_ELEM"
-    character(len=16) :: motcle(2), typmcl(2)
-    character(len=19) :: modelLigrel, ligrel, chmlrac
-    character(len=24) :: lismaco, lismavo, lisnoco
-    character(len=8)  :: model, mesh
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    character(len=19) :: modelLigrel
+    character(len=19), parameter :: chmlrac = '&&RACO3D.PCACOQU.CM'
+    character(len=24), parameter :: lismavo = '&&RACO3D.LMAILLES.VOL'
+    character(len=24), parameter :: lisnoco = '&&RACO3D.LNOEUDS.COQ'
+    character(len=24), parameter :: lismaco = '&&RACO3D.LMAILLES.COQ'
+    character(len=19), parameter :: ligrel = '&&RACO3D'
+    character(len=8) :: model, mesh
     integer(kind=8) :: nbmavo, nbmaco, nt_nodes
     integer(kind=8) :: nb_pairs, iret
     integer(kind=8) :: i, n1
     real(kind=8) :: epai, crig
     integer(kind=8), pointer :: list_pairs(:) => null()
-    character(len=8) :: lpain(2), lpaout(1)
-    character(len=24) :: lchin(2), lchout(1)
     integer(kind=8) :: nbnocot, jlisnoco
     integer(kind=8), allocatable :: map_noco_pair(:, :, :)
     integer(kind=8), allocatable :: map_noco_nbnoco(:, :, :)
@@ -86,15 +93,10 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
 !
     load = loadZ
     listRela = listRelaZ
-!
-    motcle(1) = 'GROUP_MA_COQUE'
-    motcle(2) = 'GROUP_MA_MASSIF'
-    typmcl(1) = 'GROUP_MA'
-    typmcl(2) = 'GROUP_MA'
-    lismavo = '&&RACO3D.LMAILLES.VOL'
-    lisnoco = '&&RACO3D.LNOEUDS.COQ'
-    lismaco = '&&RACO3D.LMAILLES.COQ'
-    ligrel = '&&RACO3D'
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
 
 ! - Main parameters
     call dismoi('NOM_MODELE', load, 'CHARGE', repk=model)
@@ -102,21 +104,21 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
     call dismoi('NOM_MAILLA', modelLigrel, 'LIGREL', repk=mesh)
 
 ! - RECUPERER COEF_RIGI_DRZ
-    call getvr8('LIAISON_ELEM', 'COEF_RIGI_DRZ', iocc=iocc, scal=crig, nbret=n1)
+    call getvr8(factorKeyword, 'COEF_RIGI_DRZ', iocc=iocc, scal=crig, nbret=n1)
     if (n1 .eq. 0) then
         crig = 1.d0-5
     end if
 
 ! - RECUPERER LA LISTE DES MAILLES
-    call reliem(' ', mesh, 'NU_MAILLE', factorKeyword, iocc, &
-                1, motcle(1), typmcl(1), lismaco, nbmaco)
+    call getelem(mesh, factorKeyword, iocc, 'F', lismaco, &
+                 nbmaco, '_COQUE')
 
-    call reliem(' ', mesh, 'NU_MAILLE', factorKeyword, iocc, &
-                1, motcle(2), typmcl(2), lismavo, nbmavo)
+    call getelem(mesh, factorKeyword, iocc, 'F', lismavo, &
+                 nbmavo, '_MASSIF')
 
-! - RECUPERER LA LISTE DES NOOEUDS DU BORD DE LA COQUE
-    call reliem(' ', mesh, 'NU_NOEUD', factorKeyword, iocc, &
-                1, motcle(1), typmcl(1), lisnoco, nbnocot)
+! - RECUPERER LA LISTE DES NOEUDS DU BORD DE LA COQUE
+    call getnode(mesh, factorKeyword, iocc, 'V', lisnoco, &
+                 nbnocot, ' ', '_COQUE')
     call jeveuo(lisnoco, 'L', jlisnoco)
     !
     AS_ALLOCATE(vi=list_total_no_co, size=nbnocot)
@@ -129,7 +131,7 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
 
     AS_ALLOCATE(vr=v_epai, size=nbmaco)
 
-    call getvid('LIAISON_ELEM', 'CARA_ELEM', iocc=iocc, scal=caraElem, nbret=n1)
+    call getvid(factorKeyword, 'CARA_ELEM', iocc=iocc, scal=caraElem, nbret=n1)
     call rco3d_crep(caraElem, mesh, lismaco, nbmaco, v_epai)
     ! RECUPERER LE MAX POUR L APPARIEMMENT
     epai = maxval(v_epai)
@@ -159,23 +161,28 @@ subroutine raco3d(iocc, listRelaZ, loadZ)
 
 !   CREATION DU CHAMP D ENTREE
 
-    chmlrac = '&&RACO3D.PCACOQU.CM'
     call alchml(ligrel, 'LIAI_CO_3D', 'PCACOQU', 'V', chmlrac, iret, ' ')
     call rco3d_crch(ligrel, mesh, chmlrac, lismaco, nbmaco, crig, v_epai)
 
-!--  Fields
-!
-    lpain(1) = 'PGEOMER'
-    lpain(2) = 'PCACOQU'
-    lchin(1) = mesh//'.COORDO'
-    lchin(2) = '&&RACO3D.PCACOQU.CM'
+! - Set input fields
+    nbFieldIn = 1
+    lpain(nbFieldIn) = 'PGEOMER'
+    lchin(nbFieldIn) = mesh//'.COORDO'
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem, &
+                       cacoqueZ_=chmlrac)
+
+! - Set output field
     lpaout(1) = 'PMATUNS'
     lchout(1) = '&&RACO3D.PMATUNS'
 
 !-- Compute elementary matrices
-    call calcul('S', 'LIAI_CO_3D', ligrel, 2, lchin, &
-                lpain, 1, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', 'LIAI_CO_3D', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 
 !-- add the linear relations
     call rco3d_clcrela(ligrel, mesh, nb_pairs, nbnocot, &

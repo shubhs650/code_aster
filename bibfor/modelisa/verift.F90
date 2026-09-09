@@ -153,7 +153,8 @@ subroutine verift(fami, kpg, ksp, poum, jvMaterCode, &
     end if
 
 ! - Check non-isotropic material
-    if (elasID .ne. 1) then
+    if (elasID .ne. ELAS_ISOT .and. elasID .ne. ELAS_SHELL .and. &
+        elasID .ne. ELAS_MEMBRANE) then
         if (.not. present(epsth_anis_)) then
             call tecael(iadzi, iazk24)
             elem_name = zk24(iazk24-1+3) (1:8)
@@ -209,7 +210,8 @@ subroutine verift(fami, kpg, ksp, poum, jvMaterCode, &
 ! - Compute thermic strain
     if (poum .eq. 'T') then
         if (iret_temp_prev+iret_temp_curr .eq. 0) then
-            if (elasID .eq. ELAS_ISOT) then
+            if (elasID .eq. ELAS_ISOT .or. elasID .eq. ELAS_SHELL .or. &
+                elasID .eq. ELAS_MEMBRANE) then
                 if (elasKeyword .eq. 'ELAS_META') then
                     if (relaComp .eq. 'META_LEMA_ANI') then
                         epsth_meta = 0.d0
@@ -246,7 +248,8 @@ subroutine verift(fami, kpg, ksp, poum, jvMaterCode, &
 
     else if (poum .eq. '-') then
         if (iret_temp_prev .eq. 0) then
-            if (elasID .eq. ELAS_ISOT) then
+            if (elasID .eq. ELAS_ISOT .or. elasID .eq. ELAS_SHELL .or. &
+                elasID .eq. ELAS_MEMBRANE) then
                 if (elasKeyword .eq. 'ELAS_META') then
                     if (relaComp .eq. 'META_LEMA_ANI') then
                         epsth_meta = 0.d0
@@ -280,7 +283,8 @@ subroutine verift(fami, kpg, ksp, poum, jvMaterCode, &
 
     else if (poum .eq. '+') then
         if (iret_temp_curr .eq. 0) then
-            if (elasID .eq. ELAS_ISOT) then
+            if (elasID .eq. ELAS_ISOT .or. elasID .eq. ELAS_SHELL .or. &
+                elasID .eq. ELAS_MEMBRANE) then
                 if (elasKeyword .eq. 'ELAS_META') then
                     if (relaComp .eq. 'META_LEMA_ANI') then
                         epsth_meta = 0.d0

@@ -18,12 +18,201 @@
 !
 subroutine te0555(option, nomte)
 !
+    use Behaviour_module, only: behaviourOption
+    use c_interface_tria_mitc_j
+    use FE_basis_module
+    use FE_quadrature_module
+    use FE_topo_module
+    use iso_c_binding
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
 !
-#include "asterfort/utmess.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/dxroep.h"
+#include "asterfort/elrefe_info.h"
+#include "asterfort/get_elas_id.h"
+#include "asterfort/get_elas_para.h"
+#include "asterfort/jevech.h"
+#include "asterfort/writeMatrix.h"
+#include "FE_module.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
+    character(len=16), intent(in) :: option, nomte
 !
-    call utmess('F', 'FERMETUR_8')
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: PLAQ_MITC
+!
+! Options: FULL_MECA_*, RIGI_MECA_*, RAPH_MECA
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ndim, nno, nnos, npg, jpoids, jvf, jdfde, jvGeom, jvMaterc
+    integer(kind=8) :: i, j, k, elas_id, igau
+    real(c_double) :: e, nu, epais, rho, e_, nu_
+    real(c_double) :: tiny
+    character(len=8), parameter :: fami = 'RIGI'
+    character(len=16) :: elas_keyword
+    real(c_double) :: cst(4), coor(18), cdofs_f(9)
+    ! NOTICE: see the size of the arrays in the C file: c_interface_tria_mitc_j
+    integer(c_int) :: ncst, ncd, ne0, ne1, ne2
+    integer(c_int) :: entities0(1), entities1(1), entities2(1)
+    integer(kind=4), parameter :: size_init = 21, size_final = 15
+    real(c_double) :: w_0(size_init), signs(size_final)
+    integer(kind=8) :: reorder(size_final)
+    real(c_double), dimension(size_init, size_init) :: M_elem
+    real(c_double), dimension(size_final, size_final) :: M_cond, M_final
+    real(c_double), dimension(size_init*size_init) :: M0, M1, M2, M3
+    real(c_double) :: AA(15, 15), BB(3, 3), CC(15, 3), DD(3, 3), CDinv(15, 3)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+!
+! --------------------------------------------------------------------------------------------------
+!
+    w_0 = 0.d0
+    tiny = 1.d-8
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Finite element informations
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, &
+                     npg=npg, jpoids=jpoids, jvf=jvf, jdfde=jdfde)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! ----- Get elastic parameters (only isotropic elasticity)
+! FIXME: for instance E and NU are supposed to be equal for all quadpoints
+!
+    call get_elas_id(zi(jvMaterc), elas_id, elas_keyword)
+    call get_elas_para(fami, zi(jvMaterc), '+', 1, 1, &
+                       elas_id, elas_keyword, &
+                       e_=e, nu_=nu)
+
+    do igau = 2, npg
+        call get_elas_id(zi(jvMaterc), elas_id, elas_keyword)
+        call get_elas_para(fami, zi(jvMaterc), '+', igau, 1, &
+                           elas_id, elas_keyword, &
+                           e_=e_, nu_=nu_)
+        ASSERT(abs(e-e_) .le. tiny .and. abs(nu-nu_) .le. tiny)
+    end do
+    call dxroep(plateCara, rho, epais)
+
+! Fill material parameters vector
+    cst(1) = e
+    cst(2) = nu
+    cst(3) = 5.0/6.0
+    cst(4) = epais
+    ncst = size(cst)
+
+! Remplissage du vecteur de coordonnées (3 coordonnées par nœud)
+    do i = 0, 5
+        coor(3*i+1) = zr(jvGeom+3*i)
+        coor(3*i+2) = zr(jvGeom+3*i+1)
+        coor(3*i+3) = zr(jvGeom+3*i+2)
+    end do
+
+! Remplissage des coordonées (pas de permut ici)
+    cdofs_f(1) = coor(1)
+    cdofs_f(2) = coor(2)
+    cdofs_f(3) = coor(3)
+    cdofs_f(4) = coor(4)
+    cdofs_f(5) = coor(5)
+    cdofs_f(6) = coor(6)
+    cdofs_f(7) = coor(7)
+    cdofs_f(8) = coor(8)
+    cdofs_f(9) = coor(9)
+    ncd = size(cdofs_f)
+!
+! On définit 3 entities car 3 arêtes dans le triangle
+    entities0(1) = 0
+    entities1(1) = 1
+    entities2(1) = 2
+    ne0 = 1
+    ne1 = 1
+    ne2 = 1
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MATRICE DE RIGIDITÉ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Appel de la fonction C++ - Matrice de rigidité -> Part1
+    call BP4_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities0, ne0, cst, ncst, M0)
+
+! Appel de la fonction C++ - Matrice de rigidité -> Part2
+    call BP5_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities0, ne0, cst, ncst, M1)
+    call BP5_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities1, ne1, cst, ncst, M2)
+    call BP5_tr6_Fortran(w_0, size_init, cdofs_f, ncd, entities2, ne2, cst, ncst, M3)
+
+! Remplissage de la matrice
+    do i = 1, size_init
+        do j = 1, size_init
+            k = (j-1)*size_init+i
+            M_elem(i, j) = M0(k)+M1(k)+M2(k)+M3(k)
+        end do
+    end do
+
+! Recupérer les bloques
+    ! (z, z) où z = (thetha_x theta_y w)
+    AA = M_elem(1:15, 1:15)
+
+    ! (gamma, gamma)
+    BB = M_elem(16:18, 16:18)
+
+    ! (z, p) où z = (thetha_x theta_y w)
+    CC = M_elem(1:15, 19:21)
+
+    ! (gamma, p)
+    DD = M_elem(16:18, 19:21)
+
+    do j = 1, 3
+        CDinv(:, j) = CC(:, j)/DD(j, j)
+    end do
+
+    ! Condensation statique
+    M_cond = AA+matmul(matmul(CDinv, BB), transpose(CDinv))
+
+! Reorganisation du vecteur
+    ![w1, θ_y1, -θ_x1, w2, θ_y2, -θ_x2, w3, θ_y3, -θ_x3,
+    ! θ_y6, -θ_x6, θ_y4, -θ_x4, θ_y5, -θ_x5]
+    !
+    reorder = (/ &
+              13, 2, 1, &
+              14, 4, 3, &
+              15, 6, 5, &
+              12, 11, &
+              8, 7, &
+              10, 9 &
+              /)
+    signs = (/ &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, 1.d0, -1.d0, &
+            1.d0, -1.d0, &
+            1.d0, -1.d0, &
+            1.d0, -1.d0 &
+            /)
+!
+    do i = 1, size_final
+        do j = 1, size_final
+            M_final(i, j) = signs(i)*signs(j)*M_cond(reorder(i), reorder(j))
+        end do
+    end do
+!
+    call writeMatrix('PMATUUR', size(M_final, dim=1), size(M_final, dim=2), ASTER_TRUE, M_final)
 !
 end subroutine

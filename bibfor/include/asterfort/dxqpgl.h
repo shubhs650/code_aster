@@ -18,7 +18,7 @@
 !
 interface
     subroutine dxqpgl(xyzg, pgl)
-        real(kind=8) :: xyzg(3, *)
-        real(kind=8) :: pgl(3, 3)
+        real(kind=8), intent(in) :: xyzg(3, *)
+        real(kind=8), intent(out) :: pgl(3, 3)
     end subroutine dxqpgl
 end interface

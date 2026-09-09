@@ -15,17 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nm1dis(fami, kpg, ksp, imate, em, &
-                  ep, sigm, deps, vim, option, &
-                  rela_comp, materi, sigp, vip, dsde)
 !
+subroutine nm1dis(materPara, &
+                  option, relaComp, materPoin, &
+                  em, ep, sigm, deps, vim, &
+                  sigp, vip, dsde)
 !
-! ----------------------------------------------------------------------
+    use MaterialPara_type
+    use Behaviour_type
+    implicit none
+!
+#include "asterfort/assert.h"
+#include "asterfort/rcfonc.h"
+#include "asterfort/rctrac.h"
+#include "asterfort/rctype.h"
+#include "asterfort/rcvalb.h"
+#include "asterfort/rcvarc.h"
+#include "asterfort/utmess.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16) :: option, relaComp
+    character(len=*) :: materPoin
+    real(kind=8) :: em, ep, sigm, deps, vim(*), sigy
+    real(kind=8) :: vip(*), sigp, dsde
+!
+! --------------------------------------------------------------------------------------------------
 !
 !          PLASTICITE VON MISES ISOTROPE BILINEAIRE MONODIM
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
 !   em      : module d'Young à t-
 !   ep      : module d'Young à t+
@@ -37,73 +55,96 @@ subroutine nm1dis(fami, kpg, ksp, imate, em, &
 !   epsp    : deformation  plastique plus
 !   dsde    : dsig/deps
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    implicit none
-#include "asterfort/assert.h"
-#include "asterfort/rcfonc.h"
-#include "asterfort/rctrac.h"
-#include "asterfort/rctype.h"
-#include "asterfort/rcvalb.h"
-#include "asterfort/rcvarc.h"
-#include "asterfort/utmess.h"
-! --------------------------------------------------------------------------------------------------
-    integer(kind=8) :: kpg, ksp, imate
-    real(kind=8) :: em, ep, et, sigy
-    real(kind=8) :: sigm, deps, pm, vim(*), vip(*), para_vale
-    real(kind=8) :: sigp, dsde
-    character(len=16) :: option, rela_comp
-    character(len=*) :: fami, materi
-! --------------------------------------------------------------------------------------------------
+    integer(kind=8), parameter :: nbProp = 2
+    character(len=16), parameter :: propName(nbProp) = (/'D_SIGM_EPSI', &
+                                                         'SY         '/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    integer(kind=8), parameter :: nbPara = 1
+    character(len=16), parameter :: paraName(nbPara) = (/'TEMP'/)
+    real(kind=8) :: paraVale
     integer(kind=8) :: jprolm, jvalem, nbvalm, nbvalp, jprolp, jvalep, iret
-    integer(kind=8) :: icodre(2)
-    real(kind=8) :: rprim, rm, sige, valpar, valres(2), airerp, sieleq, rp, dp, nu, asige
-    character(len=8) :: nompar, para_type
-    character(len=16) :: nomecl(2)
-    data nomecl/'D_SIGM_EPSI', 'SY'/
+    real(kind=8) :: rprim, rm, sige, airerp, sieleq, rp, dp, nu, asige, pm, et
+    character(len=8) :: tracParaType
+    real(kind=8) :: tracParaVale
+!
 ! --------------------------------------------------------------------------------------------------
 !
-    nompar = 'TEMP'
     pm = vim(1)
-!
     et = 0.0d0
+
 !   caractéristiques écrouissage linéaire
-    if ((rela_comp .eq. 'VMIS_ISOT_LINE') .or. (rela_comp .eq. 'GRILLE_ISOT_LINE')) then
-        call rcvalb(fami, kpg, ksp, '+', imate, materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                    1, nomecl, valres, icodre, 1)
-        call rcvalb(fami, kpg, ksp, '+', imate, materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                    1, nomecl(2), valres(2), icodre(2), 0)
-        if (icodre(2) .ne. 0) valres(2) = 0.d0
-        et = valres(1)
-        sigy = valres(2)
+    if ((relaComp .eq. 'VMIS_ISOT_LINE') .or. (relaComp .eq. 'GRILLE_ISOT_LINE')) then
+        call rcvalb(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    '+', materPara%jvMaterCode, &
+                    materPoin, 'ECRO_LINE', &
+                    0, ' ', [0.d0], &
+                    1, propName, propVale, propCode, 1)
+        call rcvalb(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    '+', materPara%jvMaterCode, &
+                    materPoin, 'ECRO_LINE', &
+                    0, ' ', [0.d0], &
+                    1, propName(2), propVale(2), propCode(2), 0)
+        if (propCode(2) .ne. 0) then
+            propVale(2) = 0.d0
+        end if
+        et = propVale(1)
+        sigy = propVale(2)
         rprim = ep*et/(ep-et)
         rm = rprim*vim(1)+sigy
-!
+
 !   caractéristiques écrouissage donné par courbe de traction
-    else if (rela_comp .eq. 'VMIS_ISOT_TRAC') then
-        call rcvarc(' ', 'TEMP', '-', fami, kpg, ksp, valpar, iret)
-        call rctype(imate, 1, nompar, [valpar], para_vale, para_type, materi=materi)
-        if ((para_type .eq. 'TEMP') .and. (iret .eq. 1)) then
-            call utmess('F', 'COMPOR5_5', sk=para_type)
+    else if (relaComp .eq. 'VMIS_ISOT_TRAC') then
+        call rcvarc(' ', 'TEMP', '-', &
+                    materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    paraVale, iret)
+        call rctype(materPara%jvMaterCode, &
+                    nbPara, paraName, [paraVale], &
+                    tracParaVale, tracParaType, &
+                    materi=materPoin)
+        if ((tracParaType .eq. 'TEMP') .and. (iret .eq. 1)) then
+            call utmess('F', 'COMPOR5_5', sk=tracParaType)
         end if
-        call rctrac(imate, 1, 'SIGM', para_vale, jprolm, jvalem, nbvalm, em, materi=materi)
-        call rcvarc(' ', 'TEMP', '+', fami, kpg, ksp, valpar, iret)
-        call rctype(imate, 1, nompar, [valpar], para_vale, para_type, materi=materi)
-        if ((para_type .eq. 'TEMP') .and. (iret .eq. 1)) then
-            call utmess('F', 'COMPOR5_5', sk=para_type)
+        call rctrac(materPara%jvMaterCode, &
+                    1, 'SIGM', tracParaVale, &
+                    jprolm, jvalem, nbvalm, em, &
+                    materi=materPoin)
+        call rcvarc(' ', 'TEMP', '+', &
+                    materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    paraVale, iret)
+        call rctype(materPara%jvMaterCode, &
+                    nbPara, paraName, [paraVale], &
+                    tracParaVale, tracParaType, &
+                    materi=materPoin)
+        if ((tracParaType .eq. 'TEMP') .and. (iret .eq. 1)) then
+            call utmess('F', 'COMPOR5_5', sk=tracParaType)
         end if
-        call rctrac(imate, 1, 'SIGM', para_vale, jprolp, jvalep, nbvalp, ep, materi=materi)
+
+        call rctrac(materPara%jvMaterCode, 1, &
+                    'SIGM', tracParaVale, &
+                    jprolp, jvalep, nbvalp, ep, &
+                    materi=materPoin)
         call rcfonc('S', 1, jprolp, jvalep, nbvalp, sigy=sigy)
         call rcfonc('V', 1, jprolp, jvalep, nbvalp, p=vim(1), rp=rm, rprim=rprim, airerp=airerp)
         et = rprim
     else
-        ASSERT(.FALSE.)
+        ASSERT(ASTER_FALSE)
     end if
-!
+
 !   estimation élastique
     sige = ep*(sigm/em+deps)
     sieleq = abs(sige)
-!
+
 !   calcul epsp, p , sig
     if (option(1:9) .eq. 'FULL_MECA' .or. option(1:9) .eq. 'RAPH_MECA') then
         if (sieleq .le. rm) then
@@ -115,7 +156,7 @@ subroutine nm1dis(fami, kpg, ksp, imate, em, &
             sigp = sige
         else
             vip(2) = 1.d0
-            if ((rela_comp .eq. 'VMIS_ISOT_LINE') .or. (rela_comp .eq. 'GRILLE_ISOT_LINE')) then
+            if ((relaComp .eq. 'VMIS_ISOT_LINE') .or. (relaComp .eq. 'GRILLE_ISOT_LINE')) then
                 dp = abs(sige)-rm
                 dp = dp/(rprim+ep)
                 rp = sigy+rprim*(pm+dp)

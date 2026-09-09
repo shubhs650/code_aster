@@ -29,6 +29,7 @@ subroutine lctppe(side, l_axis, l_upda_jaco, &
 #include "jeveux.h"
 #include "asterfort/mmnonf.h"
 #include "asterfort/mmdonf.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmmjac.h"
 #include "asterfort/mmnorm.h"
 #include "asterfort/mmtang.h"
@@ -37,11 +38,11 @@ subroutine lctppe(side, l_axis, l_upda_jaco, &
     integer(kind=8), intent(in) :: elem_dime
     aster_logical, intent(in) :: l_axis, l_upda_jaco
     integer(kind=8), intent(in) :: nb_node
-    real(kind=8), intent(in) :: elem_init(nb_node, elem_dime)
-    real(kind=8), intent(in) :: elem_coor(nb_node, elem_dime)
+    real(kind=8), intent(in) :: elem_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_code
     real(kind=8), intent(in) :: gauss_coor(2)
-    real(kind=8), intent(out) :: shape_func(9)
+    real(kind=8), intent(out) :: shape_func(MT_NNOMAX2D)
     real(kind=8), intent(out) :: jacobian
     real(kind=8), intent(out) :: norm_g(3)
 !
@@ -69,8 +70,8 @@ subroutine lctppe(side, l_axis, l_upda_jaco, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: i_dime, i_node
-    real(kind=8) :: elem_coot(3, 9)
-    real(kind=8) :: tau1(3), tau2(3), shape_dfunc(2, 9)
+    real(kind=8) :: elem_coot(3, MT_NNOMAX2D)
+    real(kind=8) :: tau1(3), tau2(3), shape_dfunc(2, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -86,16 +87,16 @@ subroutine lctppe(side, l_axis, l_upda_jaco, &
     elem_coot = 0.d0
     do i_dime = 1, elem_dime
         do i_node = 1, nb_node
-            elem_coot(i_dime, i_node) = elem_coor(i_node, i_dime)
+            elem_coot(i_dime, i_node) = elem_coor(i_dime, i_node)
         end do
     end do
 !
 ! - Get shape functions and first derivative only (for perf)
 !
-    call mmnonf(elem_dime, nb_node, elem_code, &
+    call mmnonf(elem_code, &
                 gauss_coor(1), gauss_coor(2), &
                 shape_func)
-    call mmdonf(elem_dime, nb_node, elem_code, &
+    call mmdonf(elem_code, &
                 gauss_coor(1), gauss_coor(2), &
                 shape_dfunc)
 !
@@ -118,7 +119,7 @@ subroutine lctppe(side, l_axis, l_upda_jaco, &
         elem_coot = 0.d0
         do i_dime = 1, elem_dime
             do i_node = 1, nb_node
-                elem_coot(i_dime, i_node) = elem_init(i_node, i_dime)
+                elem_coot(i_dime, i_node) = elem_init(i_dime, i_node)
             end do
         end do
         call mmmjac(l_axis, nb_node, elem_dime, &

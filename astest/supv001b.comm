@@ -17,6 +17,7 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
+import sys
 
 from code_aster.Commands import *
 from code_aster import CA
@@ -42,5 +43,7 @@ const_context = {"func": [__five]}
 six = FORMULE(NOM_PARA="INST", VALE="func[0](INST) + 1", **const_context)
 
 assert four(0.0) == 4.0, "evaluate four"
+
+assert sys.getrefcount(six) == 2
 
 FIN()

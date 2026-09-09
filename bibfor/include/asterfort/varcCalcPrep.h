@@ -17,26 +17,25 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine varcCalcPrep(modelz    , cara_elemz, matecoz    ,&
-                            nume_harm , time_comp ,&
-                            l_temp    , l_meta    ,&
-                            varc_refez, varc_prevz, varc_currz,&
-                            comporz   , mult_compz, chsithz   ,&
-                            sigmz     , variz     ,&
-                            mxchin    , mxchout   ,&
-                            nbin      , nbout     ,&
-                            lpain     , lchin     ,&
-                            lpaout    , lchout)
-        character(len=*), intent(in) :: modelz, cara_elemz, matecoz
+    subroutine varcCalcPrep(modelZ, caraElemZ, materCodeZ, &
+                            poum, &
+                            l_temp, l_meta, &
+                            varcRefeZ, varcPrevZ, varcCurrZ, &
+                            comporZ, multCompZ, chsithz, &
+                            sigmz, variz, &
+                            nbFieldInMax, nbFieldOutMax, &
+                            nbFieldIn, nbFieldOut, &
+                            lpain, lchin, &
+                            lpaout, lchout)
+        character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
         aster_logical, intent(in) :: l_temp, l_meta
-        integer(kind=8), intent(in) :: nume_harm
-        character(len=1), intent(in) :: time_comp
-        character(len=*), intent(in) :: varc_refez, varc_prevz, varc_currz
-        character(len=*), intent(in) :: comporz, mult_compz, chsithz
+        character(len=1), intent(in) :: poum
+        character(len=*), intent(in) :: varcRefeZ, varcPrevZ, varcCurrZ
+        character(len=*), intent(in) :: comporZ, multCompZ, chsithz
         character(len=*), intent(in) :: sigmz, variz
-        integer(kind=8), intent(in) :: mxchin, mxchout
-        integer(kind=8), intent(out) :: nbin, nbout
-        character(len=8), intent(out)  :: lpaout(mxchout), lpain(mxchin)
-        character(len=19), intent(out)  :: lchout(mxchout), lchin(mxchin)
+        integer(kind=8), intent(in) :: nbFieldInMax, nbFieldOutMax
+        integer(kind=8), intent(out) :: nbFieldIn, nbFieldOut
+        character(len=8), intent(out) :: lpaout(nbFieldOutMax), lpain(nbFieldInMax)
+        character(len=19), intent(out) :: lchout(nbFieldOutMax), lchin(nbFieldInMax)
     end subroutine varcCalcPrep
 end interface

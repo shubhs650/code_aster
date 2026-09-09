@@ -15,11 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0434(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystMemb
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
+#include "asterc/r8prem.h"
+#include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/mbgchg.h"
@@ -27,124 +32,106 @@ subroutine te0434(option, nomte)
 #include "asterfort/rccoma.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
-! ----------------------------------------------------------------------
-!    - FONCTION REALISEE:  CALCUL DES OPTIONS DE CHARGEMENT :
-!                                  - CHAR_MECA_EPSI_R
-!                                  - CHAR_MECA_EPSI_F
-!                                  - CHAR_MECA_PESA_R
-!                                  - CHAR_MECA_TEMP_R
-!                                  - FORC_NODA
-!                                  - REFE_FORC_NODA
-!                          POUR LES MEMBRANES
-!    - ARGUMENTS :
-!        DONNEES :      OPTION       -->  OPTION DE CALCUL
-!                       NOMTE        -->  NOM DU TYPE ELEMENT
-! ----------------------------------------------------------------------
 !
-    character(len=4) :: fami
-    character(len=32) :: phenom
-    integer(kind=8) :: nddl, nno, nnos, npg, ndim, ncomp
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: MEMBRANE
+!
+! Options: CHAR_MECA_TEMP*, CHAR_MECA_EPSI*, FORC_NODA, REFE_FORC_NODA
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter :: nddl = 3, ncomp = 3
+    character(len=32) :: elasKeyword
+    integer(kind=8) :: nno, npg
     integer(kind=8) :: n, kpg
-    integer(kind=8) :: ipoids, ivf, idfde, jgano, iret, icompo, itab(1), itemps
-    integer(kind=8) :: igeom, icacoq, imate, jvSief, ipesa, iepsin, ivectu
+    integer(kind=8) :: ipoids, ivf, idfde, iret, jvCompor, itab(1), jvInst
+    integer(kind=8) :: jvGeom, jvMaterc, jvSief, jvPesa, jvEpsi, jvVect
     integer(kind=8) :: icodre1, icodre2
     real(kind=8) :: dff(2, 9), vff(9)
-    real(kind=8) :: alpha, beta, h, preten
-    aster_logical :: grav
+    real(kind=8) :: h, preten
+    aster_logical :: lGravity
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
-! -----------------------------------------------------------------
-! ---              INITIALISATION DES VARIABLES                 ---
-! -----------------------------------------------------------------
-!
-! - NOMBRE DE COMPOSANTES DES TENSEURS
-!
-    ncomp = 3
-    nddl = 3
-!
-! - FONCTIONS DE FORME ET POINTS DE GAUSS
-!
-    fami = 'RIGI'
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
-!
-! - PARAMETRES EN ENTREE
-! - grav : permet d'utiliser PESANTEUR en STAT_NON_LINE
-    grav = (option .eq. 'CHAR_MECA_PESA_R')
+    lGravity = (option .eq. 'CHAR_MECA_PESA_R')
 
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PCACOQU', 'L', icacoq)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
 
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystMemb(plateOrie)
+
+    call elrefe_info(fami=fami, nno=nno, npg=npg, &
+                     jpoids=ipoids, jvf=ivf, jdfde=idfde)
+!
+! - Input fields
     call tecach('N', 'PCOMPOR', 'L', iret, 1, itab)
-    icompo = itab(1)
-!
+    jvCompor = itab(1)
     if (option .eq. 'FORC_NODA') then
         call jevech('PSIEFR', 'L', jvSief)
-        call jevech('PMATERC', 'L', imate)
-!
+        call jevech('PMATERC', 'L', jvMaterc)
     else if (option .eq. 'REFE_FORC_NODA') then
-        call jevech('PMATERC', 'L', imate)
-!
+        call jevech('PMATERC', 'L', jvMaterc)
     else if (option .eq. 'CHAR_MECA_EPSI_R') then
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PEPSINR', 'L', iepsin)
-!
+        call jevech('PMATERC', 'L', jvMaterc)
+        call jevech('PEPSINR', 'L', jvEpsi)
     else if (option .eq. 'CHAR_MECA_EPSI_F') then
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PEPSINF', 'L', iepsin)
-        call jevech('PINSTR', 'L', itemps)
-!
-    else if (grav) then
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PPESANR', 'L', ipesa)
-!
+        call jevech('PMATERC', 'L', jvMaterc)
+        call jevech('PEPSINF', 'L', jvEpsi)
+        call jevech('PINSTR', 'L', jvInst)
+    else if (lGravity) then
+        call jevech('PMATERC', 'L', jvMaterc)
+        call jevech('PPESANR', 'L', jvPesa)
     else if (option .eq. 'CHAR_MECA_TEMP_R') then
-        call jevech('PMATERC', 'L', imate)
-!
+        call jevech('PMATERC', 'L', jvMaterc)
+    else
+        ASSERT(ASTER_FALSE)
     end if
-!
-! - PARAMETRES EN SORTIE
-!
-    call jevech('PVECTUR', 'E', ivectu)
-!
-! - DIRECTION DE REFERENCE POUR UN COMPORTEMENT ANISOTROPE
-!
-    alpha = zr(icacoq+1)*r8dgrd()
-    beta = zr(icacoq+2)*r8dgrd()
+
+! - Output field
+    call jevech('PVECTUR', 'E', jvVect)
 
 ! - EPAISSEUR ET PRETCONTRAINTES
-    h = zr(icacoq)
-    preten = zr(icacoq+3)/h
-!
+    h = plateCara%thick
+    if (h .lt. r8prem()) then
+        call utmess('F', 'MEMBRANE_1')
+    end if
+    preten = plateCara%tension/h
+
 ! -----------------------------------------------------------------
 ! ---  VERIFICATION DE LA CORRESPONDANCE MATERIAU / COMPORTMENT ---
 ! -----------------------------------------------------------------
-!
-    call rccoma(zi(imate), 'ELAS_MEMBRANE', 0, phenom, icodre1)
-    call rccoma(zi(imate), 'ELAS', 0, phenom, icodre2)
-
+    call rccoma(zi(jvMaterc), 'ELAS_MEMBRANE', 0, elasKeyword, icodre1)
+    call rccoma(zi(jvMaterc), 'ELAS', 0, elasKeyword, icodre2)
     if (icodre1 .eq. 0) then
-        if ((icompo .ne. 0) .and. (zk16(icompo+2) (1:5) .ne. 'PETIT')) then
+        if ((jvCompor .ne. 0) .and. (zk16(jvCompor+2) (1:5) .ne. 'PETIT')) then
             call utmess('F', 'MEMBRANE_10')
         end if
     elseif (icodre2 .eq. 0) then
-        if (((icompo .eq. 0) .or. (zk16(icompo+2) (1:9) .ne. 'GROT_GDEP')) &
-            .and. (.not. grav)) then
+        if (((jvCompor .eq. 0) .or. (zk16(jvCompor+2) (1:9) .ne. 'GROT_GDEP')) &
+            .and. (.not. lGravity)) then
             call utmess('F', 'MEMBRANE_10')
         end if
     end if
-!
-! -----------------------------------------------------------------
-! ---       DEBUT DE LA BOUCLE SUR LES POINTS DE GAUSS          ---
-! -----------------------------------------------------------------
-!
+
     do kpg = 1, npg
-!
-! --- MISE SOUS FORME DE TABLEAU DES VALEURS ET DES DERIVEES
-!     DES FONCTIONS DE FORME
-!
         do n = 1, nno
             vff(n) = zr(ivf+(kpg-1)*nno+n-1)
             dff(1, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2)
@@ -152,21 +139,25 @@ subroutine te0434(option, nomte)
         end do
 
         if (icodre1 .eq. 0) then
-
-            call mbxchg(option, fami, nddl, nno, ncomp, kpg, npg, iepsin, itemps, ipoids, igeom, &
-                        imate, ipesa, ivectu, jvSief, vff, dff, alpha, beta)
+            call mbxchg(plateOrie, &
+                        option, fami, &
+                        nddl, nno, ncomp, kpg, npg, &
+                        jvEpsi, jvInst, ipoids, jvGeom, &
+                        jvMaterc, jvPesa, jvVect, jvSief, &
+                        vff, dff)
 
         elseif (icodre2 .eq. 0) then
-
             if ((option .ne. 'FORC_NODA') .and. (option .ne. 'CHAR_MECA_PESA_R')) then
                 call utmess('F', 'MEMBRANE_7')
             end if
-            call mbgchg(option, fami, nddl, nno, ncomp, kpg, imate, jvSief, &
-                        ipoids, ipesa, igeom, ivectu, vff, dff, h, alpha, beta, preten)
-
+            call mbgchg(plateOrie, &
+                        option, fami, &
+                        nddl, nno, ncomp, kpg, &
+                        jvMaterc, jvSief, &
+                        ipoids, jvPesa, jvGeom, jvVect, &
+                        vff, dff, &
+                        h, preten)
         end if
     end do
-!
-! - FIN DE LA BOUCLE SUR LES POINTS DE GAUSS
 !
 end subroutine

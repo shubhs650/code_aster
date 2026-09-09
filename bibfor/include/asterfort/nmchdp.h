@@ -15,12 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmchdp(crit, seuil, dp, iret, iter)
-        real(kind=8) :: crit(*)
+    subroutine nmchdp(carcri, seuil, dp, iret, iter)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: seuil
         real(kind=8) :: dp
         integer(kind=8) :: iret

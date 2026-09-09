@@ -42,42 +42,56 @@ lamb = E * Nu / (1 + Nu) / (1 - 2 * Nu)
 mu = E / 2 / (1 + Nu)
 
 uX = {
-    "LINEAIRE": FORMULE(VALE="0.8*X+1", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="0.8*X*Y-X+1", NOM_PARA=("X", "Y")),
-    "CUBIQUE": FORMULE(VALE="0.8*X*X*Y-X+1", NOM_PARA=("X", "Y")),
-    "QUARTIQUE": FORMULE(VALE="0.8*X*X*Y*Y-X+1", NOM_PARA=("X", "Y")),
+    "CONSTANTE": FORMULE(VALE="0.8*X+1", NOM_PARA=("X", "Y")),
+    "LINEAIRE": FORMULE(VALE="0.8*X*Y-X+1", NOM_PARA=("X", "Y")),
+    "QUADRATIQUE": FORMULE(VALE="0.8*X*X*Y-X+1", NOM_PARA=("X", "Y")),
+    "CUBIQUE": FORMULE(VALE="0.8*X*X*Y*Y-X+1", NOM_PARA=("X", "Y")),
+    "QUARTIQUE": FORMULE(VALE="0.8*X*X*Y*Y*X-X+1", NOM_PARA=("X", "Y")),
 }
 uY = {
-    "LINEAIRE": FORMULE(VALE="-Y+0.1*X", NOM_PARA=("X", "Y")),
-    "QUADRATIQUE": FORMULE(VALE="-Y*Y+0.1*X", NOM_PARA=("X", "Y")),
-    "CUBIQUE": FORMULE(VALE="-Y*Y*Y+0.1*X-0.5*X*Y", NOM_PARA=("X", "Y")),
-    "QUARTIQUE": FORMULE(VALE="-Y*Y*Y*Y+0.1*X-0.5*X*Y", NOM_PARA=("X", "Y")),
+    "CONSTANTE": FORMULE(VALE="-Y+0.1*X", NOM_PARA=("X", "Y")),
+    "LINEAIRE": FORMULE(VALE="-Y*Y+0.1*X", NOM_PARA=("X", "Y")),
+    "QUADRATIQUE": FORMULE(VALE="-Y*Y*Y+0.1*X-0.5*X*Y", NOM_PARA=("X", "Y")),
+    "CUBIQUE": FORMULE(VALE="-Y*Y*Y*Y+0.1*X-0.5*X*Y", NOM_PARA=("X", "Y")),
+    "QUARTIQUE": FORMULE(VALE="-Y*Y*Y*Y*X+0.1*X-0.5*X*Y", NOM_PARA=("X", "Y")),
 }
 
 zero = FORMULE(VALE="0", NOM_PARA=("X", "Y"))
 
 
 fX = {
+    "CONSTANTE": zero,
     "LINEAIRE": zero,
-    "QUADRATIQUE": zero,
-    "CUBIQUE": FORMULE(
+    "QUADRATIQUE": FORMULE(
         VALE="-lamb*(1.6*Y - 0.5) - 3.2*mu*Y + 0.5*mu", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu
     ),
-    "QUARTIQUE": FORMULE(
+    "CUBIQUE": FORMULE(
         VALE="-lamb*(1.6*Y*Y - 0.5) - 3.2*mu*Y*Y - mu*(1.6*X*X-0.5)",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
+    "QUARTIQUE": FORMULE(
+        VALE="lamb*(- 4.8*X*Y*Y  + 4.0*Y*Y*Y  + 0.5) - 9.6*mu*X*Y*Y  + mu*(- 1.6*X*X*X  + 4.0*Y*Y*Y  + 0.5)",
         NOM_PARA=("X", "Y"),
         lamb=lamb,
         mu=mu,
     ),
 }
 fY = {
-    "LINEAIRE": zero,
-    "QUADRATIQUE": FORMULE(VALE="1.2*lamb+3.2*mu", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
-    "CUBIQUE": FORMULE(
+    "CONSTANTE": zero,
+    "LINEAIRE": FORMULE(VALE="1.2*lamb+3.2*mu", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu),
+    "QUADRATIQUE": FORMULE(
         VALE="-lamb*(1.6*X - 6.0*Y) - 1.6*mu*X + 12.0*mu*Y", NOM_PARA=("X", "Y"), lamb=lamb, mu=mu
     ),
-    "QUARTIQUE": FORMULE(
+    "CUBIQUE": FORMULE(
         VALE="-Y*(lamb*(3.2*X - 12*Y) + 3.2*mu*X - 24.0*mu*Y)",
+        NOM_PARA=("X", "Y"),
+        lamb=lamb,
+        mu=mu,
+    ),
+    "QUARTIQUE": FORMULE(
+        VALE="-X*Y*(lamb*(4.8*X - 12.0*Y) + 4.8*mu*X - 24.0*mu*Y)",
         NOM_PARA=("X", "Y"),
         lamb=lamb,
         mu=mu,

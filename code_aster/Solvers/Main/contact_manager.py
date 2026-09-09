@@ -134,4 +134,4 @@ class ContactManager:
         """
         if not self.enable:
             return
-        self.pair.updateCoordinates(phys_state.primal_curr)
+        self.pair.updateCoordinates(phys_state.U)

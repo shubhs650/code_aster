@@ -17,16 +17,17 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504,C1505,W0104
 !
-subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
-                  typmod, imate, compor, carcri, instam, &
+subroutine lc7058(BEHInteg, &
+                  fami, kpg, ksp, ndim, &
+                  typmod, jvMaterCode, compor, carcri, instam, &
                   instap, neps, epsm, deps, nsig, &
-                  sigm, nvi, vim, option, angmas, &
+                  sigm, nvi, vim, option, &
                   sigp, vip, ndsde, dsidep, codret)
 !
     use Behaviour_type
     use BehaviourMGIS_module
     use logging_module, only: DEBUG, LOGLEVEL_MGIS, is_enabled
-!
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/mgis_get_number_of_props.h"
@@ -42,11 +43,11 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
 #include "asterfort/use_orient.h"
 #include "asterfort/utmess.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg, ksp, ndim
-    character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: imate
+    character(len=8), intent(in) :: typmod(2)
+    integer(kind=8), intent(in) :: jvMaterCode
     character(len=16), intent(in) :: compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam, instap
@@ -57,7 +58,6 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
     integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8), intent(out) :: sigp(nsig)
     real(kind=8), intent(out) :: vip(nvi)
     integer(kind=8), intent(in) :: ndsde
@@ -73,13 +73,13 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  BEHinteg         : parameters for integration of behaviour
+! In  BEHInteg         : parameters for integration of behaviour
 ! In  fami             : Gauss family for integration point rule
 ! In  kpg              : current point gauss
 ! In  ksp              : current "sous-point" gauss
 ! In  ndim             : dimension of problem (2 or 3)
 ! In  typmod           : type of modelization (TYPMOD2)
-! In  imate            : coded material address
+! In  jvMaterCode            : coded material address
 ! In  compor           : name of comportment definition (field)
 ! In  carcri           : parameters for comportment
 ! In  instam           : time at beginning of time step
@@ -92,7 +92,6 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
 ! In  nvi              : number of components of internal state variables
 ! In  vim              : internal state variables at beginning of current step time
 ! In  option           : name of option to compute
-! In  angmas           : nautical angles
 ! Out sigp             : stresses at end of current step time
 ! Out vip              : internal state variables at end of current step time
 ! Out dsidep           : tangent matrix
@@ -116,9 +115,11 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
     real(kind=8) :: props(MGIS_MAX_PROPS)
     integer(kind=8) :: nprops, retcode
     aster_logical :: dbg
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    materPara = BEHInteg%materPara
     sigp_loc = 0.d0
     vi_loc = 0.d0
     dsidep_loc = 0.d0
@@ -157,8 +158,8 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
 ! - Get and set the material properties
     call mgis_get_number_of_props(extern_addr, nprops)
     ASSERT(nprops <= MGIS_MAX_PROPS)
-    call mfront_get_mater_value(extern_addr, BEHinteg, rela_comp, fami, kpg, &
-                                ksp, imate, props, nprops)
+    call mfront_get_mater_value(extern_addr, BEHInteg, rela_comp, fami, kpg, &
+                                ksp, jvMaterCode, props, nprops)
 
 ! - Prepare strains
     call mfrontPrepareStrain(lGreenLagr, neps, epsm, deps, stran, dstran)
@@ -170,7 +171,7 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
     dtime = instap-instam
 
 ! - Anisotropic case
-    if (use_orient(angmas, 3)) then
+    if (use_orient(materPara%lcsPara%lcsAngle, 3)) then
         call utmess('F', 'MGIS1_2', sk=typmod(2))
     end if
 
@@ -258,6 +259,7 @@ subroutine lc7058(BEHinteg, fami, kpg, ksp, ndim, &
         end do
     end if
 
+! - Outputs
     if (lVari) then
         vip = 0.d0
         vip(1:nstatv) = vi_loc(1:nstatv)

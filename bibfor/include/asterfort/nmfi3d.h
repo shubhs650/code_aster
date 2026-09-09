@@ -21,7 +21,7 @@
 interface
     subroutine nmfi3d(BEHInteg, typmod, &
                       nno, nddl, npg, lgpg, wref, &
-                      vff, dfde, mate, option, geom, &
+                      vff, dfde, option, geom, &
                       deplm, ddepl, sigm, sigp, fint, &
                       ktan, vim, vip, carcri, compor, &
                       matsym, coopg, tm, tp, lMatr, lVect, lSigm, &
@@ -35,7 +35,6 @@ interface
         real(kind=8) :: wref(npg)
         real(kind=8) :: vff(nno, npg)
         real(kind=8) :: dfde(2, nno, npg)
-        integer(kind=8) :: mate
         real(kind=8) :: geom(nddl)
         real(kind=8) :: deplm(nddl)
         real(kind=8) :: ddepl(nddl)

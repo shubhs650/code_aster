@@ -19,12 +19,13 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mcomce(noma, newgeo, nummai, coor, alias,&
                       nno)
         character(len=8) :: noma
         character(len=19) :: newgeo
         integer(kind=8) :: nummai
-        real(kind=8) :: coor(27)
+        real(kind=8) :: coor(3,MT_NNOMAX2D)
         character(len=8) :: alias
         integer(kind=8) :: nno
     end subroutine mcomce

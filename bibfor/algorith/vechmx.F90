@@ -15,15 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine vechmx(nomo, lischa, ichar, nbch, nomlis, &
-                  nbin_maxi, lpain, lchin, lastin, vecele)
 !
+subroutine vechmx(model, listLoad, iLoad, nbLoadIndx, listLoadIndxJv, &
+                  nbFieldInMax, lpain, lchin, nbFieldIn, vectElem)
 !
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
 #include "asterfort/calcul.h"
+#include "asterfort/codent.h"
 #include "asterfort/corich.h"
 #include "asterfort/exisd.h"
 #include "asterfort/jedema.h"
@@ -34,26 +34,25 @@ subroutine vechmx(nomo, lischa, ichar, nbch, nomlis, &
 #include "asterfort/lisltc.h"
 #include "asterfort/lisopt.h"
 #include "asterfort/reajre.h"
-#include "asterfort/codent.h"
-
-    integer(kind=8) :: nbin_maxi, lastin
-    character(len=8) :: lpain(nbin_maxi)
-    character(len=19) :: lchin(nbin_maxi)
-    character(len=19) :: lischa
-    character(len=24) :: nomlis
-    integer(kind=8) :: ichar, nbch
-    character(len=8) :: nomo
-    character(len=19) :: vecele
 !
-! ----------------------------------------------------------------------
+    character(len=8), intent(in) :: model
+    character(len=19), intent(in) :: listLoad
+    integer(kind=8), intent(in) :: iLoad, nbLoadIndx
+    character(len=24), intent(in) :: listLoadIndxJv
+    integer(kind=8), intent(in) :: nbFieldInMax
+    character(len=8), intent(inout) :: lpain(nbFieldInMax)
+    character(len=19), intent(inout) :: lchin(nbFieldInMax)
+    integer(kind=8), intent(inout) :: nbFieldIn
+    character(len=19), intent(in) :: vectElem
+!
+! --------------------------------------------------------------------------------------------------
 !
 ! CALCUL DES VECTEURS ELEMENTAIRES DES CHARGEMENTS MECANIQUES
 ! DE NEUMANN (VOIR DEFINITION DANS LISDEF)
 !
 ! CALCUL EFFECTIF - BOUCLE SUR LES TYPES DE CHARGEMENT
 !
-! ----------------------------------------------------------------------
-!
+! --------------------------------------------------------------------------------------------------
 !
 ! IN  NOMO   : NOM DU MODELE
 ! IN  LISCHA : SD LISTE DES CHARGES
@@ -66,81 +65,65 @@ subroutine vechmx(nomo, lischa, ichar, nbch, nomlis, &
 ! IN  LASTIN : NOMBRE EFFECTIF DE CHAMPS IN
 ! OUT VECELE : VECT_ELEM RESULTAT
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbout
-    parameter(nbout=1)
-    character(len=8) :: lpaout(nbout)
-    character(len=19) :: lchout(nbout)
-!
-    integer(kind=8) :: jlisci, ich, nbin
-    integer(kind=8) :: iret
-    integer(kind=8) :: indxch
+    integer(kind=8), parameter :: nbFieldOut = 1
+    character(len=8) :: lpaout(nbFieldOut)
+    character(len=19) :: lchout(nbFieldOut)
+    integer(kind=8) :: iLoadIndx, iret, loadInx, nbFieldInMod
     character(len=16) :: option
     character(len=8) :: parain, paraou, newnom
-    character(len=8) :: typech
-    character(len=19) :: carte
-    character(len=19) :: ligcal
-    character(len=13) :: prefob
+    character(len=8) :: loadType
+    character(len=19) :: carte, ligrelCalc
+    character(len=13) :: loadPreObject
+    integer(kind=8), pointer :: listLoadInx(:) => null()
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
-! --- INITIALISATIONS
-!
-    newnom = '.0000000'
-!
-! --- PREFIXE DE L'OBJET DE LA CHARGE
-!
-    call lisllc(lischa, ichar, prefob)
-!
-! --- TYPE DE LA CHARGE
-!
-    call lisltc(lischa, ichar, typech)
-!
-! --- CHAMP DE SORTIE
-!
-    call codent(ichar, 'D0', newnom(2:8))
 
+! - Initializations
+    newnom = '.0000000'
+
+! - PREFIXE DE L'OBJET DE LA CHARGE
+    call lisllc(listLoad, iLoad, loadPreObject)
+
+! - TYPE DE LA CHARGE
+    call lisltc(listLoad, iLoad, loadType)
+
+! - Generate name of output field
+    call codent(iLoad, 'D0', newnom(2:8))
     lchout(1) = '&&VECHMX.'//newnom(2:8)
-    call corich('E', lchout(1), ichin_=ichar)
-!
-! --- LISTE DES INDEX DES CHARGES
-!
-    call jeveuo(nomlis, 'L', jlisci)
-!
-! --- CALCUL
-!
-    do ich = 1, nbch
-        indxch = zi(jlisci-1+ich)
-        call lisopt(prefob, nomo, typech, indxch, option, &
-                    parain, paraou, carte, ligcal)
+    call corich('E', lchout(1), ichin_=iLoad)
+
+! - LISTE DES INDEX DES CHARGES
+    call jeveuo(listLoadIndxJv, 'L', vi=listLoadInx)
+
+! - CALCUL
+    do iLoadIndx = 1, nbLoadIndx
+        loadInx = listLoadInx(iLoadIndx)
+        call lisopt(loadPreObject, model, loadType, loadInx, option, &
+                    parain, paraou, carte, ligrelCalc)
         call jeexin(carte(1:19)//'.DESC', iret)
         if (iret .ne. 0) then
-!
-! ------- CARTE D'ENTREE
-!
-            nbin = lastin+1
-            lchin(nbin) = carte
-            lpain(nbin) = parain
-!
-! ------- CARTE DE SORTIE
-!
+
+! --------- Input field
+            nbFieldInMod = nbFieldIn+1
+            lchin(nbFieldInMod) = carte
+            lpain(nbFieldInMod) = parain
+            ASSERT(nbFieldInMod .le. nbFieldInMax)
+
+! --------- Output field
             lpaout(1) = paraou
-!
-! ------- CALCUL
-!
-            ASSERT(nbin .le. nbin_maxi)
-            call calcul('S', option, ligcal, nbin, lchin, &
-                        lpain, nbout, lchout, lpaout, 'V', &
-                        'OUI')
-!
-! ------- RESU_ELEM DANS LE VECT_ELEM
-!
+            call calcul('S', option, ligrelCalc, &
+                        nbFieldInMod, lchin, lpain, &
+                        nbFieldOut, lchout, lpaout, &
+                        'V', 'OUI')
+
+! --------- RESU_ELEM DANS LE VECT_ELEM
             call exisd('CHAMP_GD', lchout(1), iret)
             ASSERT(iret .gt. 0)
-            call reajre(vecele, lchout(1), 'V')
+            call reajre(vectElem, lchout(1), 'V')
         end if
     end do
 !

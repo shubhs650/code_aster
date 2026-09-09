@@ -53,7 +53,7 @@ contains
         type(HHO_Face), intent(in)          :: hhoFace
         type(HHO_Data), intent(in)          :: hhoData
         type(HHO_Quadrature), intent(in)    :: hhoQuad
-        real(kind=8), intent(in)            :: NeumValuesQP(MAX_QP_FACE)
+        real(kind=8), intent(in)            :: NeumValuesQP(MSIZE_QP_FACE)
         real(kind=8), intent(out)           :: rhs_forces(MSIZE_FACE_SCAL)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ contains
         type(HHO_Face), intent(in)          :: hhoFace
         type(HHO_Data), intent(in)          :: hhoData
         type(HHO_Quadrature), intent(in)    :: hhoQuad
-        real(kind=8), intent(in)            :: NeumValuesQP(3, MAX_QP_FACE)
+        real(kind=8), intent(in)            :: NeumValuesQP(3, MSIZE_QP_FACE)
         real(kind=8), intent(out)           :: rhs_forces(MSIZE_FACE_VEC)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ contains
         type(HHO_Cell), intent(in)          :: hhoCell
         type(HHO_Data), intent(in)          :: hhoData
         type(HHO_Quadrature), intent(in)    :: hhoQuad
-        real(kind=8), intent(in)            :: voluValuesQP(3, MAX_QP_CELL)
+        real(kind=8), intent(in)            :: voluValuesQP(3, MSIZE_QP_CELL)
         real(kind=8), intent(out)           :: rhs_forces(MSIZE_CELL_VEC)
 !
 ! --------------------------------------------------------------------------------------------------

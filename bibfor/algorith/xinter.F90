@@ -28,6 +28,7 @@ subroutine xinter(ndim, ndime, elrefp, geom, lsn, ia, ib, &
 #include "asterfort/xelrex.h"
 #include "asterfort/xveri0.h"
 #include "asterfort/xnewto.h"
+#include "MeshTypes_type.h"
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, ndime, ia, ib, im
     real(kind=8) :: lsn(*), geom(*), inter(3), inref(3), pintt(*), pmitt(*)
@@ -43,7 +44,7 @@ subroutine xinter(ndim, ndime, elrefp, geom, lsn, ia, ib, &
 !     ----------------------------------------------------------------
 !
     character(len=6) :: name
-    real(kind=8) :: ksi(ndime), ptxx(3*ndime), x(81), ff(27)
+    real(kind=8) :: ksi(ndime), ptxx(3*ndime), x(3*MT_NNOMAX3D), ff(MT_NNOMAX)
     real(kind=8) :: epsmax, a, b, c, pta(ndim), ptb(ndim), newpt(ndim)
     real(kind=8) :: ptm(ndim), dekker(4*ndime)
     integer(kind=8) :: itemax, ibid, n(3), j, nno, iret, exit(2)

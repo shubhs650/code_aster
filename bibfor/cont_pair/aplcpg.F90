@@ -52,6 +52,7 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
 #include "asterfort/as_allocate.h"
 #include "asterfort/apsave_pair.h"
 #include "asterfort/apsave_patch.h"
+#include "MeshTypes_type.h"
 #include "asterfort/int_to_char8.h"
 !
     character(len=8), intent(in) :: mesh
@@ -95,6 +96,7 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    aster_logical, parameter ::  debug = ASTER_FALSE
     integer(kind=8) :: nbpatch_t, iret, vali(2)
     integer(kind=8) :: list_pair(nb_elem_mast), li_nb_pt_inte_sl(nb_elem_mast)
     real(kind=8) :: li_pt_inte_sl(nb_elem_mast*16), li_pt_inte_ma(nb_elem_mast*16)
@@ -103,7 +105,7 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
     integer(kind=8) :: elem_mast_nbnode, cellMastNume, elem_mast_dime, cellMastIndx
     character(len=8) :: elem_mast_code, elem_slav_code
     character(len=8) :: elem_slav_type, elem_mast_type
-    real(kind=8) :: elem_mast_coor(27), elem_slav_coor(27)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D), elem_slav_coor(3, MT_NNOMAX2D)
     integer(kind=8) :: nb_pair, nb_poin_inte
     integer(kind=8) :: iMastNeigh, ISlavStart, iMastStart, iCell
     integer(kind=8) :: iSlavNeigh
@@ -114,14 +116,14 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
     real(kind=8) :: poin_gauss_ma(74)
     integer(kind=8) ::  elin_mast_nbnode
     integer(kind=8) ::  elin_slav_nbnode
-    character(len=8) :: elin_mast_code, elin_slav_code, elem_slav_name, elem_mast_name, elem_name
+    character(len=8) :: elin_mast_code, elin_slav_code, elem_name
     integer(kind=8) :: nbSlavStart, nbMastPaired, nbMastStart
     integer(kind=8) :: cellMastPaired(nb_elem_mast)
     integer(kind=8) :: elem_start, cellSlavStart(nb_elem_slav), cellMastStart(nb_elem_slav)
     integer(kind=8) :: cellNeighIndx, cellNeighNume
     integer(kind=8) :: slavIndxMini, mastIndxMini, slavIndxMaxi, mastIndxMaxi
     integer(kind=8) :: mast_find_indx
-    aster_logical :: l_recup, debug
+    aster_logical :: l_recup
     integer(kind=8), pointer :: cellMastFlag(:) => null()
     integer(kind=8), pointer :: elem_mast_flag(:) => null()
     integer(kind=8), pointer :: cellSlavFlag(:) => null()
@@ -154,7 +156,6 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
 !
 ! - Initializations
 !
-    debug = .false.
     inteNeigh(1:4) = 0
     list_slav_master(1:4) = 0
     list_slav_weight(1:4) = 0.d0
@@ -228,14 +229,12 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
         if (nbSlavStart .eq. 0) then
             write (*, *) ". No more slave start element "
         else
-            elem_slav_name = int_to_char8(cellSlavStart(1))
-            write (*, *) ". Start slave element: ", elem_slav_name
+            write (*, *) ". Start slave element: ", cellSlavStart(1)
         end if
         if (nbMastStart .eq. 0) then
             write (*, *) ". No more master start element "
         else
-            elem_mast_name = int_to_char8(cellMastStart(1))
-            write (*, *) ". Start master element: ", elem_mast_name
+            write (*, *) ". Start master element: ", cellMastStart(1)
         end if
     end if
     if (nbSlavStart .eq. 0) then
@@ -281,8 +280,7 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
                     cellSlavNume, elem_slav_nbnode, elem_slav_dime, &
                     elem_slav_coor)
         if (debug) then
-            elem_slav_name = int_to_char8(cellSlavNume)
-            write (*, *) "Current slave element: ", cellSlavNume, elem_slav_name, &
+            write (*, *) "Current slave element: ", cellSlavNume, &
                 '(type : ', elem_slav_code, ')'
         end if
 !
@@ -379,9 +377,7 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
             elem_type_nume = v_mesh_typmail(cellMastNume)
             call jenuno(jexnum('&CATA.TM.NOMTM', elem_type_nume), elem_mast_type)
             if (debug) then
-                call jenuno(jexnum(mesh//'.NOMMAI', cellMastNume), elem_mast_name)
-                elem_mast_name = int_to_char8(cellMastNume)
-                write (*, *) "Current master element: ", cellMastNume, elem_mast_name, &
+                write (*, *) "Current master element: ", cellMastNume, &
                     '(type : ', elem_mast_type, ')'
             end if
 
@@ -390,7 +386,6 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
                 do iMastNeigh = 1, 4
                     cellNeighNume = meshMastNeigh((cellMastIndx-1)*4+iMastNeigh)
                     if (cellNeighNume .ne. 0) then
-                        call jenuno(jexnum(mesh//'.NOMMAI', cellNeighNume), elem_name)
                         elem_name = int_to_char8(cellNeighNume)
                     else
                         elem_name = 'None'
@@ -444,8 +439,8 @@ subroutine aplcpg(mesh, newgeo, sdappa, i_zone, pair_tole, &
                 call utmess('A', 'CONTACT4_6', ni=2, vali=vali)
             end if
             if (debug) then
-                write (*, *) "Intersection - Master: ", elem_mast_name
-                write (*, *) "Intersection - Slave : ", elem_slav_name
+                write (*, *) "Intersection - Master: ", cellMastNume
+                write (*, *) "Intersection - Slave : ", cellSlavNume
                 write (*, *) "Intersection - Poids : ", inteArea
                 write (*, *) "Intersection - Nb    : ", nb_poin_inte
                 write (*, *) "Intersection - Points: ", poin_inte_sl

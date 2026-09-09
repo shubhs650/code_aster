@@ -15,7 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine te0331(option, nomte)
     implicit none
 #include "asterf_types.h"
@@ -50,7 +51,7 @@ subroutine te0331(option, nomte)
 !
     integer(kind=8) :: icodre(4)
     integer(kind=8) :: codres
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=16) :: nomres(4), optcal(12)
     character(len=32) :: phenom
     real(kind=8) :: sig(6), sigi, dsigwb, valres(4), epsgi

@@ -18,6 +18,7 @@
 !
 subroutine te0598(option, nomte)
 !
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "jeveux.h"
@@ -30,7 +31,6 @@ subroutine te0598(option, nomte)
 #include "asterfort/norfpd.h"
 #include "asterfort/nurfgd.h"
 #include "asterfort/nurfpd.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
 #include "asterfort/Behaviour_type.h"
 !
@@ -53,6 +53,7 @@ subroutine te0598(option, nomte)
     character(len=16), pointer :: compor(:) => null()
     character(len=8) :: lielrf(10), typmod(2)
     character(len=24) :: valk
+    type(RESI_REFE):: refe
 ! ----------------------------------------------------------------------
 !
 !
@@ -78,8 +79,11 @@ subroutine te0598(option, nomte)
     call jevech('PGEOMER', 'L', igeom)
     call jevech('PVECTUR', 'E', ivectu)
     call jevech('PCOMPOR', 'L', vk16=compor)
-    call terefe('SIGM_REFE', 'MECA_INCO', sigref)
-    call terefe('EPSI_REFE', 'MECA_INCO', epsref)
+
+    call refe%Init(nomte)
+    sigref = refe%GetRef('SIGM')
+    epsref = refe%GetRef('EPSI')
+    call refe%Check()
 !
 ! - CALCUL DE REFE_FORC_NODA
     if (compor(DEFO) .eq. 'PETIT ') then
@@ -91,7 +95,7 @@ subroutine te0598(option, nomte)
             call nurfpd(ndim, nno1, nno2, npg, iw, zr(ivf1), zr(ivf2), idf1, vu, vp, &
                         typmod, zr(igeom), sigref, epsref, zr(ivectu))
         elseif (lteatt('INCO', 'C2O')) then
-            call terefe('PI_REFE', 'MECA_INCO', piref)
+            piref = refe%GetRef('PI')
 ! --------- Get index of dof
             call niinit(typmod, ndim, nno1, 0, nno2, nno2, vu, vg, vp, vpi)
 !
@@ -115,5 +119,6 @@ subroutine te0598(option, nomte)
     else
         call utmess('F', 'ELEMENTS3_16', sk=compor(DEFO))
     end if
+    call refe%Check()
 !
 end subroutine

@@ -18,22 +18,23 @@
 !
 subroutine thmCompRefeForcNoda(ds_thm)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
-#include "asterfort/refthm.h"
 #include "asterfort/jevech.h"
-#include "asterfort/thmGetGeneDime.h"
+#include "asterfort/refthm.h"
 #include "asterfort/thmGetElemDime.h"
-#include "asterfort/thmGetElemRefe.h"
 #include "asterfort/thmGetElemInfo.h"
-#include "asterfort/thmGetElemModel.h"
-#include "asterfort/thmGetGene.h"
 #include "asterfort/thmGetElemIntegration.h"
+#include "asterfort/thmGetElemModel.h"
+#include "asterfort/thmGetElemRefe.h"
+#include "asterfort/thmGetGene.h"
+#include "asterfort/thmGetGeneDime.h"
+#include "jeveux.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
 !
@@ -52,7 +53,7 @@ subroutine thmCompRefeForcNoda(ds_thm)
     character(len=8) :: elrefe, elref2
     aster_logical :: fnoevo
     real(kind=8) :: dt
-    integer(kind=8) :: jv_mater, jv_geom, jv_vectu
+    integer(kind=8) :: jvMaterc, jv_geom, jv_vectu
     real(kind=8) :: b(21, 120), r(22)
     integer(kind=8) :: nno, nnos, nnom
     integer(kind=8) :: npi, npi2, npg
@@ -101,31 +102,30 @@ subroutine thmCompRefeForcNoda(ds_thm)
                         inte_type, npi, npi2, npg)
     ASSERT(npi .le. 27)
     ASSERT(nno .le. 20)
-!
+
 ! - Get dimensions of generalized vectors
-!
     call thmGetGeneDime(ndim, &
                         mecani, press1, press2, tempe, second, &
                         dimdep, dimdef, dimcon)
-!
+
 ! - Get dimensions about element
-!
     call thmGetElemDime(ndim, nnos, nnom, &
                         mecani, press1, press2, tempe, second, &
                         nddls, nddlm, &
                         nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
                         dimdep, dimdef, dimcon, dimuel)
-!
+
 ! - Intput/output fields
-!
     call jevech('PGEOMER', 'L', jv_geom)
-    call jevech('PMATERC', 'L', jv_mater)
     call jevech('PVECTUR', 'E', jv_vectu)
-!
+
+! - Set reference to material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+    ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode = zi(jvMaterc)
+
 ! - Compute REFE_FORC_NODA
-!
     call refthm(ds_thm, &
-                zi(jv_mater), ndim, l_axi, fnoevo, &
+                ndim, l_axi, fnoevo, &
                 mecani, press1, press2, tempe, second, &
                 nno, nnos, npi, npg, &
                 zr(jv_geom), dt, dimdef, dimcon, dimuel, &

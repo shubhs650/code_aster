@@ -21,10 +21,11 @@ subroutine mmtang(ndim, nno, coorma, dff, tau1, &
 !
 !
     implicit none
+#include "MeshTypes_type.h"
 #include "asterfort/assert.h"
     integer(kind=8) :: ndim, nno
-    real(kind=8) :: coorma(27)
-    real(kind=8) :: dff(2, 9)
+    real(kind=8) :: coorma(3, MT_NNOMAX2D)
+    real(kind=8) :: dff(2, MT_NNOMAX2D)
     real(kind=8) :: tau1(3), tau2(3)
 !
 ! ----------------------------------------------------------------------
@@ -60,9 +61,9 @@ subroutine mmtang(ndim, nno, coorma, dff, tau1, &
 !
     do idim = 1, 3
         do ino = 1, nno
-            tau1(idim) = coorma(3*(ino-1)+idim)*dff(1, ino)+tau1(idim)
+            tau1(idim) = coorma(idim, ino)*dff(1, ino)+tau1(idim)
             if (ndim .eq. 3) then
-                tau2(idim) = coorma(3*(ino-1)+idim)*dff(2, ino)+tau2(idim)
+                tau2(idim) = coorma(idim, ino)*dff(2, ino)+tau2(idim)
             end if
         end do
     end do

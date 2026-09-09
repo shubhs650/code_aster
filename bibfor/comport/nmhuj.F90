@@ -15,12 +15,44 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
-                 carcri, angmas, epsd, &
-                 deps, sigd, vind, opt, sigf, &
+! aslint: disable=W0413
+!
+subroutine nmhuj(BEHInteg, &
+                 fami, kpg, ksp, typmod, imat, &
+                 carcri, epsd, &
+                 deps, sigd, vind, option, sigf, &
                  vinf, dsde, iret)
+!
+    use Behaviour_type
+    use MaterialPara_type
     implicit none
+!
+#include "asterc/r8prem.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/get_varc.h"
+#include "asterfort/hujcdc.h"
+#include "asterfort/hujcic.h"
+#include "asterfort/hujcrd.h"
+#include "asterfort/hujcri.h"
+#include "asterfort/hujdp.h"
+#include "asterfort/hujmat.h"
+#include "asterfort/hujori.h"
+#include "asterfort/hujpre.h"
+#include "asterfort/hujprj.h"
+#include "asterfort/hujres.h"
+#include "asterfort/hujtel.h"
+#include "asterfort/hujtid.h"
+#include "asterfort/MaterialPara_type.h"
+#include "asterfort/mgauss.h"
+#include "asterfort/trace.h"
+#include "asterfort/utmess.h"
+!
+    type(Behaviour_Integ), intent(in) :: BEHInteg
+!
+! --------------------------------------------------------------------------------------------------
+!
 !  INTEGRATION DE LA LOI DE COMPORTEMENT ELASTO PLASTIQUE DE HUJEUX
 !  AVEC    . 50 VARIABLES INTERNES
 !          . 4 FONCTIONS SEUIL ELASTIQUE DEDOUBLEES AVEC CYCLIQUE
@@ -28,7 +60,9 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !  INTEGRATION DES CONTRAINTES           = SIG(T+DT)
 !  INTEGRATION DES VARIABLES INTERNES    = VIN(T+DT)
 !  ET CALCUL DU JACOBIEN ASSOCIE         = DS/DE(T+DT) OU DS/DE(T)
-!  ================================================================
+!
+! --------------------------------------------------------------------------------------------------
+!
 !  IN      FAMI    FAMILLE DE POINT DE GAUSS (RIGI,MASS,...)
 !          KPG,KSP NUMERO DU (SOUS)POINT DE GAUSS
 !          TYPMOD  TYPE DE MODELISATION
@@ -91,39 +125,19 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !  MULTIPLIES PAR RACINE DE 2 > PRISE EN COMPTE DES DOUBLES
 !  PRODUITS TENSORIELS ET CONSERVATION DE LA SYMETRIE
 !
-!  ----------------------------------------------------------------
-#include "asterf_types.h"
-#include "asterc/r8prem.h"
-#include "asterfort/assert.h"
-#include "asterc/r8vide.h"
-#include "asterfort/hujcrd.h"
-#include "asterfort/hujcri.h"
-#include "asterfort/hujcic.h"
-#include "asterfort/hujcdc.h"
-#include "asterfort/hujdp.h"
-#include "asterfort/hujmat.h"
-#include "asterfort/hujori.h"
-#include "asterfort/hujpre.h"
-#include "asterfort/hujprj.h"
-#include "asterfort/hujres.h"
-#include "asterfort/hujtel.h"
-#include "asterfort/hujtid.h"
-#include "asterfort/mgauss.h"
-#include "asterfort/utmess.h"
-#include "asterfort/Behaviour_type.h"
-#include "asterfort/trace.h"
-#include "asterfort/get_varc.h"
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8)      :: imat, ndt, ndi, nvi, iret, iret1, kpg, ksp
     integer(kind=8)      :: i, inc, incmax, ndtt, limsup
-    real(kind=8) :: carcri(*), vind(50), vinf(50), vind0(50), variTmp(50)
+    real(kind=8) :: carcri(CARCRI_SIZE), vind(50), vinf(50), vind0(50), variTmp(50)
     real(kind=8) :: epsd(6), deps(6), deps0(6)
     real(kind=8) :: sigd(6), sigf(6), dsde(6, 6), seuil
     real(kind=8) :: piso, depsr(6), depsq(6), tin(3)
-    real(kind=8) :: d, q, m, phi, b, angmas(3)
+    real(kind=8) :: d, q, m, phi, b
     real(kind=8) :: pc0, sigd0(6), hill, dsig(6)
     character(len=7)  :: etatd, etatf
-    character(len=8)  :: mod, typmod(*)
-    character(len=16) :: opt
+    character(len=8)  :: typmod1, typmod(2)
+    character(len=16) :: option
     character(len=*)  :: fami
     real(kind=8) :: depsth(6), alpha(3), tempm, tempf, tref
     real(kind=8) :: det, bid16(6), bid66(6, 6)
@@ -133,9 +147,12 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
     real(kind=8) :: neps, nsig, ptrac, rtrac
     real(kind=8) :: crit, dpiso
     aster_logical:: debug, conv, reorie, tract, lVari
-!
-!     ----------------------------------------------------------------
     common/tdim/ndt, ndi
+    type(Material_Para) :: materPara
+!
+! --------------------------------------------------------------------------------------------------
+!
+    materPara = BEHInteg%materPara
 !
     iret = 0
 ! --- DEBUG = ASTER_TRUE : MODE AFFICHAGE ENRICHI
@@ -145,7 +162,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
     reorie = ASTER_FALSE
 
 ! - Flag to modify internal state variable
-    lVari = L_VARI(opt)
+    lVari = L_VARI(option)
 !
     variTmp = 0.d0
     deps0 = 0.d0
@@ -187,7 +204,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
         write (6, '(A)') '!!!!(@_@)!!!!                        !!!!(@_@)!!!!'
     end if
 !
-    mod = typmod(1)
+    typmod1 = typmod(1)
 !
 ! - Get temperatures
 !
@@ -197,7 +214,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !      (INDEPENDANTS DE LA TEMPERATURE)
 !      NB DE CMP DIRECTES/CISAILLEMENT
 !      NB VARIABLES INTERNES
-    call hujmat(fami, kpg, ksp, mod, imat, &
+    call hujmat(fami, kpg, ksp, typmod1, imat, &
                 tempf, materf, ndt, ndi, nvi)
 !
     ptrac = materf(21, 2)
@@ -205,16 +222,17 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !
 ! --- REORIENTATION DES PLANS DE GLISSEMENT SUR LES AXES DU
 !     REPERE LOCAL DONNE PAR LES ANGLES NAUTIQUES (ANGMAS)
-    if (angmas(1) .eq. r8vide()) then
+    if (materPara%lcsPara%lcsType .eq. MATER_LCS_NONE) then
         call utmess('F', 'ALGORITH8_20')
     end if
 !
-    reorie = (angmas(1) .ne. zero) .or. (angmas(2) .ne. zero) .or. &
-             (angmas(3) .ne. zero)
+    reorie = (materPara%lcsPara%lcsAngle(1) .ne. zero) .or. &
+             (materPara%lcsPara%lcsAngle(2) .ne. zero) .or. &
+             (materPara%lcsPara%lcsAngle(3) .ne. zero)
 !
-    call hujori('LOCAL', 1, reorie, angmas, sigd, bid66)
-    call hujori('LOCAL', 1, reorie, angmas, epsd, bid66)
-    call hujori('LOCAL', 1, reorie, angmas, deps, bid66)
+    call hujori('LOCAL', 1, reorie, materPara%lcsPara%lcsAngle, sigd, bid66)
+    call hujori('LOCAL', 1, reorie, materPara%lcsPara%lcsAngle, epsd, bid66)
+    call hujori('LOCAL', 1, reorie, materPara%lcsPara%lcsAngle, deps, bid66)
 !
 ! --- ON TRAVAILLE TOUJOURS AVEC UN TENSEUR CONTRAINTES
 !     DEFINI EN 3D
@@ -361,7 +379,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
         if (abs(vind(27+i)-un) .lt. r8prem()) vind(23+i) = -un
     end do
 !
-    if (opt(1:9) .ne. 'RIGI_MECA') then
+    if (option(1:9) .ne. 'RIGI_MECA') then
         variTmp(1:50) = vind(1:50)
     end if
 !
@@ -382,7 +400,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 ! -------------------------------------------------------------
 ! OPTIONS 'FULL_MECA' ET 'RAPH_MECA' = CALCUL DE SIG(T+DT)
 ! -------------------------------------------------------------
-    if (opt(1:9) .eq. 'RAPH_MECA' .or. opt(1:9) .eq. 'FULL_MECA') then
+    if (option(1:9) .eq. 'RAPH_MECA' .or. option(1:9) .eq. 'FULL_MECA') then
 !
         if (debug) write (6, *) ' * DEPS =', (depsth(i), i=1, 3)
 !
@@ -424,7 +442,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !
         inc = inc+1
         depsr(1:ndt) = depsq(1:ndt)
-        call hujpre(fami, kpg, ksp, etatd, mod, &
+        call hujpre(fami, kpg, ksp, etatd, typmod1, &
                     imat, materf, depsr, sigd, &
                     sigf, vind0, iret)
 !
@@ -439,7 +457,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 ! ---> CONTROLE DE L EVOLUTION DE LA PRESSION ISOTROPE
 ! ----------------------------------------------------
         iret1 = 0
-        call hujdp(mod, depsr, sigd, sigf, materf, &
+        call hujdp(typmod1, depsr, sigd, sigf, materf, &
                    vind, incmax, iret1)
 
         if (iret1 .eq. 1) then
@@ -461,7 +479,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
                 depsq(i) = deps0(i)/incmax
                 depsr(i) = deps0(i)/incmax
             end do
-            call hujpre(fami, kpg, ksp, etatd, mod, &
+            call hujpre(fami, kpg, ksp, etatd, typmod1, &
                         imat, materf, depsr, sigd, &
                         sigf, vind0, iret)
         end if
@@ -472,7 +490,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
         if (debug) write (6, *) &
             '!!!@_@!!! NMHUJ -- VINF =', (variTmp(i), i=24, 31), ' !!!@_@!!!'
 !
-        call hujres(fami, kpg, ksp, mod, carcri, &
+        call hujres(fami, kpg, ksp, typmod1, carcri, &
                     materf, imat, nvi, depsr, sigd, &
                     vind, sigf, variTmp, iret, etatf)
         if (iret .eq. 1) goto 999
@@ -519,7 +537,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !       CALCUL ELASTIQUE ET EVALUATION DE DSDE A (T)
 !       POUR 'RIGI_MECA_TANG' ET POUR 'FULL_MECA'
 !       ----------------------------------------------------------------
-    if (opt .eq. 'RIGI_MECA_TANG') then
+    if (option .eq. 'RIGI_MECA_TANG') then
 !
         dsde(:, :) = zero
 !
@@ -528,56 +546,56 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !
 ! ---> CALCUL MATRICE DE RIGIDITE ELASTIQUE
         if (etatd .eq. 'ELASTIC') then
-            call hujtel(mod, materf, sigd, dsde)
+            call hujtel(typmod1, materf, sigd, dsde)
         end if
 !
 ! ---> CALCUL MATRICE TANGENTE DU PROBLEME CONTINU
         if (etatd .eq. 'PLASTIC') then
-            call hujtid(fami, kpg, ksp, mod, imat, &
+            call hujtid(fami, kpg, ksp, typmod1, imat, &
                         sigd, vind, dsde, iret)
             if (iret .eq. 1) goto 999
         end if
 !
-        call hujori('GLOBA', 2, reorie, angmas, bid16, dsde)
+        call hujori('GLOBA', 2, reorie, materPara%lcsPara%lcsAngle, bid16, dsde)
 !
-    else if (opt .eq. 'FULL_MECA') then
+    else if (option .eq. 'FULL_MECA') then
 !
         dsde(:, :) = zero
 !
 ! ---> CALCUL MATRICE DE RIGIDITE ELASTIQUE
         if (etatf .eq. 'ELASTIC') then
-            call hujtel(mod, materf, sigf, dsde)
+            call hujtel(typmod1, materf, sigf, dsde)
         end if
 !
 ! ---> CALCUL MATRICE TANGENTE DU PROBLEME CONTINU
         if (etatf .eq. 'PLASTIC') then
-            call hujtid(fami, kpg, ksp, mod, imat, &
+            call hujtid(fami, kpg, ksp, typmod1, imat, &
                         sigf, variTmp, dsde, iret)
             if (iret .eq. 1) goto 999
         end if
 !
-    else if (opt .eq. 'FULL_MECA_ELAS') then
+    else if (option .eq. 'FULL_MECA_ELAS') then
 !
         dsde(:, :) = zero
-        call hujtel(mod, materf, sigf, dsde)
+        call hujtel(typmod1, materf, sigf, dsde)
 !
-    else if (opt .eq. 'RIGI_MECA_ELAS') then
+    else if (option .eq. 'RIGI_MECA_ELAS') then
 !
         dsde(:, :) = zero
-        call hujtel(mod, materf, sigd, dsde)
-        call hujori('GLOBA', 2, reorie, angmas, bid16, dsde)
+        call hujtel(typmod1, materf, sigd, dsde)
+        call hujori('GLOBA', 2, reorie, materPara%lcsPara%lcsAngle, bid16, dsde)
 !
     end if
 ! fin <IF RIGI_MECA_TANG>
 !
 ! ---> CALCUL DETERMINANT DE LA MATRICE TANGENTE + INDICATEUR
 ! --- RELIE AUX MECANISMES ACTIFS
-    if (opt(1:9) .ne. 'RIGI_MECA') then
+    if (option(1:9) .ne. 'RIGI_MECA') then
 !
-        call hujori('GLOBA', 2, reorie, angmas, bid16, &
+        call hujori('GLOBA', 2, reorie, materPara%lcsPara%lcsAngle, bid16, &
                     dsde)
 !
-        if (opt .eq. 'FULL_MECA') then
+        if (option .eq. 'FULL_MECA') then
             call mgauss('NCSD', dsde, sigd, 6, 6, &
                         1, det, iret)
             if (iret .eq. 1) then
@@ -593,21 +611,21 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
 !     POUR MODELISATION D_PLAN
     if (ndtt .eq. 4) ndt = 4
 !
-    if (opt .eq. 'RAPH_MECA' .or. opt(1:9) .eq. 'FULL_MECA') &
-        call hujori('GLOBA', 1, reorie, angmas, sigf, bid66)
+    if (option .eq. 'RAPH_MECA' .or. option(1:9) .eq. 'FULL_MECA') &
+        call hujori('GLOBA', 1, reorie, materPara%lcsPara%lcsAngle, sigf, bid66)
 !
 999 continue
 !
-    if (opt(1:9) .eq. 'RAPH_MECA' .or. opt(1:9) .eq. 'FULL_MECA' &
-        .or. opt(1:14) .eq. 'RIGI_MECA_ELAS') then
+    if (option(1:9) .eq. 'RAPH_MECA' .or. option(1:9) .eq. 'FULL_MECA' &
+        .or. option(1:14) .eq. 'RIGI_MECA_ELAS') then
         if (iret .eq. 1) then
             if (.not. tract) then
                 dsde(:, :) = zero
-                call hujtid(fami, kpg, ksp, mod, imat, &
+                call hujtid(fami, kpg, ksp, typmod1, imat, &
                             sigd, vind, dsde, iret1)
                 if (iret1 .eq. 1) then
                     dsde(:, :) = zero
-                    call hujtel(mod, materf, sigd, dsde)
+                    call hujtel(typmod1, materf, sigd, dsde)
                 end if
 ! debut ---new dvp 23/01/2019---
                 dsig(1:ndt) = matmul(dsde(1:ndt, 1:ndt), deps0(1:ndt))
@@ -640,7 +658,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
                         sigf(i+3) = zero
                     end do
                     dsde(:, :) = zero
-                    call hujtel(mod, materf, sigd, dsde)
+                    call hujtel(typmod1, materf, sigd, dsde)
                 end if
 !
                 variTmp(1:50) = vind0(1:50)
@@ -657,7 +675,7 @@ subroutine nmhuj(fami, kpg, ksp, typmod, imat, &
             else
 !
                 dsde(:, :) = zero
-                call hujtel(mod, materf, sigd, dsde)
+                call hujtel(typmod1, materf, sigd, dsde)
                 do i = 1, 3
                     sigf(i) = -deux*rtrac+ptrac
                     sigf(i+3) = zero

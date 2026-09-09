@@ -33,8 +33,9 @@ subroutine xjacf2(elrefp, elrefc, elc, ndim, fpg, &
 #include "asterfort/normev.h"
 #include "asterfort/reeref.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: jinter, ifa, cface(30, 6), ipg, nnop, igeom, jbasec, nptf, ndim, nnops
-    real(kind=8) :: jac, ffp(27), ffpc(27), dfdi(27, 3)
+    real(kind=8) :: jac, ffp(MT_NNOMAX), ffpc(MT_NNOMAX), dfdi(MT_NNOMAX, 3)
     real(kind=8) :: nd(3), tau1(3), xg(3)
     character(len=8) :: elrefp, fpg, elc, elrefc
     real(kind=8), intent(out), optional :: dfdic(nnops, 3)

@@ -18,14 +18,24 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine xnmpl(nnop, nfh, nfe, ddlc, ddlm,&
-                     igeom, instam, instap, ideplp, sigm,&
-                     vip, typmod, option, imate, compor,&
-                     lgpg, carcri, jpintt, cnset, heavt,&
-                     lonch, basloc, idepl, lsn, lst,&
-                     sig, vi, matuu, ivectu, codret,&
-                     jpmilt, nfiss, jheavn, jstno,&
+    subroutine xnmpl(BEHInteg, &
+                     option, typmod, &
+                     compor, carcri, &
+                     nnop, nfh, nfe, &
+                     ddlc, ddlm, igeom, &
+                     instam, instap, &
+                     ideplp, &
+                     sigm, vip, &
+                     lgpg, jpintt, cnset, heavt, &
+                     lonch, basloc, idepl, lsn, lst, &
+                     sig, vi, matuu, ivectu, codret, &
+                     jpmilt, nfiss, jheavn, jstno, &
                      lMatr, lVect, lSigm)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         integer(kind=8) :: nfiss
         integer(kind=8) :: nnop
         integer(kind=8) :: nfh
@@ -38,12 +48,7 @@ interface
         integer(kind=8) :: ideplp
         real(kind=8) :: sigm(*)
         real(kind=8) :: vip(*)
-        character(len=8) :: typmod(*)
-        character(len=16) :: option
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
         integer(kind=8) :: lgpg
-        real(kind=8) :: carcri(*)
         integer(kind=8) :: jpintt
         integer(kind=8) :: cnset(128)
         integer(kind=8) :: heavt(*)

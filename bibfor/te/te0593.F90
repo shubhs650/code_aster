@@ -18,11 +18,13 @@
 !
 subroutine te0593(option, nomte)
 !
+    use Behaviour_module, only: behaviourOption
+    use Behaviour_type
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
-#include "jeveux.h"
-#include "asterfort/Behaviour_type.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
@@ -30,19 +32,26 @@ subroutine te0593(option, nomte)
 #include "asterfort/niinit.h"
 #include "asterfort/nirfgd.h"
 #include "asterfort/nirfpd.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-! ----------------------------------------------------------------------
+!
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
 ! FONCTION REALISEE:  CALCUL DE L'OPTION FORC_REFE POUR LES ELEMENTS
 !                     INCOMPRESSIBLES A 3 CHAMPS UGP
 !                     EN 3D/D_PLAN/AXI
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: ndim, nno1, nno2, nno3, nnos, npg, jgn, ntrou
     integer(kind=8) :: iw, ivf1, ivf2, ivf3, idf1, idf2, idf3
@@ -51,10 +60,10 @@ subroutine te0593(option, nomte)
     real(kind=8) :: sigref, epsref
     character(len=8) :: lielrf(10), typmod(2)
     character(len=16), pointer :: compor(:) => null()
-! ----------------------------------------------------------------------
+    type(RESI_REFE):: refe
 !
+! --------------------------------------------------------------------------------------------------
 !
-! - FONCTIONS DE FORMES ET POINTS DE GAUSS
     call elref2(nomte, 10, lielrf, ntrou)
     ASSERT(ntrou .ge. 3)
     call elrefe_info(elrefe=lielrf(3), fami='RIGI', ndim=ndim, nno=nno3, nnos=nnos, npg=npg, &
@@ -63,7 +72,7 @@ subroutine te0593(option, nomte)
                      jpoids=iw, jvf=ivf2, jdfde=idf2, jgano=jgn)
     call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nno1, nnos=nnos, npg=npg, &
                      jpoids=iw, jvf=ivf1, jdfde=idf1, jgano=jgn)
-!
+
 ! - TYPE DE MODELISATION
     if (ndim .eq. 2 .and. lteatt('AXIS', 'OUI')) then
         typmod(1) = 'AXIS  '
@@ -72,7 +81,7 @@ subroutine te0593(option, nomte)
     else if (ndim .eq. 3) then
         typmod(1) = '3D'
     else
-        call utmess('F', 'ELEMENTS_34', sk=nomte)
+        ASSERT(ASTER_FALSE)
     end if
 !
 ! - Get index of dof
@@ -82,8 +91,10 @@ subroutine te0593(option, nomte)
     call jevech('PGEOMER', 'L', igeom)
     call jevech('PVECTUR', 'E', ivectu)
     call jevech('PCOMPOR', 'L', vk16=compor)
-    call terefe('SIGM_REFE', 'MECA_INCO', sigref)
-    call terefe('EPSI_REFE', 'MECA_INCO', epsref)
+    call refe%Init(nomte)
+    sigref = refe%GetRef('SIGM')
+    epsref = refe%GetRef('EPSI')
+    call refe%Check()
 !
 ! - CALCUL DE REFE_FORC_NODA
     if (compor(DEFO) (1:6) .eq. 'PETIT ') then

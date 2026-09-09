@@ -16,10 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
-                          rela_comp, defo_comp, kit_comp, type_cpla, post_iter, &
-                          regu_visc, post_incr, &
-                          extern_addr, extern_type, infoVari)
+subroutine comp_meca_name(nbVari, nbVariMeca, &
+                          l_excl, variExcl, l_kit_meta, &
+                          relaComp, defoComp, kitComp, typeCpla, postIter, &
+                          reguVisc, postIncr, &
+                          adrsMGIS, solvBehavType, comporInfoVari)
 !
     implicit none
 !
@@ -29,18 +30,20 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
 #include "asterc/lcvari.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/comp_meca_code.h"
 #include "asterfort/comp_mfront_vname.h"
 #include "asterfort/Metallurgy_type.h"
 !
     integer(kind=8), intent(in) :: nbVari, nbVariMeca
     aster_logical, intent(in) :: l_excl
-    character(len=16), intent(in) :: vari_excl
+    character(len=16), intent(in) :: variExcl
     aster_logical, intent(in) :: l_kit_meta
-    character(len=16), intent(in) :: extern_addr, rela_comp, defo_comp, kit_comp(4)
-    character(len=16), intent(in) :: type_cpla, post_iter, regu_visc, post_incr
-    integer(kind=8), intent(in) :: extern_type
-    character(len=16), pointer :: infoVari(:)
+    character(len=16), intent(in) :: relaComp, defoComp, kitComp(4)
+    character(len=16), intent(in) :: typeCpla, postIter, reguVisc, postIncr
+    character(len=16), intent(in) :: adrsMGIS
+    integer(kind=8), intent(in) :: solvBehavType
+    character(len=16), pointer :: comporInfoVari(:)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -53,21 +56,21 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
 ! In  nbVari           : number of internal variables
 ! In  nbVariMeca       : number of internal variables for mechanic
 ! In  l_excl           : .true. if exception case (no names for internal variables)
-! In  vari_excl        : name of internal variables if l_excl
+! In  variExcl         : name of internal variables if l_excl
 ! In  l_kit_meta       : .true. if metallurgy
-! In  rela_comp        : RELATION comportment
-! In  defo_comp        : DEFORMATION comportment
-! In  kit_comp         : KIT comportment
-! In  type_cpla        : plane stress method
-! In  post_iter        : type of post-treatment at each Newton iteration
-! In  regu_visc        : keyword for viscuous regularization
-! In  post_incr        : type of post-treatment at end of time step
-! Ptr infoVari         : pointer to names of internal state variables
+! In  relaComp         : behaviour (RELATION keyword)
+! In  defoComp         : model of strain (DEFORMATION keyword)
+! In  typeCpla         : plane stress method (analytical or De Borst algorithm)
+! In  kitComp          : KIT behaviour
+! In  postIter         : type of post_treatment at each Newton iteration (POST_ITER keyword)
+! In  reguVisc         : keyword for viscuous regularization (REGU_VISC keyword)
+! In  postIncr         : type of post-treatment at end of time step (POST_INCR keyword)
+! Ptr comporInfoVari   : pointer to names of internal state variables
 !
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: metaNbVariMaxi = 30
-    character(len=6) :: metaPhasName(META_MECA_NBPHASE_MAXI)
+    character(len=7) :: metaPhasName(META_MECA_NBPHASE_MAXI)
     character(len=8) :: metaRelaName(metaNbVariMaxi)
     character(len=16) :: metaGlobName(metaNbVariMaxi)
     integer(kind=8) :: idummy, idummy2, nbVariOther, iVariMeca, iVari
@@ -80,37 +83,35 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
 ! --------------------------------------------------------------------------------------------------
 !
     if (l_excl) then
-        infoVari(1:nbVari) = vari_excl
+        comporInfoVari(1:nbVari) = variExcl
     else
 ! ----- Name of internal state variables
-        ! UMAT
-        if (extern_type .eq. 4) then
-            call comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                                post_iter, regu_visc, post_incr, &
+        if (solvBehavType .eq. SOLV_BEHAV_UMAT) then
+            call comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                                postIter, reguVisc, postIncr, &
                                 compCodePy)
             nbVariOther = nbVari-nbVariMeca
             do iVariMeca = 1, nbVariMeca
-                infoVari(iVariMeca) = 'NoName'
+                comporInfoVari(iVariMeca) = 'NoName'
             end do
             if (nbVariOther .ne. 0) then
-                call lcvari(compCodePy, nbVariOther, infoVari(nbVariMeca+1:nbVari))
+                call lcvari(compCodePy, nbVariOther, comporInfoVari(nbVariMeca+1:nbVari))
             end if
             call lcdiscard(compCodePy)
 
-            ! MFront official or proto
-        else if (extern_type .eq. 1 .or. extern_type .eq. 2) then
-            ASSERT(extern_addr .ne. ' ')
-            call comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                                post_iter, regu_visc, post_incr, &
+        else if (solvBehavType .eq. SOLV_BEHAV_MGIS_OFFI .or. &
+                 solvBehavType .eq. SOLV_BEHAV_MGIS_PROTO) then
+            ASSERT(adrsMGIS .ne. ' ')
+            call comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                                postIter, reguVisc, postIncr, &
                                 compCodePy)
             nbVariOther = nbVari-nbVariMeca
-            call comp_mfront_vname(extern_addr, nbVariMeca, infoVari)
+            call comp_mfront_vname(adrsMGIS, nbVariMeca, comporInfoVari)
             if (nbVariOther .ne. 0) then
-                call lcvari(compCodePy, nbVariOther, infoVari(nbVariMeca+1:nbVari))
+                call lcvari(compCodePy, nbVariOther, comporInfoVari(nbVariMeca+1:nbVari))
             end if
             call lcdiscard(compCodePy)
 
-            ! internal integration
         else
             if (l_kit_meta) then
 ! ------------- metaPhas: ACIER, ZIRC, ...
@@ -119,9 +120,9 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
 ! -------------           META_V_ISOT_LINE, META_V_ISOT_TRAC
 ! ------------- metaGlob: internal state variables (global)
 ! -------------           META_G_ISOT_*, META_G_CINE_*
-                metaPhas = kit_comp(1)
-                metaRela = kit_comp(2)
-                metaGlob = kit_comp(3)
+                metaPhas = kitComp(1)
+                metaRela = kitComp(2)
+                metaGlob = kitComp(3)
                 call lccree(1, metaPhas, metaPhasPy)
                 call lccree(1, metaRela, metaRelaPy)
                 call lccree(1, metaGlob, metaGlobPy)
@@ -140,14 +141,15 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
                 do iMetaPhas = 1, nbMetaPhas
                     do iVariMetaRela = 1, nbVariMetaRela
                         iVari = iVari+1
-                        infoVari(iVari) = metaPhasName(iMetaPhas)//'##'//metaRelaName(iVariMetaRela)
+                        comporInfoVari(iVari) = &
+                            metaPhasName(iMetaPhas)//'#'//metaRelaName(iVariMetaRela)
                     end do
                 end do
 
 ! ------------- Add internal state variables (global)
                 do iVariMetaGlob = 1, nbVariMetaGlob
                     iVari = iVari+1
-                    infoVari(iVari) = metaGlobName(iVariMetaGlob)
+                    comporInfoVari(iVari) = metaGlobName(iVariMetaGlob)
                 end do
                 ASSERT(iVari .eq. nbVariMetaGlob+nbVariMetaRela*nbMetaPhas)
                 call lcdiscard(metaPhasPy)
@@ -157,18 +159,18 @@ subroutine comp_meca_name(nbVari, nbVariMeca, l_excl, vari_excl, l_kit_meta, &
 ! ------------- Other internal state variables (GDEF_LOG, etc.)
                 nbVariOther = nbVari-iVari
                 if (nbVariOther .ne. 0) then
-                    call comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                                        post_iter, regu_visc, post_incr, &
+                    call comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                                        postIter, reguVisc, postIncr, &
                                         compCodePy)
-                    call lcvari(compCodePy, nbVariOther, infoVari(iVari+1:nbVari))
+                    call lcvari(compCodePy, nbVariOther, comporInfoVari(iVari+1:nbVari))
                     call lcdiscard(compCodePy)
                 end if
 
             else
-                call comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                                    post_iter, regu_visc, post_incr, &
+                call comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                                    postIter, reguVisc, postIncr, &
                                     compCodePy)
-                call lcvari(compCodePy, nbVari, infoVari)
+                call lcvari(compCodePy, nbVari, comporInfoVari)
                 call lcdiscard(compCodePy)
 
             end if

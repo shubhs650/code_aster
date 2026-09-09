@@ -27,10 +27,12 @@ subroutine mmgtmm(ndim, nnm, &
 !
     implicit none
 !
+#include "MeshTypes_type.h"
+#include "MeshTypes_type.h"
 #include "asterf_types.h"
 !
     integer(kind=8), intent(in) :: ndim, nnm
-    real(kind=8), intent(in) :: wpg, ffm(9), dffm(2, 9), ddffm(3, 9)
+    real(kind=8), intent(in) :: wpg, ffm(9), dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: jacobi, coefac, jeu, dlagrc
     real(kind=8), intent(in) :: mprt1n(3, 3), mprt2n(3, 3), mprnt1(3, 3), mprnt2(3, 3)
     real(kind=8), intent(in) :: kappa(2, 2), vech1(3), vech2(3), h(2, 2)
@@ -139,56 +141,84 @@ subroutine mmgtmm(ndim, nnm, &
                     matrmm(ii, jj) = matrmm(ii, jj)+ &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*(-1.d0)*( &
                                      -kappa(1, 1)*(2.d0*mprt11(l, k)*ffm(i)*( &
-                                                   kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                   kappa(1, 1)*dffm(1, j)+ &
+                                                   kappa(2, 1)*dffm(2, j))+ &
                                                    mprt12(l, k)*ffm(i)*( &
-                                                   kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                   kappa(1, 1)*dffm(1, j)+ &
+                                                   kappa(2, 1)*dffm(2, j))+ &
                                                    mprt12(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))- &
+                                                   kappa(1, 2)*dffm(1, j)+ &
+                                                   kappa(2, 2)*dffm(2, j)))- &
                                      kappa(1, 2)*(mprt21(l, k)*ffm(i)*( &
-                                                  kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                  kappa(1, 1)*dffm(1, j)+ &
+                                                  kappa(2, 1)*dffm(2, j))+ &
                                                   mprt21(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j))+ &
+                                                  kappa(1, 2)*dffm(1, j)+ &
+                                                  kappa(2, 2)*dffm(2, j))+ &
                                                   2.d0*mprt22(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))+ &
+                                                  kappa(1, 2)*dffm(1, j)+ &
+                                                  kappa(2, 2)*dffm(2, j)))+ &
                                      kappa(1, 1)*(mprt1n(l, k)*jeu*( &
-                                      dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                     (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))+ &
+                                                  dffm(1, i)*(kappa(1, 1)*dffm(1, j)+ &
+                                                              kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j) &
+                                                               +kappa(2, 2)*dffm(2, j)))+ &
                                                   mprnt1(l, k)*jeu*( &
-                                     (dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                   (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))))+ &
+                                                  (dffm(1, i)*(kappa(1, 1)*dffm(1, j) &
+                                                               +kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j) &
+                                                               +kappa(2, 2)*dffm(2, j)))))+ &
                                      kappa(1, 2)*(mprt2n(l, k)*jeu*( &
-                                     dffm(1, i)*((kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                    (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j))))+ &
+                                                  dffm(1, i)*((kappa(1, 1)*dffm(1, j) &
+                                                               +kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j) &
+                                                               +kappa(2, 2)*dffm(2, j))))+ &
                                                   mprnt2(l, k)*jeu*( &
-                                       dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j))+ &
-                                       dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))))
+                                                  dffm(1, i)*(kappa(1, 1)*dffm(1, j) &
+                                                              +kappa(1, 2)*dffm(2, j))+ &
+                                                  dffm(2, i)*(kappa(2, 1)*dffm(1, j) &
+                                                              +kappa(2, 2)*dffm(2, j)))))
 ! ----------------- terme  pour xi2
                     matrmm(ii, jj) = matrmm(ii, jj)+ &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*( &
                                      -kappa(2, 1)*(2.d0*mprt11(l, k)*ffm(i)*( &
-                                                   kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                   kappa(1, 1)*dffm(1, j)+ &
+                                                   kappa(2, 1)*dffm(2, j))+ &
                                                    mprt12(l, k)*ffm(i)*( &
-                                                   kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                   kappa(1, 1)*dffm(1, j)+ &
+                                                   kappa(2, 1)*dffm(2, j))+ &
                                                    mprt12(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))- &
+                                                   kappa(1, 2)*dffm(1, j)+ &
+                                                   kappa(2, 2)*dffm(2, j)))- &
                                      kappa(2, 2)*(mprt21(l, k)*ffm(i)*( &
-                                                  kappa(1, 1)*dffm(1, j)+kappa(2, 1)*dffm(2, j))+ &
+                                                  kappa(1, 1)*dffm(1, j)+ &
+                                                  kappa(2, 1)*dffm(2, j))+ &
                                                   mprt21(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j))+ &
+                                                  kappa(1, 2)*dffm(1, j)+ &
+                                                  kappa(2, 2)*dffm(2, j))+ &
                                                   2.d0*mprt22(l, k)*ffm(i)*( &
-                                                  kappa(1, 2)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))+ &
+                                                  kappa(1, 2)*dffm(1, j)+ &
+                                                  kappa(2, 2)*dffm(2, j)))+ &
                                      kappa(2, 1)*(mprt1n(l, k)*jeu*( &
-                                      dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                     (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))+ &
+                                                  dffm(1, i)*(kappa(1, 1)*dffm(1, j)+ &
+                                                              kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+ &
+                                                               kappa(2, 2)*dffm(2, j)))+ &
                                                   mprnt1(l, k)*jeu*( &
-                                     (dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                   (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))))+ &
+                                                  (dffm(1, i)*(kappa(1, 1)*dffm(1, j)+ &
+                                                               kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+ &
+                                                               kappa(2, 2)*dffm(2, j)))))+ &
                                      kappa(2, 2)*(mprt2n(l, k)*jeu*( &
-                                     dffm(1, i)*((kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j)))+ &
-                                    (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j))))+ &
+                                                  dffm(1, i)*((kappa(1, 1)*dffm(1, j)+ &
+                                                               kappa(1, 2)*dffm(2, j)))+ &
+                                                  (dffm(2, i)*(kappa(2, 1)*dffm(1, j)+ &
+                                                               kappa(2, 2)*dffm(2, j))))+ &
                                                   mprnt2(l, k)*jeu*( &
-                                       dffm(1, i)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j))+ &
-                                       dffm(2, i)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))))
+                                                  dffm(1, i)*(kappa(1, 1)*dffm(1, j)+ &
+                                                              kappa(1, 2)*dffm(2, j))+ &
+                                                  dffm(2, i)*(kappa(2, 1)*dffm(1, j)+ &
+                                                              kappa(2, 2)*dffm(2, j)))))
                 end do
             end do
         end do
@@ -206,40 +236,66 @@ subroutine mmgtmm(ndim, nnm, &
                     matrmm(ii, jj) = matrmm(ii, jj)- &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*( &
                                      mprt11(l, k)*ffm(j)*(kappa(1, 1)*kappa(1, 1)+ &
-                                               kappa(1, 2)*kappa(2, 1))*(ddffm(1, i)+ddffm(3, i))+ &
+                                                          kappa(1, 2)*kappa(2, 1))* &
+                                     (ddffm(1, i)+ddffm(3, i))+ &
                                      mprt12(l, k)*ffm(j)*(kappa(1, 1)*kappa(1, 1)+ &
-                                               kappa(1, 2)*kappa(2, 1))*(ddffm(2, i)+ddffm(3, i))+ &
+                                                          kappa(1, 2)*kappa(2, 1))* &
+                                     (ddffm(2, i)+ddffm(3, i))+ &
                                      mprt21(l, k)*ffm(j)*(kappa(1, 2)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(1, 2))*(ddffm(1, i)+ddffm(3, i))+ &
+                                                          kappa(2, 2)*kappa(1, 2))* &
+                                     (ddffm(1, i)+ddffm(3, i))+ &
                                      mprt22(l, k)*ffm(j)*(kappa(1, 2)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(1, 2))*(ddffm(3, i)+ddffm(2, i))- &
+                                                          kappa(2, 2)*kappa(1, 2))* &
+                                     (ddffm(3, i)+ddffm(2, i))- &
                                      mprnt1(l, k)*jeu*(kappa(1, 1)*kappa(1, 1)+ &
-                                    kappa(1, 2)*kappa(2, 1))*dffm(1, j)*(ddffm(1, i)+ddffm(3, i))- &
+                                                       kappa(1, 2)*kappa(2, 1))*dffm(1, j)* &
+                                     (ddffm(1, i)+ddffm(3, i))- &
                                      mprnt1(l, k)*jeu*(kappa(1, 2)*kappa(1, 1)+ &
-                                    kappa(2, 2)*kappa(1, 2))*dffm(2, j)*(ddffm(1, i)+ddffm(3, i))- &
-                                     mprnt2(l, k)*jeu*(kappa(1, 1)*kappa(1, 1)+ &
-                                    kappa(1, 2)*kappa(2, 1))*dffm(1, j)*(ddffm(2, i)+ddffm(3, i))- &
-                                     mprnt2(l, k)*jeu*(kappa(1, 2)*kappa(1, 1)+ &
-                                      kappa(2, 2)*kappa(1, 2))*dffm(2, j)*(ddffm(2, i)+ddffm(3, i)))
+                                                       kappa(2, 2)*kappa(1, 2))*dffm(2, j)* &
+                                     (ddffm(1, i)+ddffm(3, i))- &
+                                     mprnt2(l, k)*jeu*(kappa(1, 1)* &
+                                                       kappa(1, 1)+ &
+                                                       kappa(1, 2)*kappa(2, 1))*dffm(1, j)* &
+                                     (ddffm(2, i)+ddffm(3, i))- &
+                                     mprnt2(l, k)*jeu*(kappa(1, 2)* &
+                                                       kappa(1, 1)+ &
+                                                       kappa(2, 2)*kappa(1, 2))*dffm(2, j)* &
+                                     (ddffm(2, i)+ddffm(3, i)))
 ! ----------------- terme pour xi2
                     matrmm(ii, jj) = matrmm(ii, jj)- &
                                      (dlagrc-coefac*jeu)*wpg*jacobi*( &
-                                     mprt11(l, k)*ffm(j)*(kappa(2, 1)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(2, 1))*(ddffm(1, i)+ddffm(3, i))+ &
-                                     mprt12(l, k)*ffm(j)*(kappa(2, 1)*kappa(1, 1)+ &
-                                               kappa(2, 2)*kappa(2, 1))*(ddffm(2, i)+ddffm(3, i))+ &
-                                     mprt21(l, k)*ffm(j)*(kappa(1, 2)*kappa(2, 1)+ &
-                                               kappa(2, 2)*kappa(2, 2))*(ddffm(1, i)+ddffm(3, i))+ &
-                                     mprt22(l, k)*ffm(j)*(kappa(1, 2)*kappa(2, 1)+ &
-                                               kappa(2, 2)*kappa(2, 2))*(ddffm(3, i)+ddffm(2, i))- &
-                                     mprnt1(l, k)*jeu*(kappa(2, 1)*kappa(1, 1)+ &
-                                    kappa(2, 2)*kappa(2, 1))*dffm(1, j)*(ddffm(1, i)+ddffm(3, i))- &
-                                     mprnt1(l, k)*jeu*(kappa(1, 2)*kappa(2, 1)+ &
-                                    kappa(2, 2)*kappa(2, 2))*dffm(2, j)*(ddffm(1, i)+ddffm(3, i))- &
-                                     mprnt2(l, k)*jeu*(kappa(1, 1)*kappa(2, 1)+ &
-                                    kappa(2, 2)*kappa(2, 1))*dffm(1, j)*(ddffm(2, i)+ddffm(3, i))- &
-                                     mprnt2(l, k)*jeu*(kappa(1, 2)*kappa(2, 1)+ &
-                                      kappa(2, 2)*kappa(2, 2))*dffm(2, j)*(ddffm(2, i)+ddffm(3, i)))
+                                     mprt11(l, k)*ffm(j)*(kappa(2, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 1))* &
+                                     (ddffm(1, i)+ddffm(3, i))+ &
+                                     mprt12(l, k)*ffm(j)*(kappa(2, 1)* &
+                                                          kappa(1, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 1))* &
+                                     (ddffm(2, i)+ddffm(3, i))+ &
+                                     mprt21(l, k)*ffm(j)*(kappa(1, 2)* &
+                                                          kappa(2, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 2))* &
+                                     (ddffm(1, i)+ddffm(3, i))+ &
+                                     mprt22(l, k)*ffm(j)*(kappa(1, 2)* &
+                                                          kappa(2, 1)+ &
+                                                          kappa(2, 2)*kappa(2, 2))* &
+                                     (ddffm(3, i)+ddffm(2, i))- &
+                                     mprnt1(l, k)*jeu*(kappa(2, 1)* &
+                                                       kappa(1, 1)+ &
+                                                       kappa(2, 2)*kappa(2, 1))*dffm(1, j)* &
+                                     (ddffm(1, i)+ddffm(3, i))- &
+                                     mprnt1(l, k)*jeu*(kappa(1, 2)* &
+                                                       kappa(2, 1)+ &
+                                                       kappa(2, 2)*kappa(2, 2))*dffm(2, j)* &
+                                     (ddffm(1, i)+ddffm(3, i))- &
+                                     mprnt2(l, k)*jeu*(kappa(1, 1)* &
+                                                       kappa(2, 1)+ &
+                                                       kappa(2, 2)*kappa(2, 1))*dffm(1, j)* &
+                                     (ddffm(2, i)+ddffm(3, i))- &
+                                     mprnt2(l, k)*jeu*(kappa(1, 2)* &
+                                                       kappa(2, 1)+ &
+                                                       kappa(2, 2)*kappa(2, 2))*dffm(2, j)* &
+                                     (ddffm(2, i)+ddffm(3, i)))
                 end do
             end do
         end do

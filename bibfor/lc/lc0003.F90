@@ -15,13 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504
+! aslint: disable=W0104
 !
 subroutine lc0003(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
+                  compor, carcri, instam, instap, epsm, &
+                  deps, sigm, vim, option, &
                   sigp, vip, typmod, nvi, &
                   dsidep, codret)
+!
+    use nmcine_line_gc_module
+    implicit none
+!
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
+#include "asterfort/nmcine.h"
+#include "asterfort/nmecmi.h"
+#include "asterfort/utmess.h"
+!
+    integer(kind=8)             :: kpg, ksp, ndim, imate
+    integer(kind=8)             :: nvi
+    integer(kind=8)             :: codret
+    character(len=8)    :: typmod(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16)   :: option
+    character(len=*)    :: fami
+    real(kind=8)        :: instam, instap
+    real(kind=8)        :: epsm(6), deps(6)
+    real(kind=8)        :: sigm(6), vim(nvi), sigp(6), vip(nvi), dsidep(6, 6)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -47,19 +69,16 @@ subroutine lc0003(fami, kpg, ksp, ndim, imate, &
 !                   compor(1) = relation de comportement
 !                   compor(2) = nb de variables internes
 !                   compor(3) = type de déformation
-!   crit        critères  locaux
-!                   crit(1) = nombre d'itérations maxi a convergence (iter_inte_maxi == itecrel)
-!                   crit(2) = type de jacobien a t+dt (type_matr_comp == macomp)
+!   carcri        critères  locaux
+!                   carcri(1) = nombre d'itérations maxi a convergence (iter_inte_maxi == itecrel)
+!                   carcri(2) = type de jacobien a t+dt (type_matr_comp == macomp)
 !                                   0 = en vitesse     > symétrique
 !                                   1 = en incrémental > non-symétrique
-!                   crit(3) = valeur de la tolérance de convergence (resi_inte == rescrel)
-!                   crit(5) = nombre d'incréments pour le redécoupage local du pas de temps
+!                   carcri(3) = valeur de la tolérance de convergence (resi_inte == rescrel)
+!                   carcri(5) = nombre d'incréments pour le redécoupage local du pas de temps
 !                             (iter_inte_pas == itedec)
 !                                   0 = pas de redécoupage
 !                                   n = nombre de paliers
-!   angmas      les trois angles du mot-clef massif venant de AFFE_CARA_ELEM
-!                   un réel qui vaut 0 si nautiques ou 2 si Euler
-!                   les angles soit nautiques soit Eule
 !   nvi         nombre de variables internes du point d'intégration
 !   instam      instant t-
 !   instap      instant t+
@@ -83,69 +102,48 @@ subroutine lc0003(fami, kpg, ksp, ndim, imate, &
 !                   2   Redécoupage local  ?
 ! --------------------------------------------------------------------------------------------------
 !
-    use nmcine_line_gc_module
-    implicit none
-!
-#include "asterf_types.h"
-#include "asterfort/nmcine.h"
-#include "asterfort/nmecmi.h"
-#include "asterfort/utmess.h"
-!
-    integer(kind=8)             :: kpg, ksp, ndim, imate
-    integer(kind=8)             :: nvi
-    integer(kind=8)             :: codret
-    character(len=8)    :: typmod(*)
-    character(len=16)   :: compor(*), option
-    character(len=*)    :: fami
-!
-    real(kind=8)        :: angmas(*)
-    real(kind=8)        :: crit(*), instam, instap
-    real(kind=8)        :: epsm(6), deps(6)
-    real(kind=8)        :: sigm(6), vim(*), sigp(6), vip(*), dsidep(6, 6)
+    character(len=16) :: relaComp
+    character(len=32) :: messk(3)
+    logical :: iscplane
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=32)   :: messk(3)
-    logical             :: iscplane
-!
-! --------------------------------------------------------------------------------------------------
-!
-    if (compor(1) (1:14) .eq. 'VMIS_CINE_LINE') then
-!
+    relaComp = compor(RELA_NAME)
+    if (relaComp(1:14) .eq. 'VMIS_CINE_LINE') then
         iscplane = typmod(1) (1:6) .eq. 'C_PLAN'
         if (iscplane) then
             call nmcine_line_gc(fami, kpg, ksp, ndim, typmod, &
-                                imate, compor, crit, epsm, deps, &
+                                imate, relaComp, carcri, epsm, deps, &
                                 sigm, vim, option, sigp, vip, &
                                 dsidep, codret)
         else
+            ASSERT(nvi .eq. 7)
             call nmcine(fami, kpg, ksp, ndim, imate, &
-                        compor, crit, instam, instap, epsm, &
+                        carcri, &
                         deps, sigm, vim, option, sigp, &
                         vip, dsidep, codret)
         end if
-!
-    else if (compor(1) (1:12) .eq. 'VMIS_CINE_GC') then
-!
+
+    else if (relaComp(1:12) .eq. 'VMIS_CINE_GC') then
         iscplane = typmod(1) (1:6) .eq. 'C_PLAN'
         if (.not. iscplane) then
-            messk(1) = compor(1)
+            messk(1) = relaComp
             messk(2) = 'C_PLAN, 1D, GRILLE_EXCENTRE'
             messk(3) = typmod(1)
             call utmess('F', 'ALGORITH4_1', nk=3, valk=messk)
         end if
         call nmcine_line_gc(fami, kpg, ksp, ndim, typmod, &
-                            imate, compor, crit, epsm, deps, &
+                            imate, relaComp, carcri, epsm, deps, &
                             sigm, vim, option, sigp, vip, &
                             dsidep, codret)
-!
-    else if (compor(1) (1:9) .eq. 'VMIS_ECMI') then
-!
+
+    else if (relaComp(1:9) .eq. 'VMIS_ECMI') then
+        ASSERT(nvi .eq. 8)
         call nmecmi(fami, kpg, ksp, ndim, typmod, &
-                    imate, compor, crit, deps, sigm, &
+                    imate, relaComp, carcri, deps, sigm, &
                     vim, option, sigp, vip, dsidep, &
                     codret)
-!
+
     end if
 !
 end subroutine

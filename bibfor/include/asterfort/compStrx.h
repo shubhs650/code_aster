@@ -18,20 +18,19 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine compStrx(modelz , ligrel , compor    ,&
-                        chdispz, chgeom , chmate    , chcara,&
-                        chvarc , chvref , &
-                        basez  , chelemz, codret    ,&
-                        l_poux_, load_d_, coef_type_, coef_real_, coef_cplx_)
-        character(len=*), intent(in) :: modelz, ligrel, compor
-        character(len=*), intent(in) :: chdispz, chgeom, chmate
-        character(len=*), intent(in) :: chcara(*)
-        character(len=*), intent(in) :: chvarc, chvref
-        character(len=*), intent(in) :: chelemz, basez
+    subroutine compStrx(modelZ, materCodeZ, caraElemZ, comporZ, &
+                        dispZ, chgeomZ, &
+                        chvarcZ, chvrefZ, &
+                        lPoux, loadPres, coefMultR, &
+                        ligrelZ, jvBaseZ, strxZ, codret)
+        character(len=*), intent(in) :: modelZ, materCodeZ, caraElemZ, comporZ
+        character(len=*), intent(in) :: dispZ, chgeomZ
+        character(len=*), intent(in) :: chvarcZ, chvrefZ
+        aster_logical, intent(in) :: lPoux
+        character(len=*), intent(in) :: loadPres
+        real(kind=8), intent(in) :: coefMultR
+        character(len=*), intent(in) :: ligrelZ
+        character(len=*), intent(in) :: strxZ, jvBaseZ
         integer(kind=8), intent(out) :: codret
-        aster_logical, intent(in), optional :: l_poux_
-        character(len=*), intent(in), optional :: load_d_, coef_type_
-        real(kind=8), intent(in), optional :: coef_real_
-        complex(kind=8), intent(in), optional :: coef_cplx_
     end subroutine compStrx
 end interface

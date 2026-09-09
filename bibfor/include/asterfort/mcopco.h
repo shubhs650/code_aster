@@ -15,18 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mcopco(noma, newgeo, ndim, nummai, ksi1,&
-                      ksi2, geom)
-        character(len=8) :: noma
-        character(len=19) :: newgeo
-        integer(kind=8) :: ndim
-        integer(kind=8) :: nummai
-        real(kind=8) :: ksi1
-        real(kind=8) :: ksi2
-        real(kind=8) :: geom(3)
+    subroutine mcopco(mesh, newgeo, cellNume, ksi1, ksi2, geom)
+        character(len=8), intent(in) :: mesh
+        character(len=19), intent(in) :: newgeo
+        integer(kind=8), intent(in) :: cellNume
+        real(kind=8), intent(in) :: ksi1, ksi2
+        real(kind=8), intent(out) :: geom(3)
     end subroutine mcopco
 end interface

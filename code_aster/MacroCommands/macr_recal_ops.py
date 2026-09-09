@@ -237,7 +237,7 @@ def macr_recal(
         ]
     )
 
-    dESCLAVE = args["CALCUL_ESCLAVE"][0].cree_dict_valeurs(args["CALCUL_ESCLAVE"][0].mc_liste)
+    dESCLAVE = args["CALCUL_ESCLAVE"][0]
     for i in list(dESCLAVE.keys()):
         if dESCLAVE[i] is None:
             del dESCLAVE[i]
@@ -284,7 +284,7 @@ def macr_recal(
     # _____________________________________________
 
     if GRAPHIQUE:
-        dGRAPHIQUE = GRAPHIQUE[0].cree_dict_valeurs(GRAPHIQUE[0].mc_liste)
+        dGRAPHIQUE = GRAPHIQUE[0]
         if "FORMAT" in dGRAPHIQUE and dGRAPHIQUE["FORMAT"] == "GNUPLOT":
             # On essaie d'importer Gnuplot -> PAS DE GRAPHIQUE
             if not HAS_GNUPLOT:
@@ -443,6 +443,8 @@ def macr_recal(
     restant, temps_iter, err = reca_utilitaires.temps_CPU(restant, temps_iter)
     para, val, borne_inf, borne_sup = reca_utilitaires.transforme_list_Num(LIST_PARA, RESU_EXP)
     val_init = copy.copy(val)
+    # Initialisation du compteur d'erreurs
+    ier = 0
 
     # Fonctionnelle en sortie (vectorielle ou scalaire)
     if METHODE in ["FMIN", "FMINBFGS", "FMINNCG", "GENETIQUE", "HYBRIDE"]:

@@ -16,8 +16,8 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_nbvari_std(rela_comp, defo_comp, type_cpla, &
-                           kit_comp, post_iter, regu_visc, post_incr, &
+subroutine comp_nbvari_std(relaComp, defoComp, typeCpla, &
+                           kitComp, postIter, reguVisc, postIncr, &
                            nbVari, numeLaw)
 !
     implicit none
@@ -27,8 +27,8 @@ subroutine comp_nbvari_std(rela_comp, defo_comp, type_cpla, &
 #include "asterc/lcdiscard.h"
 #include "asterfort/comp_meca_code.h"
 !
-    character(len=16), intent(in) :: rela_comp, defo_comp, type_cpla
-    character(len=16), intent(in) :: kit_comp(4), post_iter, regu_visc, post_incr
+    character(len=16), intent(in) :: relaComp, defoComp, typeCpla
+    character(len=16), intent(in) :: kitComp(4), postIter, reguVisc, postIncr
     integer(kind=8), intent(out) :: nbVari, numeLaw
 !
 ! --------------------------------------------------------------------------------------------------
@@ -39,19 +39,19 @@ subroutine comp_nbvari_std(rela_comp, defo_comp, type_cpla, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  rela_comp        : RELATION comportment
-! In  defo_comp        : DEFORMATION comportment
-! In  type_cpla        : plane stress method
-! In  kit_comp         : KIT comportment
-! In  post_iter        : type of post-treatment at each Newton iteration
-! In  regu_visc        : keyword for viscuous regularization
-! In  post_incr        : type of post-treatment at end of time step
+! In  relaComp         : behaviour (RELATION keyword)
+! In  defoComp         : model of strain (DEFORMATION keyword)
+! In  typeCpla         : plane stress method (analytical or De Borst algorithm)
+! In  kitComp          : KIT behaviour
+! In  postIter         : type of post_treatment at each Newton iteration (POST_ITER keyword)
+! In  reguVisc         : keyword for viscuous regularization (REGU_VISC keyword)
+! In  postIncr         : type of post-treatment at end of time step (POST_INCR keyword)
 ! Out nbVari           : number of internal state variables
 ! Out numeLaw          : index of subroutine for behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=16) :: comp_code_py
+    character(len=16) :: compCodePY
     integer(kind=8) :: idummy
 !
 ! --------------------------------------------------------------------------------------------------
@@ -60,14 +60,14 @@ subroutine comp_nbvari_std(rela_comp, defo_comp, type_cpla, &
     numeLaw = 0
 
 ! - Coding composite comportment (Python)
-    call comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                        post_iter, regu_visc, post_incr, &
-                        comp_code_py)
+    call comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                        postIter, reguVisc, postIncr, &
+                        compCodePY)
 
 ! - Get number of total internal state variables and index of law
-    call lcinfo(comp_code_py, numeLaw, nbVari, idummy)
+    call lcinfo(compCodePY, numeLaw, nbVari, idummy)
 
 ! - End of encoding
-    call lcdiscard(comp_code_py)
+    call lcdiscard(compCodePY)
 !
 end subroutine

@@ -416,7 +416,7 @@ class MECA3DGVH_HHO111(Element):
         OP.CHAR_MECA_HYDR_R(
             te=503,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -430,7 +430,7 @@ class MECA3DGVH_HHO111(Element):
         OP.CHAR_MECA_SECH_R(
             te=503,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -444,7 +444,7 @@ class MECA3DGVH_HHO111(Element):
         OP.CHAR_MECA_TEMP_R(
             te=503,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -463,7 +463,7 @@ class MECA3DGVH_HHO111(Element):
         OP.EPSI_ELGA(
             te=448,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PDEPLAR, DDL_DEPL),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (OP.EPSI_ELGA.PCHHOBS, CHHOBS),
@@ -505,7 +505,7 @@ class MECA3DGVH_HHO111(Element):
         OP.FULL_MECA(
             te=485,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
@@ -635,6 +635,7 @@ class MECA3DGVH_HHO111(Element):
                 (OP.PILO_PRED_DEFO.PVARIMR, LC.ZVARIPG),
                 (OP.PILO_PRED_DEFO.PCHHOGT, CHHOGT),
                 (OP.PILO_PRED_DEFO.PCHHOBS, CHHOBS),
+                (SP.PCDTAU, LC.CCDTAU),
             ),
             para_out=((OP.PILO_PRED_DEFO.PCOPILO, LC.ECOPILO),),
         ),
@@ -662,7 +663,7 @@ class MECA3DGVH_HHO111(Element):
         OP.RAPH_MECA(
             te=485,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
@@ -692,7 +693,7 @@ class MECA3DGVH_HHO111(Element):
         OP.RIGI_MECA(
             te=485,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PVARCPR, LC.ZVARCPG),
@@ -704,7 +705,7 @@ class MECA3DGVH_HHO111(Element):
         OP.RIGI_MECA_ELAS(
             te=485,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RIGI_MECA_ELAS.PCOMPOR, LC.CCOMPOR),
@@ -726,7 +727,7 @@ class MECA3DGVH_HHO111(Element):
         OP.RIGI_MECA_TANG(
             te=485,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (SP.PMULCOM, LC.CMLCOMP),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
@@ -780,7 +781,16 @@ class MECA3DGVH_HHO111(Element):
             para_in=((OP.SIGM_ELNO.PCONTRR, ESIGMPG),),
             para_out=((SP.PSIEFNOC, ESIGMNC), (OP.SIGM_ELNO.PSIEFNOR, ESIGMNO)),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
@@ -790,11 +800,12 @@ class MECA3DGVH_HHO111(Element):
                 (SP.PFACY_R, EFACY_R),
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
                 (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PSOUR_R, ESOURCR),
                 (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -804,10 +815,11 @@ class MECA3DGVH_HHO111(Element):
                 (OP.TOU_INI_ELNO.PEPSI_R, EDEFONO),
                 (OP.TOU_INI_ELNO.PGEOM_R, ENGEOM_R),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PSIEF_R, ECONTNO),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.ZVARINO),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARC_ELGA(

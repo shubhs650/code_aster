@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 ! aslint: disable=W0413
-subroutine lccgad(BEHinteg, &
+subroutine lccgad(BEHInteg, &
                   fami, kpg, ksp, mat, option, &
                   mu, su, glis, dde, vim, vip)
 !
@@ -27,7 +27,7 @@ subroutine lccgad(BEHinteg, &
 #include "asterf_types.h"
 #include "asterfort/rcvalb.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: mat, kpg, ksp
     real(kind=8) :: mu, su, glis, dde(2)
     real(kind=8) :: vim(*), vip(*)
@@ -48,8 +48,8 @@ subroutine lccgad(BEHinteg, &
 !      VIM     : VARIABLES INTERNES
 !                |1   : GLISSEMENT
 !                |2   : INDICATEUR GLISSEMENT
-!      BEHinteg%behavESVA%behavESVAOther%tenscab    : TENSION CABLE
-!      BEHinteg%behavESVA%behavESVAOther%curvcab    : COURBURE CABLE
+!      BEHInteg%behavESVA%behavESVAOther%tenscab    : TENSION CABLE
+!      BEHInteg%behavESVA%behavESVAOther%curvcab    : COURBURE CABLE
 !
 !
 ! OUT : GLIS   : DELTA, SOLUTION DE LA MINIMISATION
@@ -101,8 +101,8 @@ subroutine lccgad(BEHinteg, &
         poum = '+'
     end if
 !
-    n = BEHinteg%behavESVA%behavESVAOther%tenscab
-    courb = BEHinteg%behavESVA%behavESVAOther%curvcab
+    n = BEHInteg%behavESVA%behavESVAOther%tenscab
+    courb = BEHInteg%behavESVA%behavESVAOther%curvcab
 !
     call rcvalb(fami, kpg, ksp, poum, mat, &
                 ' ', 'CABLE_GAINE_FROT', 0, ' ', [0.d0], &

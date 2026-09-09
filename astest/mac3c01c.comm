@@ -1,0 +1,189 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+#
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), IMPR_MACRO="NON")
+
+MA1 = LIRE_MAILLAGE(FORMAT="MED", UNITE=20)
+
+DATAMAC = LIRE_TABLE(UNITE=38, FORMAT="LIBRE", SEPARATEUR="\t")
+
+RESU_C1 = CALC_MAC3COEUR(
+    TYPE_COEUR="TEST",
+    ROTATION_GRILLE="NON",
+    TABLE_N=DATAMAC,
+    MAILLAGE_N=MA1,
+    DEFORMATION=_F(UNITE_THYC=32, NIVE_FLUENCE=33),
+)
+
+t4 = 4.0e-3
+t9 = 33 + 8.0e-3
+
+TAB1 = CREA_TABLE(
+    RESU=_F(
+        RESULTAT=RESU_C1,
+        NOM_CHAM="DEPL",
+        INST=t4,
+        NOM_CMP=("DX", "DY", "DZ"),
+        GROUP_MA=("CR_B_B", "TG_B_B"),
+    )
+)
+
+TAB2 = CREA_TABLE(
+    RESU=_F(
+        RESULTAT=RESU_C1,
+        NOM_CHAM="DEPL",
+        INST=t4,
+        NOM_CMP=("DX", "DY", "DZ"),
+        GROUP_NO=("P_CUV", "FIX"),
+    )
+)
+
+TAB3 = POST_MAC3COEUR(
+    RESULTAT=RESU_C1,
+    TYPE_COEUR="TEST",
+    INST=t9,
+    TABLE=DATAMAC,
+    TYPE_CALCUL="DEFORMATION",
+    OPERATION="EXTRACTION",
+)
+
+TEST_TABLE(
+    TABLE=TAB1,
+    VALE_CALC=-0.01992785871510022,
+    VALE_REFE=-0.01992785871510022,
+    NOM_PARA="DX",
+    TYPE_TEST="MIN",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB1,
+    VALE_CALC=-0.01224885752106249,
+    VALE_REFE=-0.01224885752106249,
+    NOM_PARA="DX",
+    TYPE_TEST="MAX",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB1,
+    VALE_CALC=0.0,
+    VALE_REFE=0.0,
+    ORDRE_GRANDEUR=0.01,
+    NOM_PARA="DY",
+    TYPE_TEST="MIN",
+    REFERENCE="AUTRE_ASTER",
+    CRITERE="ABSOLU",
+)
+
+TEST_TABLE(
+    TABLE=TAB1,
+    VALE_CALC=0.003444329700109245,
+    VALE_REFE=0.003444329700109245,
+    NOM_PARA="DY",
+    TYPE_TEST="MAX",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB1,
+    VALE_CALC=0.0,
+    VALE_REFE=0.0,
+    NOM_PARA="DZ",
+    TYPE_TEST="SOMM",
+    REFERENCE="AUTRE_ASTER",
+    ORDRE_GRANDEUR=1.0,
+    CRITERE="ABSOLU",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=-0.021929946270868632,
+    VALE_REFE=-0.021929946270868632,
+    NOM_PARA="DX",
+    TYPE_TEST="MIN",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=-0.00121683101056054,
+    VALE_REFE=-0.00121683101056054,
+    NOM_PARA="DX",
+    TYPE_TEST="MAX",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=-0.0015641216120505345,
+    VALE_REFE=-0.0015641216120505345,
+    NOM_PARA="DY",
+    TYPE_TEST="MIN",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=0.0015641216120505345,
+    VALE_REFE=0.0015641216120505345,
+    NOM_PARA="DY",
+    TYPE_TEST="MAX",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=-0.0015641216120505345,
+    VALE_REFE=-0.0015641216120505345,
+    NOM_PARA="DZ",
+    TYPE_TEST="MIN",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    TABLE=TAB2,
+    VALE_CALC=0.0015641216120505345,
+    VALE_REFE=0.0015641216120505345,
+    NOM_PARA="DZ",
+    TYPE_TEST="MAX",
+    REFERENCE="AUTRE_ASTER",
+)
+
+TEST_TABLE(
+    VALE_CALC=3.18288082639214,
+    VALE_REFE=3.18288082639214,
+    NOM_PARA="Ro",
+    TABLE=TAB3,
+    REFERENCE="AUTRE_ASTER",
+    FILTRE=_F(NOM_PARA="TEST", VALE_K="B02"),
+)
+
+TEST_TABLE(
+    VALE_CALC_K="2C",
+    VALE_REFE_K="2C",
+    REFERENCE="AUTRE_ASTER",
+    NOM_PARA="Forme",
+    TABLE=TAB3,
+    FILTRE=_F(NOM_PARA="TEST", VALE_K="B02"),
+)
+
+FIN()

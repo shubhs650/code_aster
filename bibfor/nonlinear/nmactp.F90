@@ -112,6 +112,12 @@ subroutine nmactp(ds_print, sddisc, sderro, ds_contact, &
     else if (retact .eq. 4) then
 ! ----- ARRET DU CALCUL
         actpas = 3
+
+    else if (retact .eq. 5) then
+!
+! ----- ARRET DU CALCUL AVEC ARCHIVAGE DERNIER PAS DE TEMPS
+!
+        actpas = 4
     else
         ASSERT(ASTER_FALSE)
     end if
@@ -123,6 +129,8 @@ subroutine nmactp(ds_print, sddisc, sderro, ds_contact, &
         call nmeceb(sderro, 'INST', 'ERRE')
     else if (actpas .eq. 3) then
         call nmeceb(sderro, 'INST', 'STOP')
+    else if (actpas .eq. 4) then
+        call nmeceb(sderro, 'INST', 'ARCH')
     else
         ASSERT(ASTER_FALSE)
     end if

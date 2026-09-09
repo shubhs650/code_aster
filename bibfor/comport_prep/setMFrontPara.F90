@@ -20,7 +20,6 @@
 subroutine setMFrontPara(prepCrit, iFactorKeyword)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
 #include "asterc/mgis_get_double_mfront_parameter.h"
@@ -29,6 +28,7 @@ subroutine setMFrontPara(prepCrit, iFactorKeyword)
 #include "asterc/mgis_set_integer_parameter.h"
 #include "asterc/mgis_set_outofbounds_policy.h"
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/utmess.h"
 !
     type(BehaviourPrep_Crit), pointer :: prepCrit(:)
@@ -48,43 +48,43 @@ subroutine setMFrontPara(prepCrit, iFactorKeyword)
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: resi_inte_mfront_rela, valr(2)
-    integer(kind=8):: extern_type, iveriborne
-    character(len=16) :: extern_addr
+    integer(kind=8):: solvBehavType, iveriborne
+    character(len=16) :: adrsMGIS
     real(kind=8) :: resi_inte
     integer(kind=8) :: iter_inte_maxi, iter_inte_mfront_maxi, vali(2)
 !
 ! --------------------------------------------------------------------------------------------------
 !
     iveriborne = prepCrit(iFactorKeyword)%iveriborne
-    extern_addr = prepCrit(iFactorKeyword)%prepExte%extern_addr
-    extern_type = prepCrit(iFactorKeyword)%extern_type
-!
+    adrsMGIS = prepCrit(iFactorKeyword)%prepExte%adrsMGIS
+    solvBehavType = prepCrit(iFactorKeyword)%prepExte%solvBehavType
+
 ! - Set values
-!
-    if (extern_type .eq. 1 .or. extern_type .eq. 2) then
+    if (solvBehavType == SOLV_BEHAV_MGIS_OFFI .or. &
+        solvBehavType == SOLV_BEHAV_MGIS_PROTO) then
         if (associated(prepCrit(iFactorKeyword)%resi_inte)) then
             resi_inte = prepCrit(iFactorKeyword)%resi_inte
-            call mgis_get_double_mfront_parameter(extern_addr, "epsilon", resi_inte_mfront_rela)
+            call mgis_get_double_mfront_parameter(adrsMGIS, "epsilon", resi_inte_mfront_rela)
             if (resi_inte_mfront_rela .ne. 0.d0 .and. &
                 resi_inte .gt. resi_inte_mfront_rela) then
                 valr(1) = resi_inte
                 valr(2) = resi_inte_mfront_rela
                 call utmess('A', 'COMPOR6_16', nr=2, valr=valr)
             end if
-            call mgis_set_double_parameter(extern_addr, "epsilon", resi_inte)
+            call mgis_set_double_parameter(adrsMGIS, "epsilon", resi_inte)
         end if
         if (associated(prepCrit(iFactorKeyword)%iter_inte_maxi)) then
             iter_inte_maxi = prepCrit(iFactorKeyword)%iter_inte_maxi
-            call mgis_get_integer_mfront_parameter(extern_addr, "iterMax", iter_inte_mfront_maxi)
+            call mgis_get_integer_mfront_parameter(adrsMGIS, "iterMax", iter_inte_mfront_maxi)
             if (iter_inte_mfront_maxi .ne. 0 .and. &
                 iter_inte_maxi .ne. iter_inte_mfront_maxi) then
                 vali(1) = iter_inte_maxi
                 vali(2) = iter_inte_mfront_maxi
                 call utmess('I', 'COMPOR6_17', ni=2, vali=vali)
             end if
-            call mgis_set_integer_parameter(extern_addr, "iterMax", iter_inte_maxi)
+            call mgis_set_integer_parameter(adrsMGIS, "iterMax", iter_inte_maxi)
         end if
-        call mgis_set_outofbounds_policy(extern_addr, iveriborne)
+        call mgis_set_outofbounds_policy(adrsMGIS, iveriborne)
     end if
 !
 end subroutine

@@ -47,10 +47,11 @@ subroutine eps2mc(nno, ndim, nbsig, npg, ipoids, &
 #include "asterfort/dfdm2d.h"
 #include "asterfort/dfdm3d.h"
 #include "asterfort/lteatt.h"
+#include "MeshTypes_type.h"
 #include "asterfort/utmess.h"
     real(kind=8) :: xyz(1), depl(1), eps2(1)
 ! -----  VARIABLES LOCALES
-    real(kind=8) :: dfdx(27), dfdy(27), dfdz(27)
+    real(kind=8) :: dfdx(MT_NNOMAX3D), dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D)
     real(kind=8) :: jacob
 !.========================= DEBUT DU CODE EXECUTABLE ==================
 !

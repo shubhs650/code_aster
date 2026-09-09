@@ -17,16 +17,16 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 !
-interface 
-    subroutine xhmsat(ds_thm, option,&
-                      ndim, dimenr,&
-                      dimcon, nbvari, addeme,&
-                      adcome,&
-                      addep1, adcp11, congem, congep, vintm,&
-                      vintp, dsde, epsv, depsv,&
-                      dp1, phi, rho11,&
-                      satur, retcom, tbiot,&
-                      angl_naut, yaenrh, adenhy, nfh)
+interface
+    subroutine xhmsat(ds_thm, option, &
+                      ndim, dimenr, &
+                      dimcon, nbvari, addeme, &
+                      adcome, &
+                      addep1, adcp11, congem, congep, vintm, &
+                      vintp, dsde, epsv, depsv, &
+                      dp1, phi, rho11, &
+                      satur, retcom, tbiot, &
+                      yaenrh, adenhy, nfh)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         integer(kind=8) :: nbvari
@@ -51,9 +51,8 @@ interface
         real(kind=8) :: satur
         integer(kind=8) :: retcom
         real(kind=8) :: tbiot(6)
-        real(kind=8) :: angl_naut(3)
         integer(kind=8) :: yaenrh
         integer(kind=8) :: adenhy
         integer(kind=8) :: nfh
     end subroutine xhmsat
-end interface 
+end interface

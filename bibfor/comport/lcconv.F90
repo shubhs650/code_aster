@@ -19,7 +19,7 @@
 subroutine lcconv(rela_comp, yd, dy, ddy, &
                   nr, itmax, toler, iter, intg, &
                   nmat, mater, r, rini, epstr, &
-                  typess, essai, icomp, nvi, &
+                  typess, essai, cutLevel, nvi, &
                   vinf, &
                   iret)
 
@@ -46,7 +46,6 @@ subroutine lcconv(rela_comp, yd, dy, ddy, &
 !         NR     :  DIMENSION DY DDY
 !         DY     :  VECTEUR SOLUTION = ( DSIG DVIN (DEPS3) )
 !         DDY    :  VECTEUR CORRECTION SUR LA SOLUTION
-!         ICOMP  :  COMPTEUR POUR LE REDECOUPAGE DU PAS DE TEMPS
 !         NVI    :  NOMBRE DE VARIABLES INTERNES
 !         VINF   :  VARIABLES INTERNES A L'INSTANT T+DT
 !
@@ -64,7 +63,7 @@ subroutine lcconv(rela_comp, yd, dy, ddy, &
 #include "asterfort/lcmmcv.h"
 #include "asterfort/lkicvg.h"
 #include "asterfort/sricvg.h"
-    integer(kind=8) :: typess, itmax, iter, intg, nr, icomp
+    integer(kind=8) :: typess, itmax, iter, intg, nr, cutLevel
     integer(kind=8) :: iret, nmat, nvi
     real(kind=8) :: toler, essai, ddy(*), dy(*), r(*), rini(*), yd(*)
     real(kind=8) :: mater(nmat, 2), epstr(6), vinf(nvi)
@@ -74,7 +73,7 @@ subroutine lcconv(rela_comp, yd, dy, ddy, &
     if (rela_comp .eq. 'VISCOCHAB') then
 !
         call cvmcvg(dy, ddy, nr, itmax, toler, &
-                    iter, intg, typess, essai, icomp, &
+                    iter, intg, typess, essai, cutLevel, &
                     iret)
 !
     else if (rela_comp .eq. 'MONOCRISTAL') then

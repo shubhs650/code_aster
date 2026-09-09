@@ -15,12 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, carcri, instam, instap, &
+subroutine nmveei(materPara, &
+                  carcri, compor, ndim, typmod, &
+                  instam, instap, &
                   epsm, deps, sigm, nvi, vim, option, &
                   sigp, vip, dsidep, iret)
 !
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -37,23 +40,25 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
 !
-    integer(kind=8) :: ndim, imate, iret, kpg, ksp
-    integer(kind=8), intent(in):: nvi
-    character(len=16) :: compor(*), option
-    character(len=8) :: typmod(*)
-    character(len=*) :: fami
-    real(kind=8) :: carcri(*), instam, instap, tm, tp, tref
+    type(Material_Para), intent(in) :: materPara
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    character(len=8), intent(in) :: typmod(2)
+    integer(kind=8), intent(in) :: nvi, ndim
+    character(len=16), intent(in) ::  option
+    real(kind=8) ::  instam, instap, tm, tp, tref
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigm(6), vim(*), sigp(6), vip(*), dsidep(6, 6)
-! ----------------------------------------------------------------------
+    integer(kind=8) :: iret
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     INTEGRATION DE LA LOI DE COMPORTEMENT VISCO PLASTIQUE DE
 !     CHABOCHE AVEC ENDOMAGEMENT
 !     METHODE ITERATIVE D'EULER IMPLICITE
 !     ELEMENTS ISOPARAMETRIQUES EN PETITES DEFORMATIONS
 !
-! ----------------------------------------------------------------------
-!-- ARGUMENTS
-!------------
+! --------------------------------------------------------------------------------------------------
 !
 ! IN  FAMI    FAMILLE DE POINT DE GAUSS (RIGI,MASS,...)
 ! IN  KPG,KSP NUMERO DU (SOUS)POINT DE GAUSS
@@ -126,7 +131,7 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
     integer(kind=8) :: itmax, i, ier, iter, iret2, iret3, iret4
     integer(kind=8) :: ndt, nrv, ndi, k, l, isimp
 !
-    real(kind=8) :: pgl(3, 3), angmas(3), toler, deltx, sumx, dt, se2
+    real(kind=8) :: pgl(3, 3), toler, deltx, sumx, dt, se2
     real(kind=8) :: vind(ni), matm(nmat, 2), a(6, 6), b(6)
     real(kind=8) :: mate(nmat, 2), hook(6, 6), hookm(6, 6)
     real(kind=8) :: p(np), beta(nb), ep(nt), rm, dm, unmd
@@ -137,9 +142,9 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
     real(kind=8) :: dbeta(nb), dp(np), dsedb(nb), dsedb2(nb, nb), se
 !
     character(len=3) :: matcst
-    character(len=16) :: loi
+
     character(len=11) :: meting
-    character(len=8) :: mod, typma
+    character(len=8) :: typmod1, typma
     character(len=7) :: etatf(3)
 !
 !     POUR LCMATE (MONOCRISTAL)
@@ -150,19 +155,20 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 !
     common/tdim/ndt, ndi
     common/meti/meting
-! ----------------------------------------------------------------------
+
+    character(len=16) :: relaComp, defoComp
 !
+! --------------------------------------------------------------------------------------------------
 !
-!-- 1. INITIALISATIONS :
-!----------------------
     itmax = int(carcri(1))
     ier = 0
     iret = 0
 !
     if (itmax .le. 0) itmax = -itmax
     toler = carcri(3)
-    loi = compor(1)
-    mod = typmod(1)
+    relaComp = compor(RELA_NAME)
+    defoComp = compor(DEFO)
+    typmod1 = typmod(1)
     cplan = typmod(1) .eq. 'C_PLAN'
     meting = 'NEWTON'
     dt = instap-instam
@@ -179,21 +185,22 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 !-- 1.2. RECUPERATION COEF(TEMP(T))) LOI ELASTO-PLASTIQUE A T ET/OU T+DT
 !        NB DE CMP DIRECTES/CISAILLEMENT + NB VAR. INTERNES
 !-----------------------------------------------------------------------
-    call rcvarc(' ', 'TEMP', '-', fami, kpg, &
-                ksp, tm, iret2)
-    call rcvarc(' ', 'TEMP', '+', fami, kpg, &
-                ksp, tp, iret3)
-    call rcvarc(' ', 'TEMP', 'REF', fami, kpg, &
-                ksp, tref, iret4)
+    call rcvarc(' ', 'TEMP', '-', materPara%schemePara%fami, materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, tm, iret2)
+    call rcvarc(' ', 'TEMP', '+', materPara%schemePara%fami, materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, tp, iret3)
+    call rcvarc(' ', 'TEMP', 'REF', materPara%schemePara%fami, materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, tref, iret4)
     if (((iret2+iret3) .eq. 0) .and. (iret4 .eq. 1)) then
         call utmess('F', 'COMPOR5_43')
     end if
 !
-    call lcmate(fami, kpg, ksp, compor, mod, &
-                imate, nmat, tm, tp, tref, 0, &
+    call lcmate(materPara, &
+                carcri, relaComp, typmod1, &
+                nmat, tm, tp, tref, 0, &
                 typma, hsr, matm, mate, matcst, &
-                nbcomm, cpmono, angmas, pgl, itmax, &
-                toler, ndt, ndi, nrv, carcri, &
+                nbcomm, cpmono, pgl, itmax, &
+                toler, ndt, ndi, nrv, &
                 nvi, vind, nfs, nsg, toutms, &
                 1, numhsr, sigm)
     ASSERT(ndt .eq. nb .or. nvi .eq. ni .or. nrv .eq. nr)
@@ -207,11 +214,13 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 !
 !-- 1.3. OPERATEUR DE HOOKE
 !-------------------------
-    call lcopli('ISOTROPE', mod, mate, hook)
+    call lcopli('ISOTROPE', typmod1, mate, hook)
 !
-    if (.not. (loi(1:4) .eq. 'ELAS' .or. loi .eq. 'VENDOCHAB' .or. loi .eq. 'VISC_ENDO_LEMA' &
+    if (.not. (relaComp(1:4) .eq. 'ELAS' .or. &
+               relaComp .eq. 'VENDOCHAB' .or. &
+               relaComp .eq. 'VISC_ENDO_LEMA' &
                )) then
-        call utmess('F', 'ALGORITH4_50', sk=loi)
+        call utmess('F', 'ALGORITH4_50', sk=relaComp)
     end if
 !
 !-- 1.4. DEFORMATIONS TOTALES, THERMIQUES ET VISCOPLASTIQUES
@@ -229,8 +238,8 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
         epthm(3+i) = 0.d0
     end do
 !
-    if (compor(3) .eq. 'PETIT_REAC') then
-        call lcopli('ISOTROPE', mod, matm, hookm)
+    if (defoComp .eq. 'PETIT_REAC') then
+        call lcopli('ISOTROPE', typmod1, matm, hookm)
         call r8inir(nb*nb, 0.d0, a, 1)
         call r8inir(nb, 0.d0, b, 1)
         if (ndim .eq. 2) then
@@ -270,9 +279,12 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 !              - ARCHIVAGE DES VARIABLES
 !-----------------------------------------------------------------------
     if (option(1:9) .eq. 'RAPH_MECA' .or. option(1:9) .eq. 'FULL_MECA') then
-        if (loi .eq. 'VISC_ENDO_LEMA') then
+        if (relaComp .eq. 'VISC_ENDO_LEMA') then
             if (.not. cplan) then
-                call nmvend(fami, kpg, ksp, matm, mate, &
+                call nmvend(materPara%schemePara%fami, &
+                            materPara%schemePara%kpg, &
+                            materPara%schemePara%ksp, &
+                            matm, mate, &
                             nmat, dt, deps, sigm, &
                             vim, ndim, carcri, dammax, etatf, &
                             p, np, beta, nb, iter, &
@@ -281,7 +293,7 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
                 if (ier .gt. 0) then
                     goto 801
                 else
-                    call nmvecd(imate, mate, nmat, matcst, loi, &
+                    call nmvecd(materPara%jvMaterCode, mate, nmat, matcst, relaComp, &
                                 hook, dt, tp, p, np, &
                                 beta, nb, ep, rm, dm, &
                                 dsgde, dsgdb, dsgdp, drbde, drpde, &
@@ -293,7 +305,7 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
         end if
         do iter = 1, itmax
 !
-            call nmvecd(imate, mate, nmat, matcst, loi, &
+            call nmvecd(materPara%jvMaterCode, mate, nmat, matcst, relaComp, &
                         hook, dt, tp, p, np, &
                         beta, nb, ep, rm, dm, &
                         dsgde, dsgdb, dsgdp, drbde, drpde, &
@@ -429,7 +441,7 @@ subroutine nmveei(fami, kpg, ksp, ndim, typmod, &
 !
 !-- MODIFICATION EN CONTRAINTE PLANES POUR TENIR COMPTE DE
 !   SIG3=0 ET DE LA CONSERVATION DE L'ENERGIE
-    if (mod(1:6) .eq. 'C_PLAN') then
+    if (typmod1(1:6) .eq. 'C_PLAN') then
         do k = 1, nb
             if (k .ne. 3) then
                 do l = 1, nb

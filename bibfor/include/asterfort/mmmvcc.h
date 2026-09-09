@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine mmmvcc(phase , l_pena_cont, &
@@ -25,7 +26,7 @@ interface
         character(len=4), intent(in) :: phase
         aster_logical, intent(in) :: l_pena_cont
         integer(kind=8), intent(in) :: nnl
-        real(kind=8), intent(in) :: wpg, ffl(9), jacobi
+        real(kind=8), intent(in) :: wpg, ffl(MT_NNOMAX2D), jacobi
         real(kind=8), intent(in) :: jeu, dlagrc, coefac
         real(kind=8), intent(out) :: vectcc(9)
     end subroutine mmmvcc

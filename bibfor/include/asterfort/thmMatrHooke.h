@@ -17,9 +17,8 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine thmMatrHooke(ds_thm, angl_naut)
+    subroutine thmMatrHooke(ds_thm)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        real(kind=8), intent(in) :: angl_naut(3)
     end subroutine thmMatrHooke
 end interface

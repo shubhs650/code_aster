@@ -283,7 +283,7 @@ void MedToAsterReader::_readMesh( BaseMeshPtr toReturn, MedFileReader &fr,
         curMeshId = 0;
     }
     const auto curMesh = fr.getMesh( curMeshId );
-    UtmessCore( "I", "MED_10", { curMesh->getName() } );
+    UTMESS( "I", "MED_10", { curMesh->getName() } );
     const auto seq = curMesh->getSequence( 0 );
     const auto nodeNbAndStart = curMesh->getSplitNodeNumberAtSequence( seq[0], seq[1] );
 
@@ -508,7 +508,7 @@ void MedToAsterReader::_readMesh( BaseMeshPtr toReturn, MedFileReader &fr,
                     std::sort( nodeIdGroupList[i].begin(), nodeIdGroupList[i].end() );
                     nodeIdGroupList2.push_back( nodeIdGroupList[i] );
                 } else {
-                    UtmessCore( "A", "MED_7", { nodeGroupList[i] } );
+                    UTMESS( "A", "MED_7", { nodeGroupList[i] } );
                 }
             }
         }
@@ -526,7 +526,7 @@ void MedToAsterReader::_readMesh( BaseMeshPtr toReturn, MedFileReader &fr,
                     std::sort( cellIdGroupList[i].begin(), cellIdGroupList[i].end() );
                     cellIdGroupList2.push_back( cellIdGroupList[i] );
                 } else {
-                    UtmessCore( "A", "MED_7", { cellGroupList[i] } );
+                    UTMESS( "A", "MED_7", { cellGroupList[i] } );
                 }
             }
         }

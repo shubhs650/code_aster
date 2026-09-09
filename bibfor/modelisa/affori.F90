@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 
 subroutine affori(typ, nomt, cara, val, jad, jin, &
-                  jdno, jdco, nutyma, ntseg, &
+                  jdno, jdco, nutyma, ntseg, nutyel, ntyele, &
                   lseuil, nbseuil, alphayz)
 !
     implicit none
-    integer(kind=8) :: nutyma, ntseg, jad, jin, jdno, jdco
+    integer(kind=8) :: nutyma, ntseg, nutyel, ntyele(*), jad, jin, jdno, jdco
     character(len=*) :: typ, nomt, cara
     real(kind=8) :: val(6)
     real(kind=8), intent(in), optional  :: lseuil
@@ -41,18 +41,19 @@ subroutine affori(typ, nomt, cara, val, jad, jin, &
 #include "asterfort/assert.h"
 #include "asterfort/angvxy.h"
 #include "asterfort/angvxz.h"
+#include "asterfort/carorsolpi.h"
+#include "asterfort/longeleori.h"
 #include "asterfort/utmess.h"
-#include "blas/ddot.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: no1, no2, ii
+    integer(kind=8) :: ino1, ino2
     character(len=16) :: affcar, nom
     character(len=24) :: vmessk(2)
-    real(kind=8) :: x1(3), x2(3), x3(3), angl(3), seglong, segseuil
+    real(kind=8) :: x3(3), angl(3), seglong, segseuil
     real(kind=8) :: alpha, beta, gamma
     aster_logical :: sousseuil, longnulle
-    blas_int :: b_incx, b_incy, b_n
+    logical :: IsIntsolpi
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -70,19 +71,14 @@ subroutine affori(typ, nomt, cara, val, jad, jin, &
     seglong = 0.0d0
     longnulle = ASTER_TRUE
     sousseuil = ASTER_TRUE
+    !
+    IsIntsolpi = .FALSE.
     if (typ(1:6) .eq. 'MAILLE') then
-        if (nutyma .eq. ntseg) then
-            no1 = zi(jdno)
-            no2 = zi(jdno+1)
-            do ii = 1, 3
-                x1(ii) = zr(jdco+(no1-1)*3+ii-1)
-                x2(ii) = zr(jdco+(no2-1)*3+ii-1)
-                x3(ii) = x2(ii)-x1(ii)
-            end do
-            b_n = to_blas_int(3)
-            b_incx = to_blas_int(1)
-            b_incy = to_blas_int(1)
-            seglong = sqrt(ddot(b_n, x3, b_incx, x3, b_incy))
+        ino1 = 1
+        ino2 = 2
+        call carorsolpi(nutyel, ntyele, IsIntsolpi, ino1, ino2)
+        if ((nutyma .eq. ntseg) .or. IsIntsolpi) then
+            call longeleori(jdno, jdco, ino1, ino2, seglong, x3)
             if (seglong .gt. 0.0d0) then
                 longnulle = ASTER_FALSE
             else
@@ -104,7 +100,7 @@ subroutine affori(typ, nomt, cara, val, jad, jin, &
         gamma = r8dgrd()*val(1)
         if (typ(1:6) .eq. 'MAILLE') then
 !           Si MAILLE : si ce n'est pas un SEG2 <F>
-            if (nutyma .ne. ntseg) then
+            if ((nutyma .ne. ntseg) .and. .not. IsIntsolpi) then
                 call utmess('F', 'MODELISA_87', nk=2, valk=vmessk)
             end if
 !           si longueur(SEG2)=0 ou sous le seuil <F>
@@ -206,7 +202,7 @@ subroutine affori(typ, nomt, cara, val, jad, jin, &
     else if ((affcar .eq. 'VECT_Y') .or. (affcar .eq. 'VECT_Z')) then
         if (typ(1:6) .eq. 'MAILLE') then
 !           Si Maille : si ce n'est pas un SEG2 <F>
-            if (nutyma .ne. ntseg) then
+            if ((nutyma .ne. ntseg) .and. .not. IsIntsolpi) then
                 call utmess('F', 'MODELISA_91', nk=2, valk=vmessk)
             end if
 !           si longueur(SEG2)=0
@@ -233,7 +229,7 @@ subroutine affori(typ, nomt, cara, val, jad, jin, &
     else if ((affcar .eq. 'VECT_MAIL_Y') .or. (affcar .eq. 'VECT_MAIL_Z')) then
         if (typ(1:6) .eq. 'MAILLE') then
 !           Si Maille : si ce n'est pas un SEG2 <F>
-            if (nutyma .ne. ntseg) then
+            if ((nutyma .ne. ntseg) .and. .not. IsIntsolpi) then
                 call utmess('F', 'MODELISA_91', nk=2, valk=vmessk)
             end if
 !           si longueur(SEG2)=0

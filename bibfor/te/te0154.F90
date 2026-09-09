@@ -34,7 +34,6 @@ subroutine te0154(option, nomte)
 #include "asterfort/ptenpo.h"
 #include "asterfort/ptenth.h"
 #include "asterfort/tecach.h"
-#include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
 #include "asterfort/verift.h"
 #include "jeveux.h"
@@ -56,7 +55,7 @@ subroutine te0154(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     character(len=3), parameter :: stopz = 'ONO'
     integer(kind=8), parameter :: nc = 3, nno = 2, kpg = 1, ksp = 1
     integer(kind=8), parameter :: elasID = ELAS_ISOT

@@ -16,57 +16,58 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dxqfor(global, xyzl, pgl, for, vecl)
+subroutine dxqfor(plateOrie, global, xyzl, for, vecl)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/gquad4.h"
-#include "asterfort/jevech.h"
 !
+    type(plateOrie_Para), intent(in) :: plateOrie
     aster_logical :: global
-    real(kind=8) :: xyzl(3, *), pgl(3, *)
+    real(kind=8) :: xyzl(3, *)
     real(kind=8) :: for(6, *)
     real(kind=8) :: vecl(*)
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CHARGEMENT FORCE_FACE DES ELEMENTS DE PLAQUE DKQ ET DSQ
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN  GLOBAL : VARIABLE LOGIQUE DE REPERE GLOBAL OU LOCAL
 !     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
 !     IN  PGL    : MATRICE DE PASSAGE GLOBAL - LOCAL
 !     IN  FOR    : FORCE APPLIQUE SUR LA FACE
 !     OUT VECL   : CHARGEMENT NODAL RESULTANT
-!     ------------------------------------------------------------------
-    real(kind=8) :: airetr(4), c1, c2, fno(6, 4, 4)
-    real(kind=8) :: fx, fy, alpha, beta
-    real(kind=8) :: t2iu(4), t2ui(4), caraq4(25), c, s
-!     ------------------------------------------------------------------
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: i, ino, it, j, k, nno, jcara
-!-----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8) :: airetr(4), c1, c2, fno(6, 4, 4)
+    real(kind=8) :: fx, fy
+    real(kind=8) :: caraq4(25)
+    integer(kind=8) :: i, ino, it, j, k, nno
+!
+! --------------------------------------------------------------------------------------------------
+!
     nno = 4
 !
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
     call gquad4(xyzl, caraq4)
 !
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, &
-                c, s)
-!
     if (.not. global) then
         do i = 1, nno
             fx = for(1, i)
             fy = for(2, i)
-            for(1, i) = t2iu(1)*fx+t2iu(3)*fy
-            for(2, i) = t2iu(2)*fx+t2iu(4)*fy
+            for(1, i) = plateOrie%t2iu(1)*fx+plateOrie%t2iu(3)*fy
+            for(2, i) = plateOrie%t2iu(2)*fx+plateOrie%t2iu(4)*fy
             fx = for(4, i)
             fy = for(5, i)
-            for(4, i) = t2iu(1)*fx+t2iu(3)*fy
-            for(5, i) = t2iu(2)*fx+t2iu(4)*fy
+            for(4, i) = plateOrie%t2iu(1)*fx+plateOrie%t2iu(3)*fy
+            for(5, i) = plateOrie%t2iu(2)*fx+plateOrie%t2iu(4)*fy
         end do
     end if
 !

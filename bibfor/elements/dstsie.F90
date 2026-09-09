@@ -15,12 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dstsie(option, fami, xyzl, pgl, depl, &
-                  nbcou, cdl)
+!
+subroutine dstsie(plateCara, plateOrie, &
+                  option, fami, xyzl, depl, &
+                  cdl)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
+#include "asterfort/assert.h"
 #include "asterfort/dstbfa.h"
 #include "asterfort/dstbfb.h"
 #include "asterfort/dstcis.h"
@@ -33,15 +38,16 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
 #include "asterfort/elrefe_info.h"
 #include "asterfort/gtria3.h"
 #include "asterfort/jevech.h"
-    character(len=4) :: fami
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    type(plateCara_Para), intent(in) :: plateCara
+    character(len=8) :: fami
     character(len=16) :: option
-    real(kind=8) :: xyzl(3, *), pgl(3, *), depl(*), cdl(*)
-    integer(kind=8) :: nbcou
+    real(kind=8) :: xyzl(3, *), depl(*), cdl(*)
 !     RELATION ELAS_COQUE/ELAS_COQMU
 !     CONTRAINTES DE L'ELEMENT DE PLAQUE DST (SIEF_ELGA)
 !     ------------------------------------------------------------------
 !     IN  XYZL   : COORDONNEES LOCALES DES TROIS NOEUDS
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL - LOCAL
 !     IN  DEPL   : DEPLACEMENTS
 !     OUT CDL    : CONTRAINTES AUX POINTS DE GAUSS DANS LE REPERE LOCAL
 !                  LE CALCUL EST FAIT SUR UNE SEULE COUCHE (ELAS_COQUE)
@@ -54,8 +60,8 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
     integer(kind=8) :: nddlfl
     parameter(nddlfl=3)
 !
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: jcaco, i, j, k, ie, icpg, ig, icou, iniv, multic
+    integer(kind=8) :: ndim, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
+    integer(kind=8) :: i, j, k, ie, icpg, ig, iLayer, iniv, multic, nbLayer
     real(kind=8) :: zic, epais, excen
     real(kind=8) :: depf(nddlfl*nnomai), depm(nddlme*nnomai)
     real(kind=8) :: vt(2), lambda(4)
@@ -65,15 +71,16 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
     real(kind=8) :: bf(3, nddlfl*nnomai), bm(3, nddlme*nnomai)
     real(kind=8) :: sm(3), sf(3), hft2(2, 6), hlt2(4, 6)
     real(kind=8) :: eps(3), sig(3), cist(2), dcis(2)
-    real(kind=8) :: qsi, eta, carat3(21), t2iu(4), t2ui(4), t1ve(9)
+    real(kind=8) :: qsi, eta, carat3(21)
     real(kind=8) :: bfa(3, 3), bfb(3, 9), bfn(3, 9)
     real(kind=8) :: bca(2, 3), bcn(2, 9)
     real(kind=8) :: an(3, 9)
-    real(kind=8) :: hicou, zmin, zmax, quotient, a, b, c
+    real(kind=8) :: hLayer, zmin, zmax, quotient, a, b, c
     aster_logical :: coupmf, lcalct
-!     ------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
                      jgano=jgano)
 !
@@ -81,18 +88,21 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
 !           MEMBRANE ET CISAILLEMENT INVERSEES -------------------------
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE TRIANGLE ----------
     call gtria3(xyzl, carat3)
+
+    nbLayer = plateCara%nbLayer
+    ASSERT(nbLayer .ge. 1)
 !
 !     ----- CARACTERISTIQUES DES MATERIAUX --------
-    call dxmate(fami, df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                fami, df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !
 !     -------- CALCUL DE LA MATRICE DE HOOKE EN MEMBRANE ---------------
     if (multic .eq. 0) then
-        call jevech('PCACOQU', 'L', jcaco)
-        epais = zr(jcaco)
-        hicou = epais/nbcou
-        excen = zr(jcaco-1+5)
+        epais = plateCara%thick
+        hLayer = epais/nbLayer
+        excen = plateCara%offset
         h = dm/epais
     end if
 !
@@ -189,26 +199,26 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
 !
 !  BOUCLE SUR LES COUCHES
 !
-        do icou = 1, nbcou
+        do iLayer = 1, nbLayer
 !
 !  BOUCLE SUR LES POINTS D'INTEGRATION DANS L'EPAISSEUR DE LA COUCHE
 !
             do ig = 1, 3
 !
 !           INDICE DANS LE CHAMP DE CONTRAINTES A ECRIRE
-                icpg = 6*3*nbcou*(ie-1)+6*3*(icou-1)+6*(ig-1)
+                icpg = 6*3*nbLayer*(ie-1)+6*3*(iLayer-1)+6*(ig-1)
 !
                 if (multic .eq. 0) then
 !             -- MONOCOUCHE
 !             -- COTE DES POINTS D'INTEGRATION
 !             --------------------------------
-                    zic = excen-epais/2.d0+(icou-1)*hicou
+                    zic = excen-epais/2.d0+(iLayer-1)*hLayer
                     if (ig .eq. 1) then
                         zic = zic
                     else if (ig .eq. 2) then
-                        zic = zic+hicou/2.d0
+                        zic = zic+hLayer/2.d0
                     else
-                        zic = zic+hicou
+                        zic = zic+hLayer
                     end if
                     d1i(1, 1) = a*zic*zic+b*zic+c
                     d1i(2, 2) = d1i(1, 1)
@@ -218,8 +228,9 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
 !             -- EN MULTICOUCHES
 !             -- ON CALCULE TOUT D'UN COUP
                     iniv = ig-2
-                    call dxdmul(lcalct, icou, iniv, t1ve, t2ui, &
-                                h, d1i, d2i, zic, hicou)
+                    call dxdmul(plateCara, plateOrie, &
+                                lcalct, iLayer, iniv, &
+                                h, d1i, d2i, zic, hLayer)
                 end if
 !
                 do i = 1, 3
@@ -238,9 +249,7 @@ subroutine dstsie(option, fami, xyzl, pgl, depl, &
                     cdl(icpg+4) = eps(3)/2.d0
                     cdl(icpg+5) = dcis(1)/2.d0
                     cdl(icpg+6) = dcis(2)/2.d0
-!
                 else
-!           SIEF_ELGA
                     do i = 1, 3
                         do j = 1, 3
                             sig(i) = sig(i)+h(i, j)*eps(j)

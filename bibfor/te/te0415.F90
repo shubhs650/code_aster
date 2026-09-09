@@ -44,7 +44,7 @@ subroutine te0415(optioz, nomtz)
 !-----------------------------------------------------------------------
     character(len=16), pointer :: compor(:) => null()
     parameter(npge=3)
-    integer(kind=8) :: icou, jmat, jnbspi
+    integer(kind=8) :: icou, jvGano, jnbspi
     integer(kind=8) :: nb2, npgsn, jtab(7)
 !
     option = optioz
@@ -79,7 +79,7 @@ subroutine te0415(optioz, nomtz)
 ! -- NBVARI = NOMBRES DE VARIABLES INTERNES
 ! -- STOCKAGE DANS PVARIGR : PAR POINT DE GAUSS DU PREMIER AU DERNIER
 !
-        call jevete('&INEL.'//nomte//'.B', ' ', jmat)
+        call jevete('&INEL.'//nomte//'.B', ' ', jvGano)
 !
 !-- EXTRAPOLATION AUX NOEUDS SOMMETS (3 OU 4)
 !
@@ -105,7 +105,7 @@ subroutine te0415(optioz, nomtz)
                         npp = npp+ic+nbvari*((icou-1)*npge+nep)
 ! -- ZR(ICHG-1+NPP) = VARI(IC,JJ)
 !                JJ = (ICOU-1)*NPGE*NPGSN + J
-                        s = s+zr(jmat-1+l+j)*zr(ichg-1+npp)
+                        s = s+zr(jvGano-1+l+j)*zr(ichg-1+npp)
                     end do
 ! -- DETERMINATION DU NOEUD SOMMET A PARTIR DE LA POSITION II
                     do k1 = 1, nso

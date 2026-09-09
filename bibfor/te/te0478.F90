@@ -19,11 +19,10 @@
 subroutine te0478(option, nomte)
 !
     use pipeElem_module
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
 !
-    character(len=16), intent(in) :: option, nomte
-!
-#include "asterc/r8pi.h"
 #include "asterfort/assert.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/elrefe_info.h"
@@ -31,11 +30,12 @@ subroutine te0478(option, nomte)
 #include "asterfort/lteatt.h"
 #include "asterfort/matrot.h"
 #include "asterfort/pmfinfo.h"
-#include "asterfort/poutre_modloc.h"
 #include "asterfort/ppga1d.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utpvlg.h"
 #include "jeveux.h"
+!
+    character(len=16), intent(in) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -49,14 +49,16 @@ subroutine te0478(option, nomte)
 !
     integer(kind=8) :: spaceDime, nbNode, npg, jvCoorSupp, idfde, ipoids, ivf, jvGeom
     integer(kind=8) :: tab(2), iret
-    integer(kind=8) :: jvSubPoint, jacf, iorien, nbsp, nbLayer, nbptcou
-    integer(kind=8) :: iLayer, isp, jvCacoqu, kpg, ifi, iNode, jvCoorPg
+    integer(kind=8) :: jacf, iorien, nbsp, nbLayer, nbptcou
+    integer(kind=8) :: iLayer, isp, kpg, ifi, iNode, jvCoorPg
     real(kind=8) :: copg(4, 4), copg2(3, 4), pgl(3, 3), gm1(3), gm2(3), airesp
     real(kind=8) :: layerThickness, thickness, hh, radius
     real(kind=8) :: dfdx(3), cour, jacp, cosa, sina, spoid
     aster_logical :: gauss_support
     integer(kind=8) :: nbfibr, nbgrfi, tygrfi, nbcarm, nug(10)
     integer(kind=8) :: nbFourier
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -133,11 +135,12 @@ subroutine te0478(option, nomte)
 !   COQUE_AXIS
     else if (nomte .eq. 'MECXSE3') then
         ASSERT(spaceDime .eq. 2)
+        call getCara(plateCara, plateOrie)
+        call compCoorSystNone(plateOrie)
+
 ! ----- Get layers
-        call jevech('PNBSP_I', 'L', jvSubPoint)
-        nbLayer = zi(jvSubPoint)
-        call jevech('PCACOQU', 'L', jvCacoqu)
-        thickness = zr(jvCacoqu)
+        nbLayer = plateCara%nbLayer
+        thickness = plateCara%thick
         layerThickness = thickness/nbLayer
 
 ! ----- Points of integration scheme for SEG support

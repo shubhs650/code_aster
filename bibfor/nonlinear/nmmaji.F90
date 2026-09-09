@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine nmmaji(numedd, lgrot, lendo, sdnume, coef, &
+subroutine nmmaji(numedd, lgrot, sdnume, coef, &
                   incmoz, ddincz, incplz, ordre)
 !
 !
@@ -28,7 +28,7 @@ subroutine nmmaji(numedd, lgrot, lendo, sdnume, coef, &
 #include "asterfort/jemarq.h"
 #include "asterfort/jeveuo.h"
 #include "asterfort/majour.h"
-    aster_logical :: lgrot, lendo
+    aster_logical :: lgrot
     real(kind=8) :: coef
     character(len=*) :: incplz, incmoz, ddincz
     character(len=24) :: numedd
@@ -82,7 +82,7 @@ subroutine nmmaji(numedd, lgrot, lendo, sdnume, coef, &
 !
 ! --- MISE A JOUR
 !
-    call majour(neq, lgrot, lendo, sdnume, depm, &
+    call majour(neq, lgrot, sdnume, depm, &
                 ddepl, coef, depp, ordre)
 !
     call jedema()

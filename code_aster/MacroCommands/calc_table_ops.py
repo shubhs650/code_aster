@@ -67,7 +67,7 @@ def calc_table_ops(self, TABLE, ACTION, INFO, **args):
 
     # Boucle sur les actions à effectuer
     for fOP in ACTION:
-        occ = fOP.cree_dict_valeurs(fOP.mc_liste)
+        occ = fOP
         for mc, val in list(occ.items()):
             if val is None:
                 del occ[mc]

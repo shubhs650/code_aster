@@ -47,12 +47,12 @@ subroutine tutemp(nbNode, nbDof, nbFourier)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     integer(kind=8) :: jvVect
     real(kind=8) :: radiusLayer
     real(kind=8) :: poids, weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
-    integer(kind=8) :: jvMaterCode
+    integer(kind=8) :: jvMaterc
     real(kind=8) :: meanTemp
     real(kind=8) :: therMatr(2, 2), epsiTher, sigmTher(2)
     real(kind=8) :: jacobi, xpg(PIPE_MAX_NPG)
@@ -94,14 +94,14 @@ subroutine tutemp(nbNode, nbDof, nbFourier)
     end if
 
 ! - Get thermal elasticity matrix
-    call jevech('PMATERC', 'L', jvMaterCode)
-    call pipeGetTherProp(jvMaterCode, meanTemp, therMatr)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call pipeGetTherProp(jvMaterc, meanTemp, therMatr)
 
 ! - Loop on Gauss points (on segment)
     forcTher = 0.d0
     do kpg = 1, npg
 ! ----- Compute thermal strain and stress
-        call verifg('RIGI', kpg, nspg, '+', zi(jvMaterCode), epsiTher)
+        call verifg('RIGI', kpg, nspg, '+', zi(jvMaterc), epsiTher)
         sigmTher(1) = (therMatr(1, 1)+therMatr(1, 2))*epsiTher
         sigmTher(2) = (therMatr(2, 1)+therMatr(2, 2))*epsiTher
 

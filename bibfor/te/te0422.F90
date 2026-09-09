@@ -15,79 +15,78 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0422(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterfort/assert.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/dxefgv.h"
 #include "asterfort/dxefro.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
 !
-!     CALCUL DES EFFORTS GENERALISES
-!     GENERALISES POUR LES ELEMENTS DKTG, ET Q4GG
-!     POUR UN MATERIAU ISOTROPE
-!         OPTION TRAITEE  ==>  SIEF_ELGA
+! --------------------------------------------------------------------------------------------------
 !
-!     IN   K16   OPTION : NOM DE L'OPTION A CALCULER
-!     IN   K16   NOMTE  : NOM DU TYPE_ELEMENT
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: jcara
-    integer(kind=8) :: jdepg, jeffg, jgeom
+! Elementary computation
 !
-    real(kind=8) :: pgl(3, 3), xyzl(3, 4), alpha, beta
-    real(kind=8) :: depl(24)
-    real(kind=8) :: effgt(32)
-    real(kind=8) :: t2iu(4), t2ui(4), c, s
+! Elements: DKTG, Q4GG
 !
-    character(len=4) :: fami
+! Options: SIEF_ELGA
 !
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    fami = 'RIGI'
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
 !
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    if (option .ne. 'SIEF_ELGA') then
-        ASSERT(.false.)
-    end if
+    integer(kind=8) :: nno, npg
+    integer(kind=8) :: jvDisp, jvSief, jvGeom
+    real(kind=8) :: pgl(3, 3), xyzl(3, 4)
+    real(kind=8) :: depl(24), efge(32)
+    character(len=8), parameter :: fami = 'RIGI'
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    call r8inir(32, 0.d0, effgt, 1)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PGEOMER', 'L', jgeom)
+    ASSERT(option .eq. 'SIEF_ELGA')
+    call elrefe_info(fami=fami, nno=nno, npg=npg)
+    efge = 0.d0
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Displacements
+    call jevech('PDEPLAR', 'L', jvDisp)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of geometry and displacements
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+    call utpvgl(nno, 6, pgl, zr(jvDisp), depl)
+
+! - CALCUL DES EFFORTS GENERALISES AUX POINTS DE CALCUL
+    call dxefgv(plateCara, plateOrie, &
+                nomte, option, xyzl, pgl, depl, &
+                efge)
 !
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-!
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, &
-                c, s)
-!
-    call jevech('PDEPLAR', 'L', jdepg)
-    call utpvgl(nno, 6, pgl, zr(jdepg), depl)
-!
-! --- CALCUL DES EFFORTS GENERALISES AUX POINTS DE CALCUL
-    call jevech('PCONTRR', 'E', jeffg)
-    call dxefgv(nomte, option, xyzl, pgl, depl, &
-                effgt)
-!
-    call dxefro(npg, t2iu, effgt, zr(jeffg))
+    call jevech('PCONTRR', 'E', jvSief)
+    call dxefro(npg, plateOrie%t2iu, efge, zr(jvSief))
 !
 end subroutine

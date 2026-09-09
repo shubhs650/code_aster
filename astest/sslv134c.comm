@@ -17,137 +17,200 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
-# QUART DE FISSURE. TEST DE POST_K1_K2_K3. MAILLAGE BARSOUM
+# MODELISATION C : MODELE AXISYMETRIQUE, DEMI-PLAQUE
+
+import math
 
 DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="OUI"))
 
+# ----------------------------------------------------------------------
+# DONNEES
+# ----------------------------------------------------------------------
+
+# chargement
+sig = 1.0e6
+
+# rayon de la fissure
+a = 2
+
+# coefficients élastiques
+E = 200000.0e6
+nu = 0.3
+
+# ----------------------------------------------------------------------
+# Calcul mécanique en élasticité linéaire
+# ----------------------------------------------------------------------
+
 MA = LIRE_MAILLAGE(VERI_MAIL=_F(VERIF="OUI"), FORMAT="MED")
 
-MA = DEFI_GROUP(
-    reuse=MA,
-    MAILLAGE=MA,
-    CREA_GROUP_NO=_F(GROUP_MA=("LP8P9", "LP8P9S", "LP0P11", "LP0P8", "LP0P8S")),
+MA = MODI_MAILLAGE(reuse=MA, MAILLAGE=MA, ORIE_PEAU_2D=_F(GROUP_MA="LEV_SUP"))
+
+MA = MODI_MAILLAGE(
+    reuse=MA, MAILLAGE=MA, MODI_MAILLE=_F(OPTION="NOEUD_QUART", GROUP_NO_FOND="FRONT")
 )
 
 MO = AFFE_MODELE(MAILLAGE=MA, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="AXIS"))
 
-MAT = DEFI_MATERIAU(ELAS=_F(E=2.0e11, NU=0.3, ALPHA=0.0, RHO=7850))
+MAT = DEFI_MATERIAU(ELAS=_F(E=E, NU=nu, ALPHA=0.0, RHO=7850))
 
 CHMAT = AFFE_MATERIAU(MAILLAGE=MA, AFFE=_F(TOUT="OUI", MATER=MAT))
 
-SYMETRIE = AFFE_CHAR_MECA(
-    MODELE=MO, DDL_IMPO=(_F(GROUP_NO=("LP8P9", "LP8P9S"), DX=0.0), _F(GROUP_NO="LP0P11", DY=0.0))
+CH_BLOC = AFFE_CHAR_MECA(
+    MODELE=MO, DDL_IMPO=(_F(GROUP_MA="GAUCHE", DX=0.0), _F(GROUP_MA="LIG", DY=0.0))
 )
 
-PRESSION = AFFE_CHAR_MECA(
-    MODELE=MO, FORCE_CONTOUR=(_F(GROUP_MA="LP9P10", FY=1.0e6), _F(GROUP_MA="LP9P10S", FY=-1.0e6))
-)
+CHAR = AFFE_CHAR_MECA(MODELE=MO, FORCE_CONTOUR=_F(GROUP_MA="HAUT", FY=sig))
 
-CHAMDEPL = MECA_STATIQUE(
-    MODELE=MO, CHAM_MATER=CHMAT, EXCIT=(_F(CHARGE=PRESSION), _F(CHARGE=SYMETRIE))
-)
+RESU = MECA_STATIQUE(MODELE=MO, CHAM_MATER=CHMAT, EXCIT=(_F(CHARGE=CHAR), _F(CHARGE=CH_BLOC)))
 
-CHAMDEPL = CALC_CHAMP(reuse=CHAMDEPL, CONTRAINTE=("SIGM_ELNO"), RESULTAT=CHAMDEPL)
+# ----------------------------------------------------------------------
+# Post-traitements
+# ----------------------------------------------------------------------
+
+IMPR_RESU(FORMAT="MED", UNITE=80, RESU=_F(RESULTAT=RESU))
 
 FISS = DEFI_FOND_FISS(
-    MAILLAGE=MA,
-    SYME="NON",
-    FOND_FISS=_F(GROUP_NO=("P0",)),
-    LEVRE_SUP=_F(GROUP_MA="LP0P8"),
-    LEVRE_INF=_F(GROUP_MA="LP0P8S"),
+    MAILLAGE=MA, SYME="OUI", FOND_FISS=_F(GROUP_NO="FRONT"), LEVRE_SUP=_F(GROUP_MA="LEV_SUP")
 )
 
-RSUP = 0.25
-RINF = 0.05
+TABL_G = CALC_G(
+    OPTION=("G", "K", "KJ"), RESULTAT=RESU, THETA=_F(NB_COUCHE_INF=2, NB_COUCHE_SUP=5, FISSURE=FISS)
+)
 
-
-G0 = CALC_G(RESULTAT=CHAMDEPL, THETA=_F(R_INF=RINF, FISSURE=FISS, R_SUP=RSUP), OPTION="G", INFO=2)
-
-
-GK0 = CALC_G(RESULTAT=CHAMDEPL, THETA=_F(R_INF=RINF, FISSURE=FISS, R_SUP=RSUP), OPTION="K")
-
-IMPR_TABLE(TABLE=GK0)
+IMPR_TABLE(TABLE=TABL_G)
 
 # POST_K1_K2_K3
-TABL_K1 = POST_K1_K2_K3(RESULTAT=CHAMDEPL, FOND_FISS=FISS, INFO=2)
+TABL_K = POST_K1_K2_K3(RESULTAT=RESU, FOND_FISS=FISS)
 
-IMPR_TABLE(TABLE=TABL_K1)
+IMPR_TABLE(TABLE=TABL_K)
 
+# ----------------------------------------------------------------------
+# Tests sur les tables
+# ----------------------------------------------------------------------
 
-# ---------------
-# VALEUR DE REFERENCE MILIEU INFINI : G=145.6
-GLOC = 11.58648
-K1 = 1.595769e6
+# VALEURS DE REFERENCE MILIEU INFINI
+KIref = 2 * sig * math.sqrt(a / math.pi)
+Gref = (1 - nu**2) / E * KIref**2
 
-# POUR UN RADIAN
-GREF = 23.17296
+print("KIref ", KIref)
+print("Gref ", Gref)
 
+# Erreurs
+KI = TABL_G.EXTR_TABLE().values()["K1"][0]
+KJ = TABL_G.EXTR_TABLE().values()["KJ"][0]
+G = TABL_G.EXTR_TABLE().values()["G"][0]
+KI_pk = TABL_K.EXTR_TABLE().values()["K1"][0]
+
+print("CALC_G - Erreur sur KI : {:.2f}%".format((KI - KIref) / KIref * 100))
+print("CALC_G - Erreur sur KJ : {:.2f}%".format((KJ - KIref) / KIref * 100))
+print("CALC_G - Erreur sur G : {:.2f}%".format((G - Gref) / Gref * 100))
+print("POST_K1_K2_K3 - Erreur sur KI : {:.2f}%".format((KI_pk - KIref) / KIref * 100))
+
+# Tolérances pour les TEST_TABLE
+tol_G = 1.8e-2
+tol_K = tol_G / 2
+
+# Rq : tant que les termes de courbures ne sont pas dispo en axi, on a une erreur sur le KI de CALC_G
+# importante, sans lien avec l'erreur sur G : glute temporaire d'une autre tolérance qu'il faudra virer
+# une fois l'issue35866 restituée
+tol_K_tmp = 0.03  # tolérance temporaire
+
+# TESTS SUR LA TABLE ISSUE de CALC_G
 TEST_TABLE(
-    REFERENCE="ANALYTIQUE",
-    PRECISION=0.017999999999999999,
-    VALE_CALC=11.78188394048058,
-    VALE_REFE=11.58648,
-    NOM_PARA="G",
-    TABLE=G0,
-)
-
-TEST_TABLE(
-    REFERENCE="ANALYTIQUE",
-    PRECISION=0.029999999999999999,
-    VALE_CALC=1643188.1524,
-    VALE_REFE=1.595769e6,
+    TABLE=TABL_G,
     NOM_PARA="K1",
-    TABLE=GK0,
-)
-
-TEST_TABLE(VALE_CALC=1643188.1524, NOM_PARA="K1", TABLE=GK0)
-
-TEST_TABLE(
+    VALE_REFE=KIref,
     REFERENCE="ANALYTIQUE",
-    PRECISION=0.014999999999999999,
-    VALE_CALC=1610581.9344,
-    VALE_REFE=1.595769e6,
-    NOM_PARA="K1",
-    TABLE=TABL_K1,
+    PRECISION=tol_K_tmp,
+    # ~PRECISION=tol_K,
+    VALE_CALC=1641232.9643824485,
 )
 
 TEST_TABLE(
+    TABLE=TABL_G,
+    NOM_PARA="KJ",
+    VALE_REFE=KIref,
     REFERENCE="ANALYTIQUE",
-    PRECISION=0.029999999999999999,
-    VALE_CALC=11.8025824617,
-    VALE_REFE=11.58648,
+    PRECISION=tol_K,
+    VALE_CALC=1609406.7649831565,
+)
+
+TEST_TABLE(
+    TABLE=TABL_G,
     NOM_PARA="G",
-    TABLE=TABL_K1,
+    VALE_REFE=Gref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_G,
+    VALE_CALC=11.785365115039653,
 )
 
-# -------------------------------------------------------------
-#           ON AJOUTE LA ROTATION POUR CALCULER K
-#                    SOUS LA FORCE CONTRIGUGE
-# -------------------------------------------------------------
-# LA VITESSE DE TOTATIO EST 150 TRS/MINUTE
-VAL_ROT = 15.708
-
-CHAR_ROT = AFFE_CHAR_MECA(
-    MODELE=MO,
-    DDL_IMPO=(_F(GROUP_NO=("LP8P9", "LP8P9S"), DX=0.0), _F(GROUP_NO="LP0P11", DY=0.0)),
-    FORCE_CONTOUR=(_F(GROUP_MA="LP9P10", FY=1.0e6), _F(GROUP_MA="LP9P10S", FY=-1.0e6)),
-    ROTATION=_F(VITESSE=VAL_ROT, AXE=(0.0, 1.0, 0.0), CENTRE=(0.0, 0.0, 0.0)),
+# TESTS SUR LA TABLE ISSUE de POST_K1_K2_K3
+TEST_TABLE(
+    TABLE=TABL_K,
+    NOM_PARA="K1",
+    VALE_REFE=KIref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_K,
+    VALE_CALC=1609690.6998059307,
 )
 
-DEPL_ROT = MECA_STATIQUE(MODELE=MO, CHAM_MATER=CHMAT, EXCIT=_F(CHARGE=CHAR_ROT), INST=1.0, INFO=1)
+TEST_TABLE(
+    TABLE=TABL_K,
+    NOM_PARA="G",
+    VALE_REFE=Gref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_G,
+    VALE_CALC=11.789523878139766,
+)
 
-IMPR_RESU(FORMAT="MED", UNITE=80, RESU=_F(RESULTAT=DEPL_ROT))
 
-G1 = CALC_G(RESULTAT=DEPL_ROT, THETA=_F(R_INF=RINF, FISSURE=FISS, R_SUP=RSUP), OPTION="G")
+# ----------------------------------------------------------------------
+#           CHARGEMENT VIA PRESSION AUX LEVRES
+# ----------------------------------------------------------------------
 
-GK1 = CALC_G(THETA=_F(R_INF=RINF, FISSURE=FISS, R_SUP=RSUP), RESULTAT=DEPL_ROT, OPTION="K")
+CHAR_PRES = AFFE_CHAR_MECA(MODELE=MO, PRES_REP=_F(GROUP_MA="LEV_SUP", PRES=sig))
 
-IMPR_TABLE(TABLE=GK1)
+RESU_PRES = MECA_STATIQUE(
+    MODELE=MO, CHAM_MATER=CHMAT, EXCIT=(_F(CHARGE=CHAR_PRES), _F(CHARGE=CH_BLOC))
+)
 
-# POST_K1_K2_K3
-TABL_K2 = POST_K1_K2_K3(RESULTAT=DEPL_ROT, FOND_FISS=FISS)
 
-IMPR_TABLE(TABLE=TABL_K2)
+TABL_G_PRES = CALC_G(
+    OPTION=("G", "K", "KJ"),
+    RESULTAT=RESU_PRES,
+    THETA=_F(NB_COUCHE_INF=2, NB_COUCHE_SUP=5, FISSURE=FISS),
+)
+
+IMPR_TABLE(TABLE=TABL_G_PRES)
+
+TEST_TABLE(
+    TABLE=TABL_G_PRES,
+    NOM_PARA="K1",
+    VALE_REFE=KIref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_K_tmp,
+    # ~PRECISION=tol_K,
+    VALE_CALC=1640140.877461735,
+)
+
+TEST_TABLE(
+    TABLE=TABL_G_PRES,
+    NOM_PARA="KJ",
+    VALE_REFE=KIref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_K,
+    VALE_CALC=1609406.76498316,
+)
+
+TEST_TABLE(
+    TABLE=TABL_G_PRES,
+    NOM_PARA="G",
+    VALE_REFE=Gref,
+    REFERENCE="ANALYTIQUE",
+    PRECISION=tol_G,
+    VALE_CALC=11.785365115039696,
+)
+
 
 FIN()
 #

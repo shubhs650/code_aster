@@ -17,12 +17,13 @@
 ! --------------------------------------------------------------------
 !
 subroutine resi_ther(l_stat, &
-                     modelZ, caraElemZ, matecoZ, &
+                     modelZ, caraElemZ, materCodeZ, &
                      timePara, timeMapZ, varcCurrZ, &
                      comporTherZ, tempIterZ, &
                      tempPrevZ, hydrPrevZ, hydrCurrZ, &
                      resuElemZ, vectElemZ, jvBase)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -30,13 +31,12 @@ subroutine resi_ther(l_stat, &
 #include "asterfort/corich.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/gcnco2.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/multResuElem.h"
 #include "asterfort/reajre.h"
 !
     aster_logical, intent(in) :: l_stat
-    character(len=*), intent(in) :: modelZ, caraElemZ, matecoZ
+    character(len=*), intent(in) :: modelZ, caraElemZ, materCodeZ
     real(kind=8), intent(in) :: timePara(2)
     character(len=*), intent(in) :: tempIterZ, comporTherZ, varcCurrZ
     character(len=*), intent(in) :: tempPrevZ, hydrPrevZ, hydrCurrZ, timeMapZ
@@ -55,7 +55,7 @@ subroutine resi_ther(l_stat, &
 ! In  l_stat           : flag for stationnary computation (no mass term)
 ! In  model            : name of the model
 ! In  caraElem         : name of elementary characteristics (field)
-! In  mateco           : name of coding material characteristics (field)
+! In  materCode        : name of coding material characteristics (field)
 ! In  timePara         : timePara(1) = theta
 !                        timePara(2) = deltat
 ! In  varcCurr         : command variable for current time
@@ -72,23 +72,21 @@ subroutine resi_ther(l_stat, &
 !
     character(len=16), parameter :: optionRigi = 'RAPH_THER', optionMass = 'MASS_THER_RESI'
     character(len=16), parameter :: optionHydr = "HYDR_ELGA"
-    integer(kind=8), parameter :: nbIn = 10, nbout = 2
-    character(len=8) :: lpain(nbIn), lpaout(nbout)
-    character(len=24) :: lchin(nbIn), lchout(nbout)
-    character(len=24) :: ligrel_model
-    character(len=24) :: chgeom, chcara(18)
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 2
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
+    character(len=24) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
+    character(len=24) :: modelLigrel, chgeom
     character(len=19) :: resuElem
     real(kind=8) :: theta, deltat
-    character(len=8) :: newnom
-    character(len=3) :: answer
+    integer(kind=8) :: nbFieldIn, nbFieldOut
+    character(len=8) :: newnom, answer
     aster_logical :: l_dry
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=ligrel_model)
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
     call dismoi('EXI_SECH', modelZ, 'MODELE', repk=answer)
-    l_dry = ASTER_FALSE
-    if (answer .eq. 'OUI') l_dry = ASTER_TRUE
+    l_dry = answer .eq. 'OUI'
     theta = timePara(1)
     deltat = timePara(2)
     lpain = " "
@@ -97,37 +95,38 @@ subroutine resi_ther(l_stat, &
     lchout = " "
     resuElem = resuElemZ(1:19)
 
-! - Geometry field
+! - Get geometry field
     call megeom(modelZ, chgeom)
 
-! - Elementary characteristics field
-    call mecara(caraElemZ, chcara)
-
-! - Input fields
+! - Add input fields
     lpain(1) = 'PGEOMER'
     lchin(1) = chgeom
     lpain(2) = 'PMATERC'
-    lchin(2) = matecoZ
+    lchin(2) = materCodeZ
     lpain(3) = 'PTEMPEI'
     lchin(3) = tempIterZ
     lpain(4) = 'PCOMPOR'
     lchin(4) = comporTherZ
     lpain(5) = 'PVARCPR'
     lchin(5) = varcCurrZ
-    lpain(6) = 'PCAMASS'
-    lchin(6) = chcara(12)
+    nbFieldIn = 5
 
-! - Output fields
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElemZ)
+
+! - Add output fields
     lpaout(1) = 'PRESIDU'
     lchout(1) = resuElemZ
     lpaout(2) = 'PFLUXPR'
     lchout(2) = "&&RESI_THER.FLUXPR"
     call corich('E', lchout(1), ichin_=-1)
+    nbFieldOut = 2
 
 ! - Compute rigidity term
-    call calcul("S", optionRigi, ligrel_model, &
-                nbin, lchin, lpain, &
-                nbout, lchout, lpaout, &
+    call calcul("S", optionRigi, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
                 jvBase, 'OUI')
 
 ! - Multiply values by theta
@@ -142,7 +141,7 @@ subroutine resi_ther(l_stat, &
         lpain = " "
         lchin = " "
         lpain(1) = 'PMATERC'
-        lchin(1) = matecoZ
+        lchin(1) = materCodeZ
         lpain(2) = 'PCOMPOR'
         lchin(2) = comporTherZ
         lpain(3) = 'PINSTR'
@@ -155,15 +154,17 @@ subroutine resi_ther(l_stat, &
         lchin(6) = hydrPrevZ
         lpain(7) = 'PGEOMER'
         lchin(7) = chgeom
+        nbFieldIn = 7
 
 ! - --- Output fields
         lpaout(1) = 'PHYDRPR'
         lchout(1) = hydrCurrZ
+        nbFieldOut = 1
 
 ! - --- Compute
-        call calcul("S", optionHydr, ligrel_model, &
-                    nbin, lchin, lpain, &
-                    1, lchout, lpaout, &
+        call calcul("S", optionHydr, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
                     jvBase, 'OUI')
     end if
 
@@ -175,7 +176,7 @@ subroutine resi_ther(l_stat, &
         lpain(1) = 'PGEOMER'
         lchin(1) = chgeom
         lpain(2) = 'PMATERC'
-        lchin(2) = matecoZ
+        lchin(2) = materCodeZ
         lpain(3) = 'PTEMPEI'
         lchin(3) = tempIterZ
         lpain(4) = 'PCOMPOR'
@@ -184,6 +185,7 @@ subroutine resi_ther(l_stat, &
         lchin(5) = varcCurrZ
         lpain(6) = 'PHYDRPR'
         lchin(6) = hydrCurrZ
+        nbFieldIn = 6
 
 ! - --- Output fields
         newnom = resuElem(9:16)
@@ -192,11 +194,12 @@ subroutine resi_ther(l_stat, &
         lpaout(1) = 'PRESIDU'
         lchout(1) = resuElem
         call corich('E', lchout(1), ichin_=-1)
+        nbFieldOut = 1
 
 ! - --- Compute
-        call calcul("S", optionMass, ligrel_model, &
-                    nbin, lchin, lpain, &
-                    1, lchout, lpaout, &
+        call calcul("S", optionMass, modelLigrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
                     jvBase, 'OUI')
 
 ! - --- Multiply values by 1/dt

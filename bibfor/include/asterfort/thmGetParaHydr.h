@@ -16,10 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaHydr(j_mater, ds_thm)
+interface
+    subroutine thmGetParaHydr(ds_thm)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
     end subroutine thmGetParaHydr
-end interface 
+end interface

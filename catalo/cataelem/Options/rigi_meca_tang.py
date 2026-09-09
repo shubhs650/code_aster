@@ -23,12 +23,11 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PCOMPOR = InputParameter(phys=PHY.COMPOR, comment=""" Informations for non-linear behaviour """)
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment=""" Local orientation for beam and pipe elements""",
 )
 

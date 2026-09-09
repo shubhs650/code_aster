@@ -457,14 +457,13 @@ CALC_MISS(
     PROJET="SDNX101B0",
     UNITE_IMPR_ASTER=26,
     UNITE_RESU_IMPE=31,
+    SURF="OUI",
     PARAMETRE=_F(
         FREQ_MIN=0.3,
         FREQ_MAX=3.0,
         FREQ_PAS=2.7,
         Z0=-5.80,
         DREF=5.0,
-        SURF="OUI",
-        ALGO="DEPL",
         OFFSET_MAX=40,
         OFFSET_NB=400,
         SPEC_MAX=0.075,
@@ -600,6 +599,7 @@ CALC_MISS(
     UNITE_RESU_RIGI=35,
     UNITE_RESU_AMOR=37,
     UNITE_RESU_MASS=38,
+    SURF="OUI",
     MATR_GENE=_F(
         MATR_MASS=mato,
         MATR_RIGI=rito,
@@ -615,15 +615,7 @@ CALC_MISS(
         CHAM_Y=deply,  # ACCEY,
     ),
     PARAMETRE=_F(
-        FREQ_IMAG=1.0,
-        Z0=-5.80,
-        SURF="OUI",
-        DREF=5,
-        ALGO="DEPL",
-        OFFSET_MAX=40,
-        OFFSET_NB=400,
-        SPEC_MAX=0.075,
-        SPEC_NB=16384,
+        FREQ_IMAG=1.0, Z0=-5.80, DREF=5, OFFSET_MAX=40, OFFSET_NB=400, SPEC_MAX=0.075, SPEC_NB=16384
     ),
     INFO=2,
 )

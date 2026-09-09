@@ -57,7 +57,7 @@ subroutine te0437(nomopt, nomte)
     type(HHO_basis_cell) :: hhoBasisCell
     integer(kind=8) :: cbs, fbs, total_dofs, npg, isour, ipg, itime, faces_dofs
     character(len=8), parameter :: fami = 'RIGI'
-    real(kind=8) :: VoluValuesQP(MAX_QP_CELL)
+    real(kind=8) :: VoluValuesQP(MSIZE_QP_CELL)
     real(kind=8) :: theta, sour, dsdt, temp_eval
     real(kind=8), dimension(MSIZE_CELL_SCAL) :: temp_T
     real(kind=8) :: BSCEval(MSIZE_CELL_SCAL)

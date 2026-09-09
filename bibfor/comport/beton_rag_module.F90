@@ -25,9 +25,17 @@ module beton_rag_module
 !
     real(kind=8), parameter      :: BR_SECHAGE_MINI = 0.10
     real(kind=8), parameter      :: BR_SECHAGE_MAXI = 0.9999
+
+    ! Paramètres pour loi fluage avec viscosité linéaire ou non
+    integer(kind=8), parameter   :: BR_LOI_MECA = 1
+    integer(kind=8), parameter   :: BR_LOI_FLUA_LIN = 2
+    integer(kind=8), parameter   :: BR_LOI_FLUA_NL = 3
+    integer(kind=8), parameter   :: BR_LOI_RAG_FLIN = 4
+    integer(kind=8), parameter   :: BR_LOI_RAG_FNL = 5
+
 !
     type :: beton_rag_mat_fluage
-        real(kind=8) :: k1, k2, n1, n2
+        real(kind=8) :: kr, ni, nr
     end type beton_rag_mat_fluage
 
     type :: beton_rag_mat_pw
@@ -67,6 +75,8 @@ module beton_rag_module
         ! Fluage
         type(beton_rag_mat_fluage) :: fluage_sph
         type(beton_rag_mat_fluage) :: fluage_dev
+        ! kappa concerne autant le déviatorique que le sphérique
+        real(kind=8)               :: kappa_fluage
         ! Avancement avancement gel
         type(beton_rag_mat_gel) :: gel
         ! Pression d'eau capillaire
@@ -103,7 +113,7 @@ module beton_rag_module
         !   1 : Mécanique seule
         !   2 : Mécanique + Fluage
         !   3 : Mécanique + Fluage + RAG
-        integer(kind=8)      :: loi_integre = 0
+        integer(kind=8)    :: loi_integre = 0
         ! Calcul fait par perturbation ou pas
         aster_logical      :: perturbation = ASTER_FALSE
         ! Calcul de fluage
@@ -136,12 +146,29 @@ module beton_rag_module
     integer(kind=8), parameter, private :: BR_VARI_PRESSION_CAPIL = 33
     !
     integer(kind=8), parameter          :: BR_VARI_LOI_INTEGRE = 34
-    integer(kind=8), parameter          :: BR_VARI_NOMBRE = 34
+    integer(kind=8), parameter          :: BR_VARI_EPSI_EQ_IRR = 35
+    integer(kind=8), parameter          :: BR_VARI_NOMBRE = 35
 
 contains
 
     ! ------------------------------------------------------------------------------------------
     ! Tenseur(ordre=4) BetonRag
+    !
+    ! Si UnMoinsD n'est pas présent ou UnMoinsD == [1,1,1]
+    !    Le tenseur correspond au tenseur élastique
+    !
+    ! Si UnMoinsD est présent et UnMoinsD != [1,1,1]
+    !   Le tenseur correspond au tenseur élastique dans la base des endommagements
+    !   Sigma = X::Epsi
+    !       Epsi doit être dans la base des endommagements
+    !       Le résultat Sigma est donc dans la base des endommagements
+    !
+    !   Utilisation
+    !       KElasD = beton_rag_raideur(young, nu, UnMoinsD)     Tenseur base endommagement
+    !       EpsiD  = VersBasePrope(SigmaRP, Epsi)               EpsiD   base endommagement
+    !       SigmaD = ContractT4T2(KElasD, EpsiD)                SigmaD  base endommagement
+    !       Sigma  = VersBaseInitiale(SigmaRP, SigmaD)          Sigma   base initiale
+
     type(tenseur4) function beton_rag_raideur(young, nu, UnMoinsD) result(X)
         real(kind=8), intent(in) :: young, nu
         type(vecteur), optional, intent(in) :: UnMoinsD
@@ -225,10 +252,10 @@ contains
         !
 #include "asterfort/assert.h"
         !
-        real(kind=8), intent(in) :: epsm(6), deps(6), sigm(6), vim(*)
-        type(beton_rag_materiau), intent(in) :: mater_br
+        real(kind=8), intent(in)               :: epsm(6), deps(6), sigm(6), vim(*)
+        type(beton_rag_materiau), intent(in)   :: mater_br
         type(beton_rag_parametres), intent(in) :: param_br
-        integer(kind=8), intent(inout)                 :: iret
+        integer(kind=8), intent(inout)         :: iret
         !
         real(kind=8), intent(out) :: sigp(6)
         real(kind=8), intent(out) :: vip(*)
@@ -236,7 +263,7 @@ contains
         !
         ! ------------------------------------------------------------------------------------------
         !
-        real(kind=8) :: epsmeca(6), epsflua(6), epsanel(6), epsvrag(6)
+        real(kind=8)             :: epsmeca(6), epsflua(6), epsanel(6), epsvrag(6)
         type(beton_rag_pression) :: grandeur_press
         !
         ! ------------------------------------------------------------------------------------------
@@ -247,7 +274,7 @@ contains
         epsanel(:) = 0.d0
         epsvrag(:) = 0.d0
 !
-        if (param_br%loi_integre == 1) then
+        if (param_br%loi_integre == BR_LOI_MECA) then
             ! Déformations : Thermique, Hydratation
             if (param_br%istemper) then
                 epsanel(1:3) = -mater_br%alpha*(param_br%temperp-param_br%temperref)
@@ -256,8 +283,9 @@ contains
                 epsanel(1:3) = epsanel(1:3)+mater_br%bendo*param_br%hydratp
             end if
             ! Déformations de fluage
-            epsflua = VecteurDeviaSpher(vim(BR_VARI_EPSI_FLUAGE:BR_VARI_EPSI_FLUAGE+5), &
-                                        vim(BR_VARI_EPSI_FLUAGE+6))
+            epsflua = VecteurDeviaSpher(vim(BR_VARI_EPSI_FLUAGE:BR_VARI_EPSI_FLUAGE+5) &
+                                        +vim(BR_VARI_EPSI_FLUAGE+7:BR_VARI_EPSI_FLUAGE+12), &
+                                        vim(BR_VARI_EPSI_FLUAGE+6)+vim(BR_VARI_EPSI_FLUAGE+13))
             ! Déformation visqueuse de la RAG
             epsvrag = vim(BR_VARI_EPSI_VISC_RAG:BR_VARI_EPSI_VISC_RAG+5)
             ! Pression du gel et pression capillaire
@@ -267,8 +295,8 @@ contains
             epsmeca = epsm+epsanel-epsflua-epsvrag
             call BR_Mecanique(epsmeca, deps, vim, mater_br, param_br, grandeur_press, &
                               sigp, vip, dsidep)
-        else if ((param_br%loi_integre == 2) .or. &
-                 (param_br%loi_integre == 3)) then
+            ! Si on demande un calcul incluant du fluage
+        else if (param_br%loi_integre .ge. BR_LOI_FLUA_LIN) then
             call BR_Mecanique_Fluage(epsm, deps, vim, mater_br, param_br, &
                                      sigp, vip, dsidep, iret)
         else
@@ -282,7 +310,7 @@ contains
         !
         real(kind=8), intent(in)    :: epsm(6), deps(6), vim(*)
         type(beton_rag_materiau), intent(in)    :: mater_br
-        type(beton_rag_parametres), intent(in)    :: param_br
+        type(beton_rag_parametres), intent(in)  :: param_br
         type(beton_rag_pression), intent(inout) :: grd_press
         !
         real(kind=8), intent(out) :: sigp(6)
@@ -369,14 +397,22 @@ contains
                 b1 = 1.0d0; b2 = 1.0d0; b3 = 1.0d0
             end if
             UnMoinsDt = [b1, b2, b3]
+
             ! Dans le cas d'un calcul avec RAG
-            if (param_br%loi_integre == 3) then
+
+            if ((param_br%loi_integre == BR_LOI_RAG_FLIN) .or. &
+                (param_br%loi_integre == BR_LOI_RAG_FNL)) then
                 ! xx1  = (max( 0.0, mater_br%gel%bg*grd_press%Pgel/sigut )**mt)/mt
                 xx1 = (max(0.0, grd_press%Pgel/sigut)**mt)/mt
                 bgel = exp(min(10.0, xx1))
-                Dommage_Rag(1) = max(Dommage_Rag(1), min(b1, bgel)-1.0)
-                Dommage_Rag(2) = max(Dommage_Rag(2), min(b2, bgel)-1.0)
-                Dommage_Rag(3) = max(Dommage_Rag(3), min(b3, bgel)-1.0)
+                ! max ou pas
+!                 Dommage_Rag(1) = max(Dommage_Rag(1), min(b1, bgel)-1.0)
+!                 Dommage_Rag(2) = max(Dommage_Rag(2), min(b2, bgel)-1.0)
+!                 Dommage_Rag(3) = max(Dommage_Rag(3), min(b3, bgel)-1.0)
+                ! Le abs() c'est par prudence : En théorie bi, bgel >= 1
+                Dommage_Rag(1) = abs(min(b1, bgel)-1.0)
+                Dommage_Rag(2) = abs(min(b2, bgel)-1.0)
+                Dommage_Rag(3) = abs(min(b3, bgel)-1.0)
                 TEpsiVRAG = [Dommage_Rag(1), Dommage_Rag(2), Dommage_Rag(3)]
                 ! Passage de TEpsiVRAGloc dans le repère initial des contraintes
                 TEpsiVRAG = VersBaseInitiale(SigmaRP, TEpsiVRAG)
@@ -432,15 +468,15 @@ contains
             if (param_br%resi) then
                 sigp = TenseurVecteurAster(TSigma)
                 ! Ajout de la pression du gel et pression capillaire
-                !sigp(1:3) = sigp(1:3) + grd_press%Pgel - grd_press%Pcap
-                sigp(1:3) = sigp(1:3)-grd_press%Pgel-grd_press%Pcap
+                sigp(1:3) = sigp(1:3)-UnMoinsDc*(grd_press%Pgel+grd_press%Pcap)
                 ! Variables internes pour la mécanique
                 vip(BR_VARI_SEUIL_ENDOMMAGEMENT:BR_VARI_SEUIL_ENDOMMAGEMENT+5) = SigmaR
                 vip(BR_VARI_SEUIL_ENDOMMAGEMENT+6) = sigdp
                 vip(BR_VARI_RAG_ENDOMMAGEMENT:BR_VARI_RAG_ENDOMMAGEMENT+2) = Dommage_Rag
                 vip(BR_VARI_EPSI_VISC_RAG:BR_VARI_EPSI_VISC_RAG+5) = EpsiVRAG(1:6)
                 !
-                vip(BR_VARI_LOI_INTEGRE) = max(param_br%loi_integre*1.0, vim(BR_VARI_LOI_INTEGRE))
+                vip(BR_VARI_LOI_INTEGRE) = max(float(param_br%loi_integre), &
+                                               vim(BR_VARI_LOI_INTEGRE))
             end if
         else
             ! Si calcul par perturbation ou fluage on met seulement à jour sigp
@@ -457,10 +493,10 @@ contains
         implicit none
         !
 #include "asterfort/assert.h"
-        real(kind=8), intent(in)      :: epsm(6), deps(6), vim(*)
-        type(beton_rag_materiau), intent(in)      :: mater_br
-        type(beton_rag_parametres), intent(in)      :: param_br
-        integer(kind=8), intent(inout)                      :: iret
+        real(kind=8), intent(in)               :: epsm(6), deps(6), vim(*)
+        type(beton_rag_materiau), intent(in)   :: mater_br
+        type(beton_rag_parametres), intent(in) :: param_br
+        integer(kind=8), intent(inout)         :: iret
         !
         real(kind=8), intent(out) :: sigp(6)
         real(kind=8), intent(out) :: vip(*)
@@ -469,9 +505,9 @@ contains
         ! ------------------------------------------------------------------------------------------
         !
         integer(kind=8), parameter  :: nbequa = 30
-        real(kind=8)        :: y0(nbequa), dy0(nbequa), resu(nbequa*2), ynorme(nbequa)
+        real(kind=8)                :: y0(nbequa), dy0(nbequa), resu(nbequa*2), ynorme(nbequa)
         !
-        real(kind=8) :: epsmeca(6), epsflua(6), epsanel(6), epsvrag(6)
+        real(kind=8)             :: epsmeca(6), epsflua(6), epsanel(6), epsvrag(6)
         type(beton_rag_pression) :: grandeur_press
         !
         ! ------------------------------------------------------------------------------------------
@@ -494,7 +530,7 @@ contains
         y0(24) = vim(BR_VARI_AVANCEMENT_CHIMIQUE)
         !
         y0(25:30) = vim(BR_VARI_EPSI_VISC_RAG:BR_VARI_EPSI_VISC_RAG+5)
-        !
+
         ! Pas de calcul de fluage avec perturbation : erreur développeur
         if (param_br%perturbation) then
             write (*, *) 'Pas encore possible de faire appel au fluage avec perturbation'
@@ -519,6 +555,7 @@ contains
         ynorme(17:23) = 1.00d-06
         ynorme(24) = 1.00d-06
         ynorme(25:30) = 1.00d-06
+
         !
         call BR_rk5adp(nbequa, mater_br, param_br, grandeur_press, vim, y0, dy0, ynorme, resu, iret)
         if (iret .ne. 0) goto 999
@@ -530,7 +567,12 @@ contains
             vip(BR_VARI_AVANCEMENT_CHIMIQUE) = resu(24)
             vip(BR_VARI_EPSI_VISC_RAG:BR_VARI_EPSI_VISC_RAG+5) = resu(25:30)
             !
-            vip(BR_VARI_LOI_INTEGRE) = max(param_br%loi_integre*1.0, vim(BR_VARI_LOI_INTEGRE))
+            vip(BR_VARI_LOI_INTEGRE) = max(float(param_br%loi_integre), &
+                                           vim(BR_VARI_LOI_INTEGRE))
+
+            ! Calcul de la nouvelle déformation irréversible équivalente
+            vip(BR_VARI_EPSI_EQ_IRR) = BR_Calcul_Defo_Equivalente(resu(17:22), resu(23), &
+                                                                  vim(BR_VARI_EPSI_EQ_IRR))
         end if
         ! Déformations : Thermique, Hydratation
         if (param_br%istemper) then
@@ -540,7 +582,7 @@ contains
             epsanel(1:3) = epsanel(1:3)+mater_br%bendo*param_br%hydratp
         end if
         ! Déformations de fluage
-        epsflua = VecteurDeviaSpher(resu(10:15), resu(16))
+        epsflua = VecteurDeviaSpher(resu(10:15)+resu(17:22), resu(16)+resu(23))
         ! Déformation visqueuse de la RAG
         epsvrag = resu(25:30)
         ! déformation
@@ -563,14 +605,14 @@ contains
 #include "asterc/r8t0.h"
 #include "asterf_types.h"
         !
-        type(beton_rag_materiau), intent(in) :: mater_br
-        type(beton_rag_parametres), intent(in) :: param_br
+        type(beton_rag_materiau), intent(in)    :: mater_br
+        type(beton_rag_parametres), intent(in)  :: param_br
         type(beton_rag_pression), intent(inout) :: grd_press
-        real(kind=8), intent(in)    :: vim(*)
-        real(kind=8), intent(in)    :: dt
-        real(kind=8), intent(in)    :: yy0(*)
-        real(kind=8), intent(in)    :: dy0(*)
-        real(kind=8), intent(out)   :: dyy(*)
+        real(kind=8), intent(in)     :: vim(*)
+        real(kind=8), intent(in)     :: dt
+        real(kind=8), intent(in)     :: yy0(*)
+        real(kind=8), intent(in)     :: dy0(*)
+        real(kind=8), intent(out)    :: dyy(*)
         aster_logical, intent(inout) :: decoup
         !
         ! ------------------------------------------------------------------------------------------
@@ -578,12 +620,14 @@ contains
         real(kind=8)   :: deps(6), sigma_m(6), vip(1), dsidep(6, 6), epsflua(6)
         real(kind=8)   :: vimloc(BR_VARI_NOMBRE)
         real(kind=8)   :: epsmeca(6), epsanel(6), epsvrag(6)
-        real(kind=8)   :: k1, n1, k2, n2, sigma_sph, vaux1, xx1
+        real(kind=8)   :: kappa, ni, nr, kr, sigma_sph, vaux1, xx1, epsi_eq, T0Kelvin
         type(SpheDev)  :: TSpheDev
+        type(tenseur2) :: eps_flu_itot, deps_flu_itot
         type(beton_rag_parametres) :: param_br_loc
         integer(kind=8), parameter :: iflu = 10
-        aster_logical      :: nofluag
+        aster_logical              :: nofluag, flua_NL
         ! ------------------------------------------------------------------------------------------
+        T0Kelvin = r8t0()
         epsmeca(:) = 0.d0
         epsflua(:) = 0.d0
         epsanel(:) = 0.d0
@@ -605,7 +649,7 @@ contains
             epsanel(1:3) = epsanel(1:3)+mater_br%bendo*yy0(8)
         end if
         ! Déformations de fluage
-        epsflua = VecteurDeviaSpher(yy0(iflu:iflu+5), yy0(iflu+6))
+        epsflua = VecteurDeviaSpher(yy0(iflu:iflu+5)+yy0(iflu+7:iflu+12), yy0(iflu+6)+yy0(iflu+13))
         ! Déformation visqueuse de la RAG
         epsvrag(1:6) = yy0(25:30)
         ! Pression de gel et pression capillaire
@@ -619,7 +663,8 @@ contains
         !
         ! Déformation visqueuse de la RAG
         dyy(25:30) = 0.0d0
-        if (param_br%loi_integre == 3) then
+        if ((param_br%loi_integre == BR_LOI_RAG_FLIN) .or. &
+            (param_br%loi_integre .eq. BR_LOI_RAG_FLIN)) then
             ! Calcul de EpsiVRAG par perturbation de la déformation
             epsvrag = grd_press%EpsiVRAG
             ! La perturbation est dans la direction de l'incrément de déformation
@@ -630,42 +675,64 @@ contains
         end if
         !
         TSpheDev = DeviaSpher(VecteurAsterVecteur(sigma_m))
+
+        ! Calcul de la déformation équivalente du tenseur des déformations de fluage
+        epsi_eq = BR_Calcul_Defo_Equivalente(yy0(iflu+7:iflu+12), &
+                                             yy0(iflu+13), vim(BR_VARI_EPSI_EQ_IRR))
+        ! Est-ce que le fluage est non-linéaire ? On interroge loi-integre
+        flua_NL = (param_br%loi_integre .eq. BR_LOI_FLUA_NL) .or. &
+                  (param_br%loi_integre .eq. BR_LOI_RAG_FNL)
+
         ! Fluage déviatorique
         sigma_m = TSpheDev%deviateur
-        k1 = abs(mater_br%fluage_dev%k1)
-        k2 = abs(mater_br%fluage_dev%k2)
-        n1 = abs(mater_br%fluage_dev%n1)
-        n2 = abs(mater_br%fluage_dev%n2)
-        nofluag = (mater_br%fluage_dev%n1 < 0.0) .and. (mater_br%fluage_dev%n2 < 0.0)
+        kappa = abs(mater_br%kappa_fluage)
+        kr = mater_br%fluage_dev%kr
+        ni = mater_br%fluage_dev%ni
+        nr = mater_br%fluage_dev%nr
+        nofluag = (ni < 0.0) .and. (nr < 0.0) .and. (kr < 0.0)
         if (nofluag) then
             dyy(iflu:iflu+5) = 0.0
             dyy(iflu+7:iflu+12) = 0.0
         else
-            dyy(iflu:iflu+5) = (sigma_m(1:6)-k1*yy0(iflu+7:iflu+12))/n1
-            dyy(iflu+7:iflu+12) = (k2*(yy0(iflu:iflu+5)-yy0(iflu+7:iflu+12)) &
-                                   -k1*yy0(iflu+7:iflu+12))/n2+dyy(iflu:iflu+5)
+            ! Fluage réversible
+            dyy(iflu:iflu+5) = (sigma_m(1:6)-kr*yy0(iflu:iflu+5))/nr
+
+            ! Si le fluage est non-linéaire, on multiplie par l'exponentielle
+            if (flua_NL) then
+                dyy(iflu+7:iflu+12) = sigma_m(1:6)*exp(-1.*epsi_eq/kappa)/ni
+            else
+                dyy(iflu+7:iflu+12) = sigma_m(1:6)/ni
+            end if
         end if
+
         ! Fluage sphérique
         sigma_sph = TSpheDev%spherique
-        k1 = abs(mater_br%fluage_sph%k1)
-        k2 = abs(mater_br%fluage_sph%k2)
-        n1 = abs(mater_br%fluage_sph%n1)
-        n2 = abs(mater_br%fluage_sph%n2)
-        nofluag = (mater_br%fluage_sph%n1 < 0.0) .and. (mater_br%fluage_sph%n2 < 0.0)
+        kr = mater_br%fluage_sph%kr
+        ni = mater_br%fluage_sph%ni
+        nr = mater_br%fluage_sph%nr
+        nofluag = (ni < 0.0) .and. (nr < 0.0) .and. (kr < 0.0)
         if (nofluag) then
             dyy(iflu+6) = 0.0
             dyy(iflu+13) = 0.0
         else
-            dyy(iflu+6) = (sigma_sph-k1*yy0(iflu+13))/n1
-            dyy(iflu+13) = (k2*(yy0(iflu+6)-yy0(iflu+13))-k1*yy0(iflu+13))/n2+dyy(iflu+6)
+            ! Fluage réversible
+            dyy(iflu+6) = (sigma_sph-kr*yy0(iflu+6))/nr
+
+            ! Si le fluage est non-linéaire, on multiplie par l'exponentielle
+            if (flua_NL) then
+                dyy(iflu+13) = sigma_sph*exp(-1.*epsi_eq/kappa)/ni
+            else
+                dyy(iflu+13) = sigma_sph/ni
+            end if
         end if
-        !
+
         ! Avancement chimique
         dyy(24) = 0.0d0
-        if (param_br%loi_integre == 3) then
+        if ((param_br%loi_integre == BR_LOI_RAG_FLIN) .or. &
+            (param_br%loi_integre == BR_LOI_RAG_FNL)) then
             if ((yy0(9) > mater_br%gel%sr0) .and. &
                 (yy0(9) > yy0(24))) then
-                vaux1 = (yy0(7)-mater_br%gel%Tref)/(yy0(7)+r8t0())/(mater_br%gel%Tref+r8t0())
+                vaux1 = (yy0(7)-mater_br%gel%Tref)/(yy0(7)+T0Kelvin)/(mater_br%gel%Tref+T0Kelvin)
                 xx1 = mater_br%gel%ear*vaux1
                 vaux1 = mater_br%gel%alpha0*exp(min(max(-100.0, xx1), 100.0))
                 dyy(24) = vaux1*(yy0(9)-mater_br%gel%sr0)*(yy0(9)-yy0(24))/(1.0-mater_br%gel%sr0)
@@ -673,6 +740,56 @@ contains
         end if
         !
     end subroutine beton_rag_mecanique_fluage
+
+    function BR_Calcul_Defo_Equivalente(deviateur, volumetrique, def_irr_prec) result(nouv_def_irr)
+        implicit none
+#include "asterf_types.h"
+        real(kind=8), intent(in), dimension(6) :: deviateur
+        real(kind=8), intent(in) ::  volumetrique
+        real(kind=8), intent(in) :: def_irr_prec
+
+        type(tenseur2) :: eps_flu_itot
+        real(kind=8) :: def_irr_act, nouv_def_irr
+
+        ! On ajoute le déviateur et la déformation volumétrique pour reconstituer le tenseur complet
+        eps_flu_itot = deviateur
+        eps_flu_itot = (volumetrique*Identite())+eps_flu_itot
+
+        ! Racine du produit contracté
+        def_irr_act = sqrt(Trace(eps_flu_itot*eps_flu_itot))
+        nouv_def_irr = max(def_irr_prec, def_irr_act)
+    end function BR_Calcul_Defo_Equivalente
+
+    function BR_Compat_Hypotheses_Calcul(vim, nouv_loi_integ) result(code_retour)
+        implicit None
+#include "asterf_types.h"
+        real(kind=8), intent(in)    :: vim(*)
+        integer(kind=8), intent(in) :: nouv_loi_integ
+
+        integer(kind=8)             :: prec_loi_integ
+        integer(kind=8)             :: code_retour
+
+        prec_loi_integ = nint(vim(BR_VARI_LOI_INTEGRE))
+        code_retour = 0
+
+        if (nouv_loi_integ .ne. prec_loi_integ) then
+            ! Non régression de la complexité des phénomènes étudiés
+            if (nouv_loi_integ .lt. prec_loi_integ) then
+                code_retour = 1
+
+                ! Impossible de passer de fluage irréversible linéaire à
+                ! RAG + fluage irréversible non-linéaire & inversement
+            else if ((prec_loi_integ .eq. BR_LOI_FLUA_LIN) .and. &
+                     (nouv_loi_integ .ne. BR_LOI_RAG_FLIN)) then
+                code_retour = 5
+
+            else if ((prec_loi_integ .eq. BR_LOI_FLUA_NL) .and. &
+                     (nouv_loi_integ .ne. BR_LOI_RAG_FNL)) then
+                code_retour = 5
+            end if
+        end if
+
+    end function BR_Compat_Hypotheses_Calcul
 
     subroutine BR_rk5adp(nbeq, mater_br, param_br, grd_press, vim, y0, dy0, ynorme, resu, iret)
         ! ------------------------------------------------------------------------------------------
@@ -702,9 +819,9 @@ contains
         ! ------------------------------------------------------------------------------------------
         implicit none
 #include "asterf_types.h"
-        integer(kind=8)          :: nbeq
-        type(beton_rag_materiau), intent(in) :: mater_br
-        type(beton_rag_parametres), intent(in) :: param_br
+        integer(kind=8) :: nbeq
+        type(beton_rag_materiau), intent(in)    :: mater_br
+        type(beton_rag_parametres), intent(in)  :: param_br
         type(beton_rag_pression), intent(inout) :: grd_press
         real(kind=8), intent(in)  :: vim(*)
         real(kind=8), intent(in)  :: y0(nbeq)
@@ -714,10 +831,10 @@ contains
         integer(kind=8), intent(out) :: iret
         !
         integer(kind=8) :: nbbou, ii
-        real(kind=8) :: t9, dt9, y9(nbeq), erreur, xbid1, solu(3*nbeq)
-        aster_logical :: decoup
+        real(kind=8)    :: t9, dt9, y9(nbeq), erreur, xbid1, solu(3*nbeq)
+        aster_logical   :: decoup
         !
-        real(kind=8) :: puplus, pumoin, creduc, cforce, coeffm, seuil, precis, grlog
+        real(kind=8)    :: puplus, pumoin, creduc, cforce, coeffm, seuil, precis, grlog
         ! puissance pour augmenter le pas de temps
         parameter(puplus=-0.20d0)
         ! puissance pour diminuer le pas de temps
@@ -828,12 +945,12 @@ contains
         ! ------------------------------------------------------------------------------------------
         implicit none
 #include "asterf_types.h"
-        integer(kind=8), intent(in)      :: nbeq
-        real(kind=8), intent(in) :: dtemps, yinit(nbeq), dyinit(nbeq), vim(*)
-        type(beton_rag_materiau), intent(in) :: mater_br
-        type(beton_rag_parametres), intent(in) :: param_br
+        integer(kind=8), intent(in) :: nbeq
+        real(kind=8), intent(in)    :: dtemps, yinit(nbeq), dyinit(nbeq), vim(*)
+        type(beton_rag_materiau), intent(in)    :: mater_br
+        type(beton_rag_parametres), intent(in)  :: param_br
         type(beton_rag_pression), intent(inout) :: grd_press
-        real(kind=8), intent(out) :: solu(3*nbeq)
+        real(kind=8), intent(out)    :: solu(3*nbeq)
         aster_logical, intent(inout) :: decoup
         !
         ! niveau du runge-kutta
@@ -857,6 +974,8 @@ contains
         tabb(5, 1:4) = (/-11.0d0/54.0d0, 2.50d0, -70.0d0/27.0d0, 35.0d0/27.0d0/)
         tabb(6, 1:5) = (/1631.0d0/55296.0d0, 175.0d0/512.0d0, 575.0d0/13824.0d0, 44275.0d0 &
                          /110592.0d0, 253.0d0/4096.0d0/)
+
+        yy(nbeq) = yinit(nbeq)
         !
         ! niveaux de RK
         do niv = 1, nivrk
@@ -866,8 +985,10 @@ contains
                     yy(ii) = yy(ii)+tabb(niv, nn)*dtemps*rr(ii, nn)
                 end do
             end do
+
             call beton_rag_mecanique_fluage(mater_br, param_br, grd_press, vim, dtemps, &
-                                            yy, dyinit, rr(1, niv), decoup)
+                                            yy, dyinit, rr(:, niv), decoup)
+
             if (decoup) goto 999
         end do
         !
@@ -883,7 +1004,7 @@ contains
                 solu(2*nbeq+ii) = solu(2*nbeq+ii)+(tabc(niv)-tabe(niv))*rr(ii, niv)*dtemps
             end do
         end do
-        !
+
 999     continue
     end subroutine BR_rk5app
 

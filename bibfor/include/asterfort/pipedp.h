@@ -17,17 +17,14 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine pipedp(BEHinteg,&
-                      kpg, ksp, ndim, typmod, mate,&
-                      epsm, sigm, vim, epsp, epsd,&
+    subroutine pipedp(BEHinteg, &
+                      ndim, typmod, &
+                      epsm, sigm, vim, epsp, epsd, &
                       a0, a1)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
         integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: mate
+        character(len=8) :: typmod(2)
         real(kind=8) :: epsm(6)
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(2)

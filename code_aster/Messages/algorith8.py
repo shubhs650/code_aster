@@ -27,7 +27,7 @@ cata_msg = {
     ),
     20: _(
         """
- La définition du repère d'orthotropie a été mal faite.
+ La définition du repère d'anisotropie n'a pas été faite.
  Utilisez soit ANGL_REP  soit ANGL_AXE de la commande AFFE_CARA_ELEM mot clé facteur MASSIF
 """
     ),

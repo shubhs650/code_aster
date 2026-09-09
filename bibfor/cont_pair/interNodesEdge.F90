@@ -28,17 +28,18 @@ subroutine interNodesEdge(proj_tole, elem_dime, &
 #include "asterfort/assert.h"
 #include "asterfort/apelem_getvertex_n.h"
 #include "asterfort/gapGetParamCoor.h"
+#include "MeshTypes_type.h"
 #include "asterfort/insema.h"
 
 !
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     character(len=8), intent(in) :: elem_mast_code, elem_slave_code
-    real(kind=8), intent(in) :: proj_coor(elem_dime-1, 9)
+    real(kind=8), intent(in) :: proj_coor(2, 9)
     integer(kind=8), intent(in) :: nb_node_proj
     integer(kind=8), intent(inout) :: inte_neigh(4), nb_poin_inte
-    real(kind=8), intent(out) :: poin_inte(elem_dime-1, 16)
-    real(kind=8), intent(out) :: poin_inte_ori(elem_dime-1, 16)
+    real(kind=8), intent(out) :: poin_inte(2, 16)
+    real(kind=8), intent(out) :: poin_inte_ori(2, 16)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -58,12 +59,12 @@ subroutine interNodesEdge(proj_tole, elem_dime, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: elem_mast_line_coop(elem_dime-1, 4)
+    real(kind=8) :: elem_mast_line_coop(2, 4)
 
     integer(kind=8) :: elem_mast_line_nbnode, i_node
     integer(kind=8) :: list_next(8), test, i_add, nb_int_add
     character(len=8) :: elem_mast_line_code, elem_code
-    real(kind=8) :: xp1, yp1, xp2, yp2, t1, t2, para_coor_ori(2, 9)
+    real(kind=8) :: xp1, yp1, xp2, yp2, t1, t2, para_coor_ori(2, MT_NNOMAX2D)
     real(kind=8) :: xp1_ori, yp1_ori, xp2_ori, yp2_ori
 
     t1 = 0.d0

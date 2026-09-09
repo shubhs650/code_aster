@@ -52,10 +52,6 @@ class ExtendedLinearSolver:
             :class:`~code_aster.Objects.LinearSolver` (derivated of):
             Instance of a solver.
         """
-        # S'assurer que les objets LinearSolver "out of scope"
-        # sont détruits. Cela permet de libérer les communs PETSc
-        # et d'éviter le bug rencontré dans la fiche 33582.
-        gc.collect()
         if not command:
             command = "STAT_NON_LINE"
         if mcf:

@@ -61,6 +61,7 @@ subroutine xvechp(ndim, elrefp, nnop, igeom, itemp, &
 #include "asterfort/xcalc_code.h"
 #include "asterfort/xcalc_heav.h"
 #include "asterfort/xjacf2.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xjacff.h"
 #include "asterfort/xxmmvd.h"
 !-----------------------------------------------------------------------
@@ -68,7 +69,7 @@ subroutine xvechp(ndim, elrefp, nnop, igeom, itemp, &
     character(len=4) :: fonree
     character(len=8) :: elrefp
     integer(kind=8) :: ndim, nnop, igeom, itemp, itps, ihechp, jptint, jcface
-    integer(kind=8) :: jlonch, jlst, jbasec, nfh, nfe, ivectt, heavn(27, 5)
+    integer(kind=8) :: jlonch, jlst, jbasec, nfh, nfe, ivectt, heavn(MT_NNOMAX3D, 5)
 !
 !-----------------------------------------------------------------------
 !
@@ -82,8 +83,8 @@ subroutine xvechp(ndim, elrefp, nnop, igeom, itemp, &
 !
     parameter(mxstac=1000)
 !
-    real(kind=8) :: theta, he(2), xg(4), jac, ff(27), r27bid(27), nd(3)
-    real(kind=8) :: dfbid(27, 3), r3bid(3), lst, rr(2), ffenr(nnop, 1+nfh+nfe)
+    real(kind=8) :: theta, he(2), xg(4), jac, ff(MT_NNOMAX3D), rnbid(MT_NNOMAX3D), nd(3)
+    real(kind=8) :: dfbid(MT_NNOMAX3D, 3), r3bid(3), lst, rr(2), ffenr(nnop, 1+nfh+nfe)
     real(kind=8) :: hechp, r8tmp, r
 !
 !     PAR CONVENTION :
@@ -163,13 +164,13 @@ subroutine xvechp(ndim, elrefp, nnop, igeom, itemp, &
                 call xjacff(elrefp, elrefc, elc, ndim, fpg, &
                             jptint, ifa, cface, ipgf, nnop, &
                             nnop, igeom, jbasec, xg, jac, &
-                            ff, r27bid, dfbid, nd, r3bid, &
+                            ff, rnbid, dfbid, nd, r3bid, &
                             r3bid)
             else if (ndim .eq. 2) then
                 call xjacf2(elrefp, elrefc, elc, ndim, fpg, &
                             jptint, ifa, cface, nptf, ipgf, &
                             nnop, nnop, igeom, jbasec, xg, &
-                            jac, ff, r27bid, dfbid, nd, &
+                            jac, ff, rnbid, dfbid, nd, &
                             r3bid)
             end if
 !

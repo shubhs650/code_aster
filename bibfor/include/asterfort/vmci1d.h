@@ -15,26 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vmci1d(fami, kpg, ksp, imate, em,&
-                      ep, sigm, deps, vim, option,&
-                      materi, sigp, vip, dsde)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: imate
-        real(kind=8) :: em
-        real(kind=8) :: ep
-        real(kind=8) :: sigm
-        real(kind=8) :: deps
-        real(kind=8) :: vim(*)
+    subroutine vmci1d(materPara, &
+                      option, materPoin, &
+                      em, ep, &
+                      sigm, deps, vim, &
+                      sigp, vip, dsde)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         character(len=16) :: option
-        character(len=*) :: materi
-        real(kind=8) :: sigp
-        real(kind=8) :: vip(*)
-        real(kind=8) :: dsde
+        character(len=*) :: materPoin
+        real(kind=8) :: ep, em
+        real(kind=8) :: sigm, deps, vim(*)
+        real(kind=8) :: sigp, vip(*), dsde
     end subroutine vmci1d
 end interface

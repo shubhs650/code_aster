@@ -15,15 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmcrpp(motfaz, iocc, prec, criter, tole)
-        character(len=*) :: motfaz
-        integer(kind=8) :: iocc
-        real(kind=8) :: prec
-        character(len=8) :: criter
-        real(kind=8) :: tole
+    subroutine nmcrpp(factorKeywordZ, iFactorKeyword, stepSlctTole)
+        character(len=*), intent(in) :: factorKeywordZ
+        integer(kind=8), intent(in) :: iFactorKeyword
+        real(kind=8), intent(out) :: stepSlctTole
     end subroutine nmcrpp
 end interface

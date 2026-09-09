@@ -62,7 +62,7 @@ def configure(self):
     opts = self.options
     try:
         self.find_program("dot", var="DOT")
-        self.find_program("convert", var="CONVERT")
+        # self.find_program("convert", var="CONVERT")
         self.find_program("sphinx-build", var="SPHINX_BUILD")
         self.env.SPHINX_BUILD = Utils.to_list(pyenv_abspath(self, self.env.SPHINX_BUILD[0]))
         self.check_sphinx()

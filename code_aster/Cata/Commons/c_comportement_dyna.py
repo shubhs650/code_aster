@@ -24,24 +24,36 @@ from ..Language.Syntax import *
 def C_COMPORTEMENT_DYNA(COMMAND):  # COMMUN#
     assert COMMAND in ("DYNA_VIBRA", "DYNA_LINE")
 
+    if COMMAND == "DYNA_VIBRA":
+        tuple_comp = (
+            "DIS_CHOC",
+            "ROTOR_FISS",
+            "FLAMBAGE",
+            "ANTI_SISM",
+            "DIS_VISC",
+            "DIS_ECRO_TRAC",
+            "DIS_ECRO_CINE",
+            "CHOC_ELAS_TRAC",
+            "RELA_EFFO_DEPL",
+            "RELA_EFFO_VITE",
+        )
+    else:
+        tuple_comp = (
+            "DIS_CHOC",
+            "ROTOR_FISS",
+            "FLAMBAGE",
+            "ANTI_SISM",
+            "DIS_VISC",
+            "DIS_ECRO_TRAC",
+            "CHOC_ELAS_TRAC",
+            "RELA_EFFO_DEPL",
+            "RELA_EFFO_VITE",
+        )
+
     mcfact = FACT(
         statut="f",
         max="**",
-        RELATION=SIMP(
-            statut="o",
-            typ="TXM",
-            into=(
-                "DIS_CHOC",
-                "ROTOR_FISS",
-                "FLAMBAGE",
-                "ANTI_SISM",
-                "DIS_VISC",
-                "DIS_ECRO_TRAC",
-                "CHOC_ELAS_TRAC",
-                "RELA_EFFO_DEPL",
-                "RELA_EFFO_VITE",
-            ),
-        ),
+        RELATION=SIMP(statut="o", typ="TXM", into=tuple_comp),
         #           C.2.1 Chocs
         b_choc=BLOC(
             condition="""equal_to("RELATION", 'DIS_CHOC')""",
@@ -243,6 +255,215 @@ def C_COMPORTEMENT_DYNA(COMMAND):  # COMMUN#
             ITER_INTE_MAXI=SIMP(statut="f", typ="I", defaut=20),
             RESI_INTE=SIMP(statut="f", typ="R", defaut=1.0e-6),
         ),  # end b_disecro
+        #
+        b_disecrocine=BLOC(
+            condition="""equal_to("RELATION", 'DIS_ECRO_CINE')""",
+            fr=tr("Loi pour un discret avec écrouissage cinématique ."),
+            regles=(
+                NON_VIDE(),
+                UN_PARMI("MAILLE", "GROUP_MA"),
+                ENSEMBLE("KELA_DX", "LIMY_DX", "KCIN_DX"),
+                ENSEMBLE("PUIS_DX", "LIMU_DX"),
+                PRESENT_PRESENT("PUIS_DX", "KCIN_DX"),
+                ENSEMBLE("KELA_DY", "LIMY_DY", "KCIN_DY"),
+                ENSEMBLE("PUIS_DY", "LIMU_DY"),
+                PRESENT_PRESENT("PUIS_DY", "KCIN_DY"),
+                ENSEMBLE("KELA_DZ", "LIMY_DZ", "KCIN_DZ"),
+                ENSEMBLE("PUIS_DZ", "LIMU_DZ"),
+                PRESENT_PRESENT("PUIS_DZ", "KCIN_DZ"),
+                ENSEMBLE("KELA_RX", "LIMY_RX", "KCIN_RX"),
+                ENSEMBLE("PUIS_RX", "LIMU_RX"),
+                PRESENT_PRESENT("PUIS_RX", "KCIN_RX"),
+                ENSEMBLE("KELA_RY", "LIMY_RY", "KCIN_RY"),
+                ENSEMBLE("PUIS_RY", "LIMU_RY"),
+                PRESENT_PRESENT("PUIS_RY", "KCIN_RY"),
+                ENSEMBLE("KELA_RZ", "LIMY_RZ", "KCIN_RZ"),
+                ENSEMBLE("PUIS_RZ", "LIMU_RZ"),
+                PRESENT_PRESENT("PUIS_RZ", "KCIN_RZ"),
+            ),
+            GROUP_MA=SIMP(statut="f", typ=grma, max="**"),
+            MAILLE=SIMP(statut="c", typ=ma, max="**"),
+            KELA_DX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local x de l'élément."),
+            ),
+            KELA_DY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local y de l'élément."),
+            ),
+            KELA_DZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local z de l'élément."),
+            ),
+            KELA_RX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local Rx de l'élément."),
+            ),
+            KELA_RY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local Ry de l'élément."),
+            ),
+            KELA_RZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Rigidité suivant l'axe local Rz de l'élément."),
+            ),
+            LIMY_DX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Effort limite élastique suivant l'axe local x de l'élément."),
+            ),
+            LIMY_DY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Effort limite élastique suivant l'axe local y de l'élément."),
+            ),
+            LIMY_DZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Effort limite élastique suivant l'axe local z de l'élément."),
+            ),
+            LIMY_RX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Moment limite élastique suivant l'axe local x de l'élément."),
+            ),
+            LIMY_RY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Moment limite élastique suivant l'axe local y de l'élément."),
+            ),
+            LIMY_RZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Moment limite élastique suivant l'axe local z de l'élément."),
+            ),
+            KCIN_DX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local x de l'élément."),
+            ),
+            KCIN_DY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local y de l'élément."),
+            ),
+            KCIN_DZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local z de l'élément."),
+            ),
+            KCIN_RX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local Rx de l'élément."),
+            ),
+            KCIN_RY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local Ry de l'élément."),
+            ),
+            KCIN_RZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=0.0,
+                fr=tr("Raideur suivant l'axe local Rz de l'élément."),
+            ),
+            LIMU_DX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Effort limite suivant l'axe local x de l'élément."),
+            ),
+            LIMU_DY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Effort limite suivant l'axe local y de l'élément."),
+            ),
+            LIMU_DZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Effort limite suivant l'axe local z de l'élément."),
+            ),
+            LIMU_RX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Moment limite suivant l'axe local x de l'élément."),
+            ),
+            LIMU_RY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Moment limite suivant l'axe local y de l'élément."),
+            ),
+            LIMU_RZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1e-8,
+                fr=tr("Moment limite suivant l'axe local z de l'élément."),
+            ),
+            PUIS_DX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local x de l'élément."),
+            ),
+            PUIS_DY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local y de l'élément."),
+            ),
+            PUIS_DZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local z de l'élément."),
+            ),
+            PUIS_RX=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local Rx de l'élément."),
+            ),
+            PUIS_RY=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local Ry de l'élément."),
+            ),
+            PUIS_RZ=SIMP(
+                statut="f",
+                typ="R",
+                val_min=1.0,
+                fr=tr("Coefficient de non-linéarité suivant l'axe local Rz de l'élément."),
+            ),
+        ),  # end b_disecrocine
         #       C.2.6.3 Discrete elastic nonlinear behavior in axial direction
         b_dischocelastrac=BLOC(
             condition="""equal_to("RELATION", 'CHOC_ELAS_TRAC')""",

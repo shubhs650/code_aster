@@ -15,20 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine crirup(fami, imat, ndim, npg, lgpg,&
-                      option, compor, sigp, vip, vim,&
+    subroutine crirup(materPara, &
+                      ndim, npg, lgpg, &
+                      option, sigp, vip, vim, &
                       instam, instap)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: option
         integer(kind=8) :: lgpg
         integer(kind=8) :: npg
         integer(kind=8) :: ndim
-        character(len=*) :: fami
-        integer(kind=8) :: imat
-        character(len=16) :: option
-        character(len=16) :: compor(*)
         real(kind=8) :: sigp(2*ndim, npg)
         real(kind=8) :: vip(lgpg, npg)
         real(kind=8) :: vim(lgpg, npg)

@@ -288,6 +288,14 @@ Il y a un spectre vertical dans les données fournies, cependant vous n'avez pas
 le mot-clé RATIO_HV. Cette valeur est fixée à 1.
 """
     ),
+    93: _(
+        """ Mot_clé MODE_SIGNE_%(k1)s  requis !
+"""
+    ),
+    94: _(
+        """ Avec la combinaison CQC_SIGNE, COMB_DIRECTION doit être NEWMARK.
+"""
+    ),
     95: _(
         """
  Le mot_clé FREQ_COUP n'est pas saisi, la fréquence de coupure est prise égale à
@@ -310,6 +318,15 @@ le mot-clé RATIO_HV. Cette valeur est fixée à 1.
     ),
     98: _(
         """ %(i1)4d   %(r1)12.5e     %(r2)12.5e      %(k1)s    %(r3)12.5e    %(k2)s    %(r4)12.5e
+"""
+    ),
+    99: _(
+        """
+Le numéro de mode demandé pour signer la réponse est invalide.
+Direction : %(k1)s
+Numéro de mode demandé : %(i1)d
+Numéros de modes admis : %(k2)s
+Vous devez choisir le mode à signer parmi les numéros de modes admis.
 """
     ),
 }

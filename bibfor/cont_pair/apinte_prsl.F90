@@ -25,15 +25,16 @@ subroutine apinte_prsl(proj_tole, elem_dime, &
 !
 #include "asterf_types.h"
 #include "asterfort/mmnewt.h"
+#include "MeshTypes_type.h"
 !
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_slav_code
-    real(kind=8), intent(out) :: proj_coor(elem_dime-1, 4)
+    real(kind=8), intent(out) :: proj_coor(2, 4)
     integer(kind=8), intent(out) :: iret
 !
 ! --------------------------------------------------------------------------------------------------
@@ -66,7 +67,7 @@ subroutine apinte_prsl(proj_tole, elem_dime, &
 !
     debug = ASTER_FALSE
     l_reli = ASTER_FALSE
-    proj_coor(elem_dime-1, 4) = 0.d0
+    proj_coor = 0.d0
     if (debug) then
         write (*, *) ".. Project master nodes in slave element parametric space"
     end if
@@ -111,10 +112,10 @@ subroutine apinte_prsl(proj_tole, elem_dime, &
                     proj_coor(2, i_node) = ksi2
                 end if
             else
-                go to 99
+                go to 999
             end if
         end if
     end do
 !
-99  continue
+999 continue
 end subroutine

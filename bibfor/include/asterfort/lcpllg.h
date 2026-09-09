@@ -19,9 +19,9 @@
 !
 !
 interface
-    subroutine lcpllg(toler, itmax, mod, nbmat, mater,&
-                      nr, nvi, deps, sigd, vind,&
-                      seuil, icomp, sigf, vinf, devg,&
+    subroutine lcpllg(toler, itmax, mod, nbmat, mater, &
+                      nr, nvi, deps, sigd, vind, &
+                      seuil, cutLevel, sigf, vinf, devg, &
                       devgii, irtet)
         integer(kind=8) :: nbmat
         real(kind=8) :: toler
@@ -34,7 +34,7 @@ interface
         real(kind=8) :: sigd(6)
         real(kind=8) :: vind(*)
         real(kind=8) :: seuil
-        integer(kind=8) :: icomp
+        integer(kind=8) :: cutLevel
         real(kind=8) :: sigf(6)
         real(kind=8) :: vinf(*)
         real(kind=8) :: devg(6)

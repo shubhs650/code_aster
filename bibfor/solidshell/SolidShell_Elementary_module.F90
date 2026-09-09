@@ -25,13 +25,16 @@
 module SolidShell_Elementary_module
 ! ==================================================================================================
     use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
+    use resi_refe_module, only: RESI_REFE
+    use SolidShell_Debug_module
+    use SolidShell_Elementary_Hexa_module
+    use SolidShell_Geometry_Hexa_module
+    use SolidShell_Geometry_module
+    use SolidShell_NonLinear_Hexa_module
     use SolidShell_type
     use SolidShell_Utilities_module
-    use SolidShell_Debug_module
-    use SolidShell_Geometry_module
-    use SolidShell_Geometry_Hexa_module
-    use SolidShell_NonLinear_Hexa_module
-    use SolidShell_Elementary_Hexa_module
 ! ==================================================================================================
     implicit none
 ! ==================================================================================================
@@ -39,7 +42,7 @@ module SolidShell_Elementary_module
                compEpsiElga, compEpslElga, &
                compLoad, compMassMatr, compRigiGeomMatr, &
                compRefeForcNoda, compLoadExteStatVari, compEpvcElga
-    private :: setMateOrientation, compElemElasMatrix, &
+    private :: compElemElasMatrix, &
                initGeomCell, initMatePara, initElemProp, initBehaPara
 ! ==================================================================================================
     private
@@ -49,11 +52,9 @@ module SolidShell_Elementary_module
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/dmat3d.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/SolidShell_type.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "jeveux.h"
 #include "MeshTypes_type.h"
 ! ==================================================================================================
@@ -175,30 +176,38 @@ contains
 ! In  elemProp         : general properties of element
 ! In  cellGeom         : general geometric properties of cell
 ! In  timeCurr         : current time
-! Out matePara         : parameters of material
+! Out sshMatePara         : parameters of material
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine initMatePara(elemProp, cellGeom, timeCurr, matePara)
+    subroutine initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         type(SSH_ELEM_PROP), intent(in)  :: elemProp
         type(SSH_CELL_GEOM), intent(in)  :: cellGeom
         real(kind=8), intent(in)         :: timeCurr
-        type(SSH_MATE_PARA), intent(out) :: matePara
+        type(SSH_MATE_PARA), intent(out) :: sshMatePara
 ! ----- Local
-        integer(kind=8) :: jvMate
+        character(len=8), parameter :: fami = 'RIGI'
+        integer(kind=8), parameter :: ndim = 3, kpg = 1, ksp = 1
+        integer(kind=8) :: jvMaterc
 !   ------------------------------------------------------------------------------------------------
 !
         if (SSH_DBG_ELEM) SSH_DBG_STRG('> initMatePara')
-! ----- Access to field of material parameters
-        call jevech('PMATERC', 'L', jvMate)
-        matePara%jvMater = zi(jvMate)
 
-! ----- Set material orientation
-        call setMateOrientation(elemProp, cellGeom, matePara)
+! ----- Get material parameters
+        call jevech('PMATERC', 'L', jvMaterc)
+
+! ----- Initializations of material parameters on current cell
+        call initParaCell(fami, zi(jvMaterc), sshMatePara%materPara)
+
+! ----- Set local coordinate system from user
+        call getUserLCS(ndim, elemProp%nbNodeGeom, cellGeom%jvGeom, sshMatePara%materPara%lcsPara)
+
+! ----- At center of element
+        call initParaPoin(kpg, ksp, sshMatePara%materPara)
 
 ! ----- Compute elasticity matrix at middle of cell
-        call compElemElasMatrix(elemProp%elemInte, timeCurr, matePara)
+        call compElemElasMatrix(timeCurr, sshMatePara)
 
 !
         if (SSH_DBG_ELEM) SSH_DBG_STRG('< initMatePara')
@@ -214,17 +223,17 @@ contains
 ! In  option           : name of option to compute
 ! In  elemProp         : general properties of element
 ! In  cellGeom         : general geometric properties of cell
-! In  matePara         : parameters of material
+! IO  sshMatePara      : parameters of material
 ! Out behaPara         : parameters of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine initBehaPara(option, elemProp, cellGeom, matePara, behaPara)
+    subroutine initBehaPara(option, elemProp, cellGeom, sshMatePara, behaPara)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=16), intent(in) :: option
         type(SSH_ELEM_PROP), intent(in) :: elemProp
         type(SSH_CELL_GEOM), intent(in) :: cellGeom
-        type(SSH_MATE_PARA), intent(in) :: matePara
+        type(SSH_MATE_PARA), intent(inout) :: sshMatePara
         type(SSH_BEHA_PARA), intent(out) :: behaPara
 ! ----- Local
         integer(kind=8) :: nno, npg
@@ -273,51 +282,21 @@ contains
                              behaPara%lVari, behaPara%lSigm)
 
 ! ----- Initialisation of behaviour datastructure
-        call behaviourInit(behaPara%BEHinteg)
+        call behaviourInit(behaPara%BEHInteg)
 
 ! ----- Set main parameters for behaviour (on cell)
-        call behaviourSetParaCell(SSH_NDIM, typmod, option, &
+        call behaviourSetParaCell(typmod, option, &
                                   behaPara%compor, behaPara%carcri, &
                                   zr(jvTimeM), zr(jvTimeP), &
-                                  elemProp%elemInte%inteFami, matePara%jvMater, &
-                                  behaPara%BEHinteg)
+                                  sshMatePara%materPara, behaPara%BEHInteg)
 
 ! ----- Prepare external state variables (geometry)
         call behaviourPrepESVAGeom(nno, npg, SSH_NDIM, &
                                    jvWeight, jvShape, jvDShape, &
                                    cellGeom%geomInit, &
-                                   behaPara%BEHinteg)
+                                   behaPara%BEHInteg)
 !
         if (SSH_DBG_ELEM) SSH_DBG_STRG('< initBehaPara')
-!
-!   ------------------------------------------------------------------------------------------------
-    end subroutine
-! --------------------------------------------------------------------------------------------------
-!
-! setMateOrientation
-!
-! Set material orientation
-!
-! In  elemProp         : general properties of element
-! In  cellGeom         : general geometric properties of cell
-! IO  matePara         : parameters of material
-!
-! --------------------------------------------------------------------------------------------------
-    subroutine setMateOrientation(elemProp, cellGeom, matePara)
-!   ------------------------------------------------------------------------------------------------
-! ----- Parameters
-        type(SSH_ELEM_PROP), intent(in)    :: elemProp
-        type(SSH_CELL_GEOM), intent(in)    :: cellGeom
-        type(SSH_MATE_PARA), intent(inout) :: matePara
-! ----- Local
-        integer(kind=8) :: nno, jvGeom
-!   ------------------------------------------------------------------------------------------------
-!
-        nno = elemProp%nbNodeGeom
-        jvGeom = cellGeom%jvGeom
-
-! ----- Get orientation
-        call getElemOrientation(SSH_NDIM, nno, jvGeom, matePara%mateBase)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -327,21 +306,18 @@ contains
 !
 ! Compute elasticity matrix at middle of cell
 !
-! In  elemInte         : properties of integration scheme
 ! In  timeCurr         : current time
-! IO  matePara         : parameters of material
+! IO  sshMatePara      : parameters of material
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compElemElasMatrix(elemInte, timeCurr, matePara)
+    subroutine compElemElasMatrix(timeCurr, sshMatePara)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        type(SSH_ELEM_INTE), intent(in)    :: elemInte
-        real(kind=8), intent(in)           :: timeCurr
-        type(SSH_MATE_PARA), intent(inout) :: matePara
+        real(kind=8), intent(in) :: timeCurr
+        type(SSH_MATE_PARA), intent(inout) :: sshMatePara
 !   ------------------------------------------------------------------------------------------------
 !
-        call dmat3d(elemInte%inteFami, matePara%jvMater, timeCurr, '+', 1, &
-                    1, matePara%mateBase, matePara%elemHookeMatrix)
+        call dmat3d(sshMatePara%materPara, '+', timeCurr, sshMatePara%elemHookeMatrix)
 !
 !   ------------------------------------------------------------------------------------------------
     end subroutine
@@ -358,7 +334,7 @@ contains
         character(len=4), parameter :: inteFami = 'RIGI'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: matrRigi(SSH_NBDOF_MAX, SSH_NBDOF_MAX), timeCurr
         integer(kind=8) :: jvMatr, i, j, k
 !   ------------------------------------------------------------------------------------------------
@@ -377,12 +353,12 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Initialization of properties of material
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Compute rigidity matrix
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compRigiMatrHexa(elemProp, cellGeom, matePara, matrRigi)
+            call compRigiMatrHexa(elemProp, cellGeom, sshMatePara, matrRigi)
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -412,7 +388,7 @@ contains
         character(len=4), parameter :: inteFami = 'RIGI'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: siefElga(SSH_SIZE_TENS*SSH_NBPG_MAX), timeCurr
         integer(kind=8) :: jvSigm, jvDisp, i
 !   ------------------------------------------------------------------------------------------------
@@ -431,15 +407,15 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Initialization of properties of material
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Get displacements
         call jevech('PDEPLAR', 'L', jvDisp)
 
 ! ----- Compute stresses
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compSiefElgaHexa(elemProp, cellGeom, matePara, zr(jvDisp), &
+            call compSiefElgaHexa(elemProp, cellGeom, sshMatePara, zr(jvDisp), &
                                   siefElga)
         else
             ASSERT(ASTER_FALSE)
@@ -516,7 +492,7 @@ contains
         character(len=4), parameter :: inteFami = 'RIGI'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         type(SSH_BEHA_PARA) :: behaPara
         real(kind=8) :: timeCurr
 !   ------------------------------------------------------------------------------------------------
@@ -534,16 +510,16 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Initialization of properties of material
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Initialization of properties of behaviour
-        call initBehaPara(option, elemProp, cellGeom, matePara, behaPara)
+        call initBehaPara(option, elemProp, cellGeom, sshMatePara, behaPara)
         if (SSH_DBG_BEHA) call dbgObjBehaPara(behaPara)
 
 ! ----- Compute non-linear options
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compNonLinearHexa(option, elemProp, cellGeom, matePara, behaPara)
+            call compNonLinearHexa(option, elemProp, cellGeom, behaPara)
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -657,7 +633,7 @@ contains
         character(len=4), parameter :: inteFami = 'RIGI'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: loadNoda(SSH_NBDOF_MAX), timeCurr
         integer(kind=8) :: jvVect, i
 !   ------------------------------------------------------------------------------------------------
@@ -677,13 +653,13 @@ contains
 
 ! ----- Initialization of properties of material
         if (option .eq. 'CHAR_MECA_PESA_R') then
-            call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-            if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+            call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+            if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
         end if
 
 ! ----- Compute load
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compLoadHexa(elemProp, cellGeom, matePara, option, loadNoda)
+            call compLoadHexa(elemProp, cellGeom, sshMatePara, option, loadNoda)
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -709,7 +685,7 @@ contains
         character(len=4), parameter :: inteFami = 'MASS'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: matrMass(SSH_NBDOF_MAX, SSH_NBDOF_MAX), timeCurr
         integer(kind=8) :: jvMatr, i, j, k
 !   ------------------------------------------------------------------------------------------------
@@ -728,12 +704,12 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Initialization of properties of material
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Compute mass matrix
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compMassMatrHexa(elemProp, cellGeom, matePara, matrMass)
+            call compMassMatrHexa(elemProp, cellGeom, sshMatePara, matrMass)
         else
             ASSERT(ASTER_FALSE)
         end if
@@ -816,6 +792,7 @@ contains
         type(SSH_ELEM_PROP) :: elemProp
         real(kind=8) :: refeForcNoda(SSH_NBDOF_MAX), sigmRefe
         integer(kind=8) :: jvVect, iDof
+        type(RESI_REFE):: refe
 !   ------------------------------------------------------------------------------------------------
 !
         refeForcNoda = 0.d0
@@ -829,7 +806,9 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Get reference stress
-        call terefe('SIGM_REFE', 'MECA_ISO', sigmRefe)
+        call refe%Init('SolidShell')
+        sigmRefe = refe%GetRef('SIGM')
+        call refe%Check()
 
 ! ----- Compute reference force
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
@@ -861,7 +840,7 @@ contains
         character(len=4), parameter :: inteFami = 'RIGI'
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: loadNoda(SSH_NBDOF_MAX), timeCurr
         integer(kind=8) :: jvVect, jvTime, i, iret
 !   ------------------------------------------------------------------------------------------------
@@ -886,12 +865,12 @@ contains
         end if
 
 ! ----- Initialization of properties of material
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Compute external state variable load
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
-            call compLoadExteStatVariHexa(elemProp, cellGeom, matePara, indxVarcStrain, &
+            call compLoadExteStatVariHexa(elemProp, cellGeom, sshMatePara, indxVarcStrain, &
                                           loadNoda)
         else
             ASSERT(ASTER_FALSE)
@@ -920,7 +899,7 @@ contains
         character(len=16) :: option
         type(SSH_CELL_GEOM) :: cellGeom
         type(SSH_ELEM_PROP) :: elemProp
-        type(SSH_MATE_PARA) :: matePara
+        type(SSH_MATE_PARA) :: sshMatePara
         real(kind=8) :: epvcElga(SSH_NBPG_MAX, SSH_SIZE_TENS), timeCurr
         real(kind=8) :: epvcElgaAllCmp(SSH_NBPG_MAX, nbCmp)
         integer(kind=8) :: jvEpsi, iIntePoint, iCmp
@@ -940,24 +919,24 @@ contains
         if (SSH_DBG_GEOM) call dbgObjCellGeom(cellGeom)
 
 ! ----- Initialization of properties of material (to suppress, see 30888)
-        call initMatePara(elemProp, cellGeom, timeCurr, matePara)
-        if (SSH_DBG_MATE) call dbgObjMatePara(matePara)
+        call initMatePara(elemProp, cellGeom, timeCurr, sshMatePara)
+        if (SSH_DBG_MATE) call dbgObjMatePara(sshMatePara)
 
 ! ----- Compute strains
         if (elemProp%cellType .eq. SSH_CELL_HEXA) then
             option = 'EPVC_ELGA_TEMP'
-            call compEpvcElgaHexa(elemProp, matePara, epvcElga)
+            call compEpvcElgaHexa(elemProp, sshMatePara, epvcElga)
             epvcElgaAllCmp(:, 1) = epvcElga(:, 1)
             epvcElgaAllCmp(:, 2) = epvcElga(:, 2)
             epvcElgaAllCmp(:, 3) = epvcElga(:, 3)
             option = 'EPVC_ELGA_SECH'
-            call compEpvcElgaHexa(elemProp, matePara, epvcElga)
+            call compEpvcElgaHexa(elemProp, sshMatePara, epvcElga)
             epvcElgaAllCmp(:, 4) = epvcElga(:, 1)
             option = 'EPVC_ELGA_HYDR'
-            call compEpvcElgaHexa(elemProp, matePara, epvcElga)
+            call compEpvcElgaHexa(elemProp, sshMatePara, epvcElga)
             epvcElgaAllCmp(:, 5) = epvcElga(:, 1)
             option = 'EPVC_ELGA_PTOT'
-            call compEpvcElgaHexa(elemProp, matePara, epvcElga)
+            call compEpvcElgaHexa(elemProp, sshMatePara, epvcElga)
             epvcElgaAllCmp(:, 6) = epvcElga(:, 1)
         else
             ASSERT(ASTER_FALSE)

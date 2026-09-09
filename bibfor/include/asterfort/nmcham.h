@@ -15,18 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmcham(fami, kpg, ksp, imate, compor,&
-                      matel, mat, nbvar, memo, visc,&
+    subroutine nmcham(fami, kpg, ksp, imate, relaComp, &
+                      matel, mat, nbvar, memo, visc, &
                       idelta, coef)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: imate
-        character(len=16) :: compor(3)
+        character(len=16), intent(in) :: relaComp
         real(kind=8) :: matel(4)
         real(kind=8) :: mat(18)
         integer(kind=8) :: nbvar

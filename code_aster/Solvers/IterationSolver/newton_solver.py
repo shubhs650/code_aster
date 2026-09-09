@@ -22,22 +22,26 @@ import numpy as np
 from ...LinearAlgebra import MatrixScaler
 from ...Objects import DiscreteComputation
 from ...Supervis import ConvergenceError
-from ...Utilities import no_new_attributes, profile
+from ...Utilities import no_new_attributes, profile, logger
 from ..Basics import EventId, EventSource
 from .convergence_manager import ConvergenceManager
 from .iteration_solver import BaseIterationSolver
 from .line_search import BaseLineSearch
 
+# Debug parameters
 USE_SCALING = False  # for testing only
-PERTURB_JAC = False  # for checking only (sloooow)
 
 
+# Newton solver class
 class NewtonSolver(BaseIterationSolver, EventSource):
     """Solves a step, loops on iterations."""
 
     __needs__ = ("problem", "state", "keywords", "oper", "linear_solver", "contact")
     solver_type = BaseIterationSolver.SubType.Newton
+    _eventid = EventId.IterationSolver
     _data = _converg = _line_search = None
+    _use_scaling = None
+    _fixed_point_contact_iter = _nb_iter_geom = None
     __setattr__ = no_new_attributes(object.__setattr__)
 
     @classmethod
@@ -54,11 +58,14 @@ class NewtonSolver(BaseIterationSolver, EventSource):
         instance._converg = ConvergenceManager.builder(context)
         instance._line_search = BaseLineSearch.factory(context)
         instance.add_observer(context.stepper)
+        instance.add_observer(context.state)
         return instance
 
     def __init__(self):
         super().__init__()
         self._data = {}
+        # - for debug
+        self._use_scaling = USE_SCALING
 
     def initialize(self):
         """Initialize the object for the next step."""
@@ -67,21 +74,21 @@ class NewtonSolver(BaseIterationSolver, EventSource):
         iter_glob = self._converg.setdefault("ITER_GLOB_MAXI")
         iter_glob.minValue = 1
 
-    def update(self, primal_incr, resi_fields=None, callback=None):
+    def update(self, deltaU, resi_fields=None, callback=None):
         """Update the physical state.
 
         Arguments:
-            primal_incr (FieldOnNodes): Displacement increment.
+            deltaU (FieldOnNodes): Displacement increment.
             resi_fields (dict of FieldOnNodes): Fields of residual values
         """
 
-        self.state.primal_step += primal_incr
+        self.state.deltaU += deltaU
 
         for key, field in resi_fields.items():
             self.state.set(key, field)
 
         if callback:
-            callback(primal_incr)
+            callback(deltaU)
 
     def _resetMatrix(self):
         """Reset matrix if needed
@@ -95,6 +102,25 @@ class NewtonSolver(BaseIterationSolver, EventSource):
             # make unavailable the current tangent matrix
             self.current_matrix = None
 
+    def _init_fixed_point_contact(self):
+        """Initialize fixed-point-specific arguments for the contact"""
+        if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "CONTROLE":
+            self._fixed_point_contact_iter = 0
+            self._nb_iter_geom = self._converg.get_keyword("CONTACT", "NB_ITER_GEOM")
+
+    def _update_criterion_fixed_point_contact(self):
+        """Update fixed-point-specific arguments for the contact"""
+        if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "CONTROLE":
+            self._fixed_point_contact_iter += 1
+
+    def _get_criterion_fixed_point_contact(self):
+        """Get criterion to reset the pairing when relying on a fixed-point for the contact"""
+        if self._nb_iter_geom is not None:
+            if self._fixed_point_contact_iter < self._nb_iter_geom:
+                return False
+            return True
+        return False
+
     @profile
     def solve(self, current_matrix, callback=None):
         """Solve a step.
@@ -105,6 +131,7 @@ class NewtonSolver(BaseIterationSolver, EventSource):
         self.current_matrix = current_matrix
 
         iter_glob = self._converg.setdefault("ITER_GLOB_MAXI")
+        self._init_fixed_point_contact()
 
         self.oper.initialize()
         while not self._converg.isFinished():
@@ -119,12 +146,13 @@ class NewtonSolver(BaseIterationSolver, EventSource):
             force = self.oper.shouldExecuteIteration(self.current_incr)
 
             # Solve current iteration
-            primal_incr, self.current_matrix, resi_fields = self.solve_iteration(
+            deltaU, self.current_matrix, resi_fields = self.solve_iteration(
                 matrix_type, self.current_matrix, force
             )
 
             # Update
-            self.update(primal_incr, resi_fields, callback)
+            self.update(deltaU, resi_fields, callback)
+            self.notifyObservers(matrix_type)
 
             if self.current_incr > 0:
                 self.logManager.printConvTableRow(
@@ -137,7 +165,9 @@ class NewtonSolver(BaseIterationSolver, EventSource):
                         matrix_type,
                     ]
                 )
+
             self.current_incr += 1
+            self._update_criterion_fixed_point_contact()
 
         if not self._converg.isConverged():
             raise ConvergenceError("MECANONLINE9_7")
@@ -159,95 +189,101 @@ class NewtonSolver(BaseIterationSolver, EventSource):
             tuple (FieldOnNodesReal, AssemblyMatrixDisplacementReal): Tuple
             with incremental primal, Jacobian matrix used (if computed).
         """
-        # we need the matrix to have scaling factor for Lagrange
+        # -- We need the matrix to have scaling factor for Lagrange
 
-        if self.contact:
-            self.contact.update(self.state)
-            self.contact.pairing()
-
-        if not matrix:
-            jacobian = self.oper.getJacobian(matrix_type)
-        else:
-            jacobian = matrix
-
+        # Specific operations for contact
+        self._update_contact_geometry()
+        # Preparation of the linear system
+        jacobian = self._get_jacobian_iteration(matrix, matrix_type)
         # Get scaling for Lagrange (j'aimerais bien m'en débarasser de là)
         scaling = self.oper.getLagrangeScaling(matrix_type)
-
-        # compute residual
-        residuals = self.oper.getResidual(scaling)
-
-        # ---------------------------------------------------------------------
-        if PERTURB_JAC:
-            neq = self.state.primal_step.size()
-            jac = np.zeros((neq, neq))
-            primal_save = self.state.primal_step.copy()
-            res_0 = np.array(residuals.resi.getValues())
-            eps = 1.0e-6
-            for i_eq in range(neq):
-                if abs(self.state.primal_step[i_eq]) < eps:
-                    self.state.primal_step[i_eq] = -eps
-                    dd = eps
-                else:
-                    self.state.primal_step[i_eq] *= 1 - eps
-                    dd = -self.state.primal_step[i_eq] + primal_save[i_eq]
-                res_p = np.array(self.oper.getResidual(scaling).resi.getValues())
-                jac[:, i_eq] = (res_p - res_0)[:] / dd
-                # return to initial value
-                self.state.primal_step = primal_save.copy()
-            residuals = self.oper.getResidual(scaling)
-            with np.printoptions(precision=3, suppress=False, linewidth=2000):
-                print("perturb_jac=", flush=True)
-                for row in range(0, neq):
-                    print(jac[row, :], flush=True)
-        # ---------------------------------------------------------------------
-
-        # evaluate convergence
+        # Compute residual
+        residuals = self._compute_residuals(scaling)
+        # Evaluate convergence
         resi_fields = self._converg.evalNormResidual(residuals)
+        deltaU = self._compute_primal_incr(residuals, jacobian, force, scaling)
+        # evaluate geometric - convergence
+        self._converg.evalGeometricResidual(deltaU)
+        self.notifyObservers(matrix_type)
 
+        return deltaU, jacobian, resi_fields
+
+    def _compute_primal_incr(self, residuals, jacobian, force, scaling):
+        """
+        Solve the linear system to obtain the current solution increment
+        """
         if not self._converg.isConverged() or force:
             disc_comp = DiscreteComputation(self.problem)
 
-            # Compute Dirichlet BC:=
-            diriBCs = disc_comp.getIncrementalDirichletBC(
-                self.state.time_curr, self.state.primal_curr
-            )
+            # Compute Dirichlet BC
+            diriBCs = disc_comp.getIncrementalDirichletBC(self.state.time_curr, self.state.U)
 
-            # Solve linear system
-            if USE_SCALING:
-                S = MatrixScaler.MatrixScaler()
-                S.computeScaling(jacobian, merge_dof=[["DX", "DY"], ["LAGS_C", "LAGS_F1"]])
-                S.scaleMatrix(jacobian)
-                S.scaleRHS(residuals.resi)
-            # ------------------------------------------------------------------------
-            if PERTURB_JAC:
-                A = jacobian.toNumpy()
-                neq = A.shape[0]
-                neql = range(0, neq // 2)
-                with np.printoptions(precision=3, suppress=False, linewidth=2000):
-                    print("residual=", np.asarray(residuals.resi.getValues())[neql], flush=True)
-                    print("pert_jac vs jac=", flush=True)
-                    for row in neql:
-                        print(jac[row, neql], flush=True)
-                        print(A[row, neql], flush=True)
-                        print("-" * 20)
-            # ------------------------------------------------------------------------
-            if not jacobian.isFactorized():
-                self.linear_solver.factorize(jacobian, raiseException=True)
-            primal_incr = self.linear_solver.solve(residuals.resi, diriBCs)
-            if USE_SCALING:
-                S.unscaleSolution(primal_incr)
-            # Use line search
-            if not self._converg.isPrediction():
-                if self._line_search.isEnabled() and not force:
-                    primal_incr = self._line_search.solve(primal_incr, scaling)
+            with MatrixScaler.matrixScaler(
+                jacobian,
+                residuals.resi,
+                merge_dof=[["DX", "DY"], ["LAGS_C", "LAGS_F1"]],
+                scaling_type=self._use_scaling,
+                verbose=False,
+            ) as matScaler:
+                # Solve linear system
+                if not jacobian.isFactorized():
+                    self.linear_solver.factorize(jacobian, raiseException=True)
+                deltaU = self.linear_solver.solve(residuals.resi, diriBCs)
+                # Unscale if MatrixScaler is used
+                matScaler.unscaleSolution(deltaU)
+                if not self._converg.isPrediction():
+                    if self._line_search.isEnabled() and not force:
+                        deltaU = self._line_search.solve(deltaU, scaling)
         else:
-            primal_incr = self.state.createPrimal(self.problem, 0.0)
+            deltaU = self.state.createPrimal(self.problem, 0.0)
 
-        # evaluate geometric - convergence
-        self._converg.evalGeometricResidual(primal_incr)
-        self.notifyObservers(matrix_type)
+        return deltaU
 
-        return primal_incr, jacobian, resi_fields
+    def _get_jacobian_iteration(self, matrix, matrix_type):
+        """Obtain the Jacobian matric (recompute or use the one provided)
+
+        Arguments:
+            matrix_type (str): type of matrix used.
+            matrix (AssemblyMatrixDisplacementReal, optional): Stiffness matrix
+                to be reused.
+
+        Returns:
+            jacobian (AssemblyMatrixDisplacementReal) : Stiffness matrix to use
+            in the current iteration
+        """
+        return matrix or self.oper.getJacobian(matrix_type)
+
+    def _compute_residuals(self, scaling):
+        """Computation of the residual"""
+        residuals = self.oper.getResidual(scaling)
+        return residuals
+
+    def _update_contact_geometry(self):
+        """Update the pairing for contact"""
+        if self.contact:
+            if self._converg.get_keyword("CONTACT", "ALGO_RESO_GEOM") == "NEWTON":
+                self.contact.update(self.state)
+                self.contact.pairing()
+            else:
+                update_fixed_point = (
+                    self._converg.isPrediction() or self._fixed_point_internal_loop_criterion()
+                )
+                if update_fixed_point:
+                    logger.info("<POINT_FIXE> Contact pairing is performed")
+                    self.contact.update(self.state)
+                    self.contact.pairing()
+                    if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "CONTROLE":
+                        self._fixed_point_contact_iter = 0
+
+    def _fixed_point_internal_loop_criterion(self):
+        """Test criterion for end of fixed point iteration (contact)"""
+        if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "AUTOMATIQUE":
+            return self._converg._param.get("RESI_GEOM").isConverged()
+        if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "CONTROLE":
+            return self._get_criterion_fixed_point_contact()
+        if self._converg.get_keyword("CONTACT", "REAC_GEOM") == "SANS":
+            return False
+        return False
 
     def notifyObservers(self, matrix_type):
         """Notify observers about the convergence.
@@ -262,4 +298,4 @@ class NewtonSolver(BaseIterationSolver, EventSource):
 
     def get_state(self):
         """Returns the current residuals to be shared with observers."""
-        return EventId.IterationSolver, self._data
+        return self._data

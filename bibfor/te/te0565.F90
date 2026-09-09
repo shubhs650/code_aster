@@ -19,6 +19,8 @@
 subroutine te0565(option, nomte)
 !
     use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -28,7 +30,6 @@ subroutine te0565(option, nomte)
 #include "asterfort/elref1.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/enelpg.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/iselli.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
@@ -72,17 +73,19 @@ subroutine te0565(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: famiMater = "XFEM"
+    integer(kind=8), parameter :: ksp = 1
     integer(kind=8), parameter :: nbsgm = 6
     real(kind=8), parameter :: zero = 0.d0
     integer(kind=8) :: idene1
-    integer(kind=8) :: jvDBaseFunc, jvSigm, jvVari, jvGeom, jvMater, jvTime
+    integer(kind=8) :: jvDBaseFunc, jvSigm, jvVari, jvGeom, jvMaterc, jvTime
     integer(kind=8) :: jvGaussWeight, jvBaseFunc
     integer(kind=8) :: nbsig, nbvari, ndim, nno
     integer(kind=8) :: npg, iret, i, jtab(7)
     real(kind=8) :: enerElas
     real(kind=8) :: welas, wtotal
     real(kind=8) :: sigmEner(nbsgm)
-    real(kind=8) :: anglNaut(3), time
+    real(kind=8) :: time
     real(kind=8) :: f(3, 3), r
     character(len=16) :: relaName, defoComp
     integer(kind=8) :: jpintt, jpmilt, jcnset, jlonch
@@ -95,6 +98,7 @@ subroutine te0565(option, nomte)
     aster_logical :: largeStrain, axi
     character(len=8), parameter :: elrese(6) = (/'SE2', 'TR3', 'TE4', 'SE3', 'TR6', 'T10'/)
     character(len=8), parameter :: fami(6) = (/'BID ', 'XINT', 'XINT', 'BID ', 'XINT', 'XINT'/)
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -122,7 +126,13 @@ subroutine te0565(option, nomte)
     call jevech('PGEOMER', 'L', jvGeom)
 
 ! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(famiMater, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! - XFEM
     call jevech('PPINTTO', 'L', jpintt)
@@ -132,9 +142,6 @@ subroutine te0565(option, nomte)
     if ((iret .eq. 0) .and. ltequa(elrefp, enr)) then
         call jevech('PPMILTO', 'L', jpmilt)
     end if
-
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nnop, jvGeom, anglNaut)
 
 ! - Get stresses
     call jevech('PCONTPR', 'L', jvSigm)
@@ -189,6 +196,9 @@ subroutine te0565(option, nomte)
         end do
 
         do kpg = 1, npg
+! --------- Initializations of material parameters on current integration point
+            call initParaPoin(kpg, ksp, materPara)
+
 ! --------- Coordinates of current Gauss point
             xg = 0.d0
             do i = 1, ndim
@@ -238,7 +248,7 @@ subroutine te0565(option, nomte)
             do i = 1, 3
                 f(i, i) = 1.d0
             end do
-            call enelpg('XFEM', zi(jvMater), time, kpg, anglNaut, &
+            call enelpg(materPara, time, &
                         relaName, defoComp, &
                         f, sigmEner, &
                         nbvari, zr(jvVari+(kpg-1)*nbvari), &

@@ -38,6 +38,7 @@ subroutine approj(mesh, newgeo, sdcont_defi, node_mast_indx, l_pair_dire, &
 #include "asterfort/dismoi.h"
 #include "asterfort/infdbg.h"
 #include "asterfort/mmproj.h"
+#include "MeshTypes_type.h"
 #include "asterfort/utmess.h"
 !
 !
@@ -96,7 +97,7 @@ subroutine approj(mesh, newgeo, sdcont_defi, node_mast_indx, l_pair_dire, &
     integer(kind=8) :: ifm, niv
     character(len=8) :: elem_mast_type, elem_mast_name
     integer(kind=8) :: elem_mast_ndim, niverr, elem_mast_nbnode, node_nbelem, ino
-    real(kind=8) :: elem_mast_coor(27), vect_pm(3)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D), vect_pm(3)
     real(kind=8) :: tau1(3), tau2(3)
     real(kind=8) :: ksi1, ksi2, dist
     integer(kind=8) :: proj_stat, i_elem_mast, elem_mast_indx, elem_mast_nume
@@ -160,7 +161,7 @@ subroutine approj(mesh, newgeo, sdcont_defi, node_mast_indx, l_pair_dire, &
         if ((elem_mast_ndim .lt. mesh_ndim) .and. .not. l_cont_disc) then
 ! ----- The nodes have to be in the plane xOy (problem for shell element)
             do ino = 1, elem_mast_nbnode
-                if (abs(elem_mast_coor(3*(ino-1)+3)) > r8prem()) then
+                if (abs(elem_mast_coor(3, ino)) > r8prem()) then
                     call utmess('F', 'APPARIEMENT_12', ni=2, vali=[mesh_ndim, elem_mast_ndim])
                 end if
             end do

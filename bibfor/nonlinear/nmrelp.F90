@@ -112,7 +112,7 @@ subroutine nmrelp(model, nume_dof, ds_material, cara_elem, ds_system, &
     real(kind=8) :: parmul, relirl, sens
     real(kind=8) :: mem(2, 10)
     aster_logical :: stite, lnkry
-    aster_logical :: lgrot, lendo
+    aster_logical :: lgrot
     character(len=19) :: cnfint2(2), cndiri2(2)
     character(len=19) :: cndiri, cnfext, cnsstr, k19bla
     character(len=19) :: depplu, sigplu, varplu, complu
@@ -138,7 +138,6 @@ subroutine nmrelp(model, nume_dof, ds_material, cara_elem, ds_system, &
         sddyna = sddyna_
     end if
     lgrot = isfonc(list_func_acti, 'GD_ROTA')
-    lendo = isfonc(list_func_acti, 'ENDO_NO')
     lnkry = isfonc(list_func_acti, 'NEWTON_KRYLOV')
 !
 ! --- INITIALISATIONS
@@ -255,9 +254,9 @@ subroutine nmrelp(model, nume_dof, ds_material, cara_elem, ds_system, &
 !
 ! ----- CALCUL DE L'INCREMENT DE DEPLACEMENT TEMPORAIRE
 !
-        call nmmaji(nume_dof, lgrot, lendo, sdnume, rho, &
+        call nmmaji(nume_dof, lgrot, sdnume, rho, &
                     depdel, ddepla, depdet, 0)
-        call nmmaji(nume_dof, lgrot, lendo, sdnume, rho, &
+        call nmmaji(nume_dof, lgrot, sdnume, rho, &
                     depplu, ddepla, depplt, 1)
         if (lnkry) then
             call vlaxpy(1.d0-rho, ddepla, depdet)

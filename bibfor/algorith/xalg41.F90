@@ -37,6 +37,7 @@ subroutine xalg41(ndim, elrefp, nnop, it, nnose, &
 # include "asterfort/xmilar.h"
 # include "asterfort/xmilfa.h"
 # include "asterfort/xstudo.h"
+#include "MeshTypes_type.h"
 # include "asterfort/xxmmvd.h"
     character(len=8) :: typma, elrefp
     integer(kind=8) :: ndim, ndime, nnop, it, nnose, cnset(*), exit(2)
@@ -68,7 +69,7 @@ subroutine xalg41(ndim, elrefp, nnop, it, nnose, &
 !     ----------------------------------------------------------------
 !
     real(kind=8) :: milfi(3), milara(3), milarb(3)
-    real(kind=8) :: milfa(3), cenfi(ndime), ff(27)
+    real(kind=8) :: milfa(3), cenfi(ndime), ff(MT_NNOMAX)
     real(kind=8) :: pmiref(13*ndime), ksia(ndime), ksib(ndime)
     integer(kind=8) :: n(3), nn(4)
     integer(kind=8) :: i, ipm, k

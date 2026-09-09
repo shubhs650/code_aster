@@ -15,16 +15,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1501,W0413
 !
-subroutine pipedo(ndim, typmod, tau, mate, vim, &
-                  epsm, epspc, epsdc, etamin, etamax, &
+subroutine pipedo(materPara, ndim, typmod, &
+                  tau, &
+                  vim, epsm, epspc, epsdc, etamin, etamax, &
                   a0, a1, a2, a3, etas)
 !
-!
-! aslint: disable=W1501
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "asterf_types.h"
+!
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/criteo.h"
 #include "asterfort/diago3.h"
 #include "asterfort/r8inir.h"
@@ -32,25 +35,23 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
 #include "asterfort/utmess.h"
 #include "asterfort/zerod2.h"
 #include "asterfort/zerog2.h"
-    character(len=8) :: typmod(*)
-    integer(kind=8) :: ndim, mate
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=8), intent(in) :: typmod(2)
+    integer(kind=8), intent(in) :: ndim
     real(kind=8) :: vim(7), epsm(6), epspc(6), epsdc(6)
     real(kind=8) :: etamin, etamax, tau
     real(kind=8) :: a0, a1, a2, a3, etas
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
 ! ROUTINE MECA_NON_LINE (PILOTAGE - PRED_ELAS)
 !
 ! LOI DE COMPORTEMENT ENDO_ORTH_BETON
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-!
-! IN  NDIM   : DIMENSION DE L'ESPACE
-! IN  TYPMOD : TYPE DE MODELISATION
 ! IN  TAU    : 2ND MEMBRE DE L'EQUATION F(ETA)=TAU
-! IN  MATE   : MATERIAU CODE
 ! IN  VIM    : VARIABLES INTERNES EN T-
 ! IN  EPSM   : DEFORMATIONS EN T-
 ! IN  EPSPC  : CORRECTION DE DEFORMATIONS DUES AUX CHARGES FIXES
@@ -63,21 +64,21 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
 ! OUT A3     : IDEM A1 POUR LA SECONDE SOLUTION EVENTUELLE;R8VIDE SINON
 ! OUT ETAS   : SI PAS DE SOLUTION : LE MINIMUM ; R8VIDE SINON
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbres
-    parameter(nbres=6)
-    integer(kind=8) :: icodre(nbres)
-    character(len=16) :: nomres(nbres)
-    character(len=8) :: fami, poum
-    real(kind=8) :: valres(nbres)
-!
-!
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
+    character(len=8), parameter :: poum = "+"
+    integer(kind=8), parameter :: nbProp = 6
+    integer(kind=8) :: propCode(nbProp)
+    character(len=16) :: propName(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    real(kind=8), parameter :: rac2 = sqrt(2.d0), un = 1.d0
     aster_logical :: cplan, rechbg, rechbd
     integer(kind=8) :: ndimsi, k, nsol, iter, nitmax
-    integer(kind=8) :: i, j, l, t(3, 3), kpg, spt
-    real(kind=8) :: coplan, un
-    real(kind=8) :: rac2, critp
+    integer(kind=8) :: i, j, l, t(3, 3)
+    real(kind=8) :: coplan, critp
     real(kind=8) :: eta
     real(kind=8) :: e, nu, lambda, mu, seuil, trepsm
     real(kind=8) :: k0, k1, k2, alpha
@@ -96,15 +97,14 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
     real(kind=8) :: stra, trb
     real(kind=8) :: ecrob, ecrod
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    un = 1.d0
     nitmax = 50
     epstol = 1.d-1
     r = 0.61803399d0
     c = 1.d0-r
     nsol = 0
-!
+
 ! TOLE: TOLERANCE POUR ARRET EVOLUTION DE L ENDOMMAGEMENT
     tole = 1.d-2
 !
@@ -117,44 +117,53 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
     t(3, 1) = 5
     t(3, 2) = 6
     t(3, 3) = 3
-!
-! -- OPTION ET MODELISATION
+
+! - OPTION ET MODELISATION
     cplan = (typmod(1) .eq. 'C_PLAN  ')
     ndimsi = 2*ndim
-    rac2 = sqrt(2.d0)
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-!
-! -- LECTURE DES CARACTERISTIQUES THERMOELASTIQUES
-    nomres(1) = 'E'
-    nomres(2) = 'NU'
-    call rcvalb(fami, kpg, spt, poum, mate, &
-                ' ', 'ELAS', 0, ' ', [0.d0], &
-                2, nomres, valres, icodre, 1)
-    e = valres(1)
-    nu = valres(2)
+
+! - Copy material parameters with other scheme parameters
+    call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                       materParaFPG1)
+
+! - LECTURE DES CARACTERISTIQUES THERMOELASTIQUES
+    propName(1) = 'E'
+    propName(2) = 'NU'
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, &
+                ' ', 'ELAS', &
+                0, ' ', [0.d0], &
+                2, propName, propVale, &
+                propCode, 1)
+    e = propVale(1)
+    nu = propVale(2)
     lambda = e*nu/(1.d0+nu)/(1.d0-2.d0*nu)
     mu = e/(2.d0*(1.d0+nu))
-!
-! -- LECTURE DES CARACTERISTIQUES D'ENDOMMAGEMENT
-    nomres(1) = 'ALPHA'
-    nomres(2) = 'K0'
-    nomres(3) = 'K1'
-    nomres(4) = 'K2'
-    nomres(5) = 'ECROB'
-    nomres(6) = 'ECROD'
-    call rcvalb(fami, kpg, spt, poum, mate, &
-                ' ', 'ENDO_ORTH_BETON', 0, ' ', [0.d0], &
-                nbres, nomres, valres, icodre, 1)
-    alpha = valres(1)
-    k0 = valres(2)
-    k1 = valres(3)
-    k2 = valres(4)
-    ecrob = valres(5)
-    ecrod = valres(6)
-!
+
+! - LECTURE DES CARACTERISTIQUES D'ENDOMMAGEMENT
+    propName(1) = 'ALPHA'
+    propName(2) = 'K0'
+    propName(3) = 'K1'
+    propName(4) = 'K2'
+    propName(5) = 'ECROB'
+    propName(6) = 'ECROD'
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, ' ', 'ENDO_ORTH_BETON', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    alpha = propVale(1)
+    k0 = propVale(2)
+    k1 = propVale(3)
+    k2 = propVale(4)
+    ecrob = propVale(5)
+    ecrod = propVale(6)
 !
     trepsm = epsm(1)+epsm(2)+epsm(3)
     if (trepsm .gt. 0.d0) then
@@ -164,17 +173,10 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
     stra = trepsm
     seuil = k0-k1*stra*(atan2(-stra/k2, un))
     seuila = seuil
-!
-!
-!
-!
-!
+
 ! ======================================================================
 !                CALCUL DES DEFORMATIONS POUR LINEARISATION
 ! ======================================================================
-!
-!
-!
 !    ETAT MECANIQUE EN T-
     do i = 1, 3
         b(i) = 1.d0-vim(i)
@@ -197,9 +199,8 @@ subroutine pipedo(ndim, typmod, tau, mate, vim, &
         etas = r8vide()
         goto 999
     end if
-!
-! -- CALCUL DES DEFORMATIONS EN PRESENCE DE CONTRAINTES PLANES
-!
+
+! - CALCUL DES DEFORMATIONS EN PRESENCE DE CONTRAINTES PLANES
     if (cplan) then
         coplan = -nu/(1.d0-nu)
         epspc(3) = coplan*(epspc(1)+epspc(2))

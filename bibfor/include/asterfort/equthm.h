@@ -15,34 +15,34 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
-interface 
-    subroutine equthm(ds_thm   , option   , j_mater  ,&
-                      lMatr    , lSigm    ,&
-                      lVari    , lMatrPred,&
-                      typmod   , angl_naut, parm_theta,&
-                      ndim     , nbvari   ,&
-                      kpi      , npg      ,&
-                      dimdef   , dimcon   ,&
-                      mecani   , press1   , press2    , tempe, second, &
-                      carcri   ,&
-                      defgem   , defgep   ,&
-                      congem   , congep   ,&
-                      vintm    , vintp    ,&
-                      time_prev, time_curr, time_incr ,&
-                      r        , drds     , dsde      , retcom)
+interface
+    subroutine equthm(ds_thm, option, &
+                      lMatr, lSigm, &
+                      lVari, lMatrPred, &
+                      typmod, parm_theta, &
+                      ndim, nbvari, &
+                      kpi, npg, &
+                      dimdef, dimcon, &
+                      mecani, press1, press2, tempe, second, &
+                      carcri, &
+                      defgem, defgep, &
+                      congem, congep, &
+                      vintm, vintp, &
+                      time_prev, time_curr, time_incr, &
+                      r, drds, dsde, retcom)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
         character(len=16), intent(in) :: option
-        integer(kind=8), intent(in) :: j_mater
         aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
         character(len=8), intent(in) :: typmod(2)
-        real(kind=8), intent(in)  :: angl_naut(3), parm_theta
+        real(kind=8), intent(in)  :: parm_theta
         integer(kind=8), intent(in) :: ndim, nbvari
         integer(kind=8), intent(in) :: npg, kpi
         integer(kind=8), intent(in) :: dimdef, dimcon
         integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
-        real(kind=8), intent(in) :: carcri(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: defgem(dimdef), defgep(dimdef)
         real(kind=8), intent(inout) :: congem(dimcon), congep(dimcon)
         real(kind=8), intent(in) :: vintm(nbvari)
@@ -52,4 +52,4 @@ interface
         real(kind=8), intent(out) :: drds(dimdef+1, dimcon), dsde(dimcon, dimdef)
         integer(kind=8), intent(out) :: retcom
     end subroutine equthm
-end interface 
+end interface

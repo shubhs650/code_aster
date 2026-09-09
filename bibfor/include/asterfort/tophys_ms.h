@@ -19,11 +19,12 @@
 !
 !
 interface
-    subroutine tophys_ms(dplmod, psidel, coef, xgene, xphys)
+    subroutine tophys_ms(dplmod, psidel, coef, xgene, xphys, nbddl_)
         real(kind=8), pointer  :: dplmod(:)
         real(kind=8), pointer  :: psidel(:)
         real(kind=8), pointer  :: coef(:)
         real(kind=8), pointer  :: xgene(:)
         real(kind=8),          intent(out) :: xphys(:)
+        integer(kind=8), intent(in), optional :: nbddl_
     end subroutine tophys_ms
 end interface

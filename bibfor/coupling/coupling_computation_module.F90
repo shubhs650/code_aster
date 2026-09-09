@@ -40,13 +40,10 @@ module coupling_computation_module
 #include "asterfort/assert.h"
 #include "asterfort/coupling_type.h"
 #include "asterfort/HHO_size_module.h"
-#include "asterfort/matrHooke3d.h"
-#include "asterfort/matrHookePlaneStrain.h"
 #include "asterfort/reereg.h"
-#include "asterfort/separ_RI_elas_3D.h"
 #include "blas/dger.h"
 #include "blas/dsyr.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -88,9 +85,9 @@ contains
 !
         type(HHO_basis_face) :: hhoBasisFace
         type(FE_Basis) :: FEBasis
-        real(kind=8), dimension(MAX_BS) :: BSEval
+        real(kind=8), dimension(MAX_BS_CG) :: BSEval
         real(kind=8), dimension(MSIZE_FACE_SCAL) :: basisScalEval
-        real(kind=8), dimension(MAX_BS+MSIZE_FACE_SCAL) :: BS
+        real(kind=8), dimension(MAX_BS_CG+MSIZE_FACE_SCAL) :: BS
         real(kind=8) :: coeff
         integer(kind=8) :: fbs, nbDoFsFE, nbDoFs, ipg
         blas_int, parameter :: b_one = to_blas_int(1)
@@ -228,8 +225,8 @@ contains
 !===================================================================================================
 !
         type(FE_Basis) :: FEBasisSl, FEBasisMa
-        real(kind=8), dimension(MAX_BS) :: BSEvalSl, BSEvalMa
-        real(kind=8), dimension(MAX_BS+MAX_BS) :: BS
+        real(kind=8), dimension(MAX_BS_CG) :: BSEvalSl, BSEvalMa
+        real(kind=8), dimension(MAX_BS_CG+MAX_BS_CG) :: BS
         real(kind=8) :: coeff, hF
         integer(kind=8) :: nbDoFsFEMa, nbDoFsFESl, nbDoFs, ipg
         blas_int, parameter :: b_one = to_blas_int(1)
@@ -340,8 +337,8 @@ contains
 !===================================================================================================
 !
         type(FE_Basis) :: FEBasisSl, FEBasisMa, FEBasisLagSl
-        real(kind=8), dimension(MAX_BS) :: BSEvalSl, BSEvalMa, BSEvalLagSl
-        real(kind=8), dimension(MAX_BS+MAX_BS) :: BS
+        real(kind=8), dimension(MAX_BS_CG) :: BSEvalSl, BSEvalMa, BSEvalLagSl
+        real(kind=8), dimension(MAX_BS_CG+MAX_BS_CG) :: BS
         real(kind=8) :: coeff
         integer(kind=8) :: nbDoFsFEMa, nbDoFsFESl, nbDoFs, ipg, nbDoFsFELagSl
         blas_int, parameter :: b_one = to_blas_int(1)
@@ -457,8 +454,8 @@ contains
 !
         type(HHO_basis_face) :: hhoBasisFace
         type(FE_Basis) :: FEBasisFaceSl, FEBasisCellSl
-        real(kind=8), dimension(MAX_BS) :: BSEvalFaceSl
-        real(kind=8), dimension(3, MAX_BS) :: BSGEvalCellSl
+        real(kind=8), dimension(MAX_BS_CG) :: BSEvalFaceSl
+        real(kind=8), dimension(3, MAX_BS_CG) :: BSGEvalCellSl
         real(kind=8), dimension(MSIZE_FACE_SCAL) :: BSEvalFaceMa
         real(kind=8) :: coor_qp_vo(3), normalSl(3), E, nu, lambda, mu
         real(kind=8) :: stress_n(3, 3), weight, matHB(6, 3)
@@ -523,9 +520,6 @@ contains
 ! ------------- Compute normal component
                 call cplEvalMatrHBn(matHB, normalSl, stress_n)
 !
-! -------- Bug for the moment - FIXME - so stress_n = 0.d0 to recover penalization
-                stress_n = 0.d0
-!
                 do idim = 1, ndim
                     iRow = iRow+1
 !
@@ -566,7 +560,7 @@ contains
 !
         type(CouplingData), intent(in) :: cplData
         integer(kind=8), intent(in) :: nbNodes
-        real(kind=8), dimension(MAX_BS), intent(in) :: BSEvalFaceSl
+        real(kind=8), dimension(MAX_BS_CG), intent(in) :: BSEvalFaceSl
         real(kind=8), intent(out) :: E, nu, lambda, mu
 !
 !===================================================================================================

@@ -1038,7 +1038,7 @@ subroutine op0167()
 ! ----- A huge value is used for global numbering of cells which are not
 !       owned by current processor because to obtain the true value
 !       it must be mandatory to communicate (#34152)
-        hugeValue = huge(pCellShift)
+        hugeValue = -huge(pCellShift)
         pCellShift = nbCellPerProc(rank+1)
         iCount = pCellShift+1
         do iCell = 1, nbCellIn

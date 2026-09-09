@@ -28,11 +28,11 @@ subroutine pipeba(ndim, mate, sup, sud, vim, &
 #include "blas/ddot.h"
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: mate
-    real(kind=8), intent(in) :: sup(ndim)
-    real(kind=8), intent(in) :: sud(ndim)
-    real(kind=8), intent(in) :: vim
+    real(kind=8), intent(in) :: sup(:)
+    real(kind=8), intent(in) :: sud(:)
+    real(kind=8), intent(in) :: vim(:)
     real(kind=8), intent(in) :: dtau
-    real(kind=8), intent(out) :: copilo(5)
+    real(kind=8), intent(out) :: copilo(:)
 !
 !-----------------------------------------------------------------------
 !
@@ -66,7 +66,7 @@ subroutine pipeba(ndim, mate, sup, sud, vim, &
                 3, nom, val, cod, 2)
     lc = val(1)/val(2)
     k0 = val(1)/val(2)*val(3)
-    ka = max(vim, k0)
+    ka = max(vim(1), k0)
     kref = max(lc, ka)
 !
     c = dtau*kref+ka

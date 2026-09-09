@@ -15,28 +15,30 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine te0053(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
-#include "asterfort/vrfplq.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
-#include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
+#include "asterfort/vrfplq.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
 !
-!.....................................................................
+! --------------------------------------------------------------------------------------------------
+!
 !  BUT: VERIFICATION DE FERRAILLAGE POUR LES ELEMENTS DE PLAQUE
-!.....................................................................
-!_____________________________________________________________________
 !
 ! DIAGRAMME D INTERACTION ET CALCUL DE LA MARGE
 !              (METHODE DE CAPRA ET MAURY)
 !
-!_____________________________________________________________________
+! --------------------------------------------------------------------------------------------------
 !
 ! PARAMETRES D'ECHANGE ENTRE CODE_ASTER ET VRFPLQ
 ! (POINT D'ENTREE DU CALCUL DE FERRAILLAGE PAR CAPRA ET MAURY)
@@ -93,29 +95,39 @@ subroutine te0053(option, nomte)
 !     c0_crd    Distance C0CRD entre le point de ref. et le point du diagramme
 !     + tous les parametres necessaires a la production du diagramme d interaction
 !     sur la facette critique
-!---------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: sigs, sigci, sigcs, marge
     real(kind=8) :: alphacc, effrts(8), ht, enrobi, enrobs, effref(8)
     real(kind=8) :: gammac, gammas, thiter
     real(kind=8) :: facier, fbeton, eys
     real(kind=8) :: dnsxi, dnsyi, dnsxs, dnsys
-    real(kind=8) ::  cequi
-    integer(kind=8) :: jepais, jefge, jefge0, jfer0, jfer1, jfer2
+    real(kind=8) :: cequi
+    integer(kind=8) :: jefge, jefge0, jfer0, jfer1, jfer2
     integer(kind=8) :: itab(7), nno, typcmb, typco, typdiag, clacier, uc, um
     integer(kind=8) :: ino, icmp, iret
-    integer(kind=8) :: iadzi, iazk24, typstru, nb
+    integer(kind=8) :: typstru, nb
     real(kind=8) :: dnsinf_crit, dnssup_crit, myNrd_crit, myMrd_crit
     real(kind=8) :: tau_crit, c0c_crit, c0crd_crit
     real(kind=8) :: theta_crit, effn_crit, effm_crit, effn0_crit, effm0_crit, bw
-    !
-    call tecael(iadzi, iazk24, noms=0)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    call jevech('PCACOQU', 'L', jepais)
+! --------------------------------------------------------------------------------------------------
+!
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    ht = plateCara%thick
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
     call jevech('PVFER0', 'L', jfer0)
     call jevech('PVFER1', 'L', jfer1)
     call jevech('PVFER2', 'E', jfer2)
-    ht = zr(jepais)
+
 !
     call jevech('PEFFORR', 'L', jefge)
     call tecach('OOO', 'PEFFORR', 'L', iret, nval=7, itab=itab)

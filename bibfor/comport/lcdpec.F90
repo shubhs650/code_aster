@@ -15,8 +15,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine lcdpec(BEHinteg, vind, nbcomm, nmat, ndt, &
+subroutine lcdpec(BEHInteg, vind, nbcomm, nmat, ndt, &
                   cpmono, materf, iter, nvi, itmax, &
                   toler, pgl, nfs, nsg, toutms, &
                   hsr, dt, dy, yd, vinf, &
@@ -27,7 +28,7 @@ subroutine lcdpec(BEHinteg, vind, nbcomm, nmat, ndt, &
 !
     implicit none
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
 !     POST-TRAITEMENTS POUR LE MONOCRISTAL
 !     DEFORMATION PLASTIQUE EQUIVALENTE CUMULEE MACROSCOPIQUE
 !     RECALCUL DES 3 VARIABLES INTERNES PAR SYSTEME
@@ -301,7 +302,7 @@ subroutine lcdpec(BEHinteg, vind, nbcomm, nmat, ndt, &
 !
 !     ROTATION RESEAU DEBUT
     if (ir .eq. 1) then
-        call lcmmro(BEHinteg, omp, nvi, vind, vinf)
+        call lcmmro(BEHInteg, omp, nvi, vind, vinf)
     end if
 ! ROTATION RESEAU FIN
 !

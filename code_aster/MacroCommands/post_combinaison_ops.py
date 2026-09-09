@@ -350,8 +350,7 @@ def post_combinaison_ops(self, TABLE_COEF_FIN=None, **args):
         # Apply filters on each table
         if args.get("FILTRE") is not None:
             filter_action = tuple(
-                _F(OPERATION="FILTRE", **filter_.cree_dict_toutes_valeurs())
-                for filter_ in args.get("FILTRE")
+                _F(OPERATION="FILTRE", **filter_) for filter_ in args.get("FILTRE")
             )
         else:
             filter_action = None

@@ -16,24 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dmat3d(fami, materCodeJv, time, poum, ipg, &
-                  ispg, anglNaut, dr_, di_)
+subroutine dmat3d(materPara, poum, time, &
+                  dr_, di_)
 !
+    use MaterialPara_type
     implicit none
 !
-#include "asterfort/get_elas_id.h"
 #include "asterfort/get_elas_para.h"
 #include "asterfort/matrHooke3d.h"
 #include "asterfort/separ_RI_elas_3D.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: materCodeJv
-    real(kind=8), intent(in) :: time
+    type(Material_Para), intent(in) :: materPara
     character(len=*), intent(in) :: poum
-    integer(kind=8), intent(in) :: ipg, ispg
-    real(kind=8), intent(in) :: anglNaut(3)
-    real(kind=8), optional, intent(out) :: dr_(6, 6)
-    real(kind=8), optional, intent(out) :: di_(6, 6)
+    real(kind=8), intent(in) :: time
+    real(kind=8), optional, intent(out) :: dr_(6, 6), di_(6, 6)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -43,34 +39,26 @@ subroutine dmat3d(fami, materCodeJv, time, poum, ipg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
-! In  materCodeJv      : coded material address
-! In  time             : current time
+! In  materPara        : parameters of material
 ! In  poum             : '-' or '+' for parameters evaluation (previous or current temperature)
-! In  ipg              : current point gauss
-! In  ispg             : current "sous-point" gauss
-! In  anglNaut         : nautical angles for definition of basis for non-isotropic elasticity
+! In  time             : current time
 ! Out dr               : Hooke matrix (real part)
 ! Out di               : Hooke matrix (imaginary part, for viscoelasticity)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: elasID
     real(kind=8) :: nur, nui, nu12r, nu13r, nu23r, nu12i, nu13i, nu23i
     real(kind=8) :: e1r, e2r, e3r, e1i, e2i, e3i, er, ei
     real(kind=8) :: g1r, g2r, g3r, g1i, g2i, g3i, gr, gi
-    character(len=32) :: elasKeyword
     real(kind=8) :: di(6, 6), dr(6, 6), hr(6), hi(6)
 !
 ! --------------------------------------------------------------------------------------------------
 !
 
-! - Get type of elasticity (Isotropic/Orthotropic/Transverse isotropic)
-    call get_elas_id(materCodeJv, elasID, elasKeyword)
-
 ! - Get elastic parameters
-    call get_elas_para(fami, materCodeJv, poum, ipg, ispg, &
-                       elasID, elasKeyword, &
+    call get_elas_para(materPara%schemePara%fami, materPara%jvMaterCode, poum, &
+                       materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                       materPara%elasID, materPara%elasKeyword, &
                        time=time, &
                        e_=er, nu_=nur, g_=gr, &
                        e1_=e1r, e2_=e2r, e3_=e3r, &
@@ -82,7 +70,8 @@ subroutine dmat3d(fami, materCodeJv, time, poum, ipg, &
                        g1i_=g1i, g2i_=g2i, g3i_=g3i)
 
 ! - Prepare Hooke matrix coefficient
-    call separ_RI_elas_3D(elasID, nur, gr, nui, gi, &
+    call separ_RI_elas_3D(materPara%elasID, &
+                          nur, gr, nui, gi, &
                           e1r, e2r, e3r, &
                           nu12r, nu13r, nu23r, &
                           e1i, e2i, e3i, &
@@ -91,13 +80,13 @@ subroutine dmat3d(fami, materCodeJv, time, poum, ipg, &
 
 ! - Compute Hooke matrix
     if (present(di_)) then
-        call matrHooke3d(elasID, anglNaut, &
+        call matrHooke3d(materPara, &
                          hi, gi, g1i, g2i, g3i, &
                          di)
         di_ = di
     end if
     if (present(dr_)) then
-        call matrHooke3d(elasID, anglNaut, &
+        call matrHooke3d(materPara, &
                          hr, gr, g1r, g2r, g3r, &
                          dr)
         dr_ = dr

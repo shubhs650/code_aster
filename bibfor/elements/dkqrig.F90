@@ -16,26 +16,29 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
-                  ener)
+subroutine dkqrig(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  matrRigi_, ener_)
+!
+    use plate_type
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
-#include "asterfort/assert.h"
+!
 #include "asterc/r8gaem.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/bsthpl.h"
 #include "asterfort/dkqbf.h"
 #include "asterfort/dkqshp.h"
-#include "asterfort/dxqgm.h"
 #include "asterfort/dxmate.h"
 #include "asterfort/dxqbm.h"
+#include "asterfort/dxqgm.h"
 #include "asterfort/dxqloc.h"
 #include "asterfort/dxqlocdri1.h"
 #include "asterfort/dxqlocdri2.h"
 #include "asterfort/dxqlocdri3.h"
 #include "asterfort/dxqlocdri4.h"
-#include "asterfort/dxqloe.h"
 #include "asterfort/dxqloe_NV.h"
+#include "asterfort/dxqloe.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/gquad4.h"
 #include "asterfort/jevech.h"
@@ -46,19 +49,22 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
 #include "asterfort/utpvgl.h"
 #include "blas/dcopy.h"
 #include "blas/dscal.h"
-    real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
-    character(len=16) :: option, nomte
+#include "jeveux.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    type(plateCara_Para), intent(in) :: plateCara
+    real(kind=8), intent(in) :: xyzl(3, *), pgl(*)
+    character(len=16), intent(in) :: option
+    real(kind=8), optional, intent(out) :: matrRigi_(300), ener_(3)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     MATRICE DE RIGIDITE DE L'ELEMENT DE PLAQUE DKQ
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT RIG    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_POT (EPOT_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: multic, i, jcoqu, jdepg
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: npg, ndim, ipoids, icoopg
+    integer(kind=8) :: multic, i, jvDisp
     real(kind=8), parameter :: un = 1.d0
     real(kind=8) :: wgt
     real(kind=8) :: df(9), dm(9), dmf(9), dc(4), dci(4)
@@ -68,12 +74,8 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
     real(kind=8) :: xab1(3, 12), depl(24), caraq4(25), jacob(5)
     real(kind=8) :: qsi, eta
     real(kind=8) :: flex(144), memb(64), mefl(96)
-    real(kind=8) :: t2iu(4), t2ui(4), t1ve(9)
-    real(kind=8) :: bsigth(24), enerth, excent, ctor
-    aster_logical :: coupmf, exce, indith
-!
-!   LOCAL VARIABLES FOR COEF_RIGI_DRZ
-!
+    real(kind=8) :: bsigth(24), excent, ctor
+    aster_logical :: coupmf, exce
     integer(kind=8) :: j, ii, jj, irot
     integer(kind=8), parameter :: npgmx = 9
     real(kind=8) :: shp(3, 4, npgmx), shpr1(3, 4, npgmx), shpr2(3, 4, npgmx), bb(12, npgmx)
@@ -83,6 +85,9 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
     real(kind=8) :: bxb(12, 12)
     aster_logical :: dri
     blas_int :: b_incx, b_incy, b_n
+    real(kind=8) :: matrRigi(300), ener(3)
+!
+! --------------------------------------------------------------------------------------------------
 !
     df = 0.d0
     dm = 0.d0
@@ -102,11 +107,7 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
     jacob = 0.0
     qsi = 0.d0
     eta = 0.0
-    t2iu = 0.d0
-    t2ui = 0.d0
-    t1ve = 0.0
     bsigth = 0.d0
-    enerth = 0.d0
     excent = 0.d0
     ctor = 0.0
     dArea = 0.d0
@@ -114,38 +115,33 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
     epais = 0.d0
     fact = 0.0
     coupmf = ASTER_FALSE
-    exce = ASTER_FALSE
-    indith = ASTER_FALSE
-    dri = ASTER_FALSE
+    ener = 0.d0
+    matrRigi = 0.d0
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
-!
-    enerth = 0.0d0
-!
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-    epais = zr(jcoqu)
-    exce = ASTER_FALSE
-! COEF_RIGI_DRZ ACTIVE = -1 --> dri = true,  dri =  false sinon
-    dri = ASTER_FALSE
-    if (ctor .lt. 0.0d0) dri = ASTER_TRUE
-    if (abs(excent) .gt. un/r8gaem()) exce = ASTER_TRUE
-!
-!     ----- MISE A ZERO DES MATRICES : FLEX ,MEMB ET MEFL :
-    call r8inir(144, 0.d0, flex, 1)
-    call r8inir(64, 0.d0, memb, 1)
-    call r8inir(96, 0.d0, mefl, 1)
-!
-!     ----- CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION,
-!           MEMBRANE ET CISAILLEMENT INVERSEE --------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
-!     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
+    call elrefe_info(fami='RIGI', npg=npg, ndim=ndim, &
+                     jpoids=ipoids, jcoopg=icoopg)
+
+! - Get parameters
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+    epais = plateCara%thick
+
+! - Flags
+    dri = ctor .lt. 0.0d0
+    exce = (abs(excent) .gt. un/r8gaem())
+
+! - Geometric properties
     call gquad4(xyzl, caraq4)
+
+! - Get elementary matrix of rigidity
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
+
+    memb = 0.d0
+    flex = 0.d0
+    mefl = 0.d0
 !
     if (dri) then
         call r8inir(12*npgmx, 0.d0, shp, 1)
@@ -163,7 +159,6 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
         call r8inir(48, 0.d0, gmefl, 1)
         call r8inir(144, 0.d0, bxb, 1)
 !
-        epais = zr(jcoqu)
         gam = abs(ctor)*dm(1)
         do ii = 1, npg
 !
@@ -174,10 +169,7 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
 !        ----- JACOBIAN AND WEIGHT :
             call jquad4(xyzl, qsi, eta, jacob)
             wgt = zr(ipoids+ii-1)*jacob(1)
-!
-!
-!        ----- LOOP FOR SHP FUNCTIONS :
-!
+
 !        -- ELEMENT AREA :
             dArea = dArea+wgt
 !
@@ -194,14 +186,12 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
         end do
 !
         do ii = 1, npg
-!
             do j = 1, 4
                 do i = 1, 3
                     shpr1(i, j, ii) = shpr1(i, j, ii)-gshp1(i, j)/dArea
                     shpr2(i, j, ii) = shpr2(i, j, ii)-gshp2(i, j)/dArea
                 end do
             end do
-!
             do i = 1, 4
                 j = 3*(i-1)
                 bb(1+j, ii) = bb(1+j, ii)-shp(2, i, ii)
@@ -210,11 +200,9 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
                 bb(3+j, ii) = bb(3+j, ii)-shpr1(2, i, ii)+shpr2(1, i, ii)
             end do
         end do
-!
     end if
-!
+
     do i = 1, npg
-!
         qsi = zr(icoopg-1+ndim*(i-1)+1)
         eta = zr(icoopg-1+ndim*(i-1)+2)
 !        ----- CALCUL DU JACOBIEN SUR LE QUADRANGLE --------------------
@@ -255,29 +243,6 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
 ! ---  LES TERMES SONT EN NK*NP                                      =
 !=====================================================================
 !
-!        call dkqnim(shp(1,1,i), shpr1(1,1,i), shpr2(1,1,i), &
-!                          nm1, nm2, gm1, gm2)
-!
-!        do i = 1, 8
-!            do j = 1, 8
-!                memb(i,j) = memb(i,j) + nm1(i) * nm1(j) * wgt
-!                memb(i,j) = memb(i,j) + nm2(i) * nm2(j) * wgt
-!            end do
-!        end do
-!
-!        do iishp = 1, 4
-!            do jjshp = 1, 4
-!                gmemb(i,j) = gmemb(i,j) + gm1(i) * gm1(j) * wgt
-!                gmemb(i,j) = gmemb(i,j) + gm2(i) * gm2(j) * wgt
-!            end do
-!        end do
-!
-!        do iishp = 1, 8
-!            do jjshp = 1, 4
-!                btgmemb(i,j) = btgmemb(i,j) + nm1(i) * gm1(j) * wgt
-!                btgmemb(i,j) = btgmemb(i,j) + nm2(i) * gm2(j) * wgt
-!            end do
-!        end do
 !        -- MEMBRANE (DRILLING PART) Gm:
             call dxqgm(shpr1(1, 1, i), shpr2(1, 1, i), gm)
 !
@@ -310,7 +275,6 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
                     bxb(irot, jj) = bxb(irot, jj)+fact*bb(jj, i)
                 end do
             end do
-!
         end if
 !
 !
@@ -353,57 +317,59 @@ subroutine dkqrig(nomte, xyzl, option, pgl, rig, &
                             bf, bm, xab1, mefl)
             else
                 ASSERT(ASTER_FALSE)
-!
             end if
         end if
     end do
 !
     if (option .eq. 'RIGI_MECA') then
         if (.not. dri) then
-            call dxqloc(flex, memb, mefl, ctor, rig)
+            call dxqloc(flex, memb, mefl, ctor, matrRigi)
         else if (dri) then
 !     Add rotational to stiffness matrix
-!
             ctor = 0.d0
-            call dxqloc(flex, memb, mefl, ctor, rig)
-            call dxqlocdri1(gmemb, rig)
-            call dxqlocdri2(btgmemb, rig)
-            call dxqlocdri3(gmefl, rig)
-            call dxqlocdri4(bxb, rig)
+            call dxqloc(flex, memb, mefl, ctor, matrRigi)
+            call dxqlocdri1(gmemb, matrRigi)
+            call dxqlocdri2(btgmemb, matrRigi)
+            call dxqlocdri3(gmefl, matrRigi)
+            call dxqlocdri4(bxb, matrRigi)
         else
             ASSERT(ASTER_FALSE)
         end if
-!
-!
-!
     else if (option .eq. 'EPOT_ELEM') then
-        call jevech('PDEPLAR', 'L', jdepg)
-        call utpvgl(4, 6, pgl, zr(jdepg), depl)
+        call jevech('PDEPLAR', 'L', jvDisp)
+        call utpvgl(4, 6, pgl, zr(jvDisp), depl)
         if (.not. dri) then
             call dxqloe(flex, memb, mefl, ctor, coupmf, &
                         depl, ener)
         else if (dri) then
-!        call dxqloe(flex, memb, mefl, abs(ctor), coupmf,&
-!                    depl, ener)
 !     Add rotational to stiffness matrix
-!
             ctor = 0.d0
-            call dxqloc(flex, memb, mefl, ctor, rig)
-            call dxqlocdri1(gmemb, rig)
-            call dxqlocdri2(btgmemb, rig)
-            call dxqlocdri3(gmefl, rig)
-            call dxqlocdri4(bxb, rig)
-            call dxqloe_NV(coupmf, rig, depl, ener)
+            call dxqloc(flex, memb, mefl, ctor, matrRigi)
+            call dxqlocdri1(gmemb, matrRigi)
+            call dxqlocdri2(btgmemb, matrRigi)
+            call dxqlocdri3(gmefl, matrRigi)
+            call dxqlocdri4(bxb, matrRigi)
+            call dxqloe_NV(coupmf, matrRigi, depl, ener)
         else
             ASSERT(ASTER_FALSE)
         end if
-        call bsthpl(nomte, bsigth, indith)
-        if (indith) then
-            do i = 1, 24
-                enerth = enerth+depl(i)*bsigth(i)
-            end do
-            ener(1) = ener(1)-enerth
-        end if
+        ! call bsthpl(plateCara, plateOrie, &
+        !             jvGeom, nomte, xyzl, &
+        !             bsigth)
+        ! if (indith) then
+        !     enerTher = 0.d0
+        !     do i = 1, 24
+        !         enerTher = enerTher+depl(i)*bsigth(i)
+        !     end do
+        !     ener(1) = ener(1)-enerTher
+        ! end if
+    end if
+!
+    if (present(matrRigi_)) then
+        matrRigi_ = matrRigi
+    end if
+    if (present(ener_)) then
+        ener_ = ener
     end if
 !
 end subroutine

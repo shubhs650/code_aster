@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0164(option, nomte)
+    use resi_refe_module, only: RESI_REFE
     implicit none
 #include "jeveux.h"
 #include "asterfort/biline.h"
@@ -24,7 +25,6 @@ subroutine te0164(option, nomte)
 #include "asterfort/jevech.h"
 #include "asterfort/jevete.h"
 #include "asterfort/matvec.h"
-#include "asterfort/terefe.h"
 !
     character(len=16) :: option, nomte
 ! ......................................................................
@@ -40,12 +40,15 @@ subroutine te0164(option, nomte)
     integer(kind=8) :: nno, kp, i, ipoids, ivf, igeom, nc, nordre, k
     integer(kind=8) :: ivectu, ino, ndim, nnos, npg
     integer(kind=8) :: idfdk, jgano, iyty, jvDisp, jvSief, jefint
+    type(RESI_REFE):: refe
 ! ----------------------------------------------------------------------
 !
     if (option .eq. 'REFE_FORC_NODA') then
         nno = 2
         nc = 3
-        call terefe('EFFORT_REFE', 'MECA_BARRE', forref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        call refe%Check()
         call jevech('PVECTUR', 'E', ivectu)
         do ino = 1, nno
             do i = 1, nc

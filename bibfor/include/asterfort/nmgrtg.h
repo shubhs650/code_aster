@@ -26,7 +26,7 @@ interface
 use FE_basis_module
 
         type(FE_basis), intent(in) :: FEBasis
-        real(kind=8), intent(in) :: dsidep(6, 6), weight, coorpg(3), BGSEval(3, MAX_BS)
+        real(kind=8), intent(in) :: dsidep(6, 6), weight, coorpg(3), BGSEval(3, MAX_BS_CG)
         real(kind=8), intent(in) :: sigmCurr(6), sigmPrev(6), fPrev(3, 3), fCurr(3, 3)
         real(kind=8), intent(inout) :: matuu(*), vectu(*)
         aster_logical, intent(in) :: matsym, lVect, lMatr, lMatrPred

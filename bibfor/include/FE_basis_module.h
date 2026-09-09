@@ -19,11 +19,10 @@
 ! FE Size module : Parameters <-> integer definitions
 ! -------------------------------------------------------------------------
 !
+#include "MeshTypes_type.h"
+!
 ! - Static size - FE methods - General
 !
-! --- maximum number of basis function
-#define MAX_BS 27
-#define MAX_BV 81
 !
 ! --- EF Lagrange
 #define EF_LAGRANGE 0

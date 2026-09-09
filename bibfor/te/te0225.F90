@@ -17,8 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0225(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/dfdm1d.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
@@ -26,118 +29,111 @@ subroutine te0225(option, nomte)
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES VECTEURS ELEMENTAIRES
-!                          COQUE 1D
-!                          OPTION : 'CHAR_MECA_TEMP_R'
-!                          ELEMENT: MECXSE3
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
 !
-    integer(kind=8) :: i, ip, k, kp, igeom, icaco, ivectt, imate
-    integer(kind=8) :: ivf, idfdk, nno, npg, jcoopg, j, nbres, jdfd2
-!-----------------------------------------------------------------------
-    integer(kind=8) :: ipoids, iret1, iret2, iret3, iret4, jgano, ndim
-    integer(kind=8) :: nnos
-    real(kind=8) :: tref
-!-----------------------------------------------------------------------
-    parameter(nbres=3)
-    character(len=32) :: phenom
-    character(len=16) :: nomres(nbres)
-    character(len=4) :: fami
-    integer(kind=8) :: icodre(nbres)
-    real(kind=8) :: valres(nbres), dfdx(3), r, cour, jac, cosa, sina
-    real(kind=8) :: tpg1, tpg2, tpg3, tpg, zero, un, deux, x3
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: COQUE_AXIS
+! Option: CHAR_MECA_TEMP_R
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter :: nbProp = 3
+    character(len=16), parameter :: propName(nbProp) = (/'E    ', 'NU   ', 'ALPHA'/)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    real(kind=8), parameter :: zero = 0.d0, un = 1.d0, deux = 2.d0
+    integer(kind=8) :: i, ip, kpg, jvGeom, ivectt, jvMaterc
+    integer(kind=8) :: ivf, idfdk, nno, npg, jcoopg, j
+    integer(kind=8) :: ipoids, iret1, iret2, iret3, iret4
+    real(kind=8) :: tempRefe
+    character(len=32) :: elasKeyword
+    real(kind=8) :: dfdx(3), r, cour, jac, cosa, sina
+    real(kind=8) :: tpg1, tpg2, tpg3, tpg, x3
     real(kind=8) :: h, epsthe, nu, coef, axis
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    data zero, un, deux/0.d0, 1.d0, 2.d0/
-!     ------------------------------------------------------------------
-    fami = 'RIGI'
-    call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=jcoopg, jvf=ivf, jdfde=idfdk, jdfd2=jdfd2, &
-                     jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PCACOQU', 'L', icaco)
-    call jevech('PMATERC', 'L', imate)
+    call elrefe_info(fami=fami, nno=nno, npg=npg, &
+                     jpoids=ipoids, jcoopg=jcoopg, jvf=ivf, jdfde=idfdk)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    h = plateCara%thick
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
     call jevech('PVECTUR', 'E', ivectt)
-!     TEMPERATURE DE REFERENCE
+
+! - TEMPERATURE DE REFERENCE
     call rcvarc(' ', 'TEMP', 'REF', fami, 1, &
-                1, tref, iret1)
+                1, tempRefe, iret1)
+! - RECUPERATION DE LA NATURE DU MATERIAU DANS PHENOM
+    call jevech('PMATERC', 'L', jvMaterc)
+    call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
 !
-! --- RECUPERATION DE LA NATURE DU MATERIAU DANS PHENOM
-!     -------------------------------------------------
-    call rccoma(zi(imate), 'ELAS', 1, phenom, icodre(1))
-!
-    if (phenom .eq. 'ELAS') then
-!
-! ==== CALCUL ISOTROPE HOMOGENE =====
-!
-        nomres(1) = 'E'
-        nomres(2) = 'NU'
-        nomres(3) = 'ALPHA'
-!
-        h = zr(icaco)
-        axis = zero
-        if (nomte .eq. 'MECXSE3 ') axis = un
-!
-!     ** BOUCLE CONCERNANT LES POINTS DE GAUSS **************
-!
-        do kp = 1, npg
-            k = (kp-1)*nno
-            call dfdm1d(nno, zr(ipoids+kp-1), zr(idfdk+k), zr(igeom), dfdx, &
+    if (elasKeyword .eq. 'ELAS') then
+        axis = un
+        do kpg = 1, npg
+            call dfdm1d(nno, zr(ipoids+kpg-1), zr(idfdk+(kpg-1)*nno), zr(jvGeom), dfdx, &
                         cour, jac, cosa, sina)
             r = zero
             tpg = zero
-            call rcvarc(' ', 'TEMP', '+', fami, kp, &
+            call rcvarc(' ', 'TEMP', '+', fami, kpg, &
                         1, tpg2, iret2)
-            call rcvarc(' ', 'TEMP', '+', fami, kp, &
+            call rcvarc(' ', 'TEMP', '+', fami, kpg, &
                         2, tpg1, iret3)
-            call rcvarc(' ', 'TEMP', '+', fami, kp, &
+            call rcvarc(' ', 'TEMP', '+', fami, kpg, &
                         3, tpg3, iret4)
             do i = 1, nno
-                r = r+zr(igeom+2*i-2)*zr(ivf+k+i-1)
+                r = r+zr(jvGeom+2*i-2)*zr(ivf+(kpg-1)*nno+i-1)
             end do
-            if (nomte .eq. 'MECXSE3 ') jac = jac*r
-!
+            jac = jac*r
+
 !---- UTILISATION DE 4 POINTS DE GAUSS DANS L'EPAISSEUR
 !---- COMME POUR LA LONGUEUR
-!
             do ip = 1, npg
                 x3 = zr(jcoopg+ip-1)
                 tpg = tpg1*(un-x3**2)+x3*(tpg3*(un+x3)-tpg2*(un-x3))/deux
-                call rcvalb('RIGI', 1, 1, '+', zi(imate), &
+                call rcvalb('RIGI', 1, 1, '+', zi(jvMaterc), &
                             ' ', 'ELAS', 1, 'TEMP', [tpg], &
-                            2, nomres, valres, icodre, 1)
-                call rcvalb('RIGI', 1, 1, '+', zi(imate), &
+                            2, propName, propVale, propCode, 1)
+                call rcvalb('RIGI', 1, 1, '+', zi(jvMaterc), &
                             ' ', 'ELAS', 1, 'TEMP', [tpg], &
-                            1, nomres(3), valres(3), icodre(3), 0)
-                if (((iret1+iret2+iret3+iret4) .ge. 1) .and. (icodre(3) .eq. 0)) then
+                            1, propName(3), propVale(3), propCode(3), 0)
+                if (((iret1+iret2+iret3+iret4) .ge. 1) .and. (propCode(3) .eq. 0)) then
                     call utmess('F', 'CALCULEL_15')
-                else if (icodre(3) .ne. 0) then
+                else if (propCode(3) .ne. 0) then
                     epsthe = 0.d0
                 else
-                    epsthe = (tpg-tref)*valres(3)
+                    epsthe = (tpg-tempRefe)*propVale(3)
                 end if
-                nu = valres(2)
-                coef = valres(1)*jac*epsthe*zr(ipoids+ip-1)*(h/deux)
+                nu = propVale(2)
+                coef = propVale(1)*jac*epsthe*zr(ipoids+ip-1)*(h/deux)
                 coef = coef/(un-nu)
-!
                 do i = 1, nno
                     j = 3*(i-1)
-                    zr(ivectt+j) = zr(ivectt+j)+coef*(axis*zr(ivf+k+i-1)/r-dfdx(i)*sina)
-                    zr(ivectt+j+1) = zr(ivectt+j+1)+coef*dfdx(i)*cosa
-                    zr(ivectt+j+2) = zr(ivectt+j+2)-coef*x3*h/deux*(axis*zr(ivf+k+i-1)*sina/r&
-                                     &-dfdx(i))
+                    zr(ivectt+j) = zr(ivectt+j)+ &
+                                   coef*(axis*zr(ivf+(kpg-1)*nno+i-1)/r-dfdx(i)*sina)
+                    zr(ivectt+j+1) = zr(ivectt+j+1)+ &
+                                     coef*dfdx(i)*cosa
+                    zr(ivectt+j+2) = zr(ivectt+j+2)- &
+                                     coef*x3*h/deux*(axis*zr(ivf+(kpg-1)*nno+i-1)*sina/r-dfdx(i))
                 end do
             end do
         end do
     else
-!  ==== CALCUL ANISOTROPE  =====
         call utmess('F', 'ELEMENTS3_49')
     end if
 end subroutine

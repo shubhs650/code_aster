@@ -15,13 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine kit_glrc_dm_vmis(imate, compor, epsm, deps, vim,&
-                      option, sigm, sig, vip, dsidep,&
-                      crit, iret, t2iu)
+    subroutine kit_glrc_dm_vmis(plateCara, plateOrie, &
+                                jvMaterCode, compor, epsm, deps, vim, &
+                                option, sigm, sig, vip, dsidep, &
+                                carcri, iret)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
         integer(kind=8) :: imate
         character(len=16) :: compor
         real(kind=8) :: epsm(6)
@@ -32,8 +35,7 @@ interface
         real(kind=8) :: sig(*)
         real(kind=8) :: vip(*)
         real(kind=8) :: dsidep(6, *)
-        real(kind=8) :: crit(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         integer(kind=8) :: iret
-        real(kind=8) :: t2iu(4)
     end subroutine kit_glrc_dm_vmis
 end interface

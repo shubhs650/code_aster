@@ -18,7 +18,7 @@
 ! aslint: disable=W1504
 !
 subroutine thmCpl001(ds_thm, &
-                     lMatr, lSigm, lVari, angl_naut, &
+                     lMatr, lSigm, lVari, &
                      ndim, nbvari, &
                      dimdef, dimcon, &
                      adcome, adcote, adcp11, &
@@ -63,7 +63,6 @@ subroutine thmCpl001(ds_thm, &
 !
     type(THM_DS), intent(in) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm, lVari
-    real(kind=8), intent(in) :: angl_naut(3)
     integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: adcome, adcote, adcp11
@@ -90,10 +89,6 @@ subroutine thmCpl001(ds_thm, &
 ! In  ds_thm           : datastructure for THM
 ! In  perman           : .true. for no-transient problem
 ! In  option           : option to compute
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  dimdef           : dimension of generalized strains vector
@@ -212,7 +207,7 @@ subroutine thmCpl001(ds_thm, &
 ! - Prepare initial parameters for coupling law
 !
     call inithm(ds_thm, &
-                angl_naut, tbiot, phi0, &
+                tbiot, phi0, &
                 epsv, depsv, &
                 epsvm, cs, mdal, dalal, &
                 alpha0, alphfi, cbiot, unsks)
@@ -281,7 +276,7 @@ subroutine thmCpl001(ds_thm, &
 ! - Update differential thermal expansion ratio
 !
     if (ds_thm%ds_elem%l_dof_meca .and. .not. ds_thm%ds_elem%l_jhms) then
-        call dilata(ds_thm, angl_naut, phi, tbiot, alphfi)
+        call dilata(ds_thm, phi, tbiot, alphfi)
     end if
 !
 ! - Update Biot modulus

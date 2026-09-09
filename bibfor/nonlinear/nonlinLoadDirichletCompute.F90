@@ -37,6 +37,7 @@ subroutine nonlinLoadDirichletCompute(list_load, model, nume_dof, &
 #include "asterfort/utmess.h"
 #include "asterfort/vebume.h"
 #include "asterfort/vector_update_ghost_values.h"
+#include "asterfort/vector_zero_late_values.h"
 !
     character(len=19), intent(in) :: list_load
     character(len=24), intent(in) :: model, nume_dof
@@ -100,6 +101,7 @@ subroutine nonlinLoadDirichletCompute(list_load, model, nume_dof, &
         call jeveuo(cnbudi//'.VALE', 'E', vr=vale)
         call dismoi('NUME_EQUA', cnbudi, 'CHAM_NO', repk=nume_equa)
         call vector_update_ghost_values(vale, nume_equa, "BIDIR")
+        call vector_zero_late_values(vale, nume_equa)
     end if
 !
 ! - Stop timer

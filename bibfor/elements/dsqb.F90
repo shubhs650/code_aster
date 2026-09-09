@@ -16,11 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dsqb(caraq4, xyzl, pgl, igau, jacgau, &
+subroutine dsqb(plateCara, plateOrie, &
+                caraq4, xyzl, igau, jacgau, &
                 bmat)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/bcoqaf.h"
 #include "asterfort/dsqbfa.h"
 #include "asterfort/dsqbfb.h"
@@ -32,8 +35,13 @@ subroutine dsqb(caraq4, xyzl, pgl, igau, jacgau, &
 #include "asterfort/dxqbm.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jquad4.h"
-    integer(kind=8) :: igau
-    real(kind=8) :: xyzl(3, 1), pgl(3, 3), bmat(8, 1), jacgau, caraq4(*)
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8), intent(in) :: caraq4(*), xyzl(3, 1)
+    integer(kind=8), intent(in) :: igau
+    real(kind=8), intent(out) :: bmat(8, 1), jacgau
 ! --- CALCUL DE LA MATRICE (B) RELIANT LES DEFORMATIONS DU PREMIER
 ! --- ORDRE AUX DEPLACEMENTS AU POINT D'INTEGRATION D'INDICE IGAU
 ! --- POUR UN ELEMENT DE TYPE DSQ
@@ -53,11 +61,13 @@ subroutine dsqb(caraq4, xyzl, pgl, igau, jacgau, &
     real(kind=8) :: bfb(3, 12), bfa(3, 4), bfn(3, 12), bf(3, 12)
     real(kind=8) :: bcb(2, 12), bca(2, 4), bcn(2, 12), bc(2, 12), bcm(2, 8)
     real(kind=8) :: hft2(2, 6), an(4, 12), hmft2(2, 6)
-    real(kind=8) :: bm(3, 8), qsi, eta, jacob(5), t2iu(4), t2ui(4), t1ve(9)
+    real(kind=8) :: bm(3, 8), qsi, eta, jacob(5)
     integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
     integer(kind=8) :: multic, i, j, k
     aster_logical :: coupmf
-!     ------------------------------------------------------------------
+
+!
+! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
@@ -71,9 +81,10 @@ subroutine dsqb(caraq4, xyzl, pgl, igau, jacgau, &
 ! --- CALCUL DES MATRICES DE HOOKE DE FLEXION, MEMBRANE,
 ! --- MEMBRANE-FLEXION, CISAILLEMENT, CISAILLEMENT INVERSE
 !     ----------------------------------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !
 ! --- CALCUL DE LA MATRICE (AN) RELIANT LES INCONNUES NOTEES (ALFA)
 ! --- PAR BATOZ AUX INCONNUES (UN) = (...,W_I,BETAX_I,BETAY_I,...)

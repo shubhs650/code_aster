@@ -151,6 +151,7 @@ FieldOnCellsRealPtr PostProcessing::computeStress( const FieldOnNodesRealPtr dis
     calcul->addInputField( "PABSCUR", currModel->getMesh()->getCurvilinearAbscissa() );
 
     calcul->addElementaryCharacteristicsField( currElemChara );
+    calcul->addOrientationField( currElemChara );
 
     if ( currMater->hasExternalStateVariable() ) {
         if ( !externVar || !externVar->exists() ) {
@@ -219,6 +220,7 @@ PostProcessing::computeStructuralStress( const FieldOnNodesRealPtr displ, const 
     calcul->addInputField( "PGEOMER", currModel->getMesh()->getCoordinates() );
 
     calcul->addElementaryCharacteristicsField( currElemChara );
+    calcul->addOrientationField( currElemChara );
 
     if ( currMater->hasExternalStateVariable() ) {
         if ( !externVar || !externVar->exists() ) {

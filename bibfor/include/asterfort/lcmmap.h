@@ -15,25 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcmmap(fami, kpg, ksp, mult_comp, mod,&
-                      imat, nmat, angmas, pgl, materd,&
-                      materf, matcst, nbcomm, cpmono, ndt,&
-                      ndi, nr, nvi, nfs, nsg,&
+    subroutine lcmmap(materPara, &
+                      multComp, typmod1, &
+                      nmat, pgl, materd, &
+                      materf, matcst, nbcomm, cpmono, ndt, &
+                      ndi, nr, nvi, nfs, nsg, &
                       nhsr, numhsr, hsr)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: multComp
+        character(len=8), intent(in) :: typmod1
         integer(kind=8) :: nhsr
         integer(kind=8) :: nsg
         integer(kind=8) :: nmat
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: mult_comp
-        character(len=8) :: mod
-        integer(kind=8) :: imat
-        real(kind=8) :: angmas(3)
         real(kind=8) :: pgl(3, 3)
         real(kind=8) :: materd(nmat, 2)
         real(kind=8) :: materf(nmat, 2)

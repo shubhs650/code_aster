@@ -24,7 +24,7 @@ loi = LoiComportement(
     nom="BETON_RAG",
     doc="""Loi RAG pour le beton""",
     num_lc=145,
-    nb_vari=34,
+    nb_vari=35,
     nom_vari=(
         # 01:07 : Contraintes seuils d'endommagement : Tenseur traction + compression
         "BR_SUT11",
@@ -34,22 +34,22 @@ loi = LoiComportement(
         "BR_SUT13",
         "BR_SUT23",
         "BR_SIGDP",
-        # 08:14 : Déformations de fluage : Tenseur déviatorique + partie sphérique
-        "BR_EFU11",
-        "BR_EFU22",
-        "BR_EFU33",
-        "BR_EFU12",
-        "BR_EFU13",
-        "BR_EFU23",
-        "BR_EFUSP",
-        # 15:21 : Déformations de fluage interne : Tenseur déviatorique + partie sphérique
-        "BR_EP111",
-        "BR_EP122",
-        "BR_EP133",
-        "BR_EP112",
-        "BR_EP113",
-        "BR_EP123",
-        "BR_EP1SP",
+        # 08:14 : Déformations de fluage réversible : Tenseur déviatorique + partie sphérique
+        "BR_EFR11",
+        "BR_EFR22",
+        "BR_EFR33",
+        "BR_EFR12",
+        "BR_EFR13",
+        "BR_EFR23",
+        "BR_EFRSP",
+        # 15:21 : Déformations de fluage irréversible : Tenseur déviatorique + partie sphérique
+        "BR_EFI11",
+        "BR_EFI22",
+        "BR_EFI33",
+        "BR_EFI12",
+        "BR_EFI13",
+        "BR_EFI23",
+        "BR_EFISP",
         # 22 : Avancement chimique
         "BR_AVCHI",
         # 23:25 : Endommagement viscoplastique de la RAG
@@ -68,6 +68,8 @@ loi = LoiComportement(
         "BR_PRCAP",
         # 34 : Étude réalisée
         "BR_ETUDE",
+        # 35 : déformation de fluage équivalente irréversible
+        "BR_EFEQI",
     ),
     mc_mater=("ELAS", "BETON_RAG"),
     modelisation=("3D", "AXIS", "D_PLAN"),

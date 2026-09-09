@@ -39,8 +39,6 @@ subroutine calcCalcMeca(nb_option, list_option, &
 #include "asterfort/medime.h"
 #include "asterfort/merimo.h"
 #include "asterfort/nmchex.h"
-#include "asterfort/nmvcd2.h"
-#include "asterfort/nmvcpr_elem.h"
 #include "asterfort/utmess.h"
 #include "asterfort/vebtla.h"
 #include "asterfort/vefnme.h"

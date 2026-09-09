@@ -24,7 +24,7 @@ interface
         integer(kind=8), intent(in) :: elem_nbnode
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_code
-        real(kind=8), intent(in) :: elem_coor(elem_dime-1,elem_nbnode)
+        real(kind=8), intent(in) :: elem_coor(2,elem_nbnode)
         real(kind=8), intent(in) :: pair_tole
         real(kind=8), intent(in) :: poin_coorx
         real(kind=8), intent(in) :: poin_coory

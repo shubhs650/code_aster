@@ -47,13 +47,14 @@ subroutine bsigmc(nno, ndim, nbsig, npg, ipoids, &
 #include "asterfort/bmatmc.h"
 #include "asterfort/btsig.h"
 #include "MeshTypes_type.h"
+#include "FE_module.h"
     integer(kind=8), intent(in) :: nno, ndim, nbsig, npg, ipoids, ivf, idfde
     real(kind=8), intent(in) :: xyz(*), nharm, sigma(npg*nbsig)
     real(kind=8), intent(out) :: bsigma(*)
 !
 ! -----  VARIABLES LOCALES
     integer(kind=8) :: i, igau, nbinco
-    real(kind=8) :: b(nbsig, 3*MT_NNOMAX3D), jacgau
+    real(kind=8) :: b(nbsig, MAX_BV_CG), jacgau
 
 !.========================= DEBUT DU CODE EXECUTABLE ==================
 ! --- INITIALISATIONS :

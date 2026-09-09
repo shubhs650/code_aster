@@ -31,7 +31,7 @@ class MockField:
 
     def __init__(self, values):
         """
-        Initializes the MockField with a dictionary of values.
+        Initializes the MockField with a list of values.
 
         Args:
             values (list): A list of values to initialize the mock field.
@@ -104,10 +104,15 @@ def MOCK_PROJ_CHAMP(RESULTAT, METHODE, MAILLAGE_1, MAILLAGE_2, NOM_CHAM, TYPE_CH
     if MAILLAGE_1.isParallel():
         rank = MPI.ASTER_COMM_WORLD.Get_rank()
 
+        coords1 = MAILLAGE_1.getCoordinates().toNumpy()
+        coords2 = MAILLAGE_2.getCoordinates().toNumpy()
+
         # The target point
-        p0 = MAILLAGE_2.getCoordinates().toNumpy().tolist()[0]
-        # A second random point always present
-        p1 = MAILLAGE_1.getCoordinates().toNumpy().tolist()[0]
+        p0 = coords2[0].tolist()
+
+        # Another point guaranteed to be a corner node
+        random_id = next(cell[0] for cell in MAILLAGE_1.getConnectivity() if len(cell) > 1)
+        p1 = coords1[random_id].tolist()
 
         # Build a new point cloud mesh from the coordinate points
         MP0 = Mesh.buildPointCloud([p0, p1], info=0)
@@ -132,7 +137,7 @@ def MOCK_PROJ_CHAMP(RESULTAT, METHODE, MAILLAGE_1, MAILLAGE_2, NOM_CHAM, TYPE_CH
             MODELE_2=MOD_0D,
             NOM_CHAM=NOM_CHAM,
             TYPE_CHAM=TYPE_CHAM,
-            DISTANCE_MAX=1.0e-1,
+            DISTANCE_MAX=1.0e-6,
         )
 
         # Determine the rank that succeeded
@@ -146,11 +151,15 @@ def MOCK_PROJ_CHAMP(RESULTAT, METHODE, MAILLAGE_1, MAILLAGE_2, NOM_CHAM, TYPE_CH
             root0 = rank
 
         roots = MPI.ASTER_COMM_WORLD.allreduce([root0], MPI.SUM)
-        root = max(roots)
 
-        nb_shared = len(roots) - roots.count(-1)
-        if nb_shared > 1:
-            UTMESS("A", "HOMO1_18", vali=nb_shared)
+        found_ranks = [r for r in roots if r != -1]
+        n_found = len(found_ranks)
+
+        if n_found == 0:
+            UTMESS("F", "HOMO1_22")
+
+        if n_found > 1:
+            UTMESS("A", "HOMO1_18", vali=n_found)
 
         # Collect values from the projected result
         values = {}
@@ -164,7 +173,8 @@ def MOCK_PROJ_CHAMP(RESULTAT, METHODE, MAILLAGE_1, MAILLAGE_2, NOM_CHAM, TYPE_CH
                 if m[0].all():
                     values[fld][n] = v[0].tolist()
 
-        # Broadcast the collected values to all processes
+        # Broadcast the collected values to all processes from the highest rank proc
+        root = max(found_ranks)
         valbcast = MPI.ASTER_COMM_WORLD.bcast(values, root=root)
         resu = MockResult(valbcast)
 
@@ -177,6 +187,7 @@ def MOCK_PROJ_CHAMP(RESULTAT, METHODE, MAILLAGE_1, MAILLAGE_2, NOM_CHAM, TYPE_CH
             MAILLAGE_2=MAILLAGE_2,
             NOM_CHAM=NOM_CHAM,
             TYPE_CHAM=TYPE_CHAM,
+            DISTANCE_MAX=1.0e-6,
         )
 
     return resu

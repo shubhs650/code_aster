@@ -1,0 +1,183 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+from code_aster.MacroCommands.defi_cont import DEFI_CONT
+
+DEBUT(CODE="OUI", IGNORE_ALARM=("QUALITY1_2"), DEBUG=_F(SDVERI="OUI"))
+
+E_m = 2e5
+nu_m = 0.3
+sig_lim = 300
+E_t = 5000
+
+E_p = E_m * 10000
+nu_p = 0.3
+coef = E_m * 10
+depl1 = -0.4
+depl2 = 0.008
+
+# lecture du maillage et définition des mailles de peau
+
+mesh = LIRE_MAILLAGE(UNITE=20, FORMAT="MED")
+# mesh=mesh.refine(3)
+mesh = DEFI_GROUP(reuse=mesh, MAILLAGE=mesh, CREA_GROUP_NO=(_F(NOM="GM12", GROUP_MA="GM12"),))
+mesh = MODI_MAILLAGE(reuse=mesh, MAILLAGE=mesh, ORIE_PEAU=_F(GROUP_MA_PEAU=("GM11", "GM12")))
+
+# Echelle de temps
+
+LINST = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=(_F(JUSQU_A=1.0, NOMBRE=10),))
+
+RAMPE = DEFI_FONCTION(
+    NOM_PARA="INST",
+    VALE=(0.0, 0.0, 0.8, 1.0, 1.0, 1 + depl2 / depl1),
+    PROL_DROITE="CONSTANT",
+    PROL_GAUCHE="CONSTANT",
+)
+
+# définition des matériaux et du modèle
+
+mat_m = DEFI_MATERIAU(ELAS=_F(E=E_m, NU=nu_m), ECRO_LINE=_F(SY=sig_lim, D_SIGM_EPSI=E_t))
+
+mat_p = DEFI_MATERIAU(ELAS=_F(E=E_p, NU=nu_p))
+
+model = AFFE_MODELE(MAILLAGE=mesh, AFFE=_F(TOUT="OUI", PHENOMENE="MECANIQUE", MODELISATION="AXIS"))
+
+AFFE = AFFE_MATERIAU(
+    MAILLAGE=mesh,
+    MODELE=model,
+    AFFE=(_F(GROUP_MA="GM15", MATER=mat_m), _F(GROUP_MA="GM17", MATER=mat_p)),
+)
+
+# conditons de chargement
+
+CHAR = AFFE_CHAR_CINE(
+    MODELE=model,
+    MECA_IMPO=(
+        _F(GROUP_MA="GM14", DX=0, DY=0),
+        _F(GROUP_MA=("GM9", "GM11"), DX=0, DY=depl1),
+        _F(GROUP_MA="GM10", DY=depl1),
+    ),
+)
+
+# CHAR = AFFE_CHAR_CINE(MODELE=model, MECA_IMPO=( _F(GROUP_MA="GM14", DX=0, DY=0), _F(GROUP_MA="GM13", DX=0), _F(GROUP_MA="GM17", DX=0, DY=depl1))) mon interprétation des CL
+
+# définition du contact
+
+DEFICO = DEFI_CONT(
+    MODELE=model,
+    INFO=1,
+    ZONE=_F(
+        GROUP_MA_MAIT="GM11",
+        GROUP_MA_ESCL="GM12",
+        ALGO_CONT="PENALISATION",
+        COEF_CONT=coef,
+        APPARIEMENT="MORTAR",
+        CONTACT_INIT="OUI",
+        AIRE_TOLE=1e-8,
+        TYPE_APPA="FORCEBRUTE",
+        TYPE_INTE="SEG_BASE",
+    ),
+)
+
+# résolution numérique
+
+EVOLNOLI = MECA_NON_LINE(
+    MODELE=model,
+    CHAM_MATER=AFFE,
+    EXCIT=(_F(CHARGE=CHAR, FONC_MULT=RAMPE),),
+    CONTACT=_F(DEFINITION=DEFICO, ALGO_RESO_GEOM="NEWTON"),
+    NEWTON=_F(MATRICE="TANGENTE", REAC_ITER=1),
+    COMPORTEMENT=(
+        _F(RELATION="VMIS_ISOT_LINE", DEFORMATION="SIMO_MIEHE", GROUP_MA="GM15"),
+        _F(RELATION="ELAS", DEFORMATION="PETIT", GROUP_MA="GM17"),
+    ),
+    INCREMENT=_F(LIST_INST=LINST),
+    CONVERGENCE=_F(RESI_GLOB_RELA=1.0e-6, ITER_GLOB_MAXI=50),
+    INFO=1,
+)
+
+
+EVOLNOLI = CALC_CHAMP(reuse=EVOLNOLI, FORCE="REAC_NODA", RESULTAT=EVOLNOLI)
+
+# Vérif test_resu
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="GM16",
+            INST=0.5,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            NOM_CMP="DY",
+            VALE_CALC=-0.24777315,
+            VALE_REFE=-0.25,
+            PRECISION=9.0e-3,
+        ),
+        _F(
+            GROUP_NO="GM16",
+            INST=0.5,
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="REAC_NODA",
+            NOM_CMP="DX",
+            VALE_CALC=3.26979502,
+        ),
+        _F(
+            GROUP_NO="GM16",
+            INST=0.5,
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="REAC_NODA",
+            NOM_CMP="DY",
+            VALE_CALC=-8.80393007,
+        ),
+    )
+)
+
+TEST_RESU(
+    RESU=(
+        _F(
+            GROUP_NO="GM16",
+            INST=1.0,
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="DEPL",
+            NOM_CMP="DY",
+            VALE_CALC=-0.38940305,
+            VALE_REFE=-0.392,
+            PRECISION=7.0e-3,
+        ),
+        _F(
+            GROUP_NO="GM16",
+            INST=1.0,
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="REAC_NODA",
+            NOM_CMP="DX",
+            VALE_CALC=1.99934352,
+        ),
+        _F(
+            GROUP_NO="GM16",
+            INST=1.0,
+            RESULTAT=EVOLNOLI,
+            NOM_CHAM="REAC_NODA",
+            NOM_CMP="DY",
+            VALE_CALC=-5.37206999,
+        ),
+    )
+)
+
+FIN()

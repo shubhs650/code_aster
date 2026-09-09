@@ -28,7 +28,6 @@ subroutine op0030()
 #include "asterfort/adalig.h"
 #include "asterfort/aflrch.h"
 #include "asterfort/asmpi_info.h"
-#include "asterfort/assert.h"
 #include "asterfort/caform.h"
 #include "asterfort/calico.h"
 #include "asterfort/caliun.h"

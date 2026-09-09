@@ -158,6 +158,7 @@ class ExecuteCommand:
 
     _cata = _op = _result = _counter = _caller = _exc = None
     _tuplmode = None
+    _gc_threshold = None
 
     __setattr__ = no_new_attributes(object.__setattr__)
 
@@ -209,7 +210,7 @@ class ExecuteCommand:
         self.adapt_syntax(keywords)
         if ExecutionParameter().option & Options.TestMode:
             Tracking.add("KWDS", self._cata, self.command_name, keywords)
-        self.create_result(keywords)
+        self.create_result_(keywords)
         if not getattr(self._result, "userName", "n/a"):
             # attribute does exist but is not defined
             self._result.userName = get_user_name(
@@ -474,6 +475,14 @@ class ExecuteCommand:
                 raise
             UTMESS("F", "SUPERVIS_4", valk=(self.command_name, msg))
 
+    def create_result_(self, keywords):
+        """Wrapper on `create_result` to be adapt by commands."""
+        # change gc threshold to avoid created object to go to generation 2
+        if ExecuteCommand.level == 1:
+            ExecuteCommand._gc_threshold = gc.get_threshold()[:2]
+            gc.set_threshold(self._gc_threshold[0], 1000000000)
+        self.create_result(keywords)
+
     def create_result(self, keywords):
         """Create the result before calling the *exec* command function
         if needed.
@@ -557,6 +566,9 @@ class ExecuteCommand:
 
     def cleanup(self):
         """Clean-up function."""
+        # restore gc threshold
+        if ExecuteCommand.level == 1:
+            gc.set_threshold(self._gc_threshold[0], self._gc_threshold[1])
 
     def check_ds(self):
         """Check a result created by the command.
@@ -731,8 +743,10 @@ class ExecuteMacro(ExecuteCommand):
         ExecuteMacro._last_cleanup_date = time.time()
         timer = ExecutionParameter().timer
         timer.Start(" . cleanup", num=1.9e6)
-        gc.collect()
+        # Only eliminates created object in generation 1
+        gc.collect(1)
         timer.Stop(" . cleanup")
+        super().cleanup()
 
     def exec_(self, keywords):
         """Execute the command and fill the *_result* attribute.
@@ -1027,7 +1041,7 @@ def command_time(counter, cpu, system, elapsed):
 
 
 class loop_on_dsdict:
-    """Decorator on ExecuteCommand that overloads 'run\_' method to
+    r"""Decorator on ExecuteCommand that overloads 'run\_' method to
     loop on each result of a DataStructureDict.
 
     Arguments:

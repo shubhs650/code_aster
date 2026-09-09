@@ -15,14 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine maglrc(zimat, matr, delas, ecr)
-        integer(kind=8) :: zimat
-        real(kind=8) :: matr(*)
-        real(kind=8) :: delas(6, 6)
-        real(kind=8) :: ecr(*)
+    subroutine maglrc(plateCara, plateOrie, jvMaterc, &
+                      matr, matrElas, ecr)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: jvMaterc
+        real(kind=8), intent(out) :: matr(50), matrElas(6, 6)
+        real(kind=8), intent(inout) :: ecr(*)
     end subroutine maglrc
 end interface

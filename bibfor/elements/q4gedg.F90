@@ -16,8 +16,12 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine q4gedg(xyzl, option, pgl, depl, edgl)
+subroutine q4gedg(plateCara, plateOrie, &
+                  xyzl, option, depl, edgl)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterfort/dsqbfb.h"
@@ -27,16 +31,20 @@ subroutine q4gedg(xyzl, option, pgl, depl, edgl)
 #include "asterfort/gquad4.h"
 #include "asterfort/jquad4.h"
 #include "asterfort/q4gbc.h"
-    real(kind=8) :: xyzl(3, *), pgl(3, *), depl(*), edgl(*)
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8) :: xyzl(3, *), depl(*), edgl(*)
     character(len=16) :: option
-!     EFFORTS ET DEFORMATIONS GENERALISES DE L'ELEMENT DE PLAQUE Q4GAMMA
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : NOM DE L'OPTION DE CALCUL
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL - LOCAL
-!     IN  DEPL   : DEPLACEMENTS
-!     OUT EDGL   : EFFORTS OU DEFORMATIONS GENERALISES AUX NOEUDS DANS
-!                  LE REPERE INTRINSEQUE A L'ELEMENT
+!
+! --------------------------------------------------------------------------------------------------
+!
+! Q4G/Q4GG
+!
+! DEGE_ELGA / DEGE_ELNO
+!
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
     integer(kind=8) :: multic, ne, k, j, i, ie
     real(kind=8) :: depf(12), depm(8)
@@ -46,10 +54,11 @@ subroutine q4gedg(xyzl, option, pgl, depl, edgl)
     real(kind=8) :: bdm(3), bdf(3), bcdf(2), dcis(2)
     real(kind=8) :: vf(3), vm(3), vt(2)
     real(kind=8) :: vfm(3), vmf(3), vmc(3), vfc(3), vcm(2), vcf(2), caraq4(25)
-    real(kind=8) :: t2iu(4), t2ui(4), t1ve(9), jacob(5), qsi, eta
+    real(kind=8) :: jacob(5), qsi, eta
     aster_logical :: coupmf
-    character(len=4) :: fami
-!     ------------------------------------------------------------------
+    character(len=8) :: fami
+!
+! --------------------------------------------------------------------------------------------------
 !
     if (option(6:9) .eq. 'ELGA') then
         call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
@@ -71,9 +80,10 @@ subroutine q4gedg(xyzl, option, pgl, depl, edgl)
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
     call gquad4(xyzl, caraq4)
 !     ----- CARACTERISTIQUES DES MATERIAUX --------
-    call dxmate(fami, df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                fami, df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !     ----- COMPOSANTES DEPLACEMENT MEMBRANE ET FLEXION ----------------
     do j = 1, nno
         do i = 1, 2

@@ -20,7 +20,6 @@ subroutine setBehaviourParaValue(prepCrit, parm_theta_thm, parm_alpha_thm, &
                                  iFactorKeyword_, carcriList_, carcriMap_)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -80,10 +79,9 @@ subroutine setBehaviourParaValue(prepCrit, parm_theta_thm, parm_alpha_thm, &
         else
             carcriMap_(CARCRI_MATRSYME) = 0
         end if
-! ----- For external solvers (UMAT / MFRONT)
-        carcriMap_(EXTE_PTR) = prepCrit(iFactorKeyword)%extern_ptr
-        carcriMap_(EXTE_TYPE) = prepCrit(iFactorKeyword)%extern_type
-        carcriMap_(EXTE_STRAIN) = prepCrit(iFactorKeyword)%exte_strain
+        carcriMap_(EXTE_TYPE) = prepCrit(iFactorKeyword)%prepExte%solvBehavType
+        carcriMap_(EXTE_PTR) = prepCrit(iFactorKeyword)%prepExte%adrsUMAT
+        carcriMap_(EXTE_STRAIN) = prepCrit(iFactorKeyword)%prepExte%strainMGIS
     end if
     if (present(carcriList_)) then
         if (associated(prepCrit(iFactorKeyword)%iter_inte_maxi)) &
@@ -108,10 +106,9 @@ subroutine setBehaviourParaValue(prepCrit, parm_theta_thm, parm_alpha_thm, &
         else
             carcriList_(CARCRI_MATRSYME) = 0
         end if
-! ----- For external solvers (UMAT / MFRONT)
-        carcriList_(EXTE_PTR) = prepCrit(iFactorKeyword)%extern_ptr
-        carcriList_(EXTE_TYPE) = prepCrit(iFactorKeyword)%extern_type
-        carcriList_(EXTE_STRAIN) = prepCrit(iFactorKeyword)%exte_strain
+        carcriList_(EXTE_TYPE) = prepCrit(iFactorKeyword)%prepExte%solvBehavType
+        carcriList_(EXTE_PTR) = prepCrit(iFactorKeyword)%prepExte%adrsUMAT
+        carcriList_(EXTE_STRAIN) = prepCrit(iFactorKeyword)%prepExte%strainMGIS
     end if
 
 ! - Set values for MFRONT

@@ -15,17 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine gerpas(fami, kpg, ksp, rela_comp, mod,&
-                      imat, matcst, nbcomm, cpmono, nbphas,&
-                      nvi, nmat, y, pas, itmax,&
-                      eps, toly, cothe, coeff, dcothe,&
-                      dcoeff, coel, pgl, angmas, neps,&
-                      epsd, detot, x, nfs, nsg,&
+    subroutine gerpas(materPara, &
+                      relaComp, typmod1, &
+                      matcst, nbcomm, cpmono, nbphas, &
+                      nvi, nmat, y, pas, itmax, &
+                      eps, toly, cothe, coeff, dcothe, &
+                      dcoeff, coel, pgl, neps, &
+                      epsd, detot, x, nfs, nsg, &
                       nhsr, numhsr, hsr, iret)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         integer(kind=8) :: nhsr
         integer(kind=8) :: nsg
         integer(kind=8) :: nfs
@@ -33,12 +34,8 @@ interface
         integer(kind=8) :: nmat
         integer(kind=8) :: nvi
         integer(kind=8) :: nbphas
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: rela_comp
-        character(len=8) :: mod
-        integer(kind=8) :: imat
+        character(len=16) :: relaComp
+        character(len=8) :: typmod1
         character(len=3) :: matcst
         integer(kind=8) :: nbcomm(nmat, 3)
         character(len=24) :: cpmono(5*nmat+1)
@@ -53,7 +50,6 @@ interface
         real(kind=8) :: dcoeff(nmat)
         real(kind=8) :: coel(nmat)
         real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: angmas(3)
         real(kind=8) :: epsd(neps)
         real(kind=8) :: detot(neps)
         real(kind=8) :: x

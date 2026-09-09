@@ -21,10 +21,11 @@ subroutine mmreli(alias, nno, ndim, coorma, coorpt, &
     implicit none
 #include "asterc/r8prem.h"
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 #include "asterfort/mmresi.h"
     character(len=8) :: alias
     integer(kind=8) :: nno, ndim
-    real(kind=8) :: coorma(27), coorpt(3)
+    real(kind=8) :: coorma(3, MT_NNOMAX2D), coorpt(3)
     real(kind=8) :: ksi1, ksi2, dksi1, dksi2
     real(kind=8) :: alpha
 ! ----------------------------------------------------------------------

@@ -49,7 +49,7 @@ class BaseOperators(ABC, ContextMixin, DispatcherMixin):
 
     def finalize(self):
         """Finalizes the operator manager."""
-        self.state.stress = self._tmp_stress
+        self.state.dual = self._tmp_stress
         self.state.internVar = self._tmp_internVar
 
     def shouldExecuteIteration(self, iter_idx):

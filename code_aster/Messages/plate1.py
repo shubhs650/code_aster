@@ -23,20 +23,6 @@ cata_msg = {
     1: _(
         """On ne sait pas calculer l'option %(k1)s avec une élasticité de type %(k2)s pour cet élément."""
     ),
-    2: _(
-        """
- Le nombre de couches défini dans DEFI_COMPOSITE et dans AFFE_CARA_ELEM dans n'est pas cohérent.
- Nombre de couches dans DEFI_COMPOSITE: %(i1)d
- Nombre de couches dans AFFE_CARA_ELEM: %(i2)d
-"""
-    ),
-    3: _(
-        """
- L'épaisseur totale des couches définie dans DEFI_COMPOSITE et celle définie dans AFFE_CARA_ELEM ne sont pas cohérentes.
- Épaisseur totale des couches dans DEFI_COMPOSITE: %(r1)f
- Épaisseur dans AFFE_CARA_ELEM: %(r2)f
-"""
-    ),
     4: _(
         """Problème dans le calcul de l'option FORC_NODA / REAC_NODA :
 Le nombre de sous-point du champ de contrainte contenu dans la structure de données n'est pas cohérent avec ce qui a été défini dans AFFE_CARA_ELEM.
@@ -57,17 +43,26 @@ Il est impératif d'utiliser un champ de contrainte complet pour le calcul de FO
     10: _("""Le nombre de couches doit être obligatoirement supérieur à zéro."""),
     11: _("""Le nombre de couches est limité à 10 pour les éléments COQUE_AXIS."""),
     12: _("""La relation %(k1)s n'est pas possible pour les éléments COQUE_3D."""),
-    13: _(
-        """La réactualisation de la géométrie (DEFORMATION='PETIT_REAC') est déconseillée pour les éléments COQUE_3D.
-Le calcul des déformations à l'aide de PETIT_REAC n'est qu'une approximation des hypothèses des grands déplacements. Elle nécessite d'effectuer de très petits incréments de chargement.
-Pour prendre en compte correctement les grands déplacements et surtout les grandes rotations, il est recommandé d'utiliser DEFORMATION='GROT_GDEP'."""
-    ),
     14: _("""La déformation %(k1)s n'est pas possible sur les éléments COQUE_3D."""),
     15: _("""On ne peut pas utiliser les éléments DST avec multi-couches et excentrement."""),
     40: _(
         """L'élément de plaque ne peut pas être orienté. Par défaut, pour orienter l'élément, on y projette l'axe global X.
 L'axe de référence pour le calcul du repère local est ici normal à l'élément.
 Il faut donc modifier l'axe de référence en utilisant ANGL_REP ou VECTEUR dans AFFE_CARA_ELEM."""
+    ),
+    51: _(
+        """
+ Le nombre de couches défini dans DEFI_COMPOSITE et dans AFFE_CARA_ELEM dans n'est pas cohérent.
+ Nombre de couches dans DEFI_COMPOSITE: %(i1)d
+ Nombre de couches dans AFFE_CARA_ELEM: %(i2)d
+"""
+    ),
+    52: _(
+        """
+ L'épaisseur totale des couches définie dans DEFI_COMPOSITE et celle définie dans AFFE_CARA_ELEM ne sont pas cohérentes.
+ Épaisseur totale des couches dans DEFI_COMPOSITE: %(r1)f
+ Épaisseur dans AFFE_CARA_ELEM: %(r2)f
+"""
     ),
     75: _("""Les matériaux de coque homogénéisées (ELAS_COQUE) sont interdits en non-linéaire."""),
     80: _(

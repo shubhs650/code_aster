@@ -16,17 +16,19 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
+subroutine mdchdl(lnoue2, iliai, ddlcho, ier, l_rotaz)
     implicit none
 #include "asterf_types.h"
 #include "asterfort/posddl.h"
 #include "asterfort/utmess.h"
 #include "asterfort/nlget.h"
 
-    integer(kind=8) :: iliai, ddlcho(*), ier
-    aster_logical :: lnoue2
+    aster_logical, intent(in) :: lnoue2
+    integer(kind=8), intent(in) :: iliai
+    integer(kind=8), intent(out) :: ddlcho(*), ier
+    aster_logical, intent(in), optional :: l_rotaz
 !
-!     ROUTINE APPELEE PAR MDCHOC
+!     ROUTINE APPELEE PAR MDCHOC,
 !     TRAITEMENT DES DDL
 !
 ! IN  : NBNLI  : DIMENSION DES TABLEAUX (NBCHOC+NBSISM+NBFLAM)
@@ -36,11 +38,18 @@ subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
 ! OUT : DDLCHO : TABLEAU DES NUMEROTATIONS DES NOEUDS DE CHOC
 ! OUT : IER    : NIVEAU D'ERREUR
 !     ------------------------------------------------------------------
-    integer(kind=8) :: nunoe, nuddl
+    integer(kind=8) :: nunoe, nuddl, nbcomp
     character(len=8) :: nume1, noeu1, nume2, noeu2, sd_nl
     character(len=24) :: valk(2)
+    aster_logical :: l_rota
 !     ------------------------------------------------------------------
 !
+    if (present(l_rotaz)) then
+        l_rota = l_rotaz
+    else
+        l_rota = ASTER_FALSE
+    end if
+
     sd_nl = '&&OP29NL'
     call nlget(sd_nl, _NUMDDL_1, iocc=iliai, kscal=nume1)
     call nlget(sd_nl, _NO1_NAME, iocc=iliai, kscal=noeu1)
@@ -74,6 +83,34 @@ subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
         call utmess('E', 'ALGORITH5_30', sk=noeu1)
     end if
     ddlcho(3) = nuddl
+    nbcomp = 3
+
+    if (l_rota) then
+        call posddl('NUME_DDL', nume1, noeu1, 'DRX', nunoe, &
+                    nuddl)
+        if (nuddl .eq. 0) then
+            ier = ier+1
+            call utmess('E', 'ALGORITH5_28', sk=noeu1)
+        end if
+        ddlcho(4) = nuddl
+        !
+        call posddl('NUME_DDL', nume1, noeu1, 'DRY', nunoe, &
+                    nuddl)
+        if (nuddl .eq. 0) then
+            ier = ier+1
+            call utmess('E', 'ALGORITH5_29', sk=noeu1)
+        end if
+        ddlcho(5) = nuddl
+        !
+        call posddl('NUME_DDL', nume1, noeu1, 'DRZ', nunoe, &
+                    nuddl)
+        if (nuddl .eq. 0) then
+            ier = ier+1
+            call utmess('E', 'ALGORITH5_30', sk=noeu1)
+        end if
+        ddlcho(6) = nuddl
+        nbcomp = 6
+    end if
 !
     if (lnoue2) then
 
@@ -92,7 +129,7 @@ subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
             ier = ier+1
             call utmess('E', 'ALGORITH5_28', sk=noeu2)
         end if
-        ddlcho(4) = nuddl
+        ddlcho(nbcomp+1) = nuddl
 !
         call posddl('NUME_DDL', nume2, noeu2, 'DY', nunoe, &
                     nuddl)
@@ -100,7 +137,7 @@ subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
             ier = ier+1
             call utmess('E', 'ALGORITH5_29', sk=noeu2)
         end if
-        ddlcho(5) = nuddl
+        ddlcho(nbcomp+2) = nuddl
 !
         call posddl('NUME_DDL', nume2, noeu2, 'DZ', nunoe, &
                     nuddl)
@@ -108,11 +145,35 @@ subroutine mdchdl(lnoue2, iliai, ddlcho, ier)
             ier = ier+1
             call utmess('E', 'ALGORITH5_30', sk=noeu2)
         end if
-        ddlcho(6) = nuddl
+        ddlcho(nbcomp+3) = nuddl
+
+        if (l_rota) then
+            call posddl('NUME_DDL', nume2, noeu2, 'DRX', nunoe, &
+                        nuddl)
+            if (nuddl .eq. 0) then
+                ier = ier+1
+                call utmess('E', 'ALGORITH5_28', sk=noeu2)
+            end if
+            ddlcho(nbcomp+4) = nuddl
+            !
+            call posddl('NUME_DDL', nume2, noeu2, 'DRY', nunoe, &
+                        nuddl)
+            if (nuddl .eq. 0) then
+                ier = ier+1
+                call utmess('E', 'ALGORITH5_29', sk=noeu2)
+            end if
+            ddlcho(nbcomp+5) = nuddl
+            !
+            call posddl('NUME_DDL', nume2, noeu2, 'DRZ', nunoe, &
+                        nuddl)
+            if (nuddl .eq. 0) then
+                ier = ier+1
+                call utmess('E', 'ALGORITH5_30', sk=noeu2)
+            end if
+            ddlcho(nbcomp+6) = nuddl
+        end if
     else
-        ddlcho(4) = ddlcho(1)
-        ddlcho(5) = ddlcho(2)
-        ddlcho(6) = ddlcho(3)
+        ddlcho(nbcomp+1:2*nbcomp) = ddlcho(1:nbcomp)
     end if
 !
 end subroutine

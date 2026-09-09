@@ -15,14 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, tinstm, tinstp, epsm, &
-                  deps, sigm, vim, option, rela_plas, &
+                  imate, tinstm, tinstp, epsm, &
+                  deps, sigm, vim, option, relaPlas, &
                   sigp, vip, dsidep)
 !
     implicit none
 !
+#include "asterfort/get_varc.h"
 #include "asterfort/lceibt.h"
 #include "asterfort/lcldsb.h"
 #include "asterfort/lcmaza.h"
@@ -39,18 +41,15 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 #include "asterfort/sigela.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
-#include "asterfort/get_varc.h"
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
-!
 !
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: imate
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     character(len=8), intent(in) :: typmod(*)
-    character(len=16), intent(in) :: compor(*)
-    character(len=16), intent(in) :: rela_plas
+    character(len=16), intent(in) :: relaPlas
     character(len=16), intent(in) :: option
     character(len=*), intent(in) :: fami
     real(kind=8) :: tinstm, tinstp
@@ -276,7 +275,7 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
     nomres(3) = 'ALPHA'
     nomres(4) = 'ALPHA'
 !
-    if (rela_plas .eq. 'ENDO_ISOT_BETON') then
+    if (relaPlas .eq. 'ENDO_ISOT_BETON') then
 !
         call rcvalb(fami, 1, 1, '+', imate, &
                     ' ', 'ELAS', 1, 'TEMP', [0.d0], &
@@ -288,7 +287,7 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
         valres(4) = valres(3)
         icodre(4) = icodre(3)
 !
-    else if (rela_plas .eq. 'MAZARS') then
+    else if (relaPlas .eq. 'MAZARS') then
         tmaxm = vim(24)
         tmaxp = max(tmaxm, tp)
 !
@@ -325,7 +324,7 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !
 !  -------CALCUL DES DEFORMATIONS THERMIQUES
 !
-    if ((rela_plas .eq. 'MAZARS') .or. (rela_plas .eq. 'ENDO_ISOT_BETON')) then
+    if ((relaPlas .eq. 'MAZARS') .or. (relaPlas .eq. 'ENDO_ISOT_BETON')) then
         if ((isnan(tref)) .or. (icodre(3) .ne. 0) .or. (icodre(4) .ne. 0)) then
             call utmess('F', 'CALCULEL_15')
         else
@@ -517,7 +516,7 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !    (LA SEULE QUI CONTRIBUE A FAIRE EVOLUER L'ENDOMMAGEMENT)
 !    POUR LE COUPLAGE AVEC MAZARS
 !
-        if (rela_plas .eq. 'MAZARS') then
+        if (relaPlas .eq. 'MAZARS') then
             call r8inir(6, 0.d0, epsel, 1)
             do k = 1, nstrs
                 epsel(k) = epsm(k)-epsrm*kron(k)-epsfm(k)
@@ -537,14 +536,14 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !  2. MISE A JOUR DE L ENDOMMAGEMENT ET DES SIGMA POUR EIB
 ! ________________________________________________________________
 !
-        if (rela_plas .eq. 'ENDO_ISOT_BETON') then
+        if (relaPlas .eq. 'ENDO_ISOT_BETON') then
 !    MATRICE ELASTO-ENDOMMAGEE ET MISE A JOUR DE L ENDOMMAGEMENT
             call lcldsb(fami, kpg, ksp, ndim, imate, &
                         epsm, deps, vim(22), 'RAPH_COUP       ', tbid, &
                         vip(22), dep)
         else
 !    MATRICE D ELASTICITE DE HOOKE POUR MAZARS ET UMLV SANS COUPLAGE
-            if (rela_plas .eq. 'MAZARS') then
+            if (relaPlas .eq. 'MAZARS') then
                 call lcumme(youn, xnu, ifou, dep)
             else
                 call lcumme(youn, xnu, ifou, dep)
@@ -565,22 +564,22 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !   MODIFI DU 18 AOUT 2004 YLP - CORRECTION DE LA DEFORMATION DE FLUAGE
 !   PAR LES DEFORMATIONS DE RETRAIT
 !
-        if (rela_plas .eq. 'MAZARS') then
-            call lcumef(rela_plas, dep, dep, an, bn, &
+        if (relaPlas .eq. 'MAZARS') then
+            call lcumef(relaPlas, dep, dep, an, bn, &
                         cn, epsm, epsrm, epsrp, deps, &
                         epsfm, sigelm, nstrs, sigelp)
             call lcumsf(sigelm, sigelp, nstrs, vim, 20, &
                         cmat, 15, isph, tdt, hygrm, &
                         hygrp, vip)
-        else if (rela_plas .eq. 'ENDO_ISOT_BETON') then
-            call lcumef(rela_plas, dep, dep, an, bn, &
+        else if (relaPlas .eq. 'ENDO_ISOT_BETON') then
+            call lcumef(relaPlas, dep, dep, an, bn, &
                         cn, epsm, epsrm, epsrp, deps, &
                         epsfm, sigm, nstrs, sigp)
             call lcumsf(sigm, sigp, nstrs, vim, 20, &
                         cmat, 15, isph, tdt, hygrm, &
                         hygrp, vip)
         else
-            call lcumef(rela_plas, dep, depm, an, bn, &
+            call lcumef(relaPlas, dep, depm, an, bn, &
                         cn, epsm, epsrm, epsrp, deps, &
                         epsfm, sigm, nstrs, sigp)
             call lcumsf(sigm, sigp, nstrs, vim, 20, &
@@ -602,10 +601,10 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !_________________________________________________________
 !
 !
-        if (rela_plas .eq. 'MAZARS') then
+        if (relaPlas .eq. 'MAZARS') then
             option2 = 'RAPH_COUP'
             call lcmaza(fami, kpg, ksp, ndim, typmod, &
-                        imate, compor, epsm, deps, vim(22), &
+                        imate, epsm, deps, vim(22), &
                         option2, sigp, vip, tbid)
         end if
     end if
@@ -619,18 +618,18 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
 !
 ! - MB: SI COUPLAGE AVEC MAZARS, ON UTILISE POUR LE COUPLAGE
 !       LA MATRICE TANGENTE DE CETTE LOI
-        if (rela_plas .eq. 'MAZARS') then
+        if (relaPlas .eq. 'MAZARS') then
             option2 = option
             if (option(1:9) .eq. 'FULL_MECA') then
                 option2 = 'RIGI_COUP'
             end if
             call lcmaza(fami, kpg, ksp, ndim, typmod, &
-                        imate, compor, epsm, deps, vim(22), &
+                        imate, epsm, deps, vim(22), &
                         option2, tbid, vip, dsidep)
         else
             option2 = 'RIGI_COUP'
             if (option(1:9) .eq. 'RIGI_MECA') then
-                if (rela_plas .eq. 'ENDO_ISOT_BETON') then
+                if (relaPlas .eq. 'ENDO_ISOT_BETON') then
                     call lcldsb(fami, kpg, ksp, ndim, imate, &
                                 epsm, tbid, vim(22), option2, tbid, &
                                 tbid, dep)
@@ -670,7 +669,7 @@ subroutine lcumfp(fami, kpg, ksp, ndim, typmod, &
                 end do
             end do
 !
-            if (rela_plas .eq. 'ENDO_ISOT_BETON') then
+            if (relaPlas .eq. 'ENDO_ISOT_BETON') then
                 if (option .eq. 'RIGI_MECA_TANG') then
                     call rcvarc(' ', 'HYDR', '+', fami, kpg, &
                                 ksp, hydrp, iret)

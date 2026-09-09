@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0156(option, nomte)
+    use resi_refe_module, only: RESI_REFE
     implicit none
 #include "asterf_types.h"
 #include "jeveux.h"
@@ -24,7 +25,6 @@ subroutine te0156(option, nomte)
 #include "asterfort/jevech.h"
 #include "asterfort/matrot.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utpvlg.h"
     character(len=16) :: option, nomte
 !-----------------------------------------------------------------------
@@ -48,6 +48,7 @@ subroutine te0156(option, nomte)
     real(kind=8) :: fs(6), pgl(3, 3), vect(6), forref
     real(kind=8) :: w(6), ang1(3), xd(3)
     aster_logical :: reactu
+    type(RESI_REFE):: refe
 !
 !     ------------------------------------------------------------------
 !
@@ -59,7 +60,9 @@ subroutine te0156(option, nomte)
             nc = 3
         end if
         call jevech('PVECTUR', 'E', ivectu)
-        call terefe('EFFORT_REFE', 'MECA_BARRE', forref)
+        call refe%Init(nomte)
+        forref = refe%GetRef('EFFORT')
+        call refe%Check()
         do ino = 1, nno
             do i = 1, nc
                 zr(ivectu+(ino-1)*nc+i-1) = forref

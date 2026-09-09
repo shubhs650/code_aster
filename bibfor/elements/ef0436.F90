@@ -15,118 +15,106 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine ef0436(nomte)
-! aslint: disable=W0104
+!
+subroutine ef0436()
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystMemb
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/mbcine.h"
 #include "asterfort/mbrigi.h"
+#include "asterfort/ppgan2.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/verift.h"
-#include "asterfort/ppgan2.h"
+#include "jeveux.h"
 !
-    character(len=16) :: nomte
-! ----------------------------------------------------------------------
-!    - FONCTION REALISEE:  CALCUL DE EFGE_ELNO POUR LES MEMBRANES
-!    - ARGUMENTS :
-!                       NOMTE        -->  NOM DU TYPE ELEMENT
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    character(len=4) :: fami
-    integer(kind=8) :: nddl, nno, nnos, npg, ndim, ncomp
+!  CALCUL DE EFGE_ELNO POUR LES MEMBRANES
+!
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=8), parameter :: fami = 'RIGI'
+    integer(kind=8), parameter :: nddl = 3, ncomp = 3
+    integer(kind=8) :: nno, npg
     integer(kind=8) :: i, n, c, cc, kpg
-    integer(kind=8) :: ipoids, ivf, idfde, jgano, jefno
-    integer(kind=8) :: igeom, icacoq, imate, idepl
+    integer(kind=8) :: ivf, idfde, jgano, jvEfgeElno
+    integer(kind=8) :: jvGeom, jvMaterc, jvDisp
     real(kind=8) :: dff(2, 8), vff(8), b(3, 3, 8), jac
-    real(kind=8) :: alpha, beta
-    real(kind=8) :: epsm(3), epsthe, sig(3), sigg(3, 9), rig(3, 3)
-!----------------------------------------------------------------------------------
+    real(kind=8) :: epsm(3), epsthe, sig(3), sigg(3, 9), matrRigi(3, 3)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-! - NOMBRE DE COMPOSANTES DES TENSEURS
+! --------------------------------------------------------------------------------------------------
 !
-    ncomp = 3
-    nddl = 3
-!
-! - FONCTIONS DE FORMES ET POINTS DE GAUSS
-!
-    fami = 'RIGI'
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, &
-                     npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
 
-!
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PCACOQU', 'L', icacoq)
-!
-    call jevech('PDEPLAR', 'L', idepl)
-    call jevech('PMATERC', 'L', imate)
-!
-    call jevech('PEFFORR', 'E', jefno)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
 
-    call r8inir(3*9, 0.d0, sigg, 1)
-!
-! - LE VECTEUR NORME QUI DETERMINE LE REPERE LOCAL DE LA MEMBRANE
-!   (COMPORTEMENT ANISOTROPE)
-!
-    alpha = zr(icacoq+1)*r8dgrd()
-    beta = zr(icacoq+2)*r8dgrd()
-!
-!
-! - DEBUT DE LA BOUCLE SUR LES POINTS DE GAUSS
-!
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Compute global<=>local transformation
+    call compCoorSystMemb(plateOrie)
+
+    call elrefe_info(fami=fami, nno=nno, &
+                     npg=npg, jvf=ivf, jdfde=idfde, jgano=jgano)
+
+! - Input fields
+    call jevech('PDEPLAR', 'L', jvDisp)
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Output field
+    call jevech('PEFFORR', 'E', jvEfgeElno)
+
+    sigg = 0.d0
     do kpg = 1, npg
-!
         do n = 1, nno
             vff(n) = zr(ivf+(kpg-1)*nno+n-1)
             dff(1, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2)
             dff(2, n) = zr(idfde+(kpg-1)*nno*2+(n-1)*2+1)
         end do
-!
-!        --- CALCUL DE LA MATRICE "B" :
-!              DEPL NODAL --> DEFORMATIONS MEMBRANAIRES ET JACOBIEN
-!
-        call mbcine(nno, zr(igeom), dff, alpha, beta, &
+
+! ----- CALCUL DE LA MATRICE "B" :
+        call mbcine(plateOrie, &
+                    nno, zr(jvGeom), dff, &
                     b, jac)
-!
-!        ---  ON CALCULE LA CONTRAINTE AU PG :
-!
-!        -- CALCUL DE LA DEFORMATION MEMBRANAIRE DANS LE REPERE LOCAL
-        call r8inir(3, 0.d0, epsm, 1)
+
+!       -- CALCUL DE LA DEFORMATION MEMBRANAIRE DANS LE REPERE LOCAL
+        epsm = 0.d0
         do n = 1, nno
             do i = 1, nddl
                 do c = 1, ncomp
-                    epsm(c) = epsm(c)+b(c, i, n)*zr(idepl+(n-1)*nddl+i-1)
+                    epsm(c) = epsm(c)+b(c, i, n)*zr(jvDisp+(n-1)*nddl+i-1)
                 end do
             end do
         end do
-!
-!        -- RETRAIT DE LA DEFORMATION THERMIQUE
-        call verift(fami, kpg, 1, '+', zi(imate), &
+
+!       -- RETRAIT DE LA DEFORMATION THERMIQUE
+        call verift(fami, kpg, 1, '+', zi(jvMaterc), &
                     epsth_=epsthe)
         epsm(1) = epsm(1)-epsthe
         epsm(2) = epsm(2)-epsthe
 
-!
-!        --  CALCUL DE LA CONTRAINTE AU PG
-        call mbrigi(fami, kpg, imate, rig)
-!
-        call r8inir(3, 0.d0, sig, 1)
+!       --  CALCUL DE LA CONTRAINTE AU PG
+        call mbrigi(fami, kpg, jvMaterc, matrRigi)
+        sig = 0.d0
         do c = 1, ncomp
             do cc = 1, ncomp
-                sig(c) = sig(c)+epsm(cc)*rig(cc, c)
+                sig(c) = sig(c)+epsm(cc)*matrRigi(cc, c)
             end do
         end do
-!
         do c = 1, ncomp
             sigg(c, kpg) = sig(c)
         end do
 
     end do
 
-!   -- passage ELGA -> ELNO :
-    call ppgan2(jgano, 1, ncomp, sigg, zr(jefno))
+! - ELGA -> ELNO
+    call ppgan2(jgano, 1, ncomp, sigg, zr(jvEfgeElno))
 
 end subroutine

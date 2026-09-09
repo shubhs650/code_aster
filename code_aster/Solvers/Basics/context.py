@@ -269,6 +269,7 @@ class ContextMixin:
         return instance
 
     def __init__(self):
+        super().__init__()
         self._ctxt = Context()
 
     @property

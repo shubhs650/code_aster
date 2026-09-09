@@ -35,6 +35,7 @@ subroutine xxbsig(elrefp, elrese, ndim, coorse, igeom, &
 #include "asterfort/reeref.h"
 #include "asterfort/xcalc_heav.h"
 #include "asterfort/xcalc_code.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xkamat.h"
 #include "asterfort/xcalfev_wrap.h"
 #include "asterfort/iimatu.h"
@@ -84,7 +85,7 @@ subroutine xxbsig(elrefp, elrese, ndim, coorse, igeom, &
     real(kind=8) :: dfdi(nnop, ndim), f(3, 3)
     real(kind=8) :: def(6, nnop, ndim*(1+nfh+ndim)), voigt(2*ndim)
     real(kind=8) :: r
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX3D, 3, 3), dkdgl(MT_NNOMAX3D, 3, 3, 3), ka, mu
     aster_logical :: axi
 !
     real(kind=8) :: rac2

@@ -90,7 +90,7 @@ subroutine te0185(option, nomte)
             call ef0410(nomte)
         else if (cmod .eq. 'CQA') then
 !         -- COQUE_AXIS
-            call ef0231(nomte)
+            call ef0231()
         else if (cmod .eq. 'DIT') then
 !         -- DIS_T
             call ef0042(nomte)
@@ -126,7 +126,7 @@ subroutine te0185(option, nomte)
             call ef0585(nomte)
         else if (cmod .eq. 'MMB') then
 !         -- MEMBRANE
-            call ef0436(nomte)
+            call ef0436()
         else
             ASSERT(ASTER_FALSE)
         end if

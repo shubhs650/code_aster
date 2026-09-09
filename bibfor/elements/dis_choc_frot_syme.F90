@@ -78,7 +78,7 @@ subroutine dis_choc_frot_syme(DD, icodma, ulp, xg, klv, &
     integer(kind=8), parameter :: EnVitesse = 1, EnPlasticite = 2
 !
     integer(kind=8) :: ii
-    real(kind=8) :: xl(6), xd(3), raide(6), raidep(6), rignor, rigtan, depxyz(3)
+    real(kind=8) :: xl(6), xd(3), raide(6), rignor, rigtan, depxyz(3)
     real(kind=8) :: coulom, dist12, Precisxyz(3), utotxyz(3)
 !
     integer(kind=8) :: axes(3), ContactInGlobal, TestOK, TestNOK, messai(4)
@@ -177,9 +177,9 @@ subroutine dis_choc_frot_syme(DD, icodma, ulp, xg, klv, &
             messak(1) = 'DIS_CONTACT'
             messak(2) = 'DIS_CHOC (cas symétrique)'
             !
-            if (abs(ldm(1)) <= Precisxyz(1)) then
-                ! Plan YZ, vect ↑ X
-                axes = [2, 3, 1]
+            if (abs(ldm(3)) <= Precisxyz(3)) then
+                ! Plan XY, vect ↑ Z
+                axes = [1, 2, 3]
                 TestOK = TestOK+1
             end if
             if (abs(ldm(2)) <= Precisxyz(2)) then
@@ -187,9 +187,9 @@ subroutine dis_choc_frot_syme(DD, icodma, ulp, xg, klv, &
                 axes = [1, 3, 2]
                 TestOK = TestOK+1
             end if
-            if (abs(ldm(3)) <= Precisxyz(3)) then
-                ! Plan XY, vect ↑ Z
-                axes = [1, 2, 3]
+            if (abs(ldm(1)) <= Precisxyz(1)) then
+                ! Plan YZ, vect ↑ X
+                axes = [2, 3, 1]
                 TestOK = TestOK+1
             end if
             if (TestOK .eq. 0) then
@@ -201,9 +201,9 @@ subroutine dis_choc_frot_syme(DD, icodma, ulp, xg, klv, &
                 abs(ldm(axes(2))) <= Precisxyz(axes(2))) then
                 ! <F> Le discret est suivant un axe
                 ! <F> Le discret est détecté dans plusieurs plans
-                messai(1:3) = axes
-                messai(4) = TestOK
-                call utmess('F', 'DISCRETS_34', nk=2, valk=messak, nr=12, valr=messar, &
+                messai(2:4) = axes
+                messai(1) = TestOK
+                call utmess('A', 'DISCRETS_34', nk=2, valk=messak, nr=12, valr=messar, &
                             ni=4, vali=messai)
             end if
             do ii = 1, 3

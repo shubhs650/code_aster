@@ -22,9 +22,10 @@ subroutine apdist(elem_type, elem_coor, elem_nbnode, ksi1, ksi2, &
     implicit none
 !
 #include "asterfort/elrfvf.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: elem_type
-    real(kind=8), intent(in) :: elem_coor(27)
+    real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_nbnode
     real(kind=8), intent(in) :: ksi1
     real(kind=8), intent(in) :: ksi2
@@ -54,7 +55,7 @@ subroutine apdist(elem_type, elem_coor, elem_nbnode, ksi1, ksi2, &
     real(kind=8) :: poin_proj_coor(3)
     integer(kind=8) :: i_dime, i_node
     real(kind=8), parameter :: zero = 0.d0
-    real(kind=8) :: ksi(2), ff(9)
+    real(kind=8) :: ksi(2), ff(MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -72,7 +73,7 @@ subroutine apdist(elem_type, elem_coor, elem_nbnode, ksi1, ksi2, &
 !
     do i_dime = 1, 3
         do i_node = 1, elem_nbnode
-            poin_proj_coor(i_dime) = ff(i_node)*elem_coor(3*(i_node-1)+i_dime)+ &
+            poin_proj_coor(i_dime) = ff(i_node)*elem_coor(i_dime, i_node)+ &
                                      poin_proj_coor(i_dime)
         end do
     end do

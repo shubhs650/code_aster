@@ -15,25 +15,28 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0009(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, &
+                  instam, instap, epsm, &
+                  deps, sigm, vim, option, &
+                  sigp, vip, typmod, &
                   nvi, dsidep, codret)
+!
     implicit none
+!
 #include "asterfort/lclbr1.h"
+#include "asterfort/Behaviour_type.h"
+!
     integer(kind=8) :: kpg, ksp, ndim, imate
     integer(kind=8) :: codret
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
-    integer(kind=8) :: icomp, nvi
-    real(kind=8) :: angmas(*)
-    real(kind=8) :: crit(*), instam, instap
+    character(len=16) :: option
+    integer(kind=8) :: nvi
+    real(kind=8) :: instam, instap
     real(kind=8) :: epsm(*), deps(*)
-    real(kind=8) :: sigm(*), vim(*), sigp(*), vip(*), dsidep(*)
-! aslint: disable=W1504,W0104
+    real(kind=8) :: sigm(*), vim(nvi), sigp(*), vip(nvi), dsidep(*)
 
 !       IN      FAMI    FAMILLE DE POINT DE GAUSS (RIGI,MASS,...)
 !       IN      KPG,KSP NUMERO DU (SOUS)POINT DE GAUSS
@@ -72,7 +75,8 @@ subroutine lc0009(fami, kpg, ksp, ndim, imate, &
 !               VIP    VARIABLES INTERNES A T+DT + INDICATEUR ETAT T+DT
 !               DSIDEP    MATRICE DE COMPORTEMENT TANGENT A T+DT OU T
 ! ======================================================================
+
     call lclbr1(fami, kpg, ksp, ndim, typmod, &
-                imate, compor, epsm, deps, &
+                imate, epsm, deps, &
                 option, sigp, dsidep)
 end subroutine

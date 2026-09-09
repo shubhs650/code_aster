@@ -26,12 +26,15 @@ check_updates_main()
 {
     local found
     printf "checking for tools updates... "
+    if [ "${ASTER_SKIP_CHECK_UPDATES}" = "1" ]; then
+        return 0
+    fi
     if [ ! -f "${mark}" ]; then
         echo "never run, updating..."
         do_updates
     else
         found=$( find "${devhelper}" -mtime +${NB_DAYS} -name "${markbase}" )
-        if [ ! -z "${found}" ] || [ ! -z "${FORCE_CHECK_UPDATES}" ]; then
+        if [ ! -z "${found}" ] || [ ! -z "${ASTER_FORCE_CHECK_UPDATES}" ]; then
             echo "not checked in last 10 days, updating..."
             do_updates
         else

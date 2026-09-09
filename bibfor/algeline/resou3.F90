@@ -33,7 +33,6 @@ subroutine resou3(matass, matpre, solveu, chcine, nsecm, &
 #include "asterfort/xfem_pc.h"
 #include "asterfort/xfem_pc_rhs.h"
 #include "asterfort/xfem_pc_sol.h"
-!#include "asterfort/xfem_precond.h"
 !-----------------------------------------------------------------------
 !
     character(len=*) :: matass, matpre, solveu, chcine

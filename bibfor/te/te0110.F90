@@ -15,10 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1501
 !
 subroutine te0110(option, nomte)
-! aslint: disable=W1501
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/codent.h"
 #include "asterfort/cq3d2d.h"
@@ -69,13 +73,16 @@ subroutine te0110(option, nomte)
     real(kind=8) :: coor2d(18), dfdx(9), dfdy(9), poids, dtpgdy(3)
     real(kind=8) :: axe(3, 3), ang(2), a(3, 3, 2, 2)
     real(kind=8) :: matn(3, 3), matp(3, 3)
-    real(kind=8) :: matref(3), matele(3)
+    real(kind=8) :: matref(3), matele(3), thickness
     real(kind=8) :: rigith(ndimax, ndimax), masse(ndimax, ndimax)
     real(kind=8) :: long, hmoin, hplus, hbord
-    integer(kind=8) :: i, j, nno, kp, npg1, npg2, gi, pi, ivectt, itemp, icacoq
+    integer(kind=8) :: i, j, nno, kp, npg1, npg2, gi, pi, ivectt, itemp
     integer(kind=8) :: ipoids, ivf, idfde, igeom, imate, nnos, jgano
     integer(kind=8) :: itemps, k, pj, gj, ndim, ibid, kpg, spt
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
 ! --- DETERMINATION DU SECOND MEMBRE CHAR_THER_EVOL :
 ! --- F =   1/DT*MASSE_THER*(T-) - (1-THETA)*RIGI_THER*(T-)
@@ -143,12 +150,15 @@ subroutine te0110(option, nomte)
 ! --- RECUPERATION DU MATERIAU :
 !     ------------------------
     call jevech('PMATERC', 'L', imate)
-!
-! --- RECUPERATION DE L'EPAISSEUR DE LA COQUE ET DES 2 ANGLES
-! --- PERMETTANT DE PASSER DU REPERE GLOBAL AU REPERE DE REFERENCE
-! --- TANGENT A LA COQUE :
-!     ------------------
-    call jevech('PCACOQU', 'L', icacoq)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+    thickness = plateCara%thick
+
 !
 ! --- RECUPERATION DE L'INSTANT DU CALCUL, DU PAS DE TEMPS ET
 ! --- DU PARAMETRE THETA DE LA METHODE 'THETA' UTILISEE
@@ -224,7 +234,7 @@ subroutine te0110(option, nomte)
 ! ---   DETERMINATION DE LA ROTATION FAISANT PASSER DU REPERE
 ! ---   DE REFERENCE AU REPERE DE L'ELEMENT
 !       -----------------------------------
-            call mudirx(nbnoso, zr(igeom), 3, zr(icacoq+1), zr(icacoq+2), &
+            call mudirx(nbnoso, zr(igeom), 3, plateOrie%alpha, plateOrie%beta, &
                         axe, ang)
 !
 ! ---   NOM DES COMPOSANTES DU TENSEUR DE CONDUCTIVITE HOMOGENEISE :
@@ -245,7 +255,7 @@ subroutine te0110(option, nomte)
 ! ---   CONSTRUCTION DE LA MATRICE DE PASSAGE DU REPERE UTILISATEUR
 ! ---   AU REPERE ELEMENT :
 !       -----------------
-            call mudirx(nbnoso, zr(igeom), 3, zr(icacoq+1), zr(icacoq+2), &
+            call mudirx(nbnoso, zr(igeom), 3, plateOrie%alpha, plateOrie%beta, &
                         axe, ang)
 !
 ! ---   VALEURS DES CARACTERISIQUES DU MATERIAU DANS LE REPERE
@@ -339,7 +349,7 @@ subroutine te0110(option, nomte)
 !
 ! ---   DEMI-EPAISSEUR :
 !       --------------
-            h = zr(icacoq)/2.d0
+            h = thickness/2.d0
 !
 ! ---   TENSEUR DE CONDUCTIVITE MEMBRANAIRE :
 !       -----------------------------------
@@ -461,7 +471,7 @@ subroutine te0110(option, nomte)
 ! ---   DETERMINATION DE LA ROTATION FAISANT PASSER DU REPERE
 ! ---   DE REFERENCE AU REPERE DE L'ELEMENT :
 !       -----------------------------------
-            call mudirx(nbnoso, zr(igeom), 3, zr(icacoq+1), zr(icacoq+2), &
+            call mudirx(nbnoso, zr(igeom), 3, plateOrie%alpha, plateOrie%beta, &
                         axe, ang)
 !
 ! ---   PASSAGE DU REPERE DE REFERENCE AU REPERE DE L'ELEMENT :

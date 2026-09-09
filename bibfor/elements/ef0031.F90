@@ -15,66 +15,74 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine ef0031(nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/cosiro.h"
 #include "asterfort/dxeffi.h"
 #include "asterfort/dxefro.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/ppgan2.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
     character(len=16) :: nomte
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCUL DE EFGE_ELNO
-!     ------------------------------------------------------------------
 !
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, ivf, idfdx, jgano, ind
-    integer(kind=8) :: icompo, ichn, jgeom, jcara, iret, icontp, ibid
+! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: pgl(3, 3), xyzl(3, 4), effgt(32), alpha, beta
-    real(kind=8) :: t2iu(4), t2ui(4), c, s
-!
-!     ---> POUR DKT/DST EFFINT = 24
-!     ---> POUR DKQ/DSQ EFFINT = 32
+    integer(kind=8), parameter :: nbEfgeNd = 8
+    integer(kind=8) :: nno, npg, jgano
+    integer(kind=8) :: jvEfge, jvGeom, jvSigm
+    real(kind=8) :: pgl(3, 3), xyzl(3, 4), effgt(32)
     real(kind=8) :: effint(32)
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-! DEB ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, jpoids=ipoids, &
-                     jvf=ivf, jdfde=idfdx, jgano=jgano)
-!
-! --- PASSAGE DES CONTRAINTES DANS LE REPERE INTRINSEQUE :
-    call cosiro(nomte, 'PCONTRR', 'L', 'UI', 'G', ibid, 'S')
-!
-    call jevech('PGEOMER', 'L', jgeom)
-    if (nno .eq. 3) then
-        call dxtpgl(zr(jgeom), pgl)
-    else if (nno .eq. 4) then
-        call dxqpgl(zr(jgeom), pgl)
-    end if
-    call utpvgl(nno, 3, pgl, zr(jgeom), xyzl)
-!
-!
-!
-    call tecach('NNO', 'PCOMPOR', 'L', iret, iad=icompo)
-    call jevech('PCONTRR', 'L', icontp)
-    ind = 8
-    call dxeffi('EFGE_ELNO', nomte, pgl, zr(icontp), ind, effint)
-!
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, c, s)
-!
-    call dxefro(npg, t2iu, effint, effgt)
-    call jevech('PEFFORR', 'E', ichn)
-    call ppgan2(jgano, 1, ind, effgt, zr(ichn))
+    call elrefe_info(fami='RIGI', nno=nno, npg=npg, jgano=jgano)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Calculate the transformation: global coordinate system/intrinsic coordinate system
+    call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! - Compute coordinate system for plate
+    call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! - Change coordinates of displacements
+    call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! - Get stress
+    call cosiro(plateCara, plateOrie, &
+                'PCONTRR', 'L', 'UI', 'G', &
+                jvSigm)
+
+! - Compute EFGE_ELGA
+    call dxeffi(plateCara, plateOrie, &
+                'EFGE_ELGA', nomte, zr(jvSigm), nbEfgeNd, &
+                effint)
+
+! - Change parametric => global
+    call dxefro(npg, plateOrie%t2iu, effint, effgt)
+
+! - Compute EFGE_ELNO
+    call jevech('PEFFORR', 'E', jvEfge)
+    call ppgan2(jgano, 1, nbEfgeNd, effgt, zr(jvEfge))
 !
 end subroutine

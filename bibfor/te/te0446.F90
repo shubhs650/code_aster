@@ -17,89 +17,82 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0446(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystPara, compCoorSystPlate, creaCaraMini
+    use resi_refe_module, only: RESI_REFE
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/dxbsig.h"
 #include "asterfort/dxefro.h"
-#include "asterfort/dxqpgl.h"
-#include "asterfort/dxtpgl.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
-#include "asterfort/terefe.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
 #include "blas/dcopy.h"
+#include "jeveux.h"
+!
     character(len=16) :: option, nomte
 !
-!   CALCUL DES OPTIONS DES ELEMENTS DE PLAQUE POUR LA MODELISATION DKTG
-!   ET LA MODELISATION Q4GG
-!     -----------------------------------------------------------------
-!                            TRIANGLE  QUADRANGLE
-!        KIRCHOFF  (MINCE)      DKT       DKQ
+! --------------------------------------------------------------------------------------------------
 !
-!                  (EPAIS)      Q4G       T3G
+! Elementary computation
 !
-!        OPTIONS     FORC_NODA
+! Elements: DKTG/Q4GG
 !
-    integer(kind=8) :: nnos, ipoids, ivf, idfdx, jgano
-    integer(kind=8) :: jtab(7), jvDisp
-    integer(kind=8) :: icompo, i, i1, i2, j, k, ivectu, ipg, npg
-    integer(kind=8) :: jvSief, iretc
-    integer(kind=8) :: nno, igeom
-    integer(kind=8) :: ndim, iret, ind
-    integer(kind=8) :: jcara
-    real(kind=8) :: pgl(3, 3), xyzl(3, 4), bsigmEner(24)
+! Options: FORC_NODA
+!          REFE_FORC_NODA
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbEfgeNd = 8
+    integer(kind=8) :: jvSief, jtab(7), jvDisp, jvGeom
+    integer(kind=8) :: jvCompor, i, i1, i2, j, k, jvVect, ipg, iretc, iret
+    integer(kind=8) :: nno, npg
+    real(kind=8) :: pgl(3, 3), xyzl(3, 4), forcNoda(24)
     real(kind=8) :: effgt(32), effort(32)
     real(kind=8) :: effref, momref
-    real(kind=8) :: alpha, beta, t2ev(4), t2ve(4), c, s
     real(kind=8) :: foref, moref
     aster_logical :: reactu
     blas_int :: b_incx, b_incy, b_n
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
+    type(RESI_REFE):: refe
 !
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', nno=nno, npg=npg)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+
     if (option .eq. 'FORC_NODA') then
-!
-! ---   RECUPERATION DES ADRESSES DANS ZR DES POIDS DES PG
-!       DES FONCTIONS DE FORME DES VALEURS DES DERIVEES DES FONCTIONS
-!       DE FORME ET DE LA MATRICE DE PASSAGE GAUSS -> NOEUDS
-        call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                         jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
-!
-        call jevech('PGEOMER', 'L', igeom)
-!
-        if (nno .eq. 3) then
-            call dxtpgl(zr(igeom), pgl)
-        else if (nno .eq. 4) then
-            call dxqpgl(zr(igeom), pgl)
-        end if
-!
-        call utpvgl(nno, 3, pgl, zr(igeom), xyzl)
-!
-        call tecach('ONO', 'PCOMPOR', 'L', iretc, iad=icompo)
-!
-! --- CALCUL DES MATRICES DE CHANGEMENT DE REPERES
-!
-!     T2EV : LA MATRICE DE PASSAGE (2X2) : UTILISATEUR -> INTRINSEQUE
-!     T2VE : LA MATRICE DE PASSAGE (2X2) : INTRINSEQUE -> UTILISATEUR
-!
-        call jevech('PCACOQU', 'L', jcara)
-        alpha = zr(jcara+1)*r8dgrd()
-        beta = zr(jcara+2)*r8dgrd()
-        call coqrep(pgl, alpha, beta, t2ev, t2ve, &
-                    c, s)
-!
-! --- VECTEUR DES EFFORTS GENERALISES AUX POINTS
-! --- D'INTEGRATION DU REPERE LOCAL
-        call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, &
-                    itab=jtab)
-!
-! --- PASSAGE DU VECTEUR DES EFFORTS GENERALISES AUX POINTS
-! --- D'INTEGRATION DU REPERE LOCAL AU REPERE INTRINSEQUE
+! ----- Get plate parameters
+        call getCara(plateCara, plateOrie)
+
+! ----- Calculate the transformation: global coordinate system/intrinsic coordinate system
+        call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! ----- Compute coordinate system for plate
+        call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! ----- Change coordinates of displacements
+        call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! ----- VECTEUR DES EFFORTS GENERALISES
+        call tecach('OOO', 'PSIEFR', 'L', iret, nval=7, itab=jtab)
+
+! ----- PASSAGE DU VECTEUR DES EFFORTS GENERALISES DU REPERE LOCAL AU REPERE INTRINSEQUE
         do ipg = 1, npg
             jvSief = jtab(1)+8*(ipg-1)
             b_n = to_blas_int(8)
@@ -107,12 +100,13 @@ subroutine te0446(option, nomte)
             b_incy = to_blas_int(1)
             call dcopy(b_n, zr(jvSief), b_incx, effort(8*(ipg-1)+1), b_incy)
         end do
-        call dxefro(npg, t2ve, effort, effgt)
-!
+        call dxefro(npg, plateOrie%t2ui, effort, effgt)
+
+        call tecach('ONO', 'PCOMPOR', 'L', iretc, iad=jvCompor)
         reactu = .false.
         if (iretc .eq. 0) then
-            if (zk16(icompo+2) (6:10) .eq. '_REAC') call utmess('A', 'ELEMENTS2_72')
-            reactu = (zk16(icompo+2) .eq. 'PETIT_REAC' .or. zk16(icompo+2) .eq. 'GROT_GDEP')
+            if (zk16(jvCompor+2) (6:10) .eq. '_REAC') call utmess('A', 'ELEMENTS2_72')
+            reactu = (zk16(jvCompor+2) .eq. 'PETIT_REAC' .or. zk16(jvCompor+2) .eq. 'GROT_GDEP')
         end if
 !
         if (reactu) then
@@ -120,83 +114,82 @@ subroutine te0446(option, nomte)
             do i = 1, nno
                 i1 = 3*(i-1)
                 i2 = 6*(i-1)
-                zr(igeom+i1) = zr(igeom+i1)+zr(jvDisp+i2)
-                zr(igeom+i1+1) = zr(igeom+i1+1)+zr(jvDisp+i2+1)
-                zr(igeom+i1+2) = zr(igeom+i1+2)+zr(jvDisp+i2+2)
+                zr(jvGeom+i1) = zr(jvGeom+i1)+zr(jvDisp+i2)
+                zr(jvGeom+i1+1) = zr(jvGeom+i1+1)+zr(jvDisp+i2+1)
+                zr(jvGeom+i1+2) = zr(jvGeom+i1+2)+zr(jvDisp+i2+2)
             end do
-            if (nno .eq. 3) then
-                call dxtpgl(zr(igeom), pgl)
-            else if (nno .eq. 4) then
-                call dxqpgl(zr(igeom), pgl)
-            end if
-!
-            call utpvgl(nno, 3, pgl, zr(igeom), xyzl)
+
+! --------- Calculate the transformation: global coordinate system/intrinsic coordinate system
+            call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+
+! --------- Compute coordinate system for plate
+            call compCoorSystPlate(pgl, plateCara, plateOrie)
+
+! --------- Change coordinates of displacements
+            call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
         end if
-!
-! --- CALCUL DES EFFORTS INTERNES (I.E. SOMME_VOL(BT_SIG))
-        call dxbsig(nomte, xyzl, pgl, effgt, bsigmEner, &
-                    option)
-!
-! --- AFFECTATION DES VALEURS DE BSIGMA AU VECTEUR EN SORTIE
-        call jevech('PVECTUR', 'E', ivectu)
-!
+
+! ----- CALCUL DES EFFORTS INTERNES (I.E. SOMME_VOL(BT_SIG))
+        call dxbsig(plateCara, plateOrie, &
+                    nomte, option, &
+                    xyzl, pgl, effgt, &
+                    forcNoda)
+
+! ----- AFFECTATION DES VALEURS DE BSIGMA AU VECTEUR EN SORTIE
+        call jevech('PVECTUR', 'E', jvVect)
+
         k = 0
         do i = 1, nno
             do j = 1, 6
                 k = k+1
-                zr(ivectu+k-1) = bsigmEner(k)
+                zr(jvVect+k-1) = forcNoda(k)
             end do
         end do
+
     else if (option .eq. 'REFE_FORC_NODA') then
-!     -------------------------------------
-!
-        call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                         jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
-        call jevech('PGEOMER', 'L', igeom)
-!
-        if (nno .eq. 3) then
-            call dxtpgl(zr(igeom), pgl)
-        else if (nno .eq. 4) then
-            call dxqpgl(zr(igeom), pgl)
-        end if
-!
-        call utpvgl(nno, 3, pgl, zr(igeom), xyzl)
-!
-        call terefe('EFFORT_REFE', 'MECA_COQUE', foref)
-        call terefe('MOMENT_REFE', 'MECA_COQUE', moref)
-!
-        ind = 8
+        call creaCaraMini(plateCara)
+        call compCoorSystPara(plateCara, zr(jvGeom), pgl)
+        call refe%Init(nomte)
+        foref = refe%GetRef('EFFORT')
+        moref = refe%GetRef('MOMENT')
+        call refe%Check()
         do i = 1, nno
             do j = 1, 3
-                effgt((i-1)*ind+j) = foref
-                effgt((i-1)*ind+3+j) = moref
-                effgt((i-1)*ind+7) = foref
-                effgt((i-1)*ind+8) = foref
+                effgt((i-1)*nbEfgeNd+j) = foref
+                effgt((i-1)*nbEfgeNd+3+j) = moref
+                effgt((i-1)*nbEfgeNd+7) = foref
+                effgt((i-1)*nbEfgeNd+8) = foref
             end do
         end do
-!
-! ------ CALCUL DES EFFORTS INTERNES (I.E. SOMME_VOL(BT_SIG))
-        call dxbsig(nomte, xyzl, pgl, effgt, bsigmEner, &
-                    option)
-!
-! ------ AFFECTATION DES VALEURS DE BSIGMA AU VECTEUR EN SORTIE
-        call jevech('PVECTUR', 'E', ivectu)
+
+! ----- Change coordinates of displacements
+        call utpvgl(nno, 3, pgl, zr(jvGeom), xyzl)
+
+! ----- CALCUL DES EFFORTS INTERNES (I.E. SOMME_VOL(BT_SIG))
+        call dxbsig(plateCara, plateOrie, &
+                    nomte, option, &
+                    xyzl, pgl, effgt, &
+                    forcNoda)
+
+! ----- AFFECTATION DES VALEURS DE BSIGMA AU VECTEUR EN SORTIE
+        call jevech('PVECTUR', 'E', jvVect)
         k = 0
         do i = 1, nno
-            effref = (abs(bsigmEner(k+1))+abs(bsigmEner(k+2))+abs(bsigmEner(k+3)))/3.d0
-            momref = (abs(bsigmEner(k+4))+abs(bsigmEner(k+5))+abs(bsigmEner(k+6)))/3.d0
+            effref = (abs(forcNoda(k+1))+abs(forcNoda(k+2))+abs(forcNoda(k+3)))/3.d0
+            momref = (abs(forcNoda(k+4))+abs(forcNoda(k+5))+abs(forcNoda(k+6)))/3.d0
             ASSERT(abs(effref) .gt. r8prem())
             ASSERT(abs(momref) .gt. r8prem())
             do j = 1, 6
                 k = k+1
                 if (j .lt. 4) then
-                    zr(ivectu+k-1) = effref
+                    zr(jvVect+k-1) = effref
                 else
-                    zr(ivectu+k-1) = momref
+                    zr(jvVect+k-1) = momref
                 end if
             end do
         end do
     else
-        ASSERT(.false.)
+        ASSERT(ASTER_FALSE)
     end if
+!
 end subroutine

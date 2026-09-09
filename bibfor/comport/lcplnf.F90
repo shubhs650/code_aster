@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine lcplnf(BEHinteg, &
+subroutine lcplnf(BEHInteg, &
                   rela_comp, vind, nbcomm, nmat, cpmono, &
                   materf, iter, nvi, itmax, &
                   toler, pgl, nfs, nsg, toutms, &
@@ -30,7 +30,7 @@ subroutine lcplnf(BEHinteg, &
 !
     implicit none
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
 !   POST-TRAITEMENTS SPECIFIQUES AUX LOIS
 !
 !   CORRESPONDANCE ENTRE LES VARIABLES INTERNES ET LES EQUATIONS
@@ -84,7 +84,7 @@ subroutine lcplnf(BEHinteg, &
 !
     if (rela_comp .eq. 'MONOCRISTAL') then
 ! ---    DEFORMATION PLASTIQUE EQUIVALENTE CUMULEE MACROSCOPIQUE
-        call lcdpec(BEHinteg, &
+        call lcdpec(BEHInteg, &
                     vind, nbcomm, nmat, ndt, cpmono, &
                     materf, iter, nvi, itmax, toler, &
                     pgl, nfs, nsg, toutms, hsr, &

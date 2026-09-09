@@ -76,7 +76,7 @@ class SNESSolver(BaseIterationSolver):
                 "Neither the function nor the Jacobian " + "is given to the operators assembler"
             )
             return
-        self.state.primal_step.fromPetsc(X, local=self.local)
+        self.state.deltaU.fromPetsc(X, local=self.local)
         # ----------------------------- Function evaluation ---------------------------
         if F:
             # Build initial residual
@@ -85,9 +85,7 @@ class SNESSolver(BaseIterationSolver):
             # Apply Lagrange scaling
             residual.resi.applyLagrangeScaling(1 / self._scaling)
             # Apply DirichletBC into the residual
-            diriBCs = disc_comp.getIncrementalDirichletBC(
-                self.state.time_curr, self.state.primal_curr
-            )
+            diriBCs = disc_comp.getIncrementalDirichletBC(self.state.time_curr, self.state.U)
             self.current_matrix.applyDirichletBC(diriBCs, residual.resi)
             # Copy to PETSc
             residual.resi.toPetsc(local=self.local).copy(F)
@@ -105,7 +103,7 @@ class SNESSolver(BaseIterationSolver):
                 self._primal_incr.fromPetsc(snes.getSolutionUpdate(), local=self.local)
             # Increment the solution
             self._primal_incr.applyLagrangeScaling(1 / self._scaling)
-            self.state.primal_step += self._primal_incr
+            self.state.deltaU += self._primal_incr
         disc_comp = DiscreteComputation(self.problem)
         try:
             residual = self.oper.getResidual(self._scaling)
@@ -117,7 +115,7 @@ class SNESSolver(BaseIterationSolver):
         # Apply Lagrange scaling
         residual.resi.applyLagrangeScaling(1 / self._scaling)
         # Apply DirichletBC into the residual
-        diriBCs = disc_comp.getIncrementalDirichletBC(self.state.time_curr, self.state.primal_curr)
+        diriBCs = disc_comp.getIncrementalDirichletBC(self.state.time_curr, self.state.U)
         self.current_matrix.applyDirichletBC(diriBCs, residual.resi)
         # Copy to PETSc
         residual.resi.toPetsc(local=self.local).copy(F)
@@ -157,7 +155,7 @@ class SNESSolver(BaseIterationSolver):
         p_resi = p_jac.getVecRight()
         p_resi.set(0)
 
-        self._primal_incr = self.state.primal_step.copy()
+        self._primal_incr = self.state.deltaU.copy()
 
         snes.setFunction(self._evalFunction, p_resi)
         snes.setJacobian(self._evalJacobian, p_jac)

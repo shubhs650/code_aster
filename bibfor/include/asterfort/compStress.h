@@ -17,16 +17,18 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine compStress(modelz , ligrel , compor,&
-                          chdispz, chgeom , chmate,&
-                          chcara , chtime , chharm,&
-                          chvarc , chvref , chstrx,&
-                          basez  , chelemz, codret)
-        character(len=*), intent(in) :: modelz, ligrel, compor
-        character(len=*), intent(in) :: chdispz, chgeom, chmate
-        character(len=*), intent(in) :: chcara(*), chtime, chharm
-        character(len=*), intent(in) :: chvarc, chvref, chstrx
-        character(len=*), intent(in) :: chelemz, basez
+    subroutine compStress(modelZ, modelLigrelZ, &
+                          materCodeZ, caraElemZ, comporZ, &
+                          chdispZ, chgeom, &
+                          chtime, chharm, &
+                          chvarc, chvref, &
+                          jvBaseZ, chelemz, codret)
+        character(len=*), intent(in) :: modelZ, modelLigrelZ
+        character(len=*), intent(in) :: materCodeZ, caraElemZ, comporZ
+        character(len=*), intent(in) :: chdispZ, chgeom
+        character(len=*), intent(in) :: chtime, chharm
+        character(len=*), intent(in) :: chvarc, chvref
+        character(len=*), intent(in) :: chelemz, jvBaseZ
         integer(kind=8), intent(out) :: codret
     end subroutine compStress
 end interface

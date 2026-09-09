@@ -1,0 +1,124 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", IGNORE_ALARM=("MED_83", "CALCULEL4_24"))
+
+tr6 = LIRE_MAILLAGE(UNITE=20)
+qu8 = LIRE_MAILLAGE(UNITE=21)
+qu9 = LIRE_MAILLAGE(UNITE=22)
+tr6_dege = LIRE_MAILLAGE(UNITE=23)
+qu4_dege = LIRE_MAILLAGE(UNITE=24)
+qu8_dege = LIRE_MAILLAGE(UNITE=25)
+
+mesh_by_type = {
+    "TR6": tr6,
+    "QU8": qu8,
+    "QU9": qu9,
+    "TR6_DEGE": tr6_dege,
+    "QU4_DEGE": qu4_dege,
+    "QU8_DEGE": qu8_dege,
+}
+
+values_by_type = {
+    "TR6": (0.0, 0.0, 0.0, 1.0 / 3, 1.0 / 3, 1.0 / 3),
+    "QU8": (-1.0 / 12, -1.0 / 12, -1.0 / 12, -1.0 / 12, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3),
+    "QU9": (1.0 / 36, 1.0 / 36, 1.0 / 36, 1.0 / 36, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 4.0 / 9),
+}
+
+
+values_by_type = {
+    "TR6": [5.2631578947368543e-002] * 3 + [0.28070175438596484] * 3,
+    "QU8": [3.9473684210526272e-002] * 4 + [0.21052631578947339] * 4,
+    "QU9": (1.0 / 36, 1.0 / 36, 1.0 / 36, 1.0 / 36, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 4.0 / 9),
+    "TR6_DEGE": [5.2631578947368543e-002] * 3 + [0.28070175438596484] * 3,
+    "QU4_DEGE": (
+        0.17832167832167833,
+        0.22494172494172499,
+        0.32167832167832167,
+        0.27505827505827507,
+    ),
+    "QU8_DEGE": (
+        2.8156054471843960e-002,
+        3.5517114464482899e-002,
+        5.0791313949208688e-002,
+        4.3430253956569742e-002,
+        0.14942951785057049,
+        0.23997055576002949,
+        0.27162311372837694,
+        0.18108207581891791,
+    ),
+}
+
+for typ in ("TR6", "QU8", "QU9", "TR6_DEGE", "QU4_DEGE", "QU8_DEGE"):
+    mesh = mesh_by_type[typ]
+    values = values_by_type[typ]
+
+    model = AFFE_MODELE(
+        MAILLAGE=mesh,
+        AFFE=(
+            _F(GROUP_MA="DALLE", PHENOMENE="MECANIQUE", MODELISATION="3D"),
+            _F(GROUP_MA="RESSORT", PHENOMENE="MECANIQUE", MODELISATION="DIS_T"),
+        ),
+    )
+
+    carelem = AFFE_CARA_ELEM(
+        MODELE=model,
+        RIGI_PARASOL=_F(
+            GROUP_MA="DALLE",
+            GROUP_MA_SEG2="RESSORT",
+            REPERE="GLOBAL",
+            COEF_GROUP=1,
+            CARA="K_T_D_L",
+            VALE=(0.0, 0.0, 1.0),
+            COOR_CENTRE=(0, 0, 0),
+        ),
+    )
+
+    DEFI_FICHIER(UNITE=80, FICHIER="./fort.80", TYPE="BINARY")
+    IMPR_CONCEPT(
+        UNITE=80, FORMAT="MED", CONCEPT=_F(CARA_ELEM=carelem, REPERE_LOCAL="ELEM", MODELE=model)
+    )
+    cardisck = LIRE_CHAMP(
+        TYPE_CHAM="ELEM_CADISK_R",
+        UNITE=80,
+        NUME_PT=0,
+        NUME_ORDRE=0,
+        MAILLAGE=mesh,
+        MODELE=model,
+        NOM_MED=f"{carelem.getName()}#CARDISCK",
+        NOM_CMP_IDEM="OUI",
+        PROL_ZERO="OUI",
+    )
+    DEFI_FICHIER(UNITE=80, ACTION="LIBERER")
+
+    for i, value in enumerate(values, 1):
+        TEST_RESU(
+            CHAM_ELEM=_F(
+                CHAM_GD=cardisck,
+                NOM_CMP="K6",
+                GROUP_MA=f"P{i}",
+                REFERENCE="ANALYTIQUE",
+                VALE_REFE=value,
+                VALE_CALC=value,
+                CRITERE="ABSOLU" if value == 0.0 else "RELATIF",
+            )
+        )
+
+
+FIN()

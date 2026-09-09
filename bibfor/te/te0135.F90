@@ -39,7 +39,6 @@ subroutine te0135(option, nomte)
     integer(kind=8) :: i
     real(kind=8) :: pgl(3, 3)
     real(kind=8) :: ux(3), uy(3), uz(3)
-    real(kind=8) :: ang(3)
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jvf=ivf, jdfde=idfdx, jgano=jgano)
@@ -50,10 +49,7 @@ subroutine te0135(option, nomte)
     call jevech('PREPLO2', 'E', jrepl2)
     call jevech('PREPLO3', 'E', jrepl3)
 !
-    ang(1) = zr(jorie)
-    ang(2) = zr(jorie+1)
-    ang(3) = zr(jorie+2)
-    call matrot(ang, pgl)
+    call matrot(zr(jorie), pgl)
 !     (UX,UY,UZ) : VECTEUR LOCAUX UTILISATEUR DANS LE BASE GLOBAL
 !     UX EST LA PREMIERE LIGNE DE PGL
 !     UY LA DEUXIEME

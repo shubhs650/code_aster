@@ -17,29 +17,30 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=C1505,W0104,W1306,W1504
 
-subroutine lc0001(BEHinteg, &
-                  fami, kpg, ksp, ndim, imate, &
+subroutine lc0001(BEHInteg, &
+                  fami, kpg, ksp, ndim, jvMaterCode, &
                   compor, carcri, instam, instap, neps, epsm, &
-                  deps, nsig, sigm, nvi, vim, option, angmas, &
+                  deps, nsig, sigm, nvi, vim, option, &
                   sigp, vip, typmod, ndsde, &
                   dsidep, codret)
 
     use Behaviour_type
+    use MaterialPara_type
     implicit none
 
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/nmelas_elas.h"
 #include "asterfort/nmelas_incr.h"
 #include "asterfort/nmorth.h"
-#include "asterfort/rccoma.h"
-
-    type(Behaviour_Integ), intent(in):: BEHinteg
+!
+    type(Behaviour_Integ), intent(in):: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
+    integer(kind=8), intent(in) :: jvMaterCode
     character(len=16), intent(in) :: compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam
@@ -52,7 +53,6 @@ subroutine lc0001(BEHinteg, &
     integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8)                 :: sigp(nsig)
     real(kind=8)                 :: vip(nvi)
     character(len=8), intent(in) :: typmod(2)
@@ -60,9 +60,13 @@ subroutine lc0001(BEHinteg, &
     real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
                            merge(neps, 6, nsig*neps .eq. ndsde))
     integer(kind=8), intent(out):: codret
+!
 ! --------------------------------------------------------------------------------------------------
+!
 !   RELATION='ELAS': COMPORTEMENT ELASTIQUE INCREMENTAL (ISOTROPE, ISOTROPE TRANSVERSE, ORTHOTROPE)
+!
 ! --------------------------------------------------------------------------------------------------
+!
 !       IN      FAMI    FAMILLE DE POINT DE GAUSS (RIGI,MASS,...)
 !       IN      KPG,KSP NUMERO DU (SOUS)POINT DE GAUSS
 !       IN      NDIM    DIMENSION DE L ESPACE (3D=3,2D=2,1D=1)
@@ -80,13 +84,18 @@ subroutine lc0001(BEHinteg, &
 !       OUT     SIGP    CONTRAINTE A T+DT
 !               VIP    VARIABLES INTERNES A T+DT + INDICATEUR ETAT T+DT
 !               DSIDEP    MATRICE DE COMPORTEMENT TANGENT A T+DT OU T
+!
 ! --------------------------------------------------------------------------------------------------
+!
     character(len=1)  :: poum
-    character(len=16) :: mcmate
-    aster_logical     :: lMatr, lSigm, lVari
-    integer(kind=8)           :: icodre, ndimsi
-    real(kind=8)      :: sig(2*ndim), dsde(2*ndim, 2*ndim), vi(nvi), zero(2*ndim), eps(2*ndim)
+    aster_logical :: lMatr, lSigm, lVari
+    integer(kind=8) :: ndimsi
+    real(kind=8) :: sig(2*ndim), dsde(2*ndim, 2*ndim), vi(nvi), zero(2*ndim), eps(2*ndim)
+    type(Material_Para) :: materPara
+!
 ! --------------------------------------------------------------------------------------------------
+!
+    materPara = BEHInteg%materPara
     ASSERT(neps .eq. nsig)
     ASSERT(neps .ge. 2*ndim)
 
@@ -104,25 +113,17 @@ subroutine lc0001(BEHinteg, &
 
     if (lVari) vip = 0
 
-    call rccoma(imate, 'ELAS', 1, mcmate, icodre)
-    ASSERT(icodre .eq. 0)
-
-! --------------------------------------------------------------------------------------------------
-!  Elasticite isotrope
-! --------------------------------------------------------------------------------------------------
-
-    if (mcmate .eq. 'ELAS') then
-
+    if (materPara%elasID .eq. ELAS_ISOT) then
         if (compor(INCRELAS) .eq. 'COMP_INCR') then
-            call nmelas_incr(BEHinteg, &
+            call nmelas_incr(BEHInteg, &
                              fami, kpg, ksp, typmod, &
-                             imate, deps(1:ndimsi), sigm(1:ndimsi), option, &
+                             jvMaterCode, deps(1:ndimsi), sigm(1:ndimsi), option, &
                              sig, vi, dsde)
 
         else if (compor(INCRELAS) .eq. 'COMP_ELAS') then
-            call nmelas_elas(BEHinteg, &
+            call nmelas_elas(BEHInteg, &
                              fami, kpg, ksp, typmod, &
-                             imate, eps, option, &
+                             jvMaterCode, eps, option, &
                              sig, vi, dsde)
         else
             ASSERT(ASTER_FALSE)
@@ -132,22 +133,20 @@ subroutine lc0001(BEHinteg, &
 !  Elasticite isotrope transverse et orthotrope
 ! --------------------------------------------------------------------------------------------------
 
-    else if (mcmate .eq. 'ELAS_ORTH' .or. mcmate .eq. 'ELAS_ISTR') then
-
+    else if (materPara%elasID .eq. ELAS_ORTH .or. &
+             materPara%elasID .eq. ELAS_ISTR) then
         if (compor(INCRELAS) .eq. 'COMP_INCR') then
-
-            call nmorth(fami, kpg, ksp, ndim, mcmate, &
-                        imate, 'T', deps, sigm, option, &
-                        angmas, sig, dsde)
+            poum = "T"
+            call nmorth(materPara, ndim, poum, &
+                        deps, sigm, option, &
+                        sig, dsde)
             vi(1) = 0
 
         else if (compor(INCRELAS) .eq. 'COMP_ELAS') then
-
             poum = merge('-', '+', option(1:9) .eq. 'RIGI_MECA')
-
-            call nmorth(fami, kpg, ksp, ndim, mcmate, &
-                        imate, poum, eps, zero, option, &
-                        angmas, sig, dsde)
+            call nmorth(materPara, ndim, poum, &
+                        eps, zero, option, &
+                        sig, dsde)
             vi(1) = 0
 
         else
@@ -161,7 +160,6 @@ subroutine lc0001(BEHinteg, &
     else
         ASSERT(ASTER_FALSE)
     end if
-
     if (lSigm) sigp(1:ndimsi) = sig
     if (lVari) vip(1:nvi) = vi
     if (lMatr) dsidep(1:ndimsi, 1:ndimsi) = dsde

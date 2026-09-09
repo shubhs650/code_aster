@@ -15,8 +15,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine te0450(nomopt, nomte)
+!
+subroutine te0450(option, nomte)
 !
     use HHO_basis_module
     use HHO_compor_module
@@ -27,7 +27,7 @@ subroutine te0450(nomopt, nomte)
     use HHO_size_module
     use HHO_type
     use HHO_utils_module
-!
+    use resi_refe_module, only: RESI_REFE
     implicit none
 !
 #include "asterf_types.h"
@@ -35,54 +35,58 @@ subroutine te0450(nomopt, nomte)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/HHO_size_module.h"
-#include "asterfort/terefe.h"
 #include "asterfort/writeVector.h"
 #include "jeveux.h"
 !
+    character(len=16), intent(in) :: nomte, option
+!
 ! --------------------------------------------------------------------------------------------------
-!  HHO
-!  Mechanics - FORC_NODA and REFE_FORC_NODA
+!
+! HHO
+! Mechanics - FORC_NODA and REFE_FORC_NODA
 !
 ! In  option           : name of option to compute
 ! In  nomte            : type of finite element
+!
 ! --------------------------------------------------------------------------------------------------
-    character(len=16) :: nomte, nomopt
 !
-! --- Local variables
-!
-    type(HHO_Quadrature) :: hhoQuadCellRigi
-    type(HHO_Compor_State) :: hhoCS
+    character(len=8), parameter :: fami = "RIGI", typmod2 = "HHO"
     type(HHO_Data) :: hhoData
     type(HHO_Cell) :: hhoCell
     type(HHO_Meca_State) :: hhoMecaState
-!
+    type(HHO_Quadrature) :: hhoQuadCellRigi
+    type(HHO_Compor_State) :: hhoCS
     integer(kind=8) :: cbs, fbs, total_dofs, npg, i, isig, cbs_cmp, j, fbs_cmp, ipg
     integer(kind=8) :: faces_dofs
     aster_logical :: l_largestrains
-    character(len=4), parameter :: fami = "RIGI"
     real(kind=8) :: rhs(MSIZE_TDOFS_VEC), refe_rhs(MSIZE_TDOFS_VEC)
-    real(kind=8) :: stress(6*MAX_QP_CELL), sigm_refe, val_refe(3)
+    real(kind=8) :: stress(6*MSIZE_QP_CELL), sigm_refe, val_refe(3)
+    type(RESI_REFE):: refe
 !
-! --- Get HHO informations
+! --------------------------------------------------------------------------------------------------
 !
+    if (option /= "FORC_NODA" .and. option /= "REFE_FORC_NODA") then
+        ASSERT(ASTER_FALSE)
+    end if
+
+! - Get element parameters
     call elrefe_info(fami=fami, npg=npg)
+
+! - Get HHO data on the modelisation
     call hhoInfoInitCell(hhoCell, hhoData, npg, hhoQuadCellRigi)
-!
-! --- Number of dofs
+
+! - Number of dofs
     call hhoMecaDofs(hhoCell, hhoData, cbs, fbs, total_dofs)
     faces_dofs = total_dofs-cbs
-!
-! --- Type of finite element
-!
-    call hhoCS%initialize(fami, nomopt, hhoCell%ndim, hhoCell%barycenter)
+
+! - Type of finite element
+    call hhoCS%initialize(fami, option, hhoCell%ndim, hhoCell%barycenter, typmod2)
     call hhoMecaState%initialize(hhoCell, hhoData, hhoCS)
-!
-! --- Large strains ?
-!
+
+! - Large strains ?
     l_largestrains = hhoCS%l_largestrain
-!
-! --- Compute Operators
-!
+
+! - Compute Operators
     if (hhoData%precompute()) then
         call hhoReloadPreCalcMeca(hhoCell, hhoData, l_largestrains, &
                                   hhoMecaState%grad, hhoMecaState%stab)
@@ -90,11 +94,15 @@ subroutine te0450(nomopt, nomte)
         call hhoCalcOpMeca(hhoCell, hhoData, l_largestrains, hhoMecaState%grad, hhoMecaState%stab)
     end if
 !
-    if (nomopt == "FORC_NODA") then
+    if (option == "FORC_NODA") then
         call hhoLocalForcNoda(hhoCell, hhoData, hhoQuadCellRigi, hhoMecaState, &
                               hhoCS, hhoCS%sig_prev, rhs)
-    elseif (nomopt == "REFE_FORC_NODA") then
-        call terefe('SIGM_REFE', 'MECA_ISO', sigm_refe)
+
+    elseif (option == "REFE_FORC_NODA") then
+        call refe%Init(nomte)
+        sigm_refe = refe%GetRef('SIGM')
+        call refe%Check()
+
         stress = 0.d0
         refe_rhs = 0.d0
         do isig = 1, hhoCS%nbsigm
@@ -129,9 +137,8 @@ subroutine te0450(nomopt, nomte)
     else
         ASSERT(ASTER_FALSE)
     end if
-!
-! --- Save rhs
-!
+
+! - Save rhs
     call writeVector('PVECTUR', total_dofs, rhs)
 !
     call hhoMecaState%free()

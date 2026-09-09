@@ -20,7 +20,7 @@
 import numpy as np
 
 from ..Cata.Syntax import _F
-from ..CodeCommands import CALC_CHAMP, CREA_TABLE, DETRUIRE, POST_RELEVE_T
+from ..CodeCommands import CALC_CHAMP, CREA_TABLE, POST_RELEVE_T
 from ..Messages import UTMESS
 from ..Objects.table_py import Table
 
@@ -167,7 +167,7 @@ class Coupure(object):
         )
 
         d_t = T.EXTR_TABLE().values()
-        DETRUIRE(NOM=(RES, T))
+        del RES, T
         return np.array([d_t[i] for i in L_CMP])
 
     def calcTorseurLocal(self):

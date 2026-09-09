@@ -18,8 +18,8 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine compGetMecaPart(rela_comp, kit_comp, meca_comp)
-        character(len=16), intent(in) :: rela_comp, kit_comp(4)
-        character(len=16), intent(out) :: meca_comp
+    subroutine compGetMecaPart(relaComp, kitComp, relaMeca)
+        character(len=16), intent(in) :: relaComp, kitComp(4)
+        character(len=16), intent(out) :: relaMeca
     end subroutine compGetMecaPart
 end interface

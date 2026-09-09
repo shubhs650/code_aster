@@ -15,21 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1306,W1504
+! aslint: disable=W1306
 !
-subroutine matthm(ds_thm, ndim, axi, nno1, nno2, dimuel, &
+subroutine matthm(ds_thm, &
+                  ndim, axi, nno1, nno2, dimuel, &
                   dimdef, iu, ip, ipf, iq, &
                   addep1, &
                   addlh1, vff1, vff2, dffr2, wref, &
-                  geom, ang, wi, q)
+                  geom, wi, q)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/ejcine_hm.h"
+#include "asterfort/MaterialPara_type.h"
 !
 !.......................................................................
 !
@@ -67,7 +70,7 @@ subroutine matthm(ds_thm, ndim, axi, nno1, nno2, dimuel, &
     integer(kind=8) :: iu(3, 18), ip(2, 9), ipf(2, 2, 9), iq(2, 2, 9)
     integer(kind=8) :: addep1, addlh1
     real(kind=8) :: vff1(nno1), vff2(nno2), dffr2(ndim-1, nno2)
-    real(kind=8) :: wref, geom(ndim, nno2), ang(24)
+    real(kind=8) :: wref, geom(ndim, nno2)
     aster_logical :: axi
 !
 ! - VARIABLES SORTIE
@@ -77,11 +80,14 @@ subroutine matthm(ds_thm, ndim, axi, nno1, nno2, dimuel, &
 ! - VARIABLES LOCALES
     integer(kind=8) :: i, j, n, kj, f
     real(kind=8) :: b(3, 3, 2*nno1), cour, jacp, sina, cosa, dfdx(nno2)
+    type(Material_Para) :: materPara
 !
-! ======================================================================
-! --- INITIALISATION ----------------------------------------------
-! ======================================================================
+! --------------------------------------------------------------------------------------------------
+!
     q(1:dimdef, 1:dimuel) = 0.d0
+
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
+    ASSERT(materPara%lcsPara%lcsType .eq. MATER_LCS_PG)
 !
 ! ======================================================================
 ! --- CALCUL DE Q ET WI ----------------------------------------------
@@ -95,7 +101,7 @@ subroutine matthm(ds_thm, ndim, axi, nno1, nno2, dimuel, &
 ! - CALCUL DE LA MATRICE DE PASSAGE U GLOBAL -> SAUT DE U LOCAL
 !
     call ejcine_hm(ndim, axi, nno1, nno2, vff1, &
-                   vff2, wref, dffr2, geom, ang, &
+                   vff2, wref, dffr2, geom, materPara%lcsPara%lcsAnglePg, &
                    wi, b)
     do i = 1, ndim
         do j = 1, ndim

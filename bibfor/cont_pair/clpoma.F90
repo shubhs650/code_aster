@@ -23,12 +23,13 @@ subroutine clpoma(elem_dime, elem_code, elem_coor, elem_nbnode, elem_weight)
 #include "asterfort/elraga.h"
 #include "asterfort/subaco.h"
 #include "asterfort/mmdonf.h"
+#include "MeshTypes_type.h"
 #include "asterfort/sumetr.h"
 #include "asterfort/assert.h"
 !
     integer(kind=8), intent(in) :: elem_dime
     character(len=8), intent(in) :: elem_code
-    real(kind=8), intent(in) :: elem_coor(3, 9)
+    real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_nbnode
     real(kind=8), intent(out) :: elem_weight
 !
@@ -51,7 +52,7 @@ subroutine clpoma(elem_dime, elem_code, elem_coor, elem_nbnode, elem_weight)
     integer(kind=8) :: i_gauss, nb_gauss, ino, ndim
     character(len=8) :: gauss_family
     real(kind=8) :: gauss_weight(12), gauss_coor(12*2)
-    real(kind=8) :: dff(2, 9), dxdk, dydk, dzdk
+    real(kind=8) :: dff(2, MT_NNOMAX2D), dxdk, dydk, dzdk
     real(kind=8) :: coptg1, coptg2
     real(kind=8) :: cova(3, 3), metr(2, 2), jacobi
 !
@@ -91,7 +92,7 @@ subroutine clpoma(elem_dime, elem_code, elem_coor, elem_nbnode, elem_weight)
         jacobi = 0.d0
         coptg1 = gauss_coor((elem_dime-1)*(i_gauss-1)+1)
         coptg2 = gauss_coor((elem_dime-1)*(i_gauss-1)+2)
-        call mmdonf(elem_dime, elem_nbnode, elem_code, coptg1, coptg2, &
+        call mmdonf(elem_code, coptg1, coptg2, &
                     dff)
         if ((elem_dime-1) .eq. 2) then
             call subaco(elem_nbnode, dff, elem_coor, cova)

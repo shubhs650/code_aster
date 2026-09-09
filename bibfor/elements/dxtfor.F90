@@ -16,49 +16,54 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dxtfor(global, xyzl, pgl, for, vecl)
+subroutine dxtfor(plateOrie, global, xyzl, for, vecl)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterc/r8dgrd.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/gtria3.h"
-#include "asterfort/jevech.h"
-    real(kind=8) :: xyzl(3, *), pgl(3, *), for(6, *), vecl(*)
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    real(kind=8) :: xyzl(3, *), for(6, *), vecl(*)
     aster_logical :: global
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CHARGEMENT FORCE_FACE DES ELEMENTS DE PLAQUE DKT ET DST
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     IN  GLOBAL : VARIABLE LOGIQUE DE REPERE GLOBAL OU LOCAL
 !     IN  XYZL   : COORDONNEES LOCALES DES TROIS NOEUDS
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL - LOCAL
 !     IN  FOR    : FORCE APPLIQUEE SUR LA FACE
 !     OUT VECL   : CHARGEMENT NODAL RESULTANT
-!     ------------------------------------------------------------------
 !
-    integer(kind=8) :: i, nno, jcara
-    real(kind=8) :: aire, alpha, beta
-    real(kind=8) :: fx, fy, carat3(21), t2iu(4), t2ui(4), c, s
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: i, nno
+    real(kind=8) :: aire
+    real(kind=8) :: fx, fy, carat3(21)
+!
+! --------------------------------------------------------------------------------------------------
+!
     nno = 3
+
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE TRIANGLE ----------
     call gtria3(xyzl, carat3)
-!
-    call jevech('PCACOQU', 'L', jcara)
-    alpha = zr(jcara+1)*r8dgrd()
-    beta = zr(jcara+2)*r8dgrd()
-    call coqrep(pgl, alpha, beta, t2iu, t2ui, &
-                c, s)
-!
+
     if (.not. global) then
         do i = 1, nno
             fx = for(1, i)
             fy = for(2, i)
-            for(1, i) = t2iu(1)*fx+t2iu(3)*fy
-            for(2, i) = t2iu(2)*fx+t2iu(4)*fy
+            for(1, i) = plateOrie%t2iu(1)*fx+plateOrie%t2iu(3)*fy
+            for(2, i) = plateOrie%t2iu(2)*fx+plateOrie%t2iu(4)*fy
             fx = for(4, i)
             fy = for(5, i)
-            for(4, i) = t2iu(1)*fx+t2iu(3)*fy
-            for(5, i) = t2iu(2)*fx+t2iu(4)*fy
+            for(4, i) = plateOrie%t2iu(1)*fx+plateOrie%t2iu(3)*fy
+            for(5, i) = plateOrie%t2iu(2)*fx+plateOrie%t2iu(4)*fy
         end do
     end if
 !

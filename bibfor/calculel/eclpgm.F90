@@ -48,6 +48,7 @@ subroutine eclpgm(ma2, model1, cham1, ligrelIn, shrink, &
 #include "asterfort/typele.h"
 #include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     character(len=8), intent(in) :: ma2, model1
@@ -94,7 +95,7 @@ subroutine eclpgm(ma2, model1, cham1, ligrelIn, shrink, &
 !     MXNBTE : MAX DU NOMBRE DE TERMES DE LA C.L. DEFINISSANT 1 POINT_I
 !              AU PLUS LES 8 SOMMETS D'UN HEXA8
 !     MXNBSE : MAX DU NOMBRE DE SOUS-ELEMENTS
-    integer(kind=8) :: k, typeElemNume, tabno(27), iret1, jobj, numa
+    integer(kind=8) :: k, typeElemNume, tabno(MT_NNOMAX), iret1, jobj, numa
     integer(kind=8) :: igr, iel, ilmaco, illiel
     integer(kind=8) :: dimgeo, ibid, ino, ino1, ino2
     integer(kind=8) :: nbmail, nbnoeu, nbcoor, iadime, kse

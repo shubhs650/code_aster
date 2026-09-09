@@ -73,7 +73,7 @@ if [ ${iret} -ne 0 ]; then
     iret=$?
 fi
 
-if [ -z "${changes}" && "${BUILDTYPE}" != "nightly" ]; then
+if [ -z "${changes}" ] && [ "${BUILDTYPE}" != "nightly" ]; then
     # add mark to skip keywords coverage
     mkdir -p results
     echo "only tests changed" > results/only_tests

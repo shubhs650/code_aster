@@ -15,26 +15,37 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine rdif01(fami, kpg, ksp, rela_comp, mod, &
-                  imat, matcst, nbcomm, cpmono, nfs, &
+! aslint: disable=W1306,W1504
+!
+subroutine rdif01(materPara, &
+                  relaComp, typmod1, &
+                  matcst, nbcomm, cpmono, nfs, &
                   nsg, toutms, nvi, nmat, vini, &
                   cothe, coeff, dcothe, dcoeff, pgl, &
                   nbphas, coel, x, dtime, neps, &
                   epsd, detot, dvin, nhsr, numhsr, &
                   hsr, itmax, toler, iret)
-! aslint: disable=W1306,W1504
+!
+    use MaterialPara_type
     implicit none
-!     ROUTINE D AIGUILLAGE
-!     ----------------------------------------------------------------
+!
+#include "asterfort/calsig.h"
+#include "asterfort/coefft.h"
+#include "asterfort/lcdvin.h"
+#include "asterfort/lcmmon.h"
+#include "asterfort/lcmmop.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: relaComp
+    character(len=8), intent(in) :: typmod1
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     INTEGRATION DE LOIS DE COMPORTEMENT ELASTO-VISCOPLASTIQUE
 !     PAR UNE METHODE DE RUNGE KUTTA
-!     ----------------------------------------------------------------
-!     IN  FAMI    FAMILLE DE POINT DE GAUSS (RIGI,MASS,...)
-!     IN  KPG,KSP NUMERO DU (SOUS)POINT DE GAUSS
-!     IN  COMP     :  NOM DU MODELE DE COMPORTEMENT
-!         MOD     :  TYPE DE MODELISATION
-!         IMAT    :  ADRESSE DU MATERIAU CODE
+!
+! --------------------------------------------------------------------------------------------------
+!
 !         MATCST  :  NATURE DES PARAMETRES INELASTIQUES
 !         NVI     :  NOMBRE DE VARIABLES INTERNES
 !         NMAT    :  NOMBRE DE PARAMETRES MATERIAU INELASTIQUE
@@ -49,18 +60,12 @@ subroutine rdif01(fami, kpg, ksp, rela_comp, mod, &
 !         EPSD    :  DEFORMATION TOTALE A T
 !         DETOT   :  INCREMENT DE DEFORMATION TOTALE
 !         DVIN    :  DERIVEES DES VARIABLES INTERNES A T
-!     ----------------------------------------------------------------
-#include "asterfort/calsig.h"
-#include "asterfort/coefft.h"
-#include "asterfort/lcdvin.h"
-#include "asterfort/lcmmon.h"
-#include "asterfort/lcmmop.h"
-    integer(kind=8) :: kpg, ksp, imat, nmat, nvi, nbcomm(nmat, 3), itens
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: nmat, nvi, nbcomm(nmat, 3), itens
     integer(kind=8) :: nbphas, nfs, iret, itmax, nsg, nhsr, numhsr(*), neps
-    character(len=16) :: rela_comp
     character(len=24) :: cpmono(5*nmat+1)
-    character(len=8) :: mod
-    character(len=*) :: fami
     character(len=3) :: matcst
     real(kind=8) :: pgl(3, 3), toler, x, dtime, coel(nmat)
     real(kind=8) :: cothe(nmat), dcothe(nmat), coeff(nmat), dcoeff(nmat)
@@ -68,47 +73,51 @@ subroutine rdif01(fami, kpg, ksp, rela_comp, mod, &
     real(kind=8) :: vini(nvi), dvin(nvi), hsr(nsg, nsg, nhsr), evi(6)
 !     POUR GAGNER EN TEMPS CPU
     real(kind=8) :: toutms(*)
+    character(len=8) :: fami
+    integer(kind=8) :: jvMaterCode, kpg, ksp
 !
-    if (rela_comp .eq. 'MONOCRISTAL') then
+! --------------------------------------------------------------------------------------------------
+!
+    jvMaterCode = materPara%jvMaterCode
+    fami = materPara%schemePara%fami
+    kpg = materPara%schemePara%kpg
+    ksp = materPara%schemePara%ksp
+
+    if (relaComp .eq. 'MONOCRISTAL') then
 !       PAS DE VARIATION DES COEF AVEC LA TEMPERATURE
         xm = 0.d0
         call coefft(cothe, coeff, dcothe, dcoeff, xm, &
                     dtime, coeft, nmat, coel)
-        call lcmmon(fami, kpg, ksp, rela_comp, nbcomm, &
+        call lcmmon(fami, kpg, ksp, relaComp, nbcomm, &
                     cpmono, nmat, nvi, vini, x, &
-                    dtime, pgl, mod, coeft, neps, &
+                    dtime, pgl, typmod1, coeft, neps, &
                     epsd, detot, coel, dvin, nfs, &
                     nsg, toutms, hsr(1, 1, 1), itmax, toler, &
                     iret)
 !
-    else if (rela_comp .eq. 'POLYCRISTAL') then
+    else if (relaComp .eq. 'POLYCRISTAL') then
 !       PAS DE VARIATION DES COEF AVEC LA TEMPERATURE
         xm = 0.d0
         call coefft(cothe, coeff, dcothe, dcoeff, xm, &
                     dtime, coeft, nmat, coel)
-        call lcmmop(fami, kpg, ksp, rela_comp, nbcomm, &
+        call lcmmop(fami, kpg, ksp, relaComp, nbcomm, &
                     cpmono, nmat, nvi, vini, x, &
-                    dtime, mod, coeft, epsd, detot, &
+                    dtime, typmod1, coeft, epsd, detot, &
                     coel, nbphas, nfs, nsg, toutms, &
                     dvin, nhsr, numhsr, hsr, itmax, &
                     toler, iret)
-!
+
     else
-!
         do itens = 1, 6
             evi(itens) = vini(itens)
         end do
-!
         call coefft(cothe, coeff, dcothe, dcoeff, x, &
                     dtime, coeft, nmat, coel)
-!
-!
-        call calsig(fami, kpg, ksp, evi, mod, &
-                    rela_comp, vini, x, dtime, epsd, &
+        call calsig(fami, kpg, ksp, evi, typmod1, &
+                    relaComp, vini, x, dtime, epsd, &
                     detot, nmat, coel, sigi)
-!
-        call lcdvin(fami, kpg, ksp, rela_comp, mod, &
-                    imat, matcst, nvi, nmat, vini, &
+        call lcdvin(fami, kpg, ksp, relaComp, typmod1, &
+                    jvMaterCode, matcst, nvi, nmat, vini, &
                     coeft, x, dtime, sigi, dvin, &
                     iret)
 !

@@ -238,7 +238,6 @@ DEFI_MATERIAU = MACRO(
             "HAYHURST_FO",
             "VISC_ENDO",
             "VISC_ENDO_FO",
-            "PINTO_MENEGOTTO",
             "BPEL_BETON",
             "BPEL_ACIER",
             "ETCC_BETON",
@@ -351,6 +350,10 @@ DEFI_MATERIAU = MACRO(
             "NORTON",
             "NORTON_FO",
             "GTN",
+            "INTERF_POU_ELAS",
+            "INTERF_POU_ELAS_FO",
+            "INTERF_POU_CINE",
+            "INTERF_POU_CINE_FO",
             # MFront
             "VISC_ISOT_PLAS",
             "VISC_ISOT_PLAS_FO",
@@ -1913,21 +1916,6 @@ DEFI_MATERIAU = MACRO(
         R_D=SIMP(statut="o", typ=(fonction_sdaster, nappe_sdaster, formule)),
         A_D=SIMP(statut="o", typ=(fonction_sdaster, nappe_sdaster, formule)),
     ),
-    PINTO_MENEGOTTO=FACT(
-        statut="f",
-        SY=SIMP(statut="o", typ="R"),
-        EPSI_ULTM=SIMP(statut="o", typ="R"),
-        SIGM_ULTM=SIMP(statut="o", typ="R"),
-        ELAN=SIMP(statut="f", typ="R", defaut=4.0),
-        EPSP_HARD=SIMP(statut="o", typ="R"),
-        R_PM=SIMP(statut="f", typ="R", defaut=20.0),
-        EP_SUR_E=SIMP(statut="f", typ="R"),
-        A1_PM=SIMP(statut="f", typ="R", defaut=18.5),
-        A2_PM=SIMP(statut="f", typ="R", defaut=0.15),
-        A6_PM=SIMP(statut="f", typ="R", defaut=620.0),
-        C_PM=SIMP(statut="f", typ="R", defaut=0.5),
-        A_PM=SIMP(statut="f", typ="R", defaut=6.0e-3),
-    ),
     #  Uniquement pour POST_ROCHE
     POST_ROCHE=FACT(
         statut="f",
@@ -1997,6 +1985,27 @@ DEFI_MATERIAU = MACRO(
             typ=(fonction_sdaster, formule),
             fr="Tangente à l'origine de la fonction d'écrouissage",
         ),
+    ),
+    # Uniquement pour l'element d'interface sol-pieu
+    INTERF_POU_ELAS=FACT(statut="f", K_N=SIMP(statut="o", typ="R"), K_T=SIMP(statut="o", typ="R")),
+    INTERF_POU_ELAS_FO=FACT(
+        statut="f",
+        K_N=SIMP(statut="o", typ=(fonction_sdaster, nappe_sdaster, formule)),
+        K_T=SIMP(statut="o", typ=(fonction_sdaster, nappe_sdaster, formule)),
+    ),
+    INTERF_POU_CINE=FACT(
+        statut="f",
+        F_NY=SIMP(statut="f", typ="R"),
+        F_TY=SIMP(statut="f", typ="R"),
+        G_N=SIMP(statut="f", typ="R", defaut=0.0),
+        G_T=SIMP(statut="f", typ="R", defaut=0.0),
+    ),
+    INTERF_POU_CINE_FO=FACT(
+        statut="f",
+        F_NY=SIMP(statut="f", typ=(fonction_sdaster, nappe_sdaster, formule)),
+        F_TY=SIMP(statut="f", typ=(fonction_sdaster, nappe_sdaster, formule)),
+        G_N=SIMP(statut="f", typ=(fonction_sdaster, nappe_sdaster, formule)),
+        G_T=SIMP(statut="f", typ=(fonction_sdaster, nappe_sdaster, formule)),
     ),
     #
     MOHR_COULOMB=FACT(
@@ -2126,13 +2135,13 @@ DEFI_MATERIAU = MACRO(
             typ="TXM",
             into=("ENDO", "ENDO_FLUA", "ENDO_FLUA_RAG"),
             defaut="ENDO",
-            enum=(1, 2, 3),
+            enum=(1, 2, 4),
         ),
         b_endo=BLOC(
             condition="""equal_to("COMP_BETON", 'ENDO') or \
                                           equal_to("COMP_BETON", 'ENDO_FLUA') or \
                                           equal_to("COMP_BETON", 'ENDO_FLUA_RAG')""",
-            fr=tr("Loi BETON_RAG : mécanique endommagente seule."),
+            fr=tr("Loi BETON_RAG : mécanique endommageante seule."),
             ENDO_MC=SIMP(
                 statut="o", typ="R", fr=tr("Paramètre de fragilité du béton en compression")
             ),
@@ -2149,11 +2158,15 @@ DEFI_MATERIAU = MACRO(
             condition="""equal_to("COMP_BETON", 'ENDO_FLUA') or \
                                                  equal_to("COMP_BETON", 'ENDO_FLUA_RAG')""",
             fr=tr("Loi BETON_RAG : mécanique et fluage."),
+            FLUA_KAPPAI=SIMP(
+                statut="f",
+                typ="R",
+                fr=tr(
+                    "Coefficient d'augmentation exponentielle de la viscosité de fluage irréversible [unité de déformation]"
+                ),
+            ),
             FLUA_SPH_KR=SIMP(
                 statut="o", typ="R", fr=tr("Raideur fluage sphérique réversible [Pa].")
-            ),
-            FLUA_SPH_KI=SIMP(
-                statut="o", typ="R", fr=tr("Raideur fluage sphérique irréversible [Pa]")
             ),
             FLUA_SPH_NR=SIMP(
                 statut="o", typ="R", fr=tr("Viscosité fluage sphérique réversible [Pa.s].")
@@ -2163,9 +2176,6 @@ DEFI_MATERIAU = MACRO(
             ),
             FLUA_DEV_KR=SIMP(
                 statut="o", typ="R", fr=tr("Raideur fluage déviatorique réversible [Pa].")
-            ),
-            FLUA_DEV_KI=SIMP(
-                statut="o", typ="R", fr=tr("Raideur fluage déviatorique irréversible [Pa].")
             ),
             FLUA_DEV_NR=SIMP(
                 statut="o", typ="R", fr=tr("Viscosité fluage déviatorique réversible [Pa.s].")
@@ -2559,18 +2569,24 @@ DEFI_MATERIAU = MACRO(
         fr=tr("Loi pour les discrets avec écrouissage cinématique."),
         regles=(
             NON_VIDE(),
-            PRESENT_PRESENT("LIMY_DX", "KCIN_DX"),
+            ENSEMBLE("LIMY_DX", "KCIN_DX"),
             ENSEMBLE("PUIS_DX", "LIMU_DX"),
-            PRESENT_PRESENT("LIMY_DY", "KCIN_DY"),
+            PRESENT_PRESENT("PUIS_DX", "KCIN_DX"),
+            ENSEMBLE("LIMY_DY", "KCIN_DY"),
             ENSEMBLE("PUIS_DY", "LIMU_DY"),
-            PRESENT_PRESENT("LIMY_DZ", "KCIN_DZ"),
+            PRESENT_PRESENT("PUIS_DY", "KCIN_DY"),
+            ENSEMBLE("LIMY_DZ", "KCIN_DZ"),
             ENSEMBLE("PUIS_DZ", "LIMU_DZ"),
-            PRESENT_PRESENT("LIMY_RX", "KCIN_RX"),
+            PRESENT_PRESENT("PUIS_DZ", "KCIN_DZ"),
+            ENSEMBLE("LIMY_RX", "KCIN_RX"),
             ENSEMBLE("PUIS_RX", "LIMU_RX"),
-            PRESENT_PRESENT("LIMY_RY", "KCIN_RY"),
+            PRESENT_PRESENT("PUIS_RX", "KCIN_RX"),
+            ENSEMBLE("LIMY_RY", "KCIN_RY"),
             ENSEMBLE("PUIS_RY", "LIMU_RY"),
-            PRESENT_PRESENT("LIMY_RZ", "KCIN_RZ"),
+            PRESENT_PRESENT("PUIS_RY", "KCIN_RY"),
+            ENSEMBLE("LIMY_RZ", "KCIN_RZ"),
             ENSEMBLE("PUIS_RZ", "LIMU_RZ"),
+            PRESENT_PRESENT("PUIS_RZ", "KCIN_RZ"),
         ),
         LIMY_DX=SIMP(
             statut="f",
@@ -5185,6 +5201,8 @@ DEFI_MATERIAU = MACRO(
         ADHE=SIMP(statut="o", typ="TXM", into=("ELAS", "PARFAITE"), enum=(0, 1)),
         COHESION=SIMP(statut="o", typ="R", val_min=0.0),
         COEF_FROT=SIMP(statut="o", typ="R", val_min=0.0),
+        RIGI_REGU_VISC=SIMP(statut="f", typ="R", val_min=0.0),
+        TAU_REGU_VISC=SIMP(statut="f", typ="R", val_min=0.0),
         PENA_LAGR_ABSO=SIMP(statut="o", typ="R", val_min=0.0),
     ),
     JOINT_MECA_ENDO=FACT(

@@ -18,12 +18,12 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine getExternalStateVariable(rela_comp, rela_code_py,&
-                                        l_mfront_offi, l_mfront_proto ,&
-                                        extern_addr, variExteCode)
-        character(len=16), intent(in) :: rela_comp, rela_code_py
+    subroutine getExternalStateVariable(relaComp, relaCompPy, &
+                                        l_mfront_offi, l_mfront_proto, &
+                                        adrsMGIS, variExteCode)
+        character(len=16), intent(in) :: relaComp, relaCompPy
         aster_logical, intent(in) :: l_mfront_offi, l_mfront_proto
-        character(len=16), intent(in) :: extern_addr
+        character(len=16), intent(in) :: adrsMGIS
         integer(kind=8), intent(out) :: variExteCode(2)
     end subroutine getExternalStateVariable
 end interface

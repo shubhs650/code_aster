@@ -16,10 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmGetParaBiot(j_mater, ds_thm)
+interface
+    subroutine thmGetParaBiot(ds_thm)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
     end subroutine thmGetParaBiot
-end interface 
+end interface

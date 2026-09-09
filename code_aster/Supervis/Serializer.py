@@ -263,6 +263,7 @@ class Serializer:
                         names.append(name)
                 except EOFError:
                     pass
+                PicklingHelper.reset()
 
         not_read = set(objList).difference(names)
         if not_read:
@@ -394,6 +395,10 @@ class PicklingHelper:
             logger.debug("+ returning %s '%s' from cache", class_.__name__, objName)
         return cls.memods[objName]
 
+    @classmethod
+    def reset(cls):
+        cls.memods = {}
+
 
 def subtypes(cls):
     """Return subclasses of 'cls'."""
@@ -454,7 +459,7 @@ def _filteringContext(context):
         if type(obj) in [getattr(klass, type(obj).__name__, None) for klass in skipped_classes]:
             continue
         # check attr needed for python<=3.6
-        if hasattr(obj, "__class__") and isinstance(obj, (IOBase, MPI.Intracomm)):
+        if hasattr(obj, "__class__") and isinstance(obj, (IOBase, MPI.Intracomm, re.Match)):
             continue
         # if hasattr(obj, "__pickling_disabled__"):
         #     continue

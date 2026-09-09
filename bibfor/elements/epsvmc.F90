@@ -16,13 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
+subroutine epsvmc(nno, ndim, nbEpsi, npg, &
                   jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                   nodeCoor, nodeDisp, &
-                  time, anglNaut, nharm, &
-                  strainType, lStrainMeca, &
+                  time, nharm, &
+                  strainType, lStrainMeca, materPara, &
                   epsi)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -33,17 +35,16 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
 #include "asterfort/eps2mc.h"
 #include "asterfort/epslmc.h"
 #include "asterfort/epthmc.h"
-#include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "jeveux.h"
 !
-    character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: nno, ndim, nbEpsi, npg
     integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     real(kind=8), intent(in) :: nodeCoor(ndim*nno), nodeDisp(ndim*nno)
-    real(kind=8), intent(in) :: time, anglNaut(3), nharm
+    real(kind=8), intent(in) :: time, nharm
     integer(kind=8), intent(in) :: strainType
     aster_logical, intent(in) :: lStrainMeca
+    type(Material_Para), intent(inout) :: materPara
     real(kind=8), intent(out) :: epsi(nbEpsi*npg)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -54,7 +55,6 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
 ! In  nno              : number of nodes
 ! In  ndim             : dimension of space
 ! In  nbEpsi           : number of strain tensor components
@@ -65,10 +65,10 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
 ! In  nodeCoor         : coordinates of nodes
 ! In  nodeDisp         : displacements of nodes
 ! In  time             : given time
-! In  anglNaut         : nautical angles (for non-isotropic materials)
 ! In  nharm            : Fourier mode
 ! In  strainType       : type of strain (small, Green, log, etc.)
 ! In  lStrainMeca      : flag to compute mechanical strains
+! IO  materPara        : parameters of material
 ! Out epsi             : mechanical strains or total strains
 !
 ! --------------------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
     real(kind=8) :: epsiVarc(162), epsiMeca(162), epsiTota(162)
     real(kind=8) :: epsiLine(162), epsiNlin(162)
     real(kind=8) :: d(4, 4)
-    integer(kind=8) :: kpg, jvMater
+    integer(kind=8) :: kpg
     aster_logical :: lStrainVarc
 !
 ! --------------------------------------------------------------------------------------------------
@@ -124,9 +124,8 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
 
 ! - Compute anelastic strains from external state variables
     if (lStrainVarc) then
-        call jevech('PMATERC', 'L', jvMater)
-        call epthmc(fami, nbEpsi, npg, ndim, &
-                    time, anglNaut, zi(jvMater), &
+        call epthmc(materPara, time, &
+                    nbEpsi, npg, ndim, &
                     VARC_STRAIN_ALL, epsiVarc)
     end if
 
@@ -140,8 +139,12 @@ subroutine epsvmc(fami, nno, ndim, nbEpsi, npg, &
         do kpg = 1, npg
             l_modi_cp = ASTER_TRUE
 
+! --------- Initializations of material parameters on current integration point
+            call initParaPoin(kpg, ksp, materPara)
+
 ! --------- Hooke matrix for iso-parametric elements
-            call dmatmc(fami, zi(jvMater), time, '+', kpg, ksp, anglNaut, nbEpsi, d, l_modi_cp)
+            call dmatmc(materPara, '+', time, &
+                        nbEpsi, d, l_modi_cp)
 
 ! --------- Modification of strains
             if (lStrainMeca) then

@@ -34,12 +34,13 @@ subroutine xcalfev(elrefp, ndim, nnop, basloc, stano, &
 #include "asterfort/xdeffk_wrap.h"
 #include "asterfort/xderfk_wrap.h"
 #include "asterfort/xelrex.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: elrefp
     integer(kind=8) :: ndim, nnop, stano(*)
-    real(kind=8) :: he, basloc(*), fk(27, 3, 3)
+    real(kind=8) :: he, basloc(*), fk(MT_NNOMAX, 3, 3)
     real(kind=8) :: kappa, ff(*), geom(*), mu
-    real(kind=8), optional :: dkdgl(27, 3, 3, 3)
+    real(kind=8), optional :: dkdgl(MT_NNOMAX, 3, 3, 3)
     real(kind=8), optional :: dfdi(nnop, ndim)
     character(len=4), optional :: face
     integer(kind=8), optional :: nnop_lin
@@ -64,12 +65,12 @@ subroutine xcalfev(elrefp, ndim, nnop, basloc, stano, &
 !
     integer(kind=8) :: i, j, k, ino, l, alp, nnops
     integer(kind=8) :: ndime, nno
-    real(kind=8) :: p(27, 3, 3), invp(27, 3, 3), p_g(3, 3), invp_g(3, 3)
+    real(kind=8) :: p(MT_NNOMAX, 3, 3), invp(MT_NNOMAX, 3, 3), p_g(3, 3), invp_g(3, 3)
     real(kind=8) :: dkdpo(ndim, ndim, 2), dkdlo(3, 3, 2), fkpo(ndim, ndim), fk_gl(ndim, ndim)
-    real(kind=8) :: rr, th, r_n(27), t_n(27), fkpo_n(27, 3, 3)
+    real(kind=8) :: rr, th, r_n(MT_NNOMAX), t_n(MT_NNOMAX), fkpo_n(MT_NNOMAX, 3, 3)
     real(kind=8) :: fkpo_g(3, 3), dkdgl_g(3, 3, 3), signe
-    real(kind=8) :: ff1(27), dfdi1(27, 3)
-    real(kind=8) :: xref(81), ff_n(27)
+    real(kind=8) :: ff1(MT_NNOMAX), dfdi1(MT_NNOMAX, 3)
+    real(kind=8) :: xref(3*MT_NNOMAX3D), ff_n(MT_NNOMAX)
     aster_logical :: lderiv, l_not_zero, lshift, lctlin, lbid
     aster_logical :: lcourb
     character(len=8) :: method

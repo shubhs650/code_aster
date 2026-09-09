@@ -17,14 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine dmatcp(fami, materCodeJv, time, poum, ipg, &
-                      ispg, anglNaut, dr_, di_)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: materCodeJv
+    subroutine dmatcp(materPara, poum, time, &
+                      dr_, di_)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
         real(kind=8), intent(in) :: time
         character(len=*), intent(in) :: poum
-        integer(kind=8), intent(in) :: ipg, ispg
-        real(kind=8), intent(in) :: anglNaut(3)
         real(kind=8), optional, intent(out) :: dr_(4, 4), di_(4, 4)
     end subroutine dmatcp
 end interface

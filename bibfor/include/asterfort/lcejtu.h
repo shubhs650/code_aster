@@ -17,19 +17,18 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine lcejtu(BEHinteg,&
-                      fami, kpg, ksp, ndim, imate,&
-                      option, epsm, deps, sigm, sigp,&
-                      dsidep, vim, vip, typmod,&
+    subroutine lcejtu(BEHinteg, &
+                      ndim, option, &
+                      epsm, deps, sigm, sigp, &
+                      dsidep, vim, vip, typmod, &
                       instam, instap)
-            use Behaviour_type
-            type(Behaviour_Integ), intent(in) :: BEHinteg
-            integer(kind=8), intent(in) :: imate, ndim, kpg, ksp
-            real(kind=8), intent(in) :: epsm(ndim), deps(ndim), sigm(6), vim(*)
-            real(kind=8), intent(in) :: instam, instap
-            character(len=8), intent(in) :: typmod(*)
-            character(len=16), intent(in) :: option
-            character(len=*), intent(in) :: fami
-            real(kind=8), intent(out) :: vip(*), sigp(6), dsidep(6, 6)
-            end subroutine lcejtu
+        use Behaviour_type
+        type(Behaviour_Integ), intent(in) :: BEHinteg
+        integer(kind=8), intent(in) :: ndim
+        real(kind=8), intent(in) :: epsm(ndim), deps(ndim), sigm(6), vim(*)
+        real(kind=8), intent(in) :: instam, instap
+        character(len=8), intent(in) :: typmod(2)
+        character(len=16), intent(in) :: option
+        real(kind=8), intent(out) :: vip(*), sigp(6), dsidep(6, 6)
+    end subroutine lcejtu
 end interface

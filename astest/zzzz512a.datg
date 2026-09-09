@@ -1,23 +1,22 @@
-from code_aster.Utilities import sympy
 from sympy import *
 
 init_printing(use_unicode=True)
 
-mu = sympy.Symbol("mu", positive=True, real=True)
-lamba = sympy.Symbol("lamba", positive=True, real=True)
+mu = Symbol("mu", positive=True, real=True)
+lamba = Symbol("lamba", positive=True, real=True)
 
-x = sympy.Symbol("x", real=True)
-y = sympy.Symbol("y", real=True)
-z = sympy.Symbol("z", real=True)
+x = Symbol("x", real=True)
+y = Symbol("y", real=True)
+z = Symbol("z", real=True)
 
 # deplacement a renseigner
-ux = z * (x + 1)* y*x + x*x
-uy = x * (y + 3) *z*y + y*y
-uz = y * (z - 2) * x*z + z*z
+ux = z * (x + 1)* y*x*z + x*x
+uy = x * (y + 3) *z*y*x + y*y
+uz = y * (z - 2) * x*z*y + z*z
 
 # calcul G
 G = simplify(
-    sympy.Matrix(
+    Matrix(
         [
             [diff(ux, x), diff(ux, y), diff(ux, z)],
             [diff(uy, x), diff(uy, y), diff(uy, z)],
@@ -45,7 +44,7 @@ fy = -simplify((diff(sigma[1, 0], x) + diff(sigma[1, 1], y) + diff(sigma[1, 2], 
 fz = -simplify((diff(sigma[2, 0], x) + diff(sigma[2, 1], y) + diff(sigma[2, 2], z)))
 
 # calcul force volumique
-f = trigsimp(sympy.Matrix([[fx], [fy], [fz]]))
+f = trigsimp(Matrix([[fx], [fy], [fz]]))
 
 print("force f =")
 pprint(f)

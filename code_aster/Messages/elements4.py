@@ -147,7 +147,7 @@ On ne trouve pas le coefficient de Poisson
     ),
     81: _(
         """
- Il manque le paramètre  %(k1)s pour la maille  %(k2)s
+ Il manque le paramètre %(k1)s pour la maille  %(i1)d
 """
     ),
     90: _(
@@ -164,18 +164,8 @@ On ne trouve pas le coefficient de Poisson
     ),
     92: _(
         """
- Vous essayez d'appliquer un chargement de pression fonction (et non nul) sur un élément de coque (avec le mot-clé facteur PRES_REP) pour la maille %(k1)s.
-
+ Vous essayez d'appliquer un chargement de pression fonction (et non nul) sur un élément de coque (avec le mot-clé facteur PRES_REP) pour la maille %(i1)d.
  Pour cette modélisation, il faut utiliser le mot-clé FORCE_COQUE.
-"""
-    ),
-    93: _(
-        """
- Vous essayez d'appliquer un chargement de pression suiveur (et non nul) sur un élément 'DKT' (avec le mot-clé facteur PRES_REP et le mot-clé TYPE_CHARGE='SUIV') pour la maille %(k1)s.
- Cette fonctionnalité n'est pas disponible.
-
- Conseil :
-    - remplacez la modélisation 'DKT' par la modélisation 'COQUE_3D'.
 """
     ),
 }

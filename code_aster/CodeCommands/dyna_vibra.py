@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Code_Aster.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy as np
 
 from ..Objects import (
     AssemblyMatrixPressureComplex,
@@ -64,6 +65,65 @@ class VibrationDynamics(ExecuteCommand):
                     self._result = TransientGeneralizedResult()
                 else:
                     self._result = HarmoGeneralizedResult()
+
+    def exec_(self, keywords):
+        base = keywords["BASE_CALCUL"]
+        typ = keywords["TYPE_CALCUL"]
+        if "CHAR_GENE" in keywords.keys():
+            char_gene = keywords.pop("CHAR_GENE")
+            nume_gene = char_gene.getDOFNumbering()
+            # add of linear relations between modes
+            basis = nume_gene.getModalBasis()
+            liaisons = char_gene.getMPCs()
+            nb_modes_with_lagr = basis.getNumberOfIndexes()
+            nb_lagr = len(liaisons)
+            nb_modes = nb_modes_with_lagr - nb_lagr
+
+            # modification of stiffness matrix
+            matr_rigi = keywords["MATR_RIGI"]
+            values = np.zeros((nb_modes_with_lagr, nb_modes_with_lagr))
+            values[:-nb_lagr, :-nb_lagr] = matr_rigi.toNumpy()
+            for i_lagr, liaison in enumerate(liaisons):
+                nume_mode_lagr = nb_modes + i_lagr + 1
+                for nume_mode, coef_mult in zip(liaison[0], liaison[1]):
+                    values[nume_mode_lagr - 1, nume_mode - 1] = coef_mult
+                    values[nume_mode - 1, nume_mode_lagr - 1] = coef_mult
+
+            is_symmetric = matr_rigi.isSymmetric()
+            matr_rigi = type(matr_rigi)()
+            matr_rigi.setGeneralizedDOFNumbering(nume_gene)
+            matr_rigi.setModalBasis(basis)
+            matr_rigi.allocate(is_symmetric)
+            matr_rigi.fromNumpy(values)
+            keywords["MATR_RIGI"] = matr_rigi
+
+            # copy of mass matrix
+            matr_mass = keywords["MATR_MASS"]
+            values = np.zeros((nb_modes_with_lagr, nb_modes_with_lagr))
+            values[:-nb_lagr, :-nb_lagr] = matr_mass.toNumpy()
+
+            is_symmetric = matr_mass.isSymmetric()
+            matr_mass = type(matr_mass)()
+            matr_mass.setGeneralizedDOFNumbering(nume_gene)
+            matr_mass.setModalBasis(basis)
+            matr_mass.allocate(is_symmetric)
+            matr_mass.fromNumpy(values)
+            keywords["MATR_MASS"] = matr_mass
+
+            # on verra plus tard pour MATR_AMOR, faire comme pour MATR_MASS
+            assert "MATR_AMOR" not in keywords
+
+            # RHS with Lagrange values
+            vect_gen = char_gene.getAssemblyVector()
+            vect_gen_values = vect_gen.getValues()
+            for i_lagr, liaison in enumerate(liaisons):
+                coef_impo = liaison[2]
+                vect_gen_values[nb_modes + i_lagr] = coef_impo
+            vect_gen.setValues(vect_gen_values)
+
+            keywords["EXCIT"] = {"VECT_ASSE_GENE": vect_gen, "COEF_MULT": 1}
+
+        super().exec_(keywords)
 
     def post_exec(self, keywords):
         """Execute the command.

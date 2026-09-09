@@ -55,6 +55,7 @@ subroutine te0368(option, nomte)
 #include "asterfort/tecach.h"
 #include "asterfort/tecael.h"
 #include "asterfort/uthk.h"
+#include "FE_module.h"
 #include "asterfort/utmess.h"
 !
     character(len=16) :: option, nomte
@@ -89,11 +90,11 @@ subroutine te0368(option, nomte)
     integer(kind=8) :: tymvol, ndegre, ifa, tyv
 !
     real(kind=8) :: r8bid, r8bid2, r8bid3(3), r8bid4(3)
-    real(kind=8) :: dfdx(27), dfdy(27), dfdz(27), hk, poids
+    real(kind=8) :: dfdx(MAX_BS_CG), dfdy(MAX_BS_CG), dfdz(MAX_BS_CG), hk, poids
     real(kind=8) :: fppx, fppy, fppz
     real(kind=8) :: fpdx, fpdy, fpdz
-    real(kind=8) :: frpx(27), frpy(27), frpz(27)
-    real(kind=8) :: frdx(27), frdy(27), frdz(27)
+    real(kind=8) :: frpx(MAX_BS_CG), frpy(MAX_BS_CG), frpz(MAX_BS_CG)
+    real(kind=8) :: frdx(MAX_BS_CG), frdy(MAX_BS_CG), frdz(MAX_BS_CG)
     real(kind=8) :: fovop(3)
     real(kind=8) :: fovod(3)
     real(kind=8) :: dspx, dspy, dspz

@@ -19,10 +19,11 @@
 !
 !
 interface
-    subroutine togene(dplmod, fphys, fgene, coef)
+    subroutine togene(dplmod, fphys, fgene, coef, nbddl_)
         real(kind=8), pointer  :: dplmod(:)
-        real(kind=8),           intent(in)  :: fphys(:)
-        real(kind=8),           intent(out) :: fgene(:)
+        real(kind=8), intent(in)  :: fphys(:)
+        real(kind=8), intent(out) :: fgene(:)
         real(kind=8), optional, intent(in)  :: coef
+        integer(kind=8), intent(in), optional :: nbddl_
     end subroutine togene
 end interface

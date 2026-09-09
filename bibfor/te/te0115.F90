@@ -18,12 +18,13 @@
 !
 subroutine te0115(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/sigvmc.h"
@@ -42,14 +43,17 @@ subroutine te0115(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8) :: nharm
     integer(kind=8) :: ndim, nno, npg, nbsig, i, dimmod
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
-    integer(kind=8) :: jvSigm, jvDisp, jvGeom, jvMater, jvHarm
-    real(kind=8) :: sigm(54), anglNaut(3), time, nharm
+    integer(kind=8) :: jvSigm, jvDisp, jvGeom, jvMaterc, jvHarmon
+    real(kind=8) :: sigm(54), time
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, npg=npg, &
+    call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
                      jpoids=jvGaussWeight, jvf=jvBaseFunc, jdfde=jvDBaseFunc)
     dimmod = 3
 !
@@ -59,30 +63,35 @@ subroutine te0115(option, nomte)
     ASSERT(nbsig .le. 6)
     ASSERT(npg .le. 27)
 
-! - Current time
-    time = r8vide()
-
 ! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)
-
-! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
-
-! - Orthotropic parameters:
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
 
 ! - Current displacements (nodes)
     call jevech('PDEPLAR', 'L', jvDisp)
 
+! - Get current time
+    time = r8vide()
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
 ! - Get Fourier mode
-    call jevech('PHARMON', 'L', jvHarm)
-    nharm = dble(zi(jvHarm))
+    call jevech('PHARMON', 'L', jvHarmon)
+    nharm = dble(zi(jvHarmon))
 
 ! - Compute mechanical stress (without effect of external state variables)
-    call sigvmc('RIGI', nno, dimmod, nbsig, npg, &
+    call sigvmc(materPara, &
+                nno, dimmod, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 zr(jvGeom), zr(jvDisp), &
-                time, anglNaut, zi(jvMater), nharm, sigm)
+                time, nharm, &
+                sigm)
 
 ! - Final copy of stress
     call jevech('PCONTRR', 'E', jvSigm)

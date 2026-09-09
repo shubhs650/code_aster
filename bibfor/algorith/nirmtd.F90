@@ -15,33 +15,39 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1306
 !
 subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                   iw, vff2, vff3, ivf1, idff1, &
-                  vu, vg, vp, igeom, mate, &
+                  vu, vg, vp, jvGeom, materPara, &
                   matr)
-! aslint: disable=W1306
+!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
-#include "jeveux.h"
 !
 #include "asterc/r8vide.h"
 #include "asterfort/bmatmc.h"
 #include "asterfort/dmatmc.h"
 #include "asterfort/nbsigm.h"
-#include "asterfort/getElemOrientation.h"
 #include "blas/dscal.h"
+#include "jeveux.h"
+#include "MeshTypes_type.h"
+!
     integer(kind=8) :: ndim, nno1, nno2, nno3, npg, iw, idff1
-    integer(kind=8) :: mate
-    integer(kind=8) :: vu(3, 27), vg(27), vp(27)
-    integer(kind=8) :: ivf1, igeom
+    integer(kind=8) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX), vp(MT_NNOMAX)
+    integer(kind=8) :: ivf1, jvGeom
     real(kind=8) :: vff2(nno2, npg), vff3(nno3, npg)
     real(kind=8) :: matr(*)
-!-----------------------------------------------------------------------
-!          CALCUL DE LA RIGIDITE MECANIQUE POUR LES ELEMENTS
-!          INCOMPRESSIBLES POUR LES GRANDES DEFORMATIONS
-!          3D/D_PLAN/AXIS
-!          ROUTINE APPELEE PAR TE0592
-!-----------------------------------------------------------------------
+    type(Material_Para), intent(inout) :: materPara
+!
+! --------------------------------------------------------------------------------------------------
+!
+! CALCUL DE LA RIGIDITE MECANIQUE POUR LES ELEMENTS INCOMPRESSIBLES POUR LES GRANDES DEFORMATIONS
+! 3D/D_PLAN/AXIS
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  NDIM    : DIMENSION DE L'ESPACE
 ! IN  NNO1    : NOMBRE DE NOEUDS DE L'ELEMENT LIES AUX DEPLACEMENTS
 ! IN  NNO2    : NOMBRE DE NOEUDS DE L'ELEMENT LIES AU GONFLEMENT
@@ -57,9 +63,12 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
 ! IN  IGEOM   : POINTEUR SUR LES COORDONEES DES NOEUDS
 ! IN  MATE    : MATERIAU CODE
 ! OUT MATR    : MATRICE DE RIGIDITE
-!-----------------------------------------------------------------------
 !
-    integer(kind=8) :: g
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: ksp = 1
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    integer(kind=8) :: kpg
     integer(kind=8) :: ia, na, ra, sa, ib, nb, rb, sb, ja, jb
     integer(kind=8) :: os, kk
     integer(kind=8) :: vuiana, vgra, vpsa
@@ -70,8 +79,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
     real(kind=8) :: ddev(2*ndim, 2*ndim), devd(2*ndim, 2*ndim)
     real(kind=8) :: dddev(2*ndim, 2*ndim)
     real(kind=8) :: iddid, devdi(2*ndim), iddev(2*ndim)
-    real(kind=8) :: angl_naut(3)
-    real(kind=8) :: t1, rac2, notime
+    real(kind=8) :: t1, notime
     real(kind=8) :: idev(6, 6), idev2(4, 4), kr(6), kd(6)
     blas_int :: b_incx, b_n
 !
@@ -86,25 +94,26 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
      &                  0.d0, 0.d0, 0.d0, 3.d0, 0.d0, 0.d0,&
      &                  0.d0, 0.d0, 0.d0, 0.d0, 3.d0, 0.d0,&
      &                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 3.d0/
-!-----------------------------------------------------------------------
 !
+! --------------------------------------------------------------------------------------------------
+!
+    notime = r8vide()
+
 ! - NOMBRE DE CONTRAINTES ASSOCIE A L'ELEMENT
-    rac2 = sqrt(2.d0)
     nbsig = nbsigm()
     do ia = 1, 3
         kd(ia) = 1.d0
         kd(ia+3) = 2.d0/rac2
     end do
-!
-! - RECUPERATION  DES DONNEEES RELATIVES AU REPERE D'ORTHOTROPIE
-    call getElemOrientation(ndim, nno1, igeom, angl_naut)
-!
+
 ! - CALCUL POUR CHAQUE POINT DE GAUSS
-    do g = 1, npg
+    do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
 !
 ! - CALCUL DES ELEMENTS GEOMETRIQUES
 ! - CALCUL DE DFDI,F,EPS,R(EN AXI) ET POIDS
-        call bmatmc(g, nbsig, zr(igeom), iw, ivf1, &
+        call bmatmc(kpg, nbsig, zr(jvGeom), iw, ivf1, &
                     idff1, nno1, 0.d0, w, b)
 !
         do ia = 1, 2*ndim
@@ -121,12 +130,11 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                 deftr(na, ia) = def(1, na, ia)+def(2, na, ia)+def(3, na, ia)
             end do
         end do
-!
+
 ! - CALCUL DE LA MATRICE DE HOOKE (LE MATERIAU POUVANT
 ! - ETRE ISOTROPE, ISOTROPE-TRANSVERSE OU ORTHOTROPE)
-        notime = r8vide()
-        call dmatmc('RIGI', mate, notime, '+', g, &
-                    1, angl_naut, nbsig, dsidep)
+        call dmatmc(materPara, "+", notime, &
+                    nbsig, dsidep)
 !
         b_n = to_blas_int(2*ndim-3)
         b_incx = to_blas_int(1)
@@ -215,7 +223,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                 do rb = 1, nno2
                     if (vg(rb) .lt. vuiana) then
                         kk = os+vg(rb)
-                        matr(kk) = matr(kk)+w*t1*vff2(rb, g)
+                        matr(kk) = matr(kk)+w*t1*vff2(rb, kpg)
                     end if
                 end do
 !
@@ -223,7 +231,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                 do sb = 1, nno3
                     if (vp(sb) .lt. vuiana) then
                         kk = os+vp(sb)
-                        t1 = deftr(na, ia)*vff3(sb, g)
+                        t1 = deftr(na, ia)*vff3(sb, kpg)
                         matr(kk) = matr(kk)+w*t1
                     end if
                 end do
@@ -244,7 +252,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                         do jb = 1, 2*ndim
                             t1 = t1+iddev(jb)*def(jb, nb, ib)
                         end do
-                        matr(kk) = matr(kk)+w*t1*vff2(ra, g)/3.d0
+                        matr(kk) = matr(kk)+w*t1*vff2(ra, kpg)/3.d0
                     end if
                 end do
             end do
@@ -253,7 +261,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
             do rb = 1, nno2
                 if (vg(rb) .le. vgra) then
                     kk = os+vg(rb)
-                    t1 = vff2(ra, g)*iddid*vff2(rb, g)
+                    t1 = vff2(ra, kpg)*iddid*vff2(rb, kpg)
                     matr(kk) = matr(kk)+w*t1
                 end if
             end do
@@ -262,7 +270,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
             do sb = 1, nno3
                 if (vp(sb) .lt. vgra) then
                     kk = os+vp(sb)
-                    t1 = -vff2(ra, g)*vff3(sb, g)
+                    t1 = -vff2(ra, kpg)*vff3(sb, kpg)
                     matr(kk) = matr(kk)+w*t1
                 end if
             end do
@@ -278,7 +286,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
                 do ib = 1, ndim
                     if (vu(ib, nb) .lt. vpsa) then
                         kk = os+vu(ib, nb)
-                        t1 = vff3(sa, g)*deftr(nb, ib)
+                        t1 = vff3(sa, kpg)*deftr(nb, ib)
                         matr(kk) = matr(kk)+w*t1
                     end if
                 end do
@@ -288,7 +296,7 @@ subroutine nirmtd(ndim, nno1, nno2, nno3, npg, &
             do rb = 1, nno2
                 if (vg(rb) .lt. vpsa) then
                     kk = os+vg(rb)
-                    t1 = -vff3(sa, g)*vff2(rb, g)
+                    t1 = -vff3(sa, kpg)*vff2(rb, kpg)
                     matr(kk) = matr(kk)+w*t1
                 end if
             end do

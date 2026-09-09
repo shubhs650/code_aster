@@ -15,53 +15,48 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nm1das(fami, kpg, ksp, e, syc, &
-                  syt, etc, ett, cr, tmoins, &
-                  tplus, icodma, sigm, deps, vim, &
+!
+subroutine nm1das(materPara, &
+                  e, syc, &
+                  syt, etc, ett, &
+                  sigm, deps, vim, &
                   sig, vip, dsdem, dsdep)
 !
+    use MaterialPara_type
     implicit none
-! ----------------------------------------------------------------------
+!
+#include "asterfort/verift.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    real(kind=8) :: e, epsthe, syc, syt, etc, ett
+    real(kind=8) :: sigm, deps, pmt, pmc, xmt, xmc, xpt, xpc, vim(4), vip(4)
+    real(kind=8) :: sig, ppt, ppc, dsdem, dsdep
+!
+! --------------------------------------------------------------------------------------------------
+!
 !          PLASTICITE VON MISES ISOTROPE BILINEAIRE MONODIM
 !    ECROUISSAGE ISOTROPE ASYMETRIQUE LINEAIRE - VON MISES-
 !
+! --------------------------------------------------------------------------------------------------
 !
-! IN  FAMI     : FAMILLE DES POINTS DE GAUSS
-! IN  KPG      : NUMERO DU POINT DE GAUSS
-! IN  KSP      : NUMERO DU SOUS-POINT DE GAUSS
 ! IN  E        : MODULE D YOUNG
 !       ETT    : ET EN TRACTION
 !       ETC    : ET EN COMPRESSION
 !       SYC    : LIMITE ELASTIQUE EN COMPRESSION
 !       SYT    : LIMITE ELASTIQUE EN TRACTION
-!       CR     : COEFFICIENT DE RESTAURATION. =0 POUR LE MOMENT
 ! IN  SIGM     : CONTRAINTE AU TEMPS MOINS
 ! IN  DEPS     : DEFORMATION  TOTALE PLUS - DEFORMATION TOTALE MOINS
 ! IN  VIM      : DEFORMATION  PLASTIQUE CUMULEE  AU TEMPS MOINS
-!
 ! OUT SIG     : CONTRAINTES AU TEMPS PLUS
 ! OUT VIP    : DEFORMATION  PLASTIQUE CUMULEE TRACTION AU TEMPS PLUS
 ! OUT DSDEM   : DSIG/DEPS TEMPS MOINS
 ! OUT DSDEP   : DSIG/DEPS TEMPS PLUS
-!     ------------------------------------------------------------------
-!     ARGUMENTS
-!     ------------------------------------------------------------------
-#include "asterfort/verift.h"
-    real(kind=8) :: e, epsthe, syc, syt, etc, ett, cr, tmoins, tplus
-    real(kind=8) :: sigm, deps, pmt, pmc, xmt, xmc, xpt, xpc, vim(4), vip(4)
-    real(kind=8) :: sig, ppt, ppc, dsdem, dsdep
-    integer(kind=8) :: kpg, ksp
-    character(len=*) :: fami
-!     ------------------------------------------------------------------
-!     VARIABLES LOCALES
-!     ------------------------------------------------------------------
-    real(kind=8) :: rmc, rmt, sige, ht, hc, depmec, dpt, rpt, dpc, rpc, sigd
-    integer(kind=8) :: icodma
 !
-!     ------------------------------------------------------------------
-!     VARIABLES INTERMEDIAIRES
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8) :: rmc, rmt, sige, ht, hc, depmec, dpt, rpt, dpc, rpc, sigd
+!
+! --------------------------------------------------------------------------------------------------
 !
     ht = e*ett/(e-ett)
     hc = e*etc/(e-etc)
@@ -73,7 +68,11 @@ subroutine nm1das(fami, kpg, ksp, e, syc, &
 !     DELTA DEFORMATION MECANIQUE
 !     ------------------------------------------------------------------
 !
-    call verift(fami, kpg, ksp, 'T', icodma, &
+    call verift(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                'T', &
+                materPara%jvMaterCode, &
                 epsth_=epsthe)
 !
     depmec = deps-epsthe
@@ -111,7 +110,7 @@ subroutine nm1das(fami, kpg, ksp, e, syc, &
             sig = sigd
 !CC         XPC = CR * SIG
 !JMP        XPC = XMC + CR * (SIG-XMC)
-            xpc = sig+(xmc-sig)*exp(-cr*(tplus-tmoins))
+            xpc = sig+(xmc-sig)
             dsdep = e
         else
 !
@@ -124,7 +123,7 @@ subroutine nm1das(fami, kpg, ksp, e, syc, &
             sig = sige/(1.d0+e*dpt/rpt)+xmt
 !CC         XPC = CR * SIG
 !JMP        XPC = XMC + CR * (SIG-XMC)
-            xpc = sig+(xmc-sig)*exp(-cr*(tplus-tmoins))
+            xpc = sig+(xmc-sig)
             xpt = xmt
             dsdep = ett
 !
@@ -146,7 +145,7 @@ subroutine nm1das(fami, kpg, ksp, e, syc, &
             sig = sigd
 !CC         XPT = CR * SIG
 !JMP        XPT = XMT + CR * (SIG-XMT)
-            xpt = sig+(xmt-sig)*exp(-cr*(tplus-tmoins))
+            xpt = sig+(xmt-sig)
             dsdep = e
         else
 !
@@ -159,7 +158,7 @@ subroutine nm1das(fami, kpg, ksp, e, syc, &
             sig = sige/(1.d0+e*dpc/rpc)+xmc
 !CC         XPT = CR * SIG
 !JMP        XPT = XMT + CR * (SIG-XMT)
-            xpt = sig+(xmt-sig)*exp(-cr*(tplus-tmoins))
+            xpt = sig+(xmt-sig)
             xpc = xmc
             dsdep = etc
 !

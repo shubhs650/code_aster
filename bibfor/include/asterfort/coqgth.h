@@ -15,17 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
 !
-!
-          interface 
-            subroutine coqgth(imate,compor,fami,ipg,ep,epsm,deps)
-              integer(kind=8), intent(in) :: imate
-              character(len=16), intent(in) :: compor
-              character(len=*), intent(in) :: fami
-              integer(kind=8), intent(in) :: ipg
-              real(kind=8), intent(in) :: ep
-              real(kind=8), intent(inout) :: epsm(6)
-              real(kind=8), intent(inout) :: deps(6)
-            end subroutine coqgth
-          end interface 
+interface
+    subroutine coqgth(materPara, ep, epsm, deps)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        real(kind=8), intent(in) :: ep
+        real(kind=8), intent(inout) :: epsm(6)
+        real(kind=8), intent(inout) :: deps(6)
+    end subroutine coqgth
+end interface

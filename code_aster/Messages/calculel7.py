@@ -36,8 +36,8 @@ Commande CALC_FERRAILLAGE :
     ),
     6: _(
         """
-  Pour ce type d'opération, il n'est pas permis d'utiliser la structure de
-  données résultat existante %(k1)s derrière le mot clé reuse.
+Erreur d'utilisation de la commande CREA_RESU / PREP_VARC.
+Il n'est pas permis d'utiliser la structure de données résultat existante derrière le mot clé reuse.
 """
     ),
     7: _(

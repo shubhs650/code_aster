@@ -17,7 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0109(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/cq3d2d.h"
@@ -42,23 +46,25 @@ subroutine te0109(option, nomte)
     parameter(nbres=3)
 !
     integer(kind=8) :: icodre(nbres)
-    integer(kind=8) :: i, kp, itempe, icacoq, imate, iflupg, inbspi
+    integer(kind=8) :: i, kp, itempe, imate, iflupg
     integer(kind=8) :: ivf, igeom, idfde, ipoids, ndim
     integer(kind=8) :: nno, nnos, npg, jgano, kpg, spt
-    integer(kind=8) :: itemps, k, mater, nbcmp, cdec, nbcou, nivc
+    integer(kind=8) :: itemps, k, mater, nbcmp, cdec, nbLayer, nivc
 !
     real(kind=8) :: valres(nbres), conduc, h, ord
     real(kind=8) :: coor2d(14), dfdx(7), dfdy(7), poids, dtdx, dtdy, dtdz
     real(kind=8) :: ts, tm, ti, dtsdx, dtmdx, dtidx, dtsdy, dtmdy, dtidy, px3
     real(kind=8) :: va1a2(3), na1a2, x1, y1, z1, x2, y2, z2, x3, y3, z3
     real(kind=8) :: pvec1(3), pvec2(3), npvec1, fx, fy, fz
-    real(kind=8) :: ep, fac1, fac2, fac3
+    real(kind=8) :: ep, fac1, fac2, fac3, thickness
 !
     character(len=8) :: fami, poum
     character(len=16) :: nomres(nbres)
     character(len=32) :: phenom
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-!-----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     valres(1) = 0.d0
     valres(2) = 0.d0
@@ -71,14 +77,19 @@ subroutine te0109(option, nomte)
 !
     call jevech('PMATERC', 'L', imate)
     call jevech('PGEOMER', 'L', igeom)
-    call jevech('PNBSP_I', 'L', inbspi)
-    call jevech('PCACOQU', 'L', icacoq)
     call jevech('PTEMPER', 'L', itempe)
     call jevech('PINSTR', 'L', itemps)
     call jevech('PFLUXPG', 'E', iflupg)
-!
-    nbcou = zi(inbspi)
-    ASSERT(nbcou .eq. 1)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+    thickness = plateCara%thick
+    nbLayer = plateCara%nbLayer
+    ASSERT(nbLayer .eq. 1)
 !
 ! --- RECUPERATION DE LA NATURE DU MATERIAU DANS PHENOM
 !     -------------------------------------------------
@@ -95,7 +106,7 @@ subroutine te0109(option, nomte)
                     ' ', 'THER', 1, 'INST', [zr(itemps)], &
                     1, nomres, valres, icodre, 1)
         conduc = valres(1)
-        h = zr(icacoq)/2.d0
+        h = thickness/2.d0
         ord = 0.d0
         ep = 2.d0*h
     else

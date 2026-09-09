@@ -21,7 +21,6 @@ function callCalcul(optionZ)
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 !
     character(len=*), intent(in) :: optionZ
     aster_logical :: callCalcul

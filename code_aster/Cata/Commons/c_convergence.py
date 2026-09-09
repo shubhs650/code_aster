@@ -19,10 +19,49 @@
 
 from ..Language.DataStructure import *
 from ..Language.Syntax import *
+from ..Language.SyntaxUtils import deprecate
+
+
+def compat_syntax(keywords):
+    """Adapt keywords before syntax checking
+
+    Arguments:
+        keywords (dict): Keywords arguments of user's keywords, changed in place.
+    """
+
+    modif = dict(
+        SIGM_REFE="SIGM",
+        EPSI_REFE="EPSI",
+        FLUX_THER_REFE="FLUXTHER",
+        FLUX_HYD1_REFE="FLUXHYD1",
+        FLUX_HYD2_REFE="FLUXHYD2",
+        EFFORT_REFE="EFFORT",
+        MOMENT_REFE="MOMENT",
+        VARI_REFE="VARI",
+        DEPL_REFE="DEPL",
+        LAGR_REFE="LAGR",
+        PI_REFE="PI",
+    )
+
+    if "CONVERGENCE" in keywords and "CONVERGENCE_REFE" not in keywords:
+        old = keywords["CONVERGENCE"][0]
+        if "RESI_REFE_RELA" in old:
+            new = dict(TOUT="OUI")
+            for mc in modif.keys():
+                if mc in old:
+                    new[modif[mc]] = old[mc]
+                    del old[mc]
+            keywords["CONVERGENCE_REFE"] = [new]
+
+            deprecate(
+                "STAT_NON_LINE/RESI_REFE_RELA",
+                case=3,
+                help="Use CONVERGENCE_REFE to define reference values",
+            )
 
 
 def C_CONVERGENCE(command):
-    assert command in ("MECA_NON_LINE", "SIMU_POINT_MAT", "THER_NON_LINE")
+    assert command in ("MECA_NON_LINE", "STAT_NON_LINE", "SIMU_POINT_MAT", "THER_NON_LINE")
     if command in ("SIMU_POINT_MAT", "THER_NON_LINE"):
         mcfact = FACT(
             statut="d",
@@ -30,6 +69,26 @@ def C_CONVERGENCE(command):
             RESI_GLOB_MAXI=SIMP(statut="f", typ="R"),
             RESI_GLOB_RELA=SIMP(statut="f", typ="R"),
             ITER_GLOB_MAXI=SIMP(statut="f", typ="I", defaut=10),
+        )
+    elif command == "STAT_NON_LINE":
+        mcfact = FACT(
+            statut="d",
+            regles=(
+                PRESENT_ABSENT(
+                    "RESI_REFE_RELA", "RESI_GLOB_MAXI", "RESI_GLOB_RELA", "RESI_COMP_RELA"
+                ),
+                AU_MOINS_UN(
+                    "RESI_REFE_RELA", "RESI_GLOB_MAXI", "RESI_GLOB_RELA", RESI_GLOB_RELA=1.0e-6
+                ),
+            ),
+            RESI_REFE_RELA=SIMP(statut="f", typ="R"),
+            RESI_GLOB_MAXI=SIMP(statut="f", typ="R"),
+            RESI_GLOB_RELA=SIMP(statut="f", typ="R"),
+            RESI_COMP_RELA=SIMP(statut="f", typ="R"),
+            ITER_GLOB_MAXI=SIMP(statut="f", typ="I", defaut=10),
+            ITER_GLOB_ELAS=SIMP(statut="f", typ="I", defaut=25),
+            ARRET=SIMP(statut="f", typ="TXM", defaut="OUI", into=("OUI", "NON")),
+            VERIF=SIMP(statut="f", typ="TXM", defaut="TOUT", into=("TOUT", "AU_MOINS_UN")),
         )
     else:
         mcfact = FACT(
@@ -86,4 +145,5 @@ def C_CONVERGENCE(command):
             ARRET=SIMP(statut="f", typ="TXM", defaut="OUI", into=("OUI", "NON")),
             VERIF=SIMP(statut="f", typ="TXM", defaut="TOUT", into=("TOUT", "AU_MOINS_UN")),
         )
+
     return mcfact

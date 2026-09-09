@@ -16,18 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
-                          post_iter, regu_visc, post_incr, &
-                          comp_code_py)
+subroutine comp_meca_code(relaComp, defoComp, typeCpla, kitComp, &
+                          postIter, reguVisc, postIncr, &
+                          compCodePY)
 !
+    use MetallurgyMeca_module
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/lccree.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
 !
-    character(len=16), intent(in) :: rela_comp, defo_comp, type_cpla, kit_comp(4)
-    character(len=16), intent(in) :: post_iter, regu_visc, post_incr
-    character(len=16), intent(out) :: comp_code_py
+    character(len=16), intent(in) :: relaComp, defoComp, typeCpla, kitComp(4)
+    character(len=16), intent(in) :: postIter, reguVisc, postIncr
+    character(len=16), intent(out) :: compCodePY
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -37,57 +39,70 @@ subroutine comp_meca_code(rela_comp, defo_comp, type_cpla, kit_comp, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  rela_comp        : RELATION comportment
-! In  defo_comp        : DEFORMATION comportment
-! In  type_cpla        : plane stress method
-! In  kit_comp         : KIT comportment
-! In  post_iter        : type of post_treatment at each Newton iteration
-! In  regu_visc        : keyword for viscuous regularization
-! In  post_incr        : type of post-treatment at end of time step
-! Out comp_code_py     : composite coded comportment (coding in Python)
+! In  relaComp         : behaviour (RELATION keyword)
+! In  defoComp         : model of strain (DEFORMATION keyword)
+! In  typeCpla         : plane stress method (analytical or De Borst algorithm)
+! In  kitComp          : KIT behaviour
+! In  postIter         : type of post_treatment at each Newton iteration (POST_ITER keyword)
+! In  reguVisc         : keyword for viscuous regularization (REGU_VISC keyword)
+! In  postIncr         : type of post-treatment at end of time step (POST_INCR keyword)
+! Out compCodePY       : composite coded comportment (coding in Python)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! - Empty kit_comp for KIT_META
     character(len=16), parameter :: NoKitComp(4) = (/'VIDE', 'VIDE', 'VIDE', 'VIDE'/)
-    integer(kind=8) :: nb_comp_elem, ikit
-    character(len=16) :: comp_elem(20)
+    integer(kind=8) :: nbCompElem, iKit
+    character(len=16) :: compElem(20), postIncrCode
+    aster_logical :: lHardIsot, lHardKine, lHardMixed
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    nb_comp_elem = 0
-    comp_elem(1:20) = 'VIDE'
+    nbCompElem = 0
+    compElem = 'VIDE'
 
 ! - Create composite behaviour
-    nb_comp_elem = nb_comp_elem+1
-    comp_elem(nb_comp_elem) = rela_comp
-    if (rela_comp .eq. 'KIT_META') then
-        do ikit = 1, 4
-            nb_comp_elem = nb_comp_elem+1
-            comp_elem(nb_comp_elem) = NoKitComp(ikit)
+    nbCompElem = nbCompElem+1
+    compElem(nbCompElem) = relaComp
+    if (relaComp .eq. 'KIT_META') then
+        do iKit = 1, 4
+            nbCompElem = nbCompElem+1
+            compElem(nbCompElem) = NoKitComp(iKit)
         end do
     else
-        do ikit = 1, 4
-            nb_comp_elem = nb_comp_elem+1
-            comp_elem(nb_comp_elem) = kit_comp(ikit)
+        do iKit = 1, 4
+            nbCompElem = nbCompElem+1
+            compElem(nbCompElem) = kitComp(iKit)
         end do
     end if
-    nb_comp_elem = nb_comp_elem+1
-    comp_elem(nb_comp_elem) = regu_visc
-    nb_comp_elem = nb_comp_elem+1
-    comp_elem(nb_comp_elem) = defo_comp
-    nb_comp_elem = nb_comp_elem+1
-    comp_elem(nb_comp_elem) = type_cpla
-    if (post_iter .ne. ' ') then
-        nb_comp_elem = nb_comp_elem+1
-        comp_elem(nb_comp_elem) = post_iter
+    nbCompElem = nbCompElem+1
+    compElem(nbCompElem) = reguVisc
+    if (postIter .ne. ' ') then
+        nbCompElem = nbCompElem+1
+        compElem(nbCompElem) = postIter
     end if
-    if (post_incr .ne. ' ') then
-        nb_comp_elem = nb_comp_elem+1
-        comp_elem(nb_comp_elem) = post_incr
+    if (postIncr .ne. ' ') then
+        postIncrCode = postIncr
+        if (postIncrCode .eq. "REST_ECRO") then
+            call metaAnnealGetType(relaComp, lHardIsot, lHardKine, lHardMixed)
+            if (lHardIsot) then
+                postIncrCode = "REST_ECRO_ISOT"
+            elseif (lHardKine) then
+                postIncrCode = "REST_ECRO_CINE"
+            elseif (lHardMixed) then
+                postIncrCode = "REST_ECRO_ECMI"
+            else
+                ASSERT(ASTER_FALSE)
+            end if
+        end if
+        nbCompElem = nbCompElem+1
+        compElem(nbCompElem) = postIncrCode
     end if
+    nbCompElem = nbCompElem+1
+    compElem(nbCompElem) = defoComp
+    nbCompElem = nbCompElem+1
+    compElem(nbCompElem) = typeCpla
 
 ! - Coding composite comportment (Python)
-    call lccree(nb_comp_elem, comp_elem, comp_code_py)
+    call lccree(nbCompElem, compElem, compCodePY)
 !
 end subroutine

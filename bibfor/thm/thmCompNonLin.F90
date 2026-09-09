@@ -21,15 +21,14 @@ subroutine thmCompNonLin(option, ds_thm)
     use THM_type
     use Behaviour_module
     use Behaviour_type
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/ismaem.h"
 #include "asterf_types.h"
 #include "asterfort/assthm.h"
 #include "asterfort/Behaviour_type.h"
-#include "asterfort/Behaviour_type.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/thmGetElemPara.h"
 #include "jeveux.h"
@@ -51,10 +50,9 @@ subroutine thmCompNonLin(option, ds_thm)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: codret
-    real(kind=8) :: angl_naut(3)
-    integer(kind=8) :: jv_geom, jv_matr, jv_vect, jv_sigmm, jv_varim, jv_cret
-    integer(kind=8) :: jv_mater, jv_instm, jv_instp, jv_dispm
-    integer(kind=8) :: jv_dispp, jv_carcri, jv_varip, jv_sigmp
+    integer(kind=8) :: jvGeom, jv_matr, jv_vect, jv_sigmm, jv_varim, jv_cret
+    integer(kind=8) :: jvMaterc, jv_instm, jv_instp, jv_dispm
+    integer(kind=8) :: jv_dispp, jvCarcri, jv_varip, jv_sigmp
     aster_logical :: l_axi
     character(len=3) :: inte_type
     integer(kind=8) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
@@ -67,10 +65,10 @@ subroutine thmCompNonLin(option, ds_thm)
     integer(kind=8):: lg_vi, lg_sig
     real(kind=8), allocatable:: varip(:), sigp(:), deplp(:)
     aster_logical :: lVect, lMatr, lVari, lSigm, lMatrPred
-    character(len=16) :: compor_copy(COMPOR_SIZE), rela_meca
-    integer(kind=8) :: iCompor
-    type(Behaviour_Integ) :: BEHinteg
-    character(len=4), parameter :: fami = 'FPG1'
+    character(len=16) :: comporCopy(COMPOR_SIZE), relaMeca
+    type(Behaviour_Integ) :: BEHInteg
+    type(Material_Para) :: materPara
+    character(len=8), parameter :: fami = 'RIGI'
     character(len=16), pointer :: compor(:) => null()
 !
 ! --------------------------------------------------------------------------------------------------
@@ -91,35 +89,59 @@ subroutine thmCompNonLin(option, ds_thm)
                         jv_gano)
 
 ! - Input fields
-    call jevech('PGEOMER', 'L', jv_geom)
-    call jevech('PMATERC', 'L', jv_mater)
+    call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PINSTMR', 'L', jv_instm)
     call jevech('PINSTPR', 'L', jv_instp)
     call jevech('PDEPLMR', 'L', jv_dispm)
     call jevech('PDEPLPR', 'L', jv_dispp)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PCARCRI', 'L', jv_carcri)
     call jevech('PVARIMR', 'L', jv_varim)
     call jevech('PCONTMR', 'L', jv_sigmm)
 
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Transfer type of elasticity
+    ds_thm%ds_material%elas%id = materPara%elasID
+    ds_thm%ds_material%elas%keyword = materPara%elasKeyword
+
+! - Initialisation of behaviour datastructure
+    call behaviourInit(BEHInteg)
+
+! - Properties of behaviour
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
+
 ! - Make copy of COMPOR map
-    do iCompor = 1, COMPOR_SIZE
-        compor_copy(iCompor) = compor(iCompor)
-    end do
+    comporCopy = compor
 
 ! - Force DEFO_LDC="MECANIQUE" for THM
-    rela_meca = compor_copy(MECA_NAME)
+    relaMeca = comporCopy(MECA_NAME)
 
 ! - Something (very) strange with Hujeux => glute
-    if (rela_meca .ne. "HUJEUX") then
-        compor_copy(DEFO_LDC) = "MECANIQUE"
+    if (relaMeca .ne. "HUJEUX") then
+        comporCopy(DEFO_LDC) = "MECANIQUE"
     end if
 
+! - Number of (total) internal variables
+    read (comporCopy(NVAR), '(I16)') nbvari
+
 ! - Select objects to construct from option name
-    call behaviourOption(option, compor_copy, &
+    call behaviourOption(option, comporCopy, &
                          lMatr, lVect, &
                          lVari, lSigm, &
                          codret)
+
+! - Set main parameters for behaviour (on cell)
+    call behaviourSetParaCell(typmod, option, &
+                              comporCopy, zr(jvCarcri), &
+                              zr(jv_instm), zr(jv_instp), &
+                              materPara, BEHInteg)
 
 ! - Output fields
     if (lMatr) then
@@ -133,12 +155,6 @@ subroutine thmCompNonLin(option, ds_thm)
     else
         jv_vect = ismaem()
     end if
-
-! - Get frame orientation for anisotropy
-    call getElemOrientation(ndim, nno, jv_geom, angl_naut)
-
-! - Number of (total) internal variables
-    read (compor_copy(NVAR), '(I16)') nbvari
 
 ! - Intermediate arrays to be safe when the addresses do not exist
     lg_sig = dimcon*npi
@@ -161,35 +177,25 @@ subroutine thmCompNonLin(option, ds_thm)
     allocate (deplp(dimuel))
     deplp(1:dimuel) = zr(jv_dispm:jv_dispm+dimuel-1)+zr(jv_dispp:jv_dispp+dimuel-1)
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, zr(jv_carcri), &
-                              zr(jv_instm), zr(jv_instp), &
-                              fami, zi(jv_mater), &
-                              BEHinteg)
-
 ! - Save
-    ds_thm%ds_behaviour%BEHinteg = BEHinteg
+    ds_thm%ds_behaviour%BEHInteg = BEHInteg
 
 ! - Compute
-    call assthm(ds_thm, option, zi(jv_mater), &
+    call assthm(ds_thm, &
                 lMatr, lSigm, lVect, &
                 lVari, lMatrPred, l_axi, &
-                typmod, inte_type, angl_naut, &
+                option, typmod, inte_type, &
                 ndim, nbvari, nno, nnos, &
                 npg, npi, &
                 nddls, nddlm, nddl_meca, &
                 nddl_p1, nddl_p2, nddl_2nd, &
                 dimdef, dimcon, dimuel, &
                 mecani, press1, press2, tempe, second, &
-                compor_copy, zr(jv_carcri), &
+                comporCopy, zr(jvCarcri), &
                 jv_poids, jv_poids2, &
                 jv_func, jv_func2, &
                 jv_dfunc, jv_dfunc2, &
-                zr(jv_geom), zr(jv_dispm), deplp, &
+                zr(jvGeom), zr(jv_dispm), deplp, &
                 zr(jv_sigmm), sigp, &
                 zr(jv_varim), varip, &
                 zr(jv_instm), zr(jv_instp), &

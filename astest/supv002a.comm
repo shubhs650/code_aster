@@ -96,6 +96,7 @@ previous_errors = [
     "PATH",
     # librairie externe
     "HDF",
+    "MEDCoupling",
 ]
 
 # TEST_TABLE are included in the "macro-command"

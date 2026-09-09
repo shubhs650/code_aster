@@ -25,6 +25,8 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
 !
     use BehaviourStrain_module
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -35,7 +37,6 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
 #include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/epstmc.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/reeref.h"
@@ -45,6 +46,7 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
 #include "asterfort/xkamat.h"
 #include "asterfort/xnbddl.h"
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: ndim, igeom, jvMaterCode, nnop, npg
     integer(kind=8) :: nfh, ddlc, nfe, idecpg
@@ -83,7 +85,7 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = 'XFEM'
+    character(len=8), parameter :: fami = 'XFEM'
     real(kind=8), parameter :: rac2 = sqrt(2.d0)
     aster_logical, parameter :: axi = ASTER_FALSE
     integer(kind=8) :: iNode, iSigm, iEpsi, iDim
@@ -93,32 +95,34 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
     integer(kind=8) :: nno, npgbis, nbsig, nnops, ndimb
     integer(kind=8) :: singu
     real(kind=8) :: f(3, 3), epsi(6), epsiTher(6)
-    real(kind=8) :: time
+    real(kind=8) :: notime
     real(kind=8) :: xg(ndim), xe(ndim), ff(nnop)
-    real(kind=8) :: anglNaut(3), dfdi(nnop, ndim)
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3)
+    real(kind=8) :: dfdi(nnop, ndim)
+    real(kind=8) :: fk(MT_NNOMAX, 3, 3), dkdgl(MT_NNOMAX, 3, 3, 3)
     real(kind=8) :: grad(3, 3)
     real(kind=8) :: s, sigmTher, d(6, 6)
     real(kind=8) :: ka, mu
-    integer(kind=8) :: elasID
-    character(len=16) :: elasKeyword
     type(All_Varc_Strain) :: allVarcStrain
+    type(Material_Para) :: materPara
 !
-!     ATTENTION, DEPL ET VECTU SONT ICI DIMENSIONNES DE TELLE SORTE
-!     QU'ILS NE PRENNENT PAS EN COMPTE LES DDL SUR LES NOEUDS MILIEU
 ! --------------------------------------------------------------------------------------------------
 !
-    call get_elas_id(jvMaterCode, elasID, elasKeyword)
-    ASSERT(elasID .eq. ELAS_ISOT)
-    anglNaut = 0.d0
     nbsig = nbsigm()
     ASSERT(ndim .eq. 3)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, jvMaterCode, materPara)
+    ASSERT(materPara%elasID .eq. ELAS_ISOT)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
 
 ! - RECUPERATION DU CHAMP DE DEPLACEMENT SUR L'ELEMENT
     call jevech('PDEPLAR', 'L', idepl)
 
-! - Get time
-    time = r8vide()
+! - No time dependency !
+    notime = r8vide()
+    notime = r8vide()
     allVarcStrain%hasTime = ASTER_FALSE
 
 !   NOMBRE DE DDL DE DEPLACEMENT À CHAQUE NOEUD
@@ -130,7 +134,7 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
                      jvf=ivf)
     ASSERT(npg .eq. npgbis .and. ndim .eq. ndimb)
 
-! CALCUL DE L IDENTIFIANT DU SS ELEMENT
+! - CALCUL DE L IDENTIFIANT DU SS ELEMENT
     hea_se = xcalc_code(nfiss, he_real=[he])
 
 ! - Loop on XFEM Gauss points
@@ -163,16 +167,18 @@ subroutine xside3(elrefp, ndim, coorse, elrese, igeom, &
                     fk, dkdgl, ff, dfdi, f, &
                     epsi, grad, heavn)
 
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! ----- Compute thermal strains
         epsiTher = 0.d0
-        call epstmc(fami, '+', kpg, ksp, ndim, &
-                    time, anglNaut, jvMaterCode, &
+        call epstmc(materPara, '+', notime, ndim, &
                     VARC_STRAIN_TEMP, allVarcStrain, &
                     epsiTher)
 
 ! ----- Hooke matrix
-        call dmatmc(fami, jvMaterCode, time, '+', kpg, &
-                    ksp, anglNaut, nbsig, d)
+        call dmatmc(materPara, "+", notime, &
+                    nbsig, d)
 
 ! ----- Compute stress
         do iSigm = 1, nbsig

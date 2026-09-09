@@ -15,24 +15,27 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine nmcine(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
+                  carcri, &
                   deps, sigm, vim, option, sigp, &
                   vip, dsidep, iret)
+!
     implicit none
-! aslint: disable=W0104
+!
 #include "asterc/r8miem.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/radial.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
+!
     integer(kind=8) :: kpg, ksp, ndim, imate
     character(len=*) :: fami
-    character(len=16) :: compor(*), option
-    real(kind=8) :: crit(10), instam, instap, radi
-    real(kind=8) :: epsm(6), deps(6)
+    character(len=16) ::  option
+    real(kind=8) :: carcri(CARCRI_SIZE), radi
+    real(kind=8) ::  deps(6)
     real(kind=8) :: sigm(6), vim(7), sigp(6), vip(7), dsidep(6, 6)
 ! ----------------------------------------------------------------------
 !     REALISE LA LOI DE VON MISES CINEMATIQUE POUR LES
@@ -228,9 +231,9 @@ subroutine nmcine(fami, kpg, ksp, ndim, imate, &
 !
     iret = 0
     if (option(1:9) .ne. 'RIGI_MECA') then
-        if (crit(10) .gt. 0.d0) then
+        if (carcri(10) .gt. 0.d0) then
             call radial(ndimsi, sigm, sigp, vim(7), vip(7), 1, vim(1), vip(1), radi)
-            if (radi .gt. crit(10)) then
+            if (radi .gt. carcri(10)) then
                 iret = 2
             end if
         end if

@@ -17,35 +17,32 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W0413
 !
-subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
+subroutine enelpg(materPara, time, &
                   relaName, defoComp, &
                   f, sigmEner, &
                   nbVari, vari, &
                   enerElas)
 !
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
 #include "asterfort/d1mamc.h"
 #include "asterfort/ElasticityMaterial_type.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/get_elas_para.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/nrsmt1.h"
 #include "asterfort/nrsmtb.h"
 #include "asterfort/nrsmtt.h"
-#include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
 #include "asterfort/zerop3.h"
 #include "blas/dcopy.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: jvMaterCode
-    real(kind=8), intent(in) :: time, anglNaut(3)
+    type(Material_Para), intent(inout) :: materPara
+    real(kind=8), intent(in) :: time
     character(len=16), intent(in) :: relaName, defoComp
-    integer(kind=8), intent(in) :: kpg
     real(kind=8), intent(in) :: f(3, 3), sigmEner(6)
     integer(kind=8), intent(in) :: nbVari
     real(kind=8), intent(in) :: vari(nbVari)
@@ -75,15 +72,12 @@ subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: ksp = 1
     integer(kind=8) :: nbsig, nsol, i, isig, jsig
     real(kind=8) :: c1, c2, trt
     real(kind=8) :: sol(3), jzero, uzero, mzero, epsi(6)
     real(kind=8) :: mjac, ujac, wbe, be(6), e, nu
     real(kind=8) :: mu, troisk, jac, tau(6), trtau, eqtau, dvtau(6), tlog(6)
     real(kind=8) :: trbe, epsthe, d1(36)
-    integer(kind=8) :: elasID
-    character(len=16) :: elasKeyword
     blas_int :: b_incx, b_incy, b_n
     real(kind=8), parameter :: pdtsca(6) = (/1.d0, 1.d0, 1.d0, 2.d0, 2.d0, 2.d0/)
     real(kind=8), parameter :: kr(6) = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
@@ -99,12 +93,14 @@ subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
         ((relaName(1:9) .eq. 'VMIS_ISOT') .or. (relaName .eq. 'ELAS'))) then
 
 ! ----- Get elastic parameters
-        call get_elas_id(jvMaterCode, elasID, elasKeyword)
-        if (elasID .ne. ELAS_ISOT) then
-            call utmess("F", "ENERGY1_2", sk=elasKeyword)
+        if (materPara%elasID .ne. ELAS_ISOT) then
+            call utmess("F", "ENERGY1_2", sk=materPara%elasKeyword)
         end if
-        call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, &
-                           elasID, elasKeyword, &
+        call get_elas_para(materPara%schemePara%fami, &
+                           materPara%jvMaterCode, '+', &
+                           materPara%schemePara%kpg, &
+                           materPara%schemePara%ksp, &
+                           materPara%elasID, materPara%elasKeyword, &
                            e_=e, nu_=nu)
         mu = e/(2.d0*(1.d0+nu))
         troisk = e/(1.d0-2.d0*nu)
@@ -138,7 +134,10 @@ subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
         trbe = jac**(-2.d0/3.d0)*(3.d0-2.d0*trbe)
 
 ! ----- DEFORMATION THERMIQUE AU POINT D'INTEGRATION COURANT :
-        call verift(fami, kpg, ksp, '+', jvMaterCode, &
+        call verift(materPara%schemePara%fami, &
+                    materPara%schemePara%kpg, &
+                    materPara%schemePara%ksp, &
+                    '+', materPara%jvMaterCode, &
                     epsth_=epsthe)
 
 ! ----- ATTENTION, EN PRESENCE DE THERMIQUE, CA MET LE BAZAR...
@@ -165,12 +164,14 @@ subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
 
     else if ((defoComp(1:8) .eq. 'GDEF_LOG')) then
 ! ----- Get elastic parameters
-        call get_elas_id(jvMaterCode, elasID, elasKeyword)
-        if (elasID .ne. ELAS_ISOT) then
-            call utmess("F", "ENERGY1_2", sk=elasKeyword)
+        if (materPara%elasID .ne. ELAS_ISOT) then
+            call utmess("F", "ENERGY1_2", sk=materPara%elasKeyword)
         end if
-        call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, &
-                           elasID, elasKeyword, &
+        call get_elas_para(materPara%schemePara%fami, &
+                           materPara%jvMaterCode, '+', &
+                           materPara%schemePara%kpg, &
+                           materPara%schemePara%ksp, &
+                           materPara%elasID, materPara%elasKeyword, &
                            e_=e, nu_=nu)
         mu = e/(2.d0*(1.d0+nu))
         troisk = e/(1.d0-2.d0*nu)
@@ -207,8 +208,7 @@ subroutine enelpg(fami, jvMaterCode, time, kpg, anglNaut, &
     else if (defoComp(1:5) .eq. 'PETIT') then
 
 ! ----- CALCUL DE L'INVERSE DE LA MATRICE DE HOOKE
-        call d1mamc(fami, jvMaterCode, time, '+', kpg, &
-                    1, anglNaut, nbsig, d1)
+        call d1mamc(materPara, '+', time, nbSig, d1)
 
 ! ----- DENSITE D'ENERGIE POTENTIELLE ELASTIQUE AU POINT D'INTEGRATION COURANT
         epsi = 0.d0

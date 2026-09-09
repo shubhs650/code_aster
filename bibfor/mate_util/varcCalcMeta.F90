@@ -16,11 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine varcCalcMeta(modelz, &
-                        nbin, nbout, &
+subroutine varcCalcMeta(modelZ, &
+                        nbFieldIn, nbFieldOut, &
                         lpain, lchin, &
                         lpaout, lchout, &
-                        base, vect_elemz)
+                        vectElemZ)
 !
     implicit none
 !
@@ -33,13 +33,12 @@ subroutine varcCalcMeta(modelz, &
 #include "asterfort/jeveuo.h"
 #include "asterfort/reajre.h"
 !
-    character(len=*), intent(in) :: modelz
-    integer(kind=8), intent(in) :: nbin, nbout
+    character(len=*), intent(in) :: modelZ
+    integer(kind=8), intent(in) :: nbFieldIn, nbFieldOut
     character(len=8), intent(in) :: lpain(*), lpaout(*)
     character(len=19), intent(in) :: lchin(*)
     character(len=19), intent(inout) :: lchout(*)
-    character(len=1), intent(in) :: base
-    character(len=*), intent(in) :: vect_elemz
+    character(len=*), intent(in) :: vectElemZ
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -50,48 +49,44 @@ subroutine varcCalcMeta(modelz, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  model            : name of model
-! In  nbin             : effective number of input fields
-! In  nbout            : effective number of output fields
+! In  nbFieldIn        : effective number of input fields
+! In  nbFieldOut       : effective number of output fields
 ! In  lpain            : list of input parameters
 ! In  lchin            : list of input fields
 ! In  lpaout           : list of output parameters
 ! IO  lchout           : list of output fields
-! In  base             : JEVEUX base to create objects
-! In  vect_elem        : name of elementary vectors
+! In  vectElem         : name of elementary vectors
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: option = 'CHAR_MECA_META_Z'
+    character(len=1), parameter :: jvBase = "V"
     character(len=8) :: newnom
-    character(len=16) :: option
-    character(len=19) :: resu_elem, ligrmo
-    integer(kind=8) :: nb_resu
-    character(len=24), pointer :: p_relr(:) => null()
+    character(len=19) :: resuElem, modelLigrel
+    integer(kind=8) :: nbResuElem
+    character(len=24), pointer :: relr(:) => null()
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call dismoi('NOM_LIGREL', modelz, 'MODELE', repk=ligrmo)
-    option = 'CHAR_MECA_META_Z'
-!
-! - Get last resu_elem
-!
-    call jelira(vect_elemz(1:8)//'           .RELR', 'LONUTI', nb_resu)
-    call jeveuo(vect_elemz(1:8)//'           .RELR', 'L', vk24=p_relr)
-    resu_elem = p_relr(nb_resu) (1:19)
-    newnom = resu_elem(10:16)
-!
-! - Generate new resu_elem
-!
-    call gcnco2(newnom)
-    resu_elem(10:16) = newnom(2:8)
-    call corich('E', resu_elem, ichin_=-1)
-    lchout(1) = resu_elem
+    call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=modelLigrel)
 
-!
+! - Get last resuElem
+    call jelira(vectElemZ(1:8)//'           .RELR', 'LONUTI', nbResuElem)
+    call jeveuo(vectElemZ(1:8)//'           .RELR', 'L', vk24=relr)
+    resuElem = relr(nbResuElem) (1:19)
+    newnom = resuElem(10:16)
+
+! - Generate new resuElem
+    call gcnco2(newnom)
+    resuElem(10:16) = newnom(2:8)
+    call corich('E', resuElem, ichin_=-1)
+    lchout(1) = resuElem
+
 ! - Compute
-!
-    call calcul('C', option, ligrmo, nbin, lchin, &
-                lpain, nbout, lchout, lpaout, base, &
-                'OUI')
-    call reajre(vect_elemz, resu_elem, base)
+    call calcul('C', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
+    call reajre(vectElemZ, resuElem, jvBase)
 !
 end subroutine

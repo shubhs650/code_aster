@@ -15,10 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine merige(model_, cara_elem_, sigg, strx, matel, &
-                  base, nh, deplr, mateco)
+!
+subroutine merige(modelZ, caraElemZ, sigm, strx, materElem, &
+                  jvBase, numeHarm, disp_, materCode_)
+!
+    use HHO_precalc_module, only: hhoAddInputField
+    use coorSyst_module, only: setOrieFields
     implicit none
+!
 #include "jeveux.h"
 #include "asterf_types.h"
 #include "asterfort/calcul.h"
@@ -31,162 +35,108 @@ subroutine merige(model_, cara_elem_, sigg, strx, matel, &
 #include "asterfort/memare.h"
 #include "asterfort/reajre.h"
 #include "asterfort/utmess.h"
-    integer(kind=8) :: nh
-    character(len=1) :: base
-    character(len=*) :: sigg, strx
-    character(len=19) :: matel
-    character(len=*), intent(in) :: model_
-    character(len=*), intent(in) :: cara_elem_
-    character(len=*), optional, intent(in) :: deplr
-    character(len=*), optional, intent(in) :: mateco
+#include "asterfort/setStructFields.h"
+#include "asterfort/xajcin.h"
 !
-!     CALCUL DES MATRICES ELEMENTAIRES DE RIGIDITE GEOMETRIQUE
+    integer(kind=8) :: numeHarm
+    character(len=1) :: jvBase
+    character(len=*) :: sigm, strx
+    character(len=19) :: materElem
+    character(len=*), intent(in) :: modelZ
+    character(len=*), intent(in) :: caraElemZ
+    character(len=*), optional, intent(in) :: disp_
+    character(len=*), optional, intent(in) :: materCode_
 !
-!     ------------------------------------------------------------------
-! IN  : MODELE : NOM DU MODELE
-! IN  : CARA   : CHAMP DE CARAC_ELEM
-! IN  : SIGG   : CHAMP DE CONTRAINTES AUX POINTS DE GAUSS
-! IN  : NH     : NUMERO DE L'HARMONIQUE DE FOURIER
-! VAR : MATEL  : NOM DU MATEL (N RESUELEM) PRODUIT
-! IN  : BASE   : BASE POUR LA CREATION DE MATEL ('G'/'V')
-! ----------------------------------------------------------------------
-    character(len=8) ::  lpain(14), lpaout(1)
-    character(len=24) :: lchin(14), lchout(1)
+! --------------------------------------------------------------------------------------------------
 !
-    character(len=16) :: option
-    character(len=24) :: ligrmo, chgeom, chcara(18), chharm
-    character(len=19) :: pintto, cnseto, heavto, loncha, basloc, lsn, lst, stano, pmilto, hea_no
-    character(len=8) :: modele, cara
+! Elementary matrix for RIGI_GEOM
 !
-!-----------------------------------------------------------------------
-    integer(kind=8) :: icode, ier, nbpara
-!-----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
+    character(len=16), parameter :: option = 'RIGI_GEOM'
+    character(len=24) :: modelLigrel, chgeom, chharm
+    character(len=8) :: model, caraElem
+    integer(kind=8) :: icode, ier
+    aster_logical :: lXFEM
+
+! --------------------------------------------------------------------------------------------------
+!
     call jemarq()
-!
-    modele = model_
-    cara = cara_elem_
-    option = 'RIGI_GEOM'
-    if (modele(1:1) .eq. ' ') then
+
+! - Initializations
+    model = modelZ
+    caraElem = caraElemZ
+    if (model(1:1) .eq. ' ') then
         call utmess('F', 'CALCULEL2_82')
     end if
-    call detrsd('MATR_ELEM', matel)
-    call mecham(option, modele, cara, nh, chgeom, &
-                chcara, chharm, icode)
-!
-    call memare(base, matel, modele, option)
-!
-!  -----CAS DU MODELE X-FEM-----------------------
-    call exixfe(modele, ier)
-    if (ier .ne. 0) then
-!
-        pintto = modele(1:8)//'.TOPOSE.PIN'
-        cnseto = modele(1:8)//'.TOPOSE.CNS'
-        heavto = modele(1:8)//'.TOPOSE.HEA'
-        loncha = modele(1:8)//'.TOPOSE.LON'
-        pmilto = modele(1:8)//'.TOPOSE.PMI'
-        hea_no = modele(1:8)//'.TOPONO.HNO'
-        basloc = modele(1:8)//'.BASLOC'
-        lsn = modele(1:8)//'.LNNO'
-        lst = modele(1:8)//'.LTNO'
-        stano = modele(1:8)//'.STNO'
-!
-        call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-!
-! ----- REMPLISSAGE DES CHAMPS D'ENTREE
-!
-        lpain(1) = 'PGEOMER'
-        lchin(1) = chgeom
-        lpain(2) = 'PCONTRR'
-        lchin(2) = sigg
-        lpain(3) = 'PPINTTO'
-        lchin(3) = pintto
-        lpain(4) = 'PHEAVTO'
-        lchin(4) = heavto
-        lpain(5) = 'PLONCHA'
-        lchin(5) = loncha
-        lpain(6) = 'PCNSETO'
-        lchin(6) = cnseto
-        lpain(7) = 'PBASLOR'
-        lchin(7) = basloc
-        lpain(8) = 'PLSN'
-        lchin(8) = lsn
-        lpain(9) = 'PLST'
-        lchin(9) = lst
-        lpain(10) = 'PSTANO'
-        lchin(10) = stano
-        lpain(11) = 'PPMILTO'
-        lchin(11) = pmilto
-        lpain(12) = 'PSTRXRR'
-        lchin(12) = strx
-        lpain(13) = 'PHEA_NO'
-        lchin(13) = hea_no
-        nbpara = 13
-!
-! --- CHAMPS DE SORTIE
-!
-        lpaout(1) = 'PMATUUR'
-        lchout(1) = matel(1:15)//'.ME001'
-!
-        option = 'RIGI_GEOM'
-!
-        call calcul('S', option, ligrmo, nbpara, lchin, &
-                    lpain, 1, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(matel, lchout(1), base)
-!
-    else if (ier .eq. 0) then
-!
-        lpaout(1) = 'PMATUUR'
-        lchout(1) = matel(1:8)//'.ME001'
-!
-        call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-        lpain(1) = 'PGEOMER'
-        lchin(1) = chgeom
-        lpain(2) = 'PCONTRR'
-        lchin(2) = sigg
-        lpain(3) = 'PCAORIE'
-        lchin(3) = chcara(1)
-        lpain(4) = 'PCADISK'
-        lchin(4) = chcara(2)
-        lpain(5) = 'PCAGNPO'
-        lchin(5) = chcara(6)
-        lpain(6) = 'PCACOQU'
-        lchin(6) = chcara(7)
-        lpain(7) = 'PEFFORR'
-        lchin(7) = sigg
-        lpain(8) = 'PHARMON'
-        lchin(8) = chharm
-        lpain(9) = 'PNBSP_I'
-        lchin(9) = chcara(16)
-        lpain(10) = 'PSTRXRR'
-        lchin(10) = strx
-        lpain(11) = 'PFIBRES'
-        lchin(11) = chcara(17)
-        lpain(12) = 'PCACABL'
-        lchin(12) = chcara(10)
-        nbpara = 12
-        if (present(deplr)) then
-            if (deplr .ne. ' ') then
-                nbpara = nbpara+1
-                lpain(nbpara) = 'PDEPLPR'
-                lchin(nbpara) = deplr
-            end if
-        end if
-        if (present(mateco)) then
-            if (mateco .ne. ' ') then
-                nbpara = nbpara+1
-                lpain(nbpara) = 'PMATERC'
-                lchin(nbpara) = mateco
-            end if
-        end if
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
 
-        option = 'RIGI_GEOM'
-        call calcul('S', option, ligrmo, nbpara, lchin, &
-                    lpain, 1, lchout, lpaout, base, &
-                    'OUI')
-        call reajre(matel, lchout(1), base)
-!
+! - Prepare flags
+    call exixfe(model, ier)
+    lXFEM = ier .ne. 0
+
+! - Preparation of input fields
+    call mecham(option, model, numeHarm, &
+                chgeom, chharm, icode)
+
+! - Prepare MATER_ELEM
+    call detrsd('MATR_ELEM', materElem)
+    call memare(jvBase, materElem, model, option)
+
+! - Add input fields
+    lpain(1) = 'PGEOMER'
+    lchin(1) = chgeom(1:19)
+    lpain(2) = 'PHARMON'
+    lchin(2) = chharm(1:19)
+    lpain(3) = 'PCONTRR'
+    lchin(3) = sigm
+    lpain(4) = 'PSTRXRR'
+    lchin(4) = strx
+    lpain(5) = 'PEFFORR'
+    lchin(5) = sigm
+    nbFieldIn = 5
+    if (present(disp_)) then
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PDEPLPR'
+        lchin(nbFieldIn) = disp_
+
     end if
+    if (present(materCode_)) then
+        nbFieldIn = nbFieldIn+1
+        lpain(nbFieldIn) = 'PMATERC'
+        lchin(nbFieldIn) = materCode_
+    end if
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Add input XFEM fields if required
+    if (lxfem) then
+        call xajcin(model, option, nbFieldInMax, lchin, lpain, nbFieldIn)
+    end if
+
+! - Add output field
+    lpaout(1) = 'PMATUUR'
+    lchout(1) = materElem(1:15)//'.ME001'
+
+    call calcul('S', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
+    call reajre(materElem, lchout(1), jvBase)
 !
     call jedema()
 end subroutine

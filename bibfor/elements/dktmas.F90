@@ -15,12 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dktmas(xyzl, option, pgl, mas, ener)
+!
+subroutine dktmas(plateCara, &
+                  xyzl, option, pgl, &
+                  mas, ener)
+!
+    use plate_type
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8gaem.h"
+#include "asterf_types.h"
 #include "asterfort/diaexp.h"
 #include "asterfort/dialum.h"
 #include "asterfort/dktnib.h"
@@ -37,19 +41,20 @@ subroutine dktmas(xyzl, option, pgl, mas, ener)
 #include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
 !
+    type(plateCara_Para), intent(in) :: plateCara
     real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
     character(len=16) :: option
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     MATRICE MASSE DE L'ELEMENT DE PLAQUE DKT
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT MAS    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_CIN (ECIN_ELEM)
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: i, j, k, i1, i2, i3, jcoqu, jdepg, m1, m2, m3
+    integer(kind=8) :: i, j, k, i1, i2, i3, jdepg, m1, m2, m3
     integer(kind=8) :: jvitg, iret
     real(kind=8) :: detj, wgt, wkt(9), depl(18), nfx(9), nfy(9), nmi(3)
     real(kind=8) :: vite(18)
@@ -59,7 +64,8 @@ subroutine dktmas(xyzl, option, pgl, mas, ener)
     real(kind=8) :: qsi, eta, carat3(21), coef1, coef2
     character(len=3) :: stopz
     aster_logical :: exce, iner
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
@@ -71,20 +77,18 @@ subroutine dktmas(xyzl, option, pgl, mas, ener)
     huit = 8.0d0
     douze = 12.0d0
 !
-    call dxroep(rho, epais)
+    call dxroep(plateCara, rho, epais)
     roe = rho*epais
     rof = rho*epais*epais*epais/douze
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-    xinert = zr(jcoqu+5)
-!
-    exce = .false.
-    iner = .false.
-    if (abs(excent) .gt. un/r8gaem()) exce = .true.
-    if (abs(xinert) .gt. un/r8gaem()) iner = .true.
-    if (.not. iner) rof = zero
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+    xinert = plateCara%inerRota
+
+! - Flags
+    exce = (abs(excent) .gt. un/r8gaem())
+    iner = (abs(xinert) .gt. un/r8gaem())
+    if (.not. iner) rof = 0.0d0
 !
 ! --- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE TRIANGLE :
 !     -------------------------------------------------

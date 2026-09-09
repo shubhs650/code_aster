@@ -93,10 +93,10 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=24) :: modeLoc, idenRela
-    character(len=8) :: gran_name, kbid
+    character(len=8) :: physQuanName
     character(len=3) :: kret
-    integer(kind=8) :: nbnode_tot, igds, nec, nlili
-    character(len=8) :: nomcmp
+    integer(kind=8) :: nbNodeTot, igds, nec, nlili
+    character(len=8) :: cmpName
     character(len=8) :: mesh
     character(len=14) :: numeDof
     character(len=16) :: nomte
@@ -115,7 +115,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
     integer(kind=8) :: inuno1, inuno2, ioldn, iprnm, ipsuiv, ire, iret
     integer(kind=8) :: ivsuiv, j, j1, jnulag, jprno, k, l, l1, l2, long, n0
     integer(kind=8) :: n0re, n1, n1m1re, n1re, n2, n21, n3, nbcmp, nbn, nb_node_subs
-    integer(kind=8) :: nb_node, nbnonu, nbnore, nddl1, nddlb
+    integer(kind=8) :: nbNode, nbnonu, nbnore, nddl1, nddlb
     integer(kind=8) :: nel, niv, nlag, nma, nn, nbnm
     integer(kind=8) :: ns, numa, nunoel, n22, n32, nunoe2
     integer(kind=8) ::  vali(5), cont_lili_ref, ili2
@@ -229,7 +229,6 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-
 !    call jemarq() FORBIDDEN !
     call infniv(ifm, niv)
 !
@@ -278,7 +277,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
     dsclag = numeDof//'.DESCLAG'
 
 ! - Create LILI objects
-    call nulili(nbLigr, listLigr, lili, base(2:2), gran_name, &
+    call nulili(nbLigr, listLigr, lili, base(2:2), physQuanName, &
                 igds, mesh, nec, nlili, modeLocZ_=modeLoc)
     call jeveuo(numeDof//'     .ADLI', 'E', vi=adli)
     call jeveuo(numeDof//'     .ADNE', 'E', vi=adne)
@@ -293,7 +292,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
     lparallel_mesh = (kret .eq. 'OUI')
     call dismoi('NB_NO_MAILLA', mesh, 'MAILLAGE', repi=nb_node_mesh)
     call dismoi('NB_NL_MAILLA', mesh, 'MAILLAGE', repi=nb_node_subs)
-    nb_node = nb_node_mesh+nb_node_subs
+    nbNode = nb_node_mesh+nb_node_subs
 
 ! --- LILI(1)='&MAILLA'
     ilim = 1
@@ -302,7 +301,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 ! --- LE LIGREL ILI DE LILI :
 !     ---------------------
     call wkvect(nnli, 'V V I', nlili, vi=v_nnli)
-    v_nnli(1) = nb_node
+    v_nnli(1) = nbNode
     call jecrec(nuno, 'V V I ', 'NU', 'CONTIG', 'VARIABLE', nlili)
 
 ! --- ALLOCATION DE PRNO :
@@ -317,13 +316,13 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 ! --- NBNOM NOMBRE DE NOEUDS TOTAL DU MAILLAGE :
 !     ------------------------------------------
 
-    call jeecra(jexnum(nuno, 1), 'LONMAX', nb_node)
-    call jeecra(jexnum(prno, 1), 'LONMAX', nb_node*(nec+2))
+    call jeecra(jexnum(nuno, 1), 'LONMAX', nbNode)
+    call jeecra(jexnum(prno, 1), 'LONMAX', nbNode*(nec+2))
 
 ! --- N CONTIENDRA LE NOMBRE TOTAL (MAX) DE NOEUDS DE NUME_DDL
 ! --- TOUS LES NOEUDS DU MAILLAGE + TOUS LES NOEUDS SUPL. DES LIGRELS :
 !     ---------------------------------------------------------------
-    nbnode_tot = nb_node
+    nbNodeTot = nbNode
     cont_lili_ref = 0
     do ili = 2, nlili
         call jenuno(jexnum(lili, ili), nomli)
@@ -376,7 +375,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
         v_nnli(ili) = nbnm
         call jeecra(jexnum(nuno, ili), 'LONMAX', nbnm)
         call jeecra(jexnum(prno, ili), 'LONMAX', nbnm*(nec+2))
-        nbnode_tot = nbnode_tot+nbnm
+        nbNodeTot = nbNodeTot+nbnm
     end do
 
     call jeveuo(prno, 'E', idprn1)
@@ -400,8 +399,8 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 
 ! --- ALLOCATION DE PSUIV LSUIV OBJETS DE LA BASE VOLATILE :
 !     ----------------------------------------------------
-    call wkvect(psuiv, ' V V I', nbnode_tot+2, ipsuiv)
-    call wkvect(lsuiv, ' V V I', nbnode_tot+1, ilsuiv)
+    call wkvect(psuiv, ' V V I', nbNodeTot+2, ipsuiv)
+    call wkvect(lsuiv, ' V V I', nbNodeTot+1, ilsuiv)
 
 ! --- CALCUL DE  PSUIV
 ! --- 1ERE ETAPE :
@@ -490,7 +489,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 !     =======================
     l1 = zi(ipsuiv)
     zi(ipsuiv) = 1
-    do i = 1, nbnode_tot+1
+    do i = 1, nbNodeTot+1
         l2 = zi(ipsuiv+i)
         zi(ipsuiv+i) = zi(ipsuiv+i-1)+l1
         l1 = l2
@@ -498,10 +497,10 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 
 ! --- ALLOCATION DE VSUIV :
 !     -------------------
-    long = zi(ipsuiv+nbnode_tot+1)-1
+    long = zi(ipsuiv+nbNodeTot+1)-1
     if (long .gt. 0) then
         call wkvect(vsuiv, ' V V I', long, ivsuiv)
-        call wkvect(derli, ' V V I', nbnode_tot+1, iderli)
+        call wkvect(derli, ' V V I', nbNodeTot+1, iderli)
     end if
 
 ! --- ALLOCATION DE DSCLAG LE DESCRIPTEUR DES "LAGRANGE"
@@ -565,7 +564,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
                     n21 = -n2
                     n2 = -n2
                     n2 = zi(inuno2+ili-1)+n2-1
-                    ilag2 = n2-nb_node
+                    ilag2 = n2-nbNode
                     n1re = zi(inewn-1+n1)
                     n1m1re = n1re-1
 
@@ -619,7 +618,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 !        --------------------
                     n3 = -n3
                     n3 = zi(inuno2+ili-1)+n3-1
-                    ilag3 = n3-nb_node
+                    ilag3 = n3-nbNode
 
 ! ---    RECUPERATION DU NOEUD PHYSIQUE DE NUMERO LE PLUS GRAND
 ! ---    LIE AU SECOND LAGRANGE PAR LE TABLEAU DERLI, CETTE
@@ -843,8 +842,9 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 ! ---  DANS LA NUMEROTATION GLOBALE DE 1ER NIVEAU
 ! ---  SI NUM2(I)=J ALORS NUM21(J)=I :
 !      -----------------------------
-    call wkvect(num21, ' V V I', nbnode_tot+1, inum21)
-    call wkvect(num2, ' V V I', nbnode_tot+1, inum2)
+!
+    call wkvect(num21, ' V V I', nbNodeTot+1, inum21)
+    call wkvect(num2, ' V V I', nbNodeTot+1, inum2)
 
 ! ---  CALCUL DE NUM2 ET NUM21 QUI REPRESENTE "L'INVERSE" DE NUM2
 ! ---  NBNONU : NOMBRE DE NOEUDS NUMEROTES DANS NUNO :
@@ -922,16 +922,16 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
                 nbnonu = nbnonu+1
                 zi(inum21+nbnonu) = nbnonu
                 n2 = zi(inuno2+ili-1)+i-1
-                ilag2 = n2-nb_node
+                ilag2 = n2-nbNode
                 zi(iddlag+3*(ilag2-1)) = 0
             end do
         end if
     end do
-
+!
     if (nbnonu .ne. (nbnore+nlag)) then
         call utmess('F', 'ASSEMBLA_28')
     end if
-
+!
 ! --- CALCUL DES DESCRIPTEURS DES PRNO
 !     ================================
 
@@ -961,7 +961,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
         end do
 150     continue
     end do
-
+!
 ! --- 2EME ETAPE : NOEUDS SUPPLEMENTAIRES DES LIGRELS:
 ! --- SI NUNOEL NOEUD TARDIF DU LIGREL ILI NOMLI = LILI(ILI)
 ! --- PRNO(ILI,NUNOEL,L+2)= NOMLI.QRNS(NUNOEL)(L) :
@@ -1020,22 +1020,12 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 
 !                 -- CALCUL DU NUMERO DE LA CMP ASSO
                             if (icddlb .eq. 0 .and. .not. lligrel_cp) then
-                                ASSERT(gran_name .eq. nomte(3:8))
-                                nomcmp = nomte(10:16)
-
-!                   "GLUTE" POUR TEMP_MIL, TEMP_INF, TEMP_SUP :
-                                if (nomcmp .eq. 'TEMP_MI') then
-                                    nomcmp = 'TEMP_MIL'
-                                else if (nomcmp .eq. 'TEMP_IN') then
-                                    nomcmp = 'TEMP_INF'
-                                else if (nomcmp .eq. 'TEMP_SU') then
-                                    nomcmp = 'TEMP_SUP'
-                                end if
-
-                                call jeveuo(jexnom('&CATA.GD.NOMCMP', gran_name), 'L', idnocm)
-                                call jelira(jexnom('&CATA.GD.NOMCMP', gran_name), 'LONMAX', nbcmp, &
-                                            kbid)
-                                nddlb = indik8(zk8(idnocm), nomcmp, 1, nbcmp)
+                                ASSERT(physQuanName .eq. nomte(2:7))
+                                cmpName = nomte(9:16)
+                                call jeveuo(jexnom('&CATA.GD.NOMCMP', physQuanName), 'L', idnocm)
+                                call jelira(jexnom('&CATA.GD.NOMCMP', physQuanName), 'LONMAX', &
+                                            nbcmp)
+                                nddlb = indik8(zk8(idnocm), cmpName, 1, nbcmp)
                                 ASSERT(nddlb .ne. 0)
                                 icddlb = 1
                             end if
@@ -1046,30 +1036,24 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
                             end do
 
                             ilag = zi(inuno2+ili2-1)+nunoel-1
-                            ilag = ilag-nb_node
+                            ilag = ilag-nbNode
                             zi(iddlag+3*(ilag-1)+1) = zi(iddlag+3*(ilag-1)+1)*nddlb
-
                         end if
                     end do
-
                 end if
-
             end do
         end do
     end do
-
+!
 ! --- CALCUL DES ADRESSES DANS LES PRNO
 !     =================================
     iad = 1
-
-    do i = 1, nbnode_tot
-        call nuno1(i, ili, nunoel, nbnode_tot, inum21, &
-                   inuno2, nlili)
+    do i = 1, nbNodeTot
+        call nuno1(i, ili, nunoel, nbNodeTot, inum21, inuno2, nlili)
         if (ili .gt. 0) then
             nddl1 = zzprno(ili, nunoel, 2)
             if (nddl1 .eq. 0) then
                 nddl1 = nddl(ili, nunoel, nec, idprn1, idprn2)
-
                 zi(izzprn(ili, nunoel, 2)) = nddl1
             end if
             zi(izzprn(ili, nunoel, 1)) = iad
@@ -1105,7 +1089,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 !       ----------------------------------------------------------------
         nma = 0
         call jeveuo(jexnum(prno, 1), 'L', jprno)
-        do ino = 1, nb_node
+        do ino = 1, nbNode
             if (zi(jprno-1+(ino-1)*(2+nec)+2) .gt. 0) nma = nma+1
         end do
         vali(1) = nb_dof
@@ -1118,7 +1102,7 @@ subroutine nueffe_lag2(nbLigr, listLigr, base, numeDofZ, renumZ, &
 
     call wkvect(refn, base(2:2)//' V K24', 5, idref)
     zk24(idref) = mesh
-    zk24(idref+1) = gran_name
+    zk24(idref+1) = physQuanName
     zk24(idref+2) = modelZ
 !
 ! - Create NUEQ object

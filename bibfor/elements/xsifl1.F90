@@ -36,6 +36,7 @@ subroutine xsifl1(elrefp, angl, basloc, coeff, coeff3, &
 #include "asterfort/utmess.h"
 #include "asterfort/xcalc_code.h"
 #include "asterfort/xcalc_heav.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xcalfev_wrap.h"
 #include "asterfort/xdeffk.h"
 !
@@ -48,7 +49,7 @@ subroutine xsifl1(elrefp, angl, basloc, coeff, coeff3, &
     real(kind=8) :: angl(2), basloc(9*nnop), cisa, coeff, coeff3
     integer(kind=8) :: cpt, ddlm, ddls
     real(kind=8) :: depla(3), dfdi(nnop, ndim), dfor(3), divt
-    real(kind=8) :: dtdm(3, 3), ff(27)
+    real(kind=8) :: dtdm(3, 3), ff(MT_NNOMAX3D)
     real(kind=8) :: forrep(3, 2), g, he(2)
     integer(kind=8) :: i, idepl, ier, igthet, ilev, indi, ino, ig, hea_fa(2)
     integer(kind=8) :: ipref, ipres, ithet, j
@@ -65,7 +66,7 @@ subroutine xsifl1(elrefp, angl, basloc, coeff, coeff3, &
     real(kind=8) :: theta(3), u1(3), u2(3), u3(3)
     real(kind=8) :: xg(3), r
     aster_logical :: axi, l_pres_var, l_cisa_var, l_not_zero
-    real(kind=8) :: fk(27, 3, 3), fkpo(3, 3)
+    real(kind=8) :: fk(MT_NNOMAX3D, 3, 3), fkpo(3, 3)
     integer(kind=8) :: alp, igeom
     real(kind=8) :: rg, tg
 !

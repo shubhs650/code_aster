@@ -55,10 +55,10 @@ CARAEL = AFFE_CARA_ELEM(
     COQUE=(
         _F(GROUP_MA="PLANC1", EPAIS=0.1),
         _F(GROUP_MA="V2", EPAIS=0.1),
-        _F(GROUP_MA="V3", EPAIS=0.1),
-        _F(GROUP_MA="V1", EPAIS=0.1),
+        _F(GROUP_MA="V3", EPAIS=0.1, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA="V1", EPAIS=0.1, VECTEUR=(0, 1, 0)),
         _F(GROUP_MA=("RADIER",), EPAIS=0.5),
-        _F(GROUP_MA="SEMELLES", EPAIS=0.38),
+        _F(GROUP_MA="SEMELLES", EPAIS=0.38, VECTEUR=(0, 0, 1)),
     ),
     ORIENTATION=(
         _F(GROUP_MA="POU1", CARA="VECT_Y", VALE=(1.0, 0.0, 0.0)),

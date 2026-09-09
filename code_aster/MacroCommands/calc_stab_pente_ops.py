@@ -40,7 +40,6 @@ from ..CodeCommands import (
     PROJ_CHAMP,
     CREA_TABLE,
     FORMULE,
-    DETRUIRE,
 )
 
 
@@ -167,7 +166,7 @@ def calc_srm(self, args):
                 # FS_INIT trop grand.
                 UTMESS("F", "CALCSTABPENTE_4")
 
-            DETRUIRE(CONCEPT=_F(NOM=(__CM_DEG)))
+            del __CM_DEG
 
             if prec - prec_fin > 1e-10:
                 # Raffiner la précision suivant la loi indiquée
@@ -218,7 +217,7 @@ def calc_srm(self, args):
         num_iter += 1
         if np.abs(NC_fact - fact) < prec:
             fact, prec = refinement(fact, prec, d_prec)
-        DETRUIRE(CONCEPT=_F(NOM=(__CHDEP, __CHFONC, __CHDT, __TABDT)))
+        del __CHDEP, __CHFONC, __CHDT, __TABDT
 
     # FIN de l'algorithme SRM
     if args.get("CHAM_DEFO") is not None:
@@ -840,7 +839,7 @@ class LEM_Solver:
                 # case 2: PROJ_CHAMP
                 self.gene_mesh_poi()
 
-            DETRUIRE(NOM=(__chpres, __mod_2))
+            del __chpres, __mod_2
 
         ## get unsaturated zone settings
         self.has_suction = args.get("SUCCION") == "OUI"
@@ -1041,9 +1040,7 @@ class LEM_Solver:
         ext_pres = np.array([tabpres[nom_para] for nom_para in ["COOR_X", "COOR_Y", "X1", "X2"]]).T
         self.ext_pres = ext_pres[np.argsort(ext_pres[:, 0])]
 
-        DETRUIRE(
-            CONCEPT=_F(NOM=(__MAIL, __CHNORM, __CHNORMD, __CHGEOM, __CHPRESF, __CHPRES, __TABPRES))
-        )
+        del __MAIL, __CHNORM, __CHNORMD, __CHGEOM, __CHPRESF, __CHPRES, __TABPRES
 
         return
 
@@ -1372,7 +1369,7 @@ class LEM_Solver:
                 DETR_GROUP_MA=_F(NOM=l_grma_mat + l_grma_auxi), MAILLAGE=mesh, reuse=mesh
             )
 
-        DETRUIRE(CONCEPT=_F(NOM=(__MODRED, __CHMRED, __TABM, __MA_RED)))
+        del __MODRED, __CHMRED, __TABM, __MA_RED
 
         return poids, barycent
 
@@ -1583,7 +1580,7 @@ class LEM_Solver:
         if self.cham_defo is not None:
             self.regis_cham_defo(resu_stab, MAILRAF)
 
-        DETRUIRE(CONCEPT=_F(NOM=MAILRAF))
+        del MAILRAF
 
         return l_FS
 
@@ -1693,7 +1690,7 @@ class LEM_Solver:
             # unsaturated model
             ptot_poi = fieldval[:, [1, 0]]
 
-        DETRUIRE(NOM=(__mod_poi, __ch_poi))
+        del __mod_poi, __ch_poi
 
         return ptot_poi
 

@@ -17,8 +17,66 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0533(option, nomte)
+
     implicit none
-#include "asterfort/utmess.h"
-    character(len=16) :: nomte, option
-    call utmess('F', 'FERMETUR_8')
+!
+#include "asterf_types.h"
+#include "asterfort/assert.h"
+#include "asterfort/nmbamb.h"
+#include "asterfort/elrefe_info.h"
+#include "asterfort/jevech.h"
+#include "asterfort/ngpide.h"
+#include "asterfort/teattr.h"
+#include "jeveux.h"
+!
+    character(len=16), intent(in) :: option, nomte
+!
+! --------------------------------------------------------------------------------------------------
+! Elementary computation PILO_PRED_DEFO
+! Elements: BARRE_2D_NL, BARRE_3D_NL
+! --------------------------------------------------------------------------------------------------
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+! --------------------------------------------------------------------------------------------------
+    character(len=8), parameter :: fami = 'RIGI'
+    real(kind=8), parameter:: aire_bid = 1.d0
+! --------------------------------------------------------------------------------------------------
+    character(len=8) :: typmod(2), attrib
+    character(len=16), pointer :: compor(:) => null()
+    integer(kind=8) :: ndim_sp, nno, npg, nddl, neps
+    integer(kind=8) :: jv_poids, jv_vff, jv_dfde, jv_geom
+    integer(kind=8) :: jv_deplm, jv_ddepl, jv_depl0, jv_depl1, jv_copil, jv_dtau
+    real(kind=8), allocatable:: b(:, :, :), w(:, :), ni2ldc(:, :)
+! --------------------------------------------------------------------------------------------------
+
+! - Type of modelling
+    call teattr('S', 'TYPMOD', typmod(1))
+    call teattr('C', 'TYPMOD2', typmod(2), vattr_missing=' ')
+    call teattr('S', 'DIM_COOR_MODELI', attrib)
+    read (attrib, '(I8)') ndim_sp
+
+! - Get parameters of element
+    call elrefe_info(fami=fami, nno=nno, npg=npg, jpoids=jv_poids, jvf=jv_vff, jdfde=jv_dfde)
+
+! - Option parameters
+    call jevech('PGEOMER', 'L', jv_geom)
+    call jevech('PDEPLMR', 'L', jv_deplm)
+    call jevech('PDDEPLR', 'L', jv_ddepl)
+    call jevech('PDEPL0R', 'L', jv_depl0)
+    call jevech('PDEPL1R', 'L', jv_depl1)
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCDTAU', 'L', jv_dtau)
+    call jevech('PCOPILO', 'E', jv_copil)
+
+    ! Kinematics
+    call nmbamb(ndim_sp, nno, npg, zr(jv_geom), aire_bid, &
+                zr(jv_dfde), zr(jv_poids), nddl, neps, b, w, ni2ldc)
+
+    ! Computation of path-following coefficients
+    call ngpide(compor, npg, neps, nddl, b, &
+                zr(jv_deplm), zr(jv_ddepl), zr(jv_depl0), zr(jv_depl1), &
+                zr(jv_dtau), zr(jv_copil))
+
+    deallocate (b, w, ni2ldc)
+
 end subroutine

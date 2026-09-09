@@ -17,10 +17,11 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W1306
 !
-subroutine nglgic(fami, option, typmod, ndim, nno, &
+subroutine nglgic(BEHInteg, &
+                  option, typmod, ndim, nno, &
                   nnob, npg, nddl, iw, vff, &
                   vffb, idff, idffb, geomi, compor, &
-                  mate, lgpg, carcri, angmas, instm, &
+                  lgpg, carcri, instm, &
                   instp, matsym, ddlm, ddld, siefm, &
                   vim, siefp, vip, fint, matr, &
                   lMatr, lVect, lSigm, lVari, &
@@ -32,32 +33,33 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
     use Behaviour_type
     use Behaviour_module
     use linalg_ops_module, only: as_matmul
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/nmcomp.h"
 #include "asterfort/nmepsi.h"
 #include "asterfort/rcvalb.h"
-#include "asterfort/Behaviour_type.h"
 !
-    aster_logical, intent(in)       :: matsym
-    character(len=8), intent(in)    :: typmod(2)
-    character(len=*), intent(in)    :: fami
-    character(len=16), intent(in)   :: option, compor(COMPOR_SIZE)
-    integer(kind=8), intent(in)             :: ndim, nno, nnob, npg, nddl, lgpg
-    integer(kind=8), intent(in)             :: mate, iw, idff, idffb
-    real(kind=8), intent(in)        :: geomi(ndim, nno), carcri(CARCRI_SIZE), instm, instp
-    real(kind=8), intent(in)        :: vff(nno, npg), vffb(nnob, npg)
-    real(kind=8), intent(in)        :: angmas(3), ddlm(nddl), ddld(nddl), siefm(3*ndim+4, npg)
-    real(kind=8), intent(in)        :: vim(lgpg, npg)
-    real(kind=8), intent(out)        :: fint(nddl), matr(nddl, nddl)
-    real(kind=8), intent(out)        :: siefp(3*ndim+4, npg), vip(lgpg, npg)
-    aster_logical, intent(in)       :: lMatr, lVect, lSigm, lVari
-    integer(kind=8), intent(out)            :: codret
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    aster_logical, intent(in) :: matsym
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: option
+    integer(kind=8), intent(in) :: ndim, nno, nnob, npg, nddl, lgpg
+    integer(kind=8), intent(in) :: iw, idff, idffb
+    real(kind=8), intent(in) :: geomi(ndim, nno), instm, instp
+    real(kind=8), intent(in) :: vff(nno, npg), vffb(nnob, npg)
+    real(kind=8), intent(in) :: ddlm(nddl), ddld(nddl), siefm(3*ndim+4, npg)
+    real(kind=8), intent(in) :: vim(lgpg, npg)
+    real(kind=8), intent(out) :: fint(nddl), matr(nddl, nddl)
+    real(kind=8), intent(out) :: siefp(3*ndim+4, npg), vip(lgpg, npg)
+    aster_logical, intent(in) :: lMatr, lVect, lSigm, lVari
+    integer(kind=8), intent(out) :: codret
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -67,7 +69,6 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! IN  FAMI    : FAMILLE DE POINTS DE GAUSS
 ! IN  OPTION  : OPTION DE CALCUL
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  NDIM    : DIMENSION DE L'ESPACE
@@ -85,7 +86,6 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
 ! IN  MATE    : MATERIAU CODE
 ! IN  LGPG    : DIMENSION DU VECTEUR DES VAR. INTERNES POUR 1 PT GAUSS
 ! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  INSTM   : VALEUR DE L'INSTANT T-
 ! IN  INSTP   : VALEUR DE L'INSTANT T+
 ! IN  MATSYM  : .TRUE. SI MATRICE SYMETRIQUE
@@ -105,55 +105,54 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    aster_logical, parameter               :: grand = ASTER_TRUE
-    real(kind=8), parameter                :: tiers = 1.d0/3.d0
-    real(kind=8), dimension(6), parameter  :: vrac2 = (/1.d0, 1.d0, 1.d0, &
-                                                        sqrt(2.d0), sqrt(2.d0), sqrt(2.d0)/)
-    real(kind=8), dimension(6), parameter  :: kron = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
-    real(kind=8), dimension(6), parameter  :: projhyd = (/tiers, tiers, tiers, 0.d0, 0.d0, 0.d0/)
-    real(kind=8), dimension(6, 6), parameter:: projdev = reshape( &
-                                               (/2*tiers, -tiers, -tiers, 0.d0, 0.d0, 0.d0, &
-                                                 -tiers, 2*tiers, -tiers, 0.d0, 0.d0, 0.d0, &
-                                                 -tiers, -tiers, 2*tiers, 0.d0, 0.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 1.d0, 0.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 1.d0/), (/6, 6/))
-    real(kind=8), dimension(6, 6), parameter:: projdh = reshape( &
-                                               (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
-                                                 1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
-                                                 1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, &
-                                                 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0/), (/6, 6/))
-! ----------------------------------------------------------------------
+    aster_logical, parameter :: grand = ASTER_TRUE
+    real(kind=8), parameter :: tiers = 1.d0/3.d0
+    real(kind=8), dimension(6), parameter :: vrac2 = (/1.d0, 1.d0, 1.d0, &
+                                                       sqrt(2.d0), sqrt(2.d0), sqrt(2.d0)/)
+    real(kind=8), dimension(6), parameter :: kron = (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0/)
+    real(kind=8), dimension(6), parameter :: projhyd = (/tiers, tiers, tiers, 0.d0, 0.d0, 0.d0/)
+    real(kind=8), dimension(6, 6), parameter :: projdev = reshape( &
+                                                (/2*tiers, -tiers, -tiers, 0.d0, 0.d0, 0.d0, &
+                                                  -tiers, 2*tiers, -tiers, 0.d0, 0.d0, 0.d0, &
+                                                  -tiers, -tiers, 2*tiers, 0.d0, 0.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 1.d0, 0.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 1.d0/), (/6, 6/))
+    real(kind=8), dimension(6, 6), parameter :: projdh = reshape( &
+                                                (/1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
+                                                  1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
+                                                  1.d0, 1.d0, 1.d0, 0.d0, 0.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0, &
+                                                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 0.d0/), (/6, 6/))
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
     type(GDLOG_DS):: gdlm, gdlp
     aster_logical :: axi, resi
-    integer(kind=8)       :: g, n, i, iok(1)
-    integer(kind=8)       :: xu(ndim, nno), xg(2, nnob), xq(2, nnob)
-    integer(kind=8)       :: cod(npg)
-    integer(kind=8)       :: nnu, nng, nnq, ndu, ndg, ndq, neu, neg, neq
-    real(kind=8)  :: dev(2*ndim, 2*ndim), dh(2*ndim, 2*ndim), hyd(2*ndim), kr(2*ndim)
-    real(kind=8)  :: r, dff(nno, ndim), dffb(nnob, ndim), poids, rinco
-    real(kind=8)  :: fm(3, 3), fp(3, 3)
-    real(kind=8)  :: bu(2*ndim, ndim, nno), bg(2+ndim, 2, nnob), bq(2, 2, nnob)
-    real(kind=8)  :: dum(ndim, nno), dup(ndim, nno)
-    real(kind=8)  :: dgm(2, nnob), dgp(2, nnob)
-    real(kind=8)  :: dqm(2, nnob), dqp(2, nnob)
-    real(kind=8)  :: epefum(2*ndim), epefgm(2+ndim), epefqm(2)
-    real(kind=8)  :: epefup(2*ndim), epefgp(2+ndim), epefqp(2)
-    real(kind=8)  :: siefup(2*ndim), siefgp(2+ndim), siefqp(2)
-    real(kind=8)  :: eplcm(3*ndim+2), eplcp(3*ndim+2)
-    real(kind=8)  :: silcm(3*ndim+2), silcp(3*ndim+2)
-    real(kind=8)  :: dsde(3*ndim+2, 3*ndim+2)
-    real(kind=8)  :: t(2*ndim)
-    real(kind=8)  :: dee(2*ndim, 2*ndim), deg(2*ndim, 2+ndim)
-    real(kind=8)  :: dge(2+ndim, 2*ndim), dgg(2+ndim, 2+ndim)
-    real(kind=8)  :: kefuu(2*ndim, 2*ndim), kefug(2*ndim, 2+ndim), kefuq(2*ndim, 2)
-    real(kind=8)  :: kefgu(2+ndim, 2*ndim), kefgg(2+ndim, 2+ndim), kefgq(2+ndim, 2)
-    real(kind=8)  :: kefqu(2, 2*ndim), kefqg(2, 2+ndim), kefqq(2, 2)
-    real(kind=8)  :: tbid(6), valinco(1)
-    type(Behaviour_Integ) :: BEHinteg
+    integer(kind=8) :: kpg, n, i, iok(1)
+    integer(kind=8) :: xu(ndim, nno), xg(2, nnob), xq(2, nnob)
+    integer(kind=8) :: cod(npg)
+    integer(kind=8) :: nnu, nng, nnq, ndu, ndg, ndq, neu, neg, neq
+    real(kind=8) :: dev(2*ndim, 2*ndim), dh(2*ndim, 2*ndim), hyd(2*ndim), kr(2*ndim)
+    real(kind=8) :: r, dff(nno, ndim), dffb(nnob, ndim), poids, rinco
+    real(kind=8) :: fm(3, 3), fp(3, 3)
+    real(kind=8) :: bu(2*ndim, ndim, nno), bg(2+ndim, 2, nnob), bq(2, 2, nnob)
+    real(kind=8) :: dum(ndim, nno), dup(ndim, nno)
+    real(kind=8) :: dgm(2, nnob), dgp(2, nnob)
+    real(kind=8) :: dqm(2, nnob), dqp(2, nnob)
+    real(kind=8) :: epefum(2*ndim), epefgm(2+ndim), epefqm(2)
+    real(kind=8) :: epefup(2*ndim), epefgp(2+ndim), epefqp(2)
+    real(kind=8) :: siefup(2*ndim), siefgp(2+ndim), siefqp(2)
+    real(kind=8) :: eplcm(3*ndim+2), eplcp(3*ndim+2)
+    real(kind=8) :: silcm(3*ndim+2), silcp(3*ndim+2)
+    real(kind=8) :: dsde(3*ndim+2, 3*ndim+2)
+    real(kind=8) :: t(2*ndim)
+    real(kind=8) :: dee(2*ndim, 2*ndim), deg(2*ndim, 2+ndim)
+    real(kind=8) :: dge(2+ndim, 2*ndim), dgg(2+ndim, 2+ndim)
+    real(kind=8) :: kefuu(2*ndim, 2*ndim), kefug(2*ndim, 2+ndim), kefuq(2*ndim, 2)
+    real(kind=8) :: kefgu(2+ndim, 2*ndim), kefgg(2+ndim, 2+ndim), kefgq(2+ndim, 2)
+    real(kind=8) :: kefqu(2, 2*ndim), kefqg(2, 2+ndim), kefqq(2, 2)
+    real(kind=8) :: tbid(6), valinco(1)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -167,20 +166,8 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
 ! - La distinction RIGI_MECA_TANG est problématique en GDEF_LOG (rigi geom ! )
     resi = option(1:9) .eq. 'FULL_MECA' .or. option(1:9) .eq. 'RAPH_MECA'
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
-
-! --- INITIALISATION ---
-
+! - INITIALISATION
     axi = typmod(1) .eq. 'AXIS'
-
     nnu = nno
     nng = nnob
     nnq = nnob
@@ -216,42 +203,51 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
     forall (i=1:ndg, n=1:nng) dgp(i, n) = dgm(i, n)+ddld(xg(i, n))
     forall (i=1:ndq, n=1:nnq) dqp(i, n) = dqm(i, n)+ddld(xq(i, n))
 
-    gauss: do g = 1, npg
+    gauss: do kpg = 1, npg
+! ----- Set main parameters for behaviour (on point)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
         ! -----------------------!
         !  ELEMENTS CINEMATIQUES !
         ! -----------------------!
 
         ! Calcul des derivees des fonctions de forme P1
-        call dfdmip(ndim, nnob, axi, geomi, g, iw, vffb(1, g), idffb, r, poids, dffb)
+        call dfdmip(ndim, nnob, axi, geomi, kpg, iw, vffb(1, kpg), idffb, r, poids, dffb)
 
         ! Calcul des derivees des fonctions de forme P2, du rayon r et des poids
-        call dfdmip(ndim, nno, axi, geomi, g, iw, vff(1, g), idff, r, poids, dff)
+        call dfdmip(ndim, nno, axi, geomi, kpg, iw, vff(1, kpg), idff, r, poids, dff)
 
         ! Calcul de la deformation mecanique en t- (fm et epm)
-        call nmepsi(ndim, nno, axi, grand, vff(1, g), r, dff, dum, fm, tbid)
-        call gdlog_defo(gdlm, fm, epefum, cod(g))
-        if (cod(g) .ne. 0) goto 999
+        call nmepsi(ndim, nno, axi, grand, vff(1, kpg), r, dff, dum, fm, tbid)
+        call gdlog_defo(gdlm, fm, epefum, cod(kpg))
+        if (cod(kpg) .ne. 0) goto 999
 
         ! Calcul de la deformation mecanique et des elements cinematiques en t+
-        call nmepsi(ndim, nno, axi, grand, vff(1, g), r, dff, dup, fp, tbid)
-        call gdlog_defo(gdlp, fp, epefup, cod(g))
-        if (cod(g) .ne. 0) goto 999
+        call nmepsi(ndim, nno, axi, grand, vff(1, kpg), r, dff, dup, fp, tbid)
+        call gdlog_defo(gdlp, fp, epefup, cod(kpg))
+        if (cod(kpg) .ne. 0) goto 999
 
         ! Coefficient de penalisation par rapport au gonflement
-        call rcvalb(fami, g, 1, '-', mate, ' ', 'NON_LOCAL', 0, ' ', [0.d0], &
-                    1, 'PENA_LAGR_INCO', valinco, iok, 2)
+        call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                    BEHInteg%materPara%schemePara%kpg, &
+                    BEHInteg%materPara%schemePara%ksp, &
+                    '-', &
+                    BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'NON_LOCAL', &
+                    0, ' ', [0.d0], &
+                    1, 'PENA_LAGR_INCO', valinco, &
+                    iok, 2)
         rinco = valinco(1)
 
         ! Calcul des matrices BU, BG et BQ
-        call gdlog_matb(gdlp, r, vff(:, g), dff, bu)
+        call gdlog_matb(gdlp, r, vff(:, kpg), dff, bu)
         bg = 0
-        bg(1, 1, :) = vffb(:, g)
-        bg(2, 2, :) = vffb(:, g)
+        bg(1, 1, :) = vffb(:, kpg)
+        bg(2, 2, :) = vffb(:, kpg)
         bg(3:neg, 1, :) = transpose(dffb)
         bq = 0
-        bq(1, 1, :) = vffb(:, g)
-        bq(2, 2, :) = vffb(:, g)
+        bq(1, 1, :) = vffb(:, kpg)
+        bq(2, 2, :) = vffb(:, kpg)
 
         ! Calcul des deformations non mecaniques  aux points de Gauss
         epefgm = prod_bd(bg, dgm)
@@ -270,26 +266,27 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
         eplcp(neu+1:neu+neg) = epefgp
 
         ! Preparation des contraintes generalisees de ldc en t-
-        silcm(1:neu) = vim(lgpg-5:lgpg-6+neu, g)*vrac2(1:neu)
-        silcm(neu+1:neu+neg) = siefm(neu+1:neu+neg, g)
-
-! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(g, ksp, BEHinteg)
+        silcm(1:neu) = vim(lgpg-5:lgpg-6+neu, kpg)*vrac2(1:neu)
+        silcm(neu+1:neu+neg) = siefm(neu+1:neu+neg, kpg)
 
 ! ----- Integrator
         silcp = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, g, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    neu+neg, eplcm, eplcp-eplcm, neu+neg, silcm, &
-                    vim(1, g), option, angmas, &
-                    silcp, vip(1, g), (neu+neg)*(neu+neg), dsde, cod(g))
-        if (cod(g) .eq. 1) goto 999
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    neu+neg, eplcm, eplcp-eplcm, &
+                    neu+neg, silcm, &
+                    vim(1, kpg), &
+                    silcp, vip(1, kpg), &
+                    (neu+neg)*(neu+neg), dsde, &
+                    cod(kpg))
+        if (cod(kpg) .eq. 1) goto 999
 
         ! Archivage des contraintes mecaniques en t+ (tau tilda) dans les vi
         if (lVari) then
-            vip(lgpg-1:lgpg, g) = 0.d0
-            vip(lgpg-5:lgpg-6+neu, g) = silcp(1:neu)/vrac2(1:neu)
+            vip(lgpg-1:lgpg, kpg) = 0.d0
+            vip(lgpg-5:lgpg-6+neu, kpg) = silcp(1:neu)/vrac2(1:neu)
         end if
 
         ! ----------------------------------------!
@@ -305,16 +302,16 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
                        rinco*(dot_product(kr, epefup)-epefqp(2))/)
         end if
         if (lVect) then
-            ! Forces interieures au point de Gauss g
+            ! Forces interieures au point de Gauss kpg
             call add_fint(fint, xu, poids*prod_sb(siefup, bu))
             call add_fint(fint, xg, poids*prod_sb(siefgp, bg))
             call add_fint(fint, xq, poids*prod_sb(siefqp, bq))
         end if
         if (lSigm) then
             ! Stockage des contraintes generalisees (avec Cauchy au lieu de T)
-            siefp(1:neu, g) = gdlog_nice_cauchy(gdlp, siefup)
-            siefp(neu+1:neu+neq, g) = siefqp
-            siefp(neu+neq+1:neu+neq+neg, g) = siefgp
+            siefp(1:neu, kpg) = gdlog_nice_cauchy(gdlp, siefup)
+            siefp(neu+1:neu+neq, kpg) = siefqp
+            siefp(neu+neq+1:neu+neq+neg, kpg) = siefgp
         end if
 
         ! -----------------------!
@@ -368,7 +365,7 @@ subroutine nglgic(fami, option, typmod, ndim, nno, &
                 call add_matr(matr, xq, xg, poids*prod_bkb(bq, kefqg, bg))
                 call add_matr(matr, xq, xq, poids*prod_bkb(bq, kefqq, bq))
             else
-                ASSERT(.false.)
+                ASSERT(ASTER_FALSE)
             end if
         end if
 

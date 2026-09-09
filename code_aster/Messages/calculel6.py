@@ -197,13 +197,6 @@ Erreur lors de l'interpolation de la fonction %(k1)s sur la maille %(k3)s, il ma
  Code retour: %(i1)d
 """
     ),
-    64: _(
-        """
- Variables internes en nombre différent aux instants '+' et '-' pour la maille %(k1)s
- Instant '-' : %(i1)d
- Instant '+' : %(i2)d
-"""
-    ),
     65: _(
         """
 Erreur lors de l'interpolation de la fonction %(k1)s, il manque la géométrie.
@@ -255,11 +248,6 @@ Risques et conseils :
   Problème lors du calcul de la pesanteur sur un élément de "câble poulie" :
   Le chargement doit être déclaré "suiveur".
   Il faut utiliser le mot clé : EXCIT / TYPE_CHARGE='SUIV'
-"""
-    ),
-    82: _(
-        """
-  Le groupe de noeuds %(k1)s n'appartient pas au maillage %(k2)s.
 """
     ),
     83: _(

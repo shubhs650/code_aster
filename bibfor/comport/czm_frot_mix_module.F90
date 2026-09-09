@@ -31,8 +31,8 @@ module czm_frot_mix_module
 
     ! Material characteristics
     type MATERIAL
-        real(kind=8) :: kn, kt, cohe, frot
-        aster_logical :: ad
+        real(kind=8) :: kn, kt, cohe, frot, k, tau
+        aster_logical :: ad, regu_visc
     end type MATERIAL
 
     ! CZM_FROT_MIX class
@@ -41,8 +41,10 @@ module czm_frot_mix_module
         aster_logical :: elas, rigi, pred
         integer(kind=8) :: ndim
         real(kind=8) :: r
-        real(kind=8), dimension(:), allocatable:: phi, deltap
-        integer(kind=8) :: statep
+        real(kind=8), dimension(:), allocatable:: phi, deltap, deltav
+        real(kind=8) :: dt
+        real(kind=8) :: statep
+        real(kind=8)  :: cvuser
         type(MATERIAL):: mat
     end type CONSTITUTIVE_LAW
 
@@ -52,12 +54,12 @@ contains
 !  OBJECT CREATION AND INITIALISATION
 ! =====================================================================
 
-    function Init(ndim, option, fami, kpg, ksp, imate, t, su, vim) result(self)
+    function Init(ndim, option, fami, kpg, ksp, imate, t, su, vim, dt, precvg) result(self)
 
         implicit none
 
         integer(kind=8), intent(in) :: kpg, ksp, imate, ndim
-        real(kind=8), intent(in) :: t(:), su(:), vim(:)
+        real(kind=8), intent(in) :: t(:), su(:), vim(:), dt, precvg
         character(len=16), intent(in) :: option
         character(len=*), intent(in) :: fami
         type(CONSTITUTIVE_LAW) :: self
@@ -68,18 +70,21 @@ contains
 ! kpg       Gauss point number
 ! ksp       Layer number (for structure elements)
 ! imate     material pointer
-! t         cohesive forces (local co-ordinates)
-! su        jump jump (local co-ordinates)
+! t         cohesive forces
+! su        displacement jump
 ! vim       internal variables at the beginning of the time step
+! dt        time increment
+! precvg    precision on stress
 ! --------------------------------------------------------------------------------------------------
-        integer(kind=8), parameter :: nbel = 2, nbpl = 3, nblg = 1
+        integer(kind=8), parameter :: nbel = 2, nbpl = 3, nbvi = 2, nblg = 1
 ! --------------------------------------------------------------------------------------------------
-        integer(kind=8) :: iokel(nbel), iokpl(nbpl), ioklg(nblg)
-        real(kind=8) :: valel(nbel), valpl(nbpl), vallg(nblg)
-        character(len=16) :: nomel(nbel), nompl(nbpl), nomlg(nblg)
+        integer(kind=8) :: iokel(nbel), iokpl(nbpl), iokvi(nbvi), ioklg(nblg)
+        real(kind=8) :: valel(nbel), valpl(nbpl), valvi(nbvi), vallg(nblg)
+        character(len=16) :: nomel(nbel), nompl(nbpl), nomvi(nbvi), nomlg(nblg)
 ! --------------------------------------------------------------------------------------------------
         data nomel/'RIGI_NOR', 'RIGI_TAN'/
         data nompl/'ADHE', 'COHESION', 'COEF_FROT'/
+        data nomvi/'RIGI_REGU_VISC', 'TAU_REGU_VISC'/
         data nomlg/'PENA_LAGR_ABSO'/
 ! --------------------------------------------------------------------------------------------------
 
@@ -89,6 +94,7 @@ contains
 
         ! General parameters
         self%ndim = ndim
+        self%cvuser = precvg
 
         ! Options
         self%elas = option .eq. 'RIGI_MECA_ELAS' .or. option .eq. 'FULL_MECA_ELAS'
@@ -96,13 +102,17 @@ contains
                     .or. option .eq. 'FULL_MECA' .or. option .eq. 'FULL_MECA_ELAS'
         self%pred = option .eq. 'RIGI_MECA_ELAS' .or. option .eq. 'RIGI_MECA_TANG'
 
-        ! Material elastic parameters
+        ! Elastic parameters
         call rcvalb(fami, kpg, ksp, '+', imate, ' ', 'CZM_FROT_MIX', 0, ' ', [0.d0], nbel, nomel, &
                     valel, iokel, 0)
 
-        ! Material plastic parameters
+        ! Plastic parameters
         call rcvalb(fami, kpg, ksp, '+', imate, ' ', 'CZM_FROT_MIX', 0, ' ', [0.d0], nbpl, nompl, &
                     valpl, iokpl, 2)
+
+        ! Viscous regularisation parameters
+        call rcvalb(fami, kpg, ksp, '+', imate, ' ', 'CZM_FROT_MIX', 0, ' ', [0.d0], nbvi, nomvi, &
+                    valvi, iokvi, 0)
 
         ! Augmentation coefficient
         call rcvalb(fami, kpg, ksp, '+', imate, ' ', 'CZM_FROT_MIX', 0, ' ', [0.d0], nblg, nomlg, &
@@ -120,13 +130,21 @@ contains
         self%mat%cohe = valpl(2)
         self%mat%frot = valpl(3)
 
+        if (iokvi(1) .eq. 0 .and. iokvi(2) .eq. 0) then
+            self%mat%regu_visc = ASTER_TRUE
+            self%mat%k = valvi(1)
+            self%mat%tau = valvi(2)
+        else
+            self%mat%regu_visc = ASTER_FALSE
+        end if
+
         self%r = vallg(1)
 
-        ! Check that RIGI_NOR and RIGI_TAN are found if ADHE='ELAS'
+        ! Check that RIGI_NOR and RIGI_TAN are found if ADHE = 'ELAS'
         if ((.not. self%mat%ad) .and. &
             (iokel(1) .eq. 1 .or. iokel(2) .eq. 1)) call utmess('F', 'MECANONLINE3_4')
 
-        ! Constitutive input phi = tau + r*su
+        ! Constitutive input phi = t + r*su
         allocate (self%phi(ndim))
         self%phi = t+self%r*su
 
@@ -134,13 +152,24 @@ contains
         allocate (self%deltap(ndim-1))
         self%deltap = vim(1:ndim-1)
 
-        ! Previous plastic state
+        ! Previous viscous jump
+        allocate (self%deltav(ndim))
+        if (self%mat%regu_visc) then
+            self%deltav = vim(8:7+ndim)
+        else
+            self%deltav = 0.d0
+        end if
+
+        ! Previous stick/slip state
         self%statep = vim(6)
+
+        ! Time increment
+        self%dt = dt
 
     end function Init
 
 ! =====================================================================
-!  INTEGRATION OF THE CONSTITUTIVE LAW (MAIN ROUTINE)
+!  INTEGRATION OF THE CONSTITUTIVE LAW
 ! =====================================================================
 
     subroutine Integrate(self, delta, dphi_delta, vi)
@@ -150,13 +179,15 @@ contains
         type(CONSTITUTIVE_LAW), intent(inout) :: self
         real(kind=8), intent(out) :: delta(:), dphi_delta(:, :), vi(:)
 ! --------------------------------------------------------------------------------------------------
-! delta         Gauss point jump jump
+! delta         Gauss point jump
 ! dphi_delta    derivative d(delta)/d(phi)
 ! vi            internal variables
 ! --------------------------------------------------------------------------------------------------
         integer(kind=8) :: i, j
         real(kind=8) :: tel(self%ndim), nel(self%ndim), id(self%ndim, self%ndim)
-        real(kind=8) :: fel, dka, telq, teln
+        real(kind=8) :: fslip, fopen, teln, telq
+        real(kind=8) :: dka, delta_nl
+        real(kind=8) :: alpha_n, alpha_t, alpha_v
         integer(kind=8) :: state
 !--------------------------------------------------------------------------------------------------
 
@@ -166,59 +197,66 @@ contains
         dka = 0.d0
         tel = 0.d0
         id = 0.d0
+        if (self%mat%ad) then
+            alpha_n = 1.d0
+            alpha_t = 1.d0
+        else
+            alpha_n = 1.d0/(1.d0+self%r/self%mat%kn)
+            alpha_t = 1.d0/(1.d0+self%r/self%mat%kt)
+        end if
+        if (self%mat%regu_visc) then
+            alpha_v = self%mat%k/(1.d0+self%dt/self%mat%tau)
+        else
+            alpha_v = 0.d0
+        end if
         forall (i=1:self%ndim) id(i, i) = 1.d0
 
 ! ======================================================================
-!  ELASTIC PREDICTION
+!  COMPUTATION OF THE NORMAL NONLINEAR JUMP
 ! ======================================================================
 
-        if (.not. self%mat%ad) then
-            tel(1) = self%phi(1)/(1.d0+self%r/self%mat%kn)
-            if (self%mat%frot .gt. 0.d0) tel(1) = min(tel(1), self%mat%cohe/self%mat%frot)
-            do i = 2, self%ndim
-                tel(i) = (self%phi(i)-self%r*self%deltap(i-1))/(1.d0+self%r/self%mat%kt)
-            end do
+        if (self%mat%frot .gt. 0.d0) then
+            fopen = self%phi(1)*alpha_n-self%mat%cohe/self%mat%frot+alpha_v*self%deltav(1)
+            delta_nl = max(fopen, 0.d0)/(self%r*alpha_n+alpha_v)
         else
-            tel(1) = self%phi(1)
-            if (self%mat%frot .gt. 0.d0) tel(1) = min(tel(1), self%mat%cohe/self%mat%frot)
-            do i = 2, self%ndim
-                tel(i) = self%phi(i)-self%r*self%deltap(i-1)
-            end do
+            delta_nl = 0.d0
         end if
+
+! ======================================================================
+!  COMPUTATION OF THE TANGENTIAL PLASTIC JUMP
+! ======================================================================
+
+        ! Elastic prediction
+        tel(1) = (self%phi(1)-self%r*delta_nl)*alpha_n
+        do i = 2, self%ndim
+            tel(i) = (self%phi(i)-self%r*self%deltap(i-1))*alpha_t
+        end do
         teln = tel(1)
         telq = sqrt(dot_product(tel(2:self%ndim), tel(2:self%ndim)))
-        fel = telq+self%mat%frot*teln-self%mat%cohe
+        fslip = telq+self%mat%frot*(teln-alpha_v*(delta_nl-self%deltav(1)))-self%mat%cohe
 
-! ======================================================================
-!  COMPUTATION OF THE PLASTIC JUMP
-! ======================================================================
-
-        ! Elastic regime
-        if (fel .lt. 0.d0) then
-
-            ! Elastic state
+        ! Stick or slip
+        if (fslip .le. self%cvuser*self%mat%cohe) then
             state = 0
-
-            ! Compute the plastic jump (the true internal variables)
             vi(1:self%ndim-1) = self%deltap(1:self%ndim-1)
-
-            ! Plastic regime
         else
-
-            ! Plastic state
             state = 1
-
-            ! Compute the plastic jump (the true internal variables)
-            if (.not. self%mat%ad) then
-                dka = fel/(self%r/(1.d0+self%r/self%mat%kt))
-            else
-                dka = fel/self%r
-            end if
+            dka = fslip/(self%r*alpha_t+alpha_v)
             do i = 2, self%ndim
                 nel(i) = tel(i)/telq
                 vi(i-1) = self%deltap(i-1)+dka*nel(i)
             end do
+        end if
 
+! ======================================================================
+!  COMPUTATION OF THE VISCOUS JUMP
+! ======================================================================
+
+        if (self%mat%regu_visc) then
+            vi(8) = self%deltav(1)+(delta_nl-self%deltav(1))/(1.d0+self%mat%tau/self%dt)
+            do i = 2, self%ndim
+                vi(7+i) = self%deltav(i)+(vi(i-1)-self%deltav(i))/(1.d0+self%mat%tau/self%dt)
+            end do
         end if
 
 ! ======================================================================
@@ -226,20 +264,12 @@ contains
 ! ======================================================================
 
         if (.not. self%mat%ad) then
-            if (self%mat%frot*teln .lt. self%mat%cohe) then
-                delta(1) = self%phi(1)/(self%mat%kn+self%r)
-            else
-                delta(1) = (self%phi(1)-self%mat%cohe/self%mat%frot)/self%r
-            end if
+            delta(1) = (self%phi(1)/self%mat%kn+delta_nl)*alpha_n
             do i = 2, self%ndim
-                delta(i) = (self%phi(i)+self%mat%kt*vi(i-1))/(self%mat%kt+self%r)
+                delta(i) = (self%phi(i)/self%mat%kt+vi(i-1))*alpha_t
             end do
         else
-            if (self%mat%frot*teln .lt. self%mat%cohe) then
-                delta(1) = 0.d0
-            else
-                delta(1) = (self%phi(1)-self%mat%cohe/self%mat%frot)/self%r
-            end if
+            delta(1) = delta_nl
             do i = 2, self%ndim
                 delta(i) = vi(i-1)
             end do
@@ -249,13 +279,25 @@ contains
 !  COMPUTATION OF THE POSTPROCESSING INTERNAL VARIABLES
 ! ======================================================================
 
+        ! Jump
         vi(3:self%ndim+2) = delta(1:self%ndim)
+
+        ! Stick or slip
         vi(6) = state
-        if (self%mat%frot*teln .lt. self%mat%cohe) then
+
+        ! Contact or gap
+        if (delta(1) .le. 0.d0) then
             vi(7) = 0
         else
             vi(7) = 1
         end if
+
+        ! Viscous stress
+        vi(11) = self%mat%k*self%mat%tau &
+                 *sqrt(dot_product( &
+                       vi(8:7+self%ndim)-self%deltav(1:self%ndim), &
+                       vi(8:7+self%ndim)-self%deltav(1:self%ndim)) &
+                       )/self%dt
 
 ! ======================================================================
 !  COMPUTATION OF THE TANGENT MATRIX
@@ -263,83 +305,45 @@ contains
 
         if (.not. self%rigi) goto 999
 
+        ! d(delta(1))/d(phi(1))
+        if (.not. self%mat%ad) then
+            dphi_delta(1, 1) = 1.d0/(self%mat%kn+self%r)
+        end if
+        if (delta_nl .gt. 0.d0) then
+            dphi_delta(1, 1) = dphi_delta(1, 1)+alpha_n**2/(self%r*alpha_n+alpha_v)
+        end if
+
         ! Tangent matrix selection for the prediction
         if (self%pred) then
             state = self%statep
         end if
 
         if (state .eq. 0 .or. self%elas) then
-
+            ! d(delta(i))/d(phi(i)), for i=2 to ndim
             if (.not. self%mat%ad) then
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    dphi_delta(1, 1) = 1.d0/(self%mat%kn+self%r)
-                else
-                    dphi_delta(1, 1) = 1.d0/self%r
-                end if
                 do i = 2, self%ndim
                     dphi_delta(i, i) = 1.d0/(self%mat%kt+self%r)
                 end do
-            else
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    dphi_delta(1, 1) = 0.d0
-                else
-                    dphi_delta(1, 1) = 1.d0/self%r
-                end if
-                do i = 2, self%ndim
-                    dphi_delta(i, i) = 0.d0
-                end do
             end if
-
         else
-
-            ! d(delta(1))/d(phi(1))
-            if (.not. self%mat%ad) then
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    dphi_delta(1, 1) = 1.d0/(self%mat%kn+self%r)
-                else
-                    dphi_delta(1, 1) = 1.d0/self%r
-                end if
-            else
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    dphi_delta(1, 1) = 0.d0
-                else
-                    dphi_delta(1, 1) = 1.d0/self%r
-                end if
-            end if
-
             ! d(delta(i))/d(phi(1)), for i=2 to ndim
-            if (.not. self%mat%ad) then
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    do i = 2, self%ndim
-                        dphi_delta(i, 1) = self%mat%frot*nel(i)/self%r &
-                                           /(1.d0+self%r/self%mat%kn)
-                    end do
-                end if
-            else
-                if (self%mat%frot*teln .lt. self%mat%cohe) then
-                    do i = 2, self%ndim
-                        dphi_delta(i, 1) = self%mat%frot*nel(i)/self%r
-                    end do
-                end if
+            if (delta_nl .le. 0.d0) then
+                do i = 2, self%ndim
+                    dphi_delta(i, 1) = self%mat%frot*nel(i) &
+                                       *alpha_t*alpha_n/(self%r*alpha_t+alpha_v)
+                end do
             end if
-
             ! d(delta(i))/d(phi(j)), for i,j=2 to ndim
-            if (.not. self%mat%ad) then
-                do i = 2, self%ndim
-                    do j = 2, self%ndim
-                        dphi_delta(i, j) = id(i, j)/(self%mat%kt+self%r) &
-                                           +(nel(i)*nel(j)+fel/telq*(id(i, j)-nel(i)*nel(j))) &
-                                           /self%r/(1.d0+self%r/self%mat%kt)
-                    end do
+            do i = 2, self%ndim
+                if (.not. self%mat%ad) then
+                    dphi_delta(i, i) = 1.d0/(self%mat%kt+self%r)
+                end if
+                do j = 2, self%ndim
+                    dphi_delta(i, j) = dphi_delta(i, j) &
+                                       +(nel(i)*nel(j)+fslip/telq*(id(i, j)-nel(i)*nel(j))) &
+                                       *alpha_t**2/(self%r*alpha_t+alpha_v)
                 end do
-            else
-                do i = 2, self%ndim
-                    do j = 2, self%ndim
-                        dphi_delta(i, j) = (nel(i)*nel(j)+fel/telq*(id(i, j)-nel(i)*nel(j)))/self%r
-                    end do
-                end do
-            end if
-
+            end do
         end if
 
 999     continue

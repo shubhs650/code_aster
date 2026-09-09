@@ -20,21 +20,21 @@ subroutine te0350(option, nomte)
 !
     use Behaviour_type
     use Behaviour_module
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/nmas2d.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/tecach.h"
 #include "asterfort/utmess.h"
 #include "blas/dcopy.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -53,22 +53,22 @@ subroutine te0350(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=16) :: mult_comp, defo_comp, rela_comp, type_comp
+    character(len=16), pointer :: compor(:) => null(), mulcom(:) => null()
+    character(len=16) :: multComp, defoComp, relaComp, typeComp
     aster_logical :: lVect, lMatr, lVari, lSigm
     character(len=8) :: typmod(2)
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     integer(kind=8) :: nno, npg, i, imatuu, lgpg, ndim
-    integer(kind=8) :: ipoids, ivf, idfde, igeom, imate
+    integer(kind=8) :: ipoids, ivf, idfde, jvGeom, jvMaterc
     integer(kind=8) :: icontm, ivarim
-    integer(kind=8) :: iinstm, iinstp, ideplm, ideplp, icarcr
-    character(len=16), pointer :: compor(:) => null(), v_mult_comp(:) => null()
+    integer(kind=8) :: jvInstmr, jvInstpr, ideplm, ideplp, jvCarcri
     integer(kind=8) :: ivectu, icontp, ivarip
     integer(kind=8) :: ivarix, iret
     integer(kind=8) :: jtab(7), jcret, codret
     real(kind=8) :: def(4*27*2), dfdi(54)
-    real(kind=8) :: angl_naut(3)
-    type(Behaviour_Integ) :: BEHinteg
     blas_int :: b_incx, b_incy, b_n
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -94,35 +94,50 @@ subroutine te0350(option, nomte)
     typmod(2) = ' '
 
 ! - Get input fields
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imate)
+    call jevech('PGEOMER', 'L', jvGeom)
     call jevech('PCONTMR', 'L', icontm)
-    call jevech('PINSTMR', 'L', iinstm)
-    call jevech('PINSTPR', 'L', iinstp)
+    call jevech('PINSTMR', 'L', jvInstmr)
+    call jevech('PINSTPR', 'L', jvInstpr)
     call jevech('PVARIMR', 'L', ivarim)
     call jevech('PDEPLMR', 'L', ideplm)
     call jevech('PDEPLPR', 'L', ideplp)
-    call jevech('PCOMPOR', 'L', vk16=compor)
-    call jevech('PCARCRI', 'L', icarcr)
-    call jevech('PMULCOM', 'L', vk16=v_mult_comp)
-    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                itab=jtab)
+    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
     lgpg = max(jtab(6), 1)*jtab(7)
 
-! - Get orientation
-    call getElemOrientation(ndim, nno, igeom, angl_naut)
-!
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Get fields for non-linear behaviour
+    call jevech('PCOMPOR', 'L', vk16=compor)
+    call jevech('PCARCRI', 'L', jvCarcri)
+    call jevech('PMULCOM', 'L', vk16=mulcom)
+
+! - Properties of behaviour
+    multComp = mulcom(1)
+    relaComp = compor(RELA_NAME)
+    defoComp = compor(DEFO)
+    typeComp = compor(INCRELAS)
+
+! - Initialisation of behaviour datastructure
+    call behaviourInit(BEHInteg)
+
 ! - Select objects to construct from option name
     call behaviourOption(option, compor, &
                          lMatr, lVect, &
                          lVari, lSigm, &
                          codret)
 
-! - Properties of behaviour
-    mult_comp = v_mult_comp(1)
-    rela_comp = compor(RELA_NAME)
-    defo_comp = compor(DEFO)
-    type_comp = compor(INCRELAS)
+! - Set main parameters for behaviour (on cell)
+    call behaviourSetParaCell(typmod, option, &
+                              compor, zr(jvCarcri), &
+                              zr(jvInstmr), zr(jvInstpr), &
+                              materPara, BEHInteg)
 
 ! - Get output fields
     if (lMatr) then
@@ -144,40 +159,31 @@ subroutine te0350(option, nomte)
         call dcopy(b_n, zr(ivarix), b_incx, zr(ivarip), b_incy)
     end if
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, zr(icarcr), &
-                              zr(iinstm), zr(iinstp), &
-                              fami, zi(imate), &
-                              BEHinteg)
-
 ! - HYPER-ELASTICITE
-    if (type_comp .eq. 'COMP_ELAS') then
-        if (rela_comp .ne. 'ELAS') then
+    if (typeComp .eq. 'COMP_ELAS') then
+        if (relaComp .ne. 'ELAS') then
             call utmess('F', 'ELEMENTSSI_2')
         end if
     end if
 
 ! - HYPO-ELASTICITE
-    if (defo_comp(6:10) .eq. '_REAC') then
+    if (defoComp(6:10) .eq. '_REAC') then
         do i = 1, ndim*nno
-            zr(igeom+i-1) = zr(igeom+i-1)+zr(ideplm+i-1)+zr(ideplp+i-1)
+            zr(jvGeom+i-1) = zr(jvGeom+i-1)+zr(ideplm+i-1)+zr(ideplp+i-1)
         end do
     end if
 !
-    if (defo_comp(1:5) .eq. 'PETIT') then
-        call nmas2d(BEHinteg, &
-                    fami, nno, npg, ipoids, ivf, &
-                    idfde, zr(igeom), typmod, option, zi(imate), &
-                    compor, mult_comp, lgpg, zr(icarcr), zr(iinstm), &
-                    zr(iinstp), zr(ideplm), zr(ideplp), angl_naut, zr(icontm), &
+    if (defoComp(1:5) .eq. 'PETIT') then
+        call nmas2d(BEHInteg, &
+                    nno, npg, &
+                    ipoids, ivf, idfde, &
+                    zr(jvGeom), typmod, option, &
+                    compor, multComp, lgpg, zr(jvCarcri), zr(jvInstmr), &
+                    zr(jvInstpr), zr(ideplm), zr(ideplp), zr(icontm), &
                     zr(ivarim), dfdi, def, zr(icontp), zr(ivarip), &
                     zr(imatuu), zr(ivectu), codret)
     else
-        call utmess('F', 'ELEMENTSSI_1', sk=defo_comp)
+        call utmess('F', 'ELEMENTSSI_1', sk=defoComp)
     end if
 
 ! - Save return code

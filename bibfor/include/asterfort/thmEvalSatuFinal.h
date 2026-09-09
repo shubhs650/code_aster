@@ -16,14 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmEvalSatuFinal(ds_thm, j_mater, p1    , temp, &
-                                satur , dsatur , retcom)
+interface
+    subroutine thmEvalSatuFinal(ds_thm, &
+                                p1, tempCurr, &
+                                satur, dsatur, retcom)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        real(kind=8), intent(in) :: p1, temp
+        real(kind=8), intent(in) :: p1, tempCurr
         real(kind=8), intent(out) :: satur, dsatur
         integer(kind=8), intent(out) :: retcom
     end subroutine thmEvalSatuFinal
-end interface 
+end interface

@@ -23,6 +23,7 @@ from . import TensorModule
 
 try:
     from ...Utilities import sympy
+    from sympy import Matrix, eye, zeros, ones, cos, sin, symbols
 
     X, Y, Z = sympy.symbols("X Y Z")
     ASTER_HAVE_SYMPY = True
@@ -31,35 +32,26 @@ except ImportError:
 
 
 def kron(i, j):
-    if i == j:
-        a = 1
-    else:
-        a = 0
-    return a
+    return 1 if i == j else 0
 
 
 def antikron(i, j):
-    if i == j:
-        a = 0.0
-    else:
-        a = 1.0
-    return a
+    return 0.0 if i == j else 1.0
 
 
 def dif(i, j, n, m):
     if i == n and j == m:
-        a = -1.0
+        return -1.0
     elif i == m and j == n:
-        a = 1.0
+        return 1.0
     else:
-        a = 0.0
-    return a
+        return 0.0
 
 
 def HookeIsotropic(E, NU):
     lamda = E * NU / ((1 + NU) * (1 - 2 * NU))
     mu = E / (2 * (1 + NU))
-    C = NP.resize(None, (3, 3, 3, 3))
+    C = NP.zeros((3, 3, 3, 3))
     for i in range(3):
         for j in range(3):
             for k in range(3):
@@ -72,30 +64,33 @@ def HookeIsotropic(E, NU):
 
 # definition des matrices des angles rotation nautique
 def Rotation(alpha, beta, gamma):
-    alpha = float(alpha)
-    beta = float(beta)
-    gamma = float(gamma)
-    Ralpha = NP.resize(0.0, (3, 3))
-    Rbeta = NP.resize(0.0, (3, 3))
-    Rgamma = NP.resize(0.0, (3, 3))
+    if not ASTER_HAVE_SYMPY:
+        raise ImportError("Sympy is required for Rotation function")
+
+    alpha, beta, gamma = map(float, (alpha, beta, gamma))
+    Ralpha = NP.zeros((3, 3))
     for i in range(3):
         for j in range(3):
-            Ralpha[i, j] = sympy.cos(alpha * antikron(i, 2)) * kron(i, j) + sympy.sin(
+            Ralpha[i, j] = cos(alpha * antikron(i, 2)) * kron(i, j) + sympy.sin(
                 alpha * dif(i, j, 0, 1)
             )
-        # Rbeta[i,j]=sympy.cos(-beta*antikron(i,1))*kron(i,j)+dif(i,j,2,1)*sympy.sin(-beta)*antikron(i,j)
-        # Rgamma[i,j]=sympy.cos(gamma*antikron(i,0))*kron(i,j)+dif(i,j,1,0)*sympy.sin(gamma)*antikron(i,j)
+
     Rotation = Ralpha  # sympy.Matrix(Ralpha.tolist())*sympy.Matrix(Rbeta.tolist())*sympy.Matrix(Rgamma.tolist())
     return TensorModule.Tensor(NP.array(Rotation.tolist()))
 
 
 def HookeIsotropicP(E, NU):
+    if not ASTER_HAVE_SYMPY:
+        raise ImportError("Sympy is required for HookeIsotropicP")
+
     lamda = E * NU / ((1.0 + NU) * (1.0 - 2.0 * NU))
     mu = E / (2.0 * (1.0 + NU))
+
     A = (lamda * ones(3) + 2 * mu * eye(3)).row_join(zeros(3))
     B = zeros(3).row_join(mu * eye(3))
     C = A.col_join(B)
-    return TensorModule.Tensor(NP.array(C))
+
+    return TensorModule.Tensor(NP.array(C.tolist()))
 
 
 def HookeOrthotropic(E_L, E_T, E_N, NU_LT, NU_LN, NU_TN, G_LT, G_LN, G_TN):

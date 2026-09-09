@@ -26,10 +26,11 @@ subroutine mmgnmm(ndim, nnm, &
 !
     implicit none
 !
+#include "MeshTypes_type.h"
 #include "asterf_types.h"
 !
     integer(kind=8), intent(in) :: ndim, nnm
-    real(kind=8), intent(in) :: wpg, ffm(9), dffm(2, 9)
+    real(kind=8), intent(in) :: wpg, ffm(9), dffm(2, MT_NNOMAX2D)
     real(kind=8), intent(in) :: jacobi, coefac, jeu, dlagrc
     real(kind=8), intent(in) :: mprojn(3, 3), mprt1n(3, 3), mprt2n(3, 3), mprnt1(3, 3), mprnt2(3, 3)
     real(kind=8), intent(in) :: kappa(2, 2), vech1(3), vech2(3), h(2, 2)
@@ -152,10 +153,14 @@ subroutine mmgnmm(ndim, nnm, &
                                           (1.d0*dffm(1, i)*kappa(1, 2)*dffm(2, j))+ &
                                           (2.d0*dffm(2, i)*kappa(2, 2)*dffm(2, j)))+ &
                                          (dlagrc-coefac*jeu)*wpg*jacobi*ffm(i)* &
-                                    (mprnt1(l, k)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j))+ &
-                                     mprnt2(l, k)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j))+ &
-                                     mprt1n(l, k)*(kappa(1, 1)*dffm(1, j)+kappa(1, 2)*dffm(2, j))+ &
-                                       mprt2n(l, k)*(kappa(2, 1)*dffm(1, j)+kappa(2, 2)*dffm(2, j)))
+                                         (mprnt1(l, k)*(kappa(1, 1)*dffm(1, j)+ &
+                                                        kappa(1, 2)*dffm(2, j))+ &
+                                          mprnt2(l, k)*(kappa(2, 1)*dffm(1, j)+ &
+                                                        kappa(2, 2)*dffm(2, j))+ &
+                                          mprt1n(l, k)*(kappa(1, 1)*dffm(1, j)+ &
+                                                        kappa(1, 2)*dffm(2, j))+ &
+                                          mprt2n(l, k)*(kappa(2, 1)*dffm(1, j)+ &
+                                                        kappa(2, 2)*dffm(2, j)))
                     end do
                 end do
             end do

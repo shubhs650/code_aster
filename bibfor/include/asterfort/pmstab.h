@@ -21,7 +21,7 @@ interface
     subroutine pmstab(sigmPrev, sigmCurr, epsiPrev, epsiIncr, &
                       nbVari, vim, vip, &
                       timePrev, timeCurr, iterNewt, &
-                      tablName, tablType, tablNbParaMaxi, tablNbPara, &
+                      tablName, tablType, tablNbPara, &
                       tablParaName, tablVale, &
                       lLoadGrad, valeImpo, lPrintMatr, dsidep, variName, &
                       nbVariTabl)
@@ -35,9 +35,9 @@ interface
         integer(kind=8), intent(in) :: iterNewt
         character(len=8), intent(in) :: tablName
         integer(kind=8), intent(in) :: tablType
-        integer(kind=8), intent(in) :: tablNbParaMaxi, tablNbPara
-        character(len=16), intent(in) :: tablParaName(tablNbParaMaxi)
-        real(kind=8), intent(inout) :: tablVale(tablNbParaMaxi)
+        integer(kind=8), intent(in) :: tablNbPara
+        character(len=16), dimension(:), intent(in) :: tablParaName
+        real(kind=8), dimension(:), intent(inout) :: tablVale
         aster_logical, intent(in) :: lLoadGrad
         real(kind=8), intent(in) :: valeImpo(9)
         aster_logical, intent(in) :: lPrintMatr

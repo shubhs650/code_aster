@@ -20,7 +20,6 @@ subroutine nonlinIntForceAsse(typeAsse, list_func_acti, sdnume, &
                               ds_material, ds_constitutive, ds_system)
 !
     use NonLin_Datastructure_type
-    use NonLinear_module, only: setNodalValuesGDVARINO
 !
     implicit none
 !
@@ -65,7 +64,7 @@ subroutine nonlinIntForceAsse(typeAsse, list_func_acti, sdnume, &
     real(kind=8) :: vectCoef(2)
     character(len=19) :: vectElem(2)
     character(len=8) :: vevcprCurr, vevcprPrev
-    aster_logical :: l_gdvarino, l_resi_comp
+    aster_logical :: l_resi_comp
     character(len=19) :: cnvcpr
 !
 ! --------------------------------------------------------------------------------------------------
@@ -76,7 +75,6 @@ subroutine nonlinIntForceAsse(typeAsse, list_func_acti, sdnume, &
     end if
 
 ! - Active functionnalities
-    l_gdvarino = isfonc(list_func_acti, 'ENDO_NO')
     l_resi_comp = isfonc(list_func_acti, 'RESI_COMP')
 
 ! - Parameters for external state variables vector
@@ -119,15 +117,9 @@ subroutine nonlinIntForceAsse(typeAsse, list_func_acti, sdnume, &
         call assvec('V', ds_system%cnfint, 1, ds_system%veinte, [1.d0], ds_system%nume_dof)
     elseif (typeAsse .eq. INTE_FORCE_NONE) then
 !       Nothing to do
-        ASSERT(.not. l_gdvarino)
         ASSERT(.not. l_resi_comp)
     else
         ASSERT(ASTER_FALSE)
-    end if
-
-! - For GDVARINO
-    if (l_gdvarino .and. typeAsse .eq. INTE_FORCE_INTE) then
-        call setNodalValuesGDVARINO(ds_system%nume_dof, sdnume, ds_system%cnfint)
     end if
 
 ! - If RESI_COMP_RELA

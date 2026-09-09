@@ -17,16 +17,16 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 !
-interface 
-    subroutine xfnohm(ds_thm,&
-                      fnoevo, deltat, nno,&
-                      npg, ipoids, ivf, idfde,&
-                      geom, congem, b, dfdi, dfdi2,&
-                      r, vectu, imate, mecani, press1,&
-                      dimcon, nddls, nddlm, dimuel, nmec,&
-                      np1, ndim, axi, dimenr, nnop,&
-                      nnops, nnopm, igeom, jpintt, jpmilt,&
-                      jheavn, lonch, cnset, heavt, enrmec, enrhyd,&
+interface
+    subroutine xfnohm(ds_thm, &
+                      nno, npg, &
+                      ipoids, ivf, idfde, &
+                      geom, congem, b, dfdi, dfdi2, &
+                      r, vectu, mecani, press1, &
+                      dimcon, nddls, nddlm, dimuel, nmec, &
+                      np1, ndim, axi, dimenr, nnop, &
+                      nnops, nnopm, igeom, jpintt, jpmilt, &
+                      jheavn, lonch, cnset, heavt, enrmec, enrhyd, &
                       nfiss, nfh, jfisno)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
@@ -49,7 +49,6 @@ interface
         real(kind=8) :: dfdi2(nnops, ndim)
         real(kind=8) :: r(1:dimenr)
         real(kind=8) :: vectu(dimuel)
-        integer(kind=8) :: imate
         integer(kind=8) :: mecani(5)
         integer(kind=8) :: press1(7)
         integer(kind=8) :: dimcon
@@ -72,4 +71,4 @@ interface
         integer(kind=8) :: nfh
         integer(kind=8) :: jfisno
     end subroutine xfnohm
-end interface 
+end interface

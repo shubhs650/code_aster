@@ -103,15 +103,15 @@ def sdu_tous_non_blancs(ojb, checker, sequence=None, comment=""):
     else:
         seq = ojb.get()
     for elem in seq:
-        assert len(elem.strip()) > 0, (seq, self, 'tous "non blancs" ' + comment)
+        assert len(elem.strip()) > 0, (seq, 'tous "non blancs" ' + comment)
 
 
 def sdu_tous_compris(ojb, checker, sequence=None, vmin=None, vmax=None, comment=""):
     """Vérifie que toutes les valeurs de la sequence sont comprises entre vmin et vmax
     Les bornes vmin et vmax sont autorisées
     Si l'argument sequence est None, on prend l'ensemble de l'ojb."""
-    assert (not vmin is None) or (
-        not vmax is None
+    assert (
+        vmin is not None or vmax is not None
     ), "Il faut fournir au moins une des valeurs vmin ou vmax"
     if sequence:
         seq = sequence
@@ -158,8 +158,7 @@ def sdu_monotone(seqini):
 
 def sdu_verif_nom_gd(nomgd):
     """vérifie que nomgd est bien un nom de grandeur"""
-    if not PhysicalQuantityManager.hasQuantityOfName(nomgd.strip()):
-        checker.err(ojb, "condition non respectée : " + nomgd + " n'est pas un nom de grandeur.")
+    return PhysicalQuantityManager.hasQuantityOfName(nomgd.strip())
 
 
 def sdu_nom_gd(numgd):

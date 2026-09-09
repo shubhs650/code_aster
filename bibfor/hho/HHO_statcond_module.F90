@@ -29,8 +29,6 @@ module HHO_statcond_module
 #include "asterf_types.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/utmess.h"
-#include "asterfort/writeMatrix.h"
-#include "asterfort/writeVector.h"
 #include "blas/dgemm.h"
 #include "blas/dgemv.h"
 #include "blas/dpotrf.h"

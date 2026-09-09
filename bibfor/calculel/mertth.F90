@@ -16,30 +16,37 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine mertth(model, loadNameJv, loadInfoJv, caraElem, mateco, &
-                  time, time_move, temp_prev, temp_iter, matr_elem)
+subroutine mertth(model, loadNameJv, loadInfoJv, &
+                  caraElem, materCode, &
+                  timeMapMatr, timeMapMove, &
+                  tempPrev, tempIter, &
+                  matrElem)
 !
+    use coorSyst_module, only: setOrieFields
+    use loadTherCompute_module
+    use loadTherCompute_type
     implicit none
 !
+#include "asterc/r8vide.h"
 #include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/calcul.h"
-#include "asterfort/codent.h"
+#include "asterfort/dismoi.h"
 #include "asterfort/jedetr.h"
 #include "asterfort/jeexin.h"
 #include "asterfort/load_list_info.h"
-#include "asterfort/mecara.h"
 #include "asterfort/megeom.h"
 #include "asterfort/memare.h"
 #include "asterfort/reajre.h"
+#include "asterfort/setStructFields.h"
 !
-    character(len=8), intent(in) :: model, caraElem
+    character(len=8), intent(in) :: model
     character(len=24), intent(in) :: loadNameJv, loadInfoJv
-    character(len=24), intent(in) :: mateco
-    character(len=24), intent(in) :: time
-    character(len=24), intent(in) :: time_move
-    character(len=24), intent(in) :: temp_prev
-    character(len=24), intent(in) :: temp_iter
-    character(len=19), intent(inout) :: matr_elem
+    character(len=8), intent(in) :: caraElem
+    character(len=24), intent(in) :: materCode
+    character(len=24), intent(in) :: timeMapMatr, timeMapMove
+    character(len=24), intent(in) :: tempPrev, tempIter
+    character(len=19), intent(inout) :: matrElem
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -53,124 +60,128 @@ subroutine mertth(model, loadNameJv, loadInfoJv, caraElem, mateco, &
 ! In  caraElem         : name of elementary characteristics (field)
 ! In  loadNameJv       : name of object for list of loads name
 ! In  loadInfoJv       : name of object for list of loads info
-! In  time             : time (<CARTE>)
-! In  time_move        : modified time (<CARTE>) for THER_NON_LINE_MO
-! In  temp_prev        : previous temperature
-! In  temp_iter        : temperature field at current Newton iteration
-! IO  matr_elem        : name of matr_elem result
+! In  timeMapMatr      : time (<CARTE>)
+! In  timeMapMove      : modified time (<CARTE>) for THER_NON_LINE_MO
+! In  tempPrev         : previous temperature
+! In  tempIter         : temperature field at current Newton iteration
+! IO  matrElem         : name of matrElem result
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbchmx
-    parameter(nbchmx=3)
-    integer(kind=8) :: nbopt(nbchmx), nligr(nbchmx)
-    character(len=6) :: nomchp(nbchmx)
-    character(len=7) :: nompar(nbchmx), nompaf(nbchmx)
-!
-    character(len=8) :: lpain(5), lpaout(1), load_name
-    character(len=16) :: option, nomopr(nbchmx), nomopf(nbchmx)
-    character(len=24) :: ligrel(2), lchin(5), lchout(1)
-    character(len=24) :: chgeom, chcara(18)
-    integer(kind=8) :: iret, nb_load, i_load, ilires, k, load_nume
-    aster_logical :: load_empty
-    character(len=24), pointer :: v_load_name(:) => null()
-    integer(kind=8), pointer :: v_load_info(:) => null()
-    data nomchp/'.FLUNL', '.HECHP', '.COEFH'/
-    data nomopr/'                ', 'MTAN_THER_PARO_R', 'RIGI_THER_ECHA_R'/
-    data nomopf/'MTAN_THER_FLUXNL', 'MTAN_THER_PARO_F', 'RIGI_THER_ECHA_F'/
-    data nompar/'       ', 'PHECHPR', 'PCOEFHR'/
-    data nompaf/'PFLUXNL', 'PHECHPF', 'PCOEFHF'/
-    data nbopt/4, 5, 3/
-    data nligr/1, 2, 1/
+    aster_logical, parameter :: l_stat = ASTER_TRUE, lMove = ASTER_TRUE
+    character(len=1), parameter :: jvBase = "V"
+    real(kind=8) :: theta
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    character(len=16), parameter :: option = 'RIGI_THER_TRANS'
+    character(len=24) :: modelLigrel, loadLigrel
+    character(len=24) :: chgeom, resuElem
+    integer(kind=8) :: iret, nbFieldIn
+    integer(kind=8) :: nbLoad, iLoad, loadNume
+    aster_logical :: noLoadInList
+    character(len=13) :: loadPreObject
+    character(len=8) :: loadName
+    character(len=24), pointer :: listLoadName(:) => null()
+    integer(kind=8), pointer :: listLoadInfo(:) => null()
 !
 ! --------------------------------------------------------------------------------------------------
 !
 
-!
-! - Loads
-!
-    call load_list_info(load_empty, nb_load, v_load_name, v_load_info, &
+! - Initializations
+    ASSERT(model .ne. ' ')
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+
+! - Stationnary !
+    ASSERT(l_stat)
+    theta = r8vide()
+
+! - Get loads
+    call load_list_info(noLoadInList, nbLoad, listLoadName, listLoadInfo, &
                         loadNameJv, loadInfoJv)
-!
+
+! - Geometry field
     call megeom(model, chgeom)
-    call mecara(caraElem, chcara)
-!
-    call jeexin(matr_elem(1:19)//'.RELR', iret)
+
+! - Allocate result
+    call jeexin(matrElem(1:19)//'.RELR', iret)
     if (iret .eq. 0) then
-        matr_elem = '&&METRIG'
-        call memare('V', matr_elem, model(1:8), 'RIGI_THER')
+        matrElem = '&&METRIG'
+        call memare('V', matrElem, model, 'RIGI_THER')
     else
-        call jedetr(matr_elem(1:19)//'.RELR')
+        call jedetr(matrElem(1:19)//'.RELR')
     end if
-!
-    ligrel(1) = model(1:8)//'.MODELE'
-!
+
+! - Add input fields
+    lpain(1) = 'PGEOMER'
+    lchin(1) = chgeom(1:19)
+    lpain(2) = 'PMATERC'
+    lchin(2) = materCode(1:19)
+    lpain(3) = 'PTEMPER'
+    lchin(3) = tempPrev(1:19)
+    lpain(4) = 'PTEMPEI'
+    lchin(4) = tempIter(1:19)
+    nbFieldIn = 4
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Generate new RESU_ELEM name
+    resuElem = matrElem(1:8)//'.ME001'
+
+! - Set output field
     lpaout(1) = 'PMATTTR'
-    lchout(1) = matr_elem(1:8)//'.ME001'
-    ilires = 0
-!
-    if (model .ne. '        ') then
+    lchout(1) = resuElem(1:19)
+
+! - Compute "volumic" term
+    call calcul('S', option, modelLigrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
+    call reajre(matrElem, lchout(1), jvBase)
+
+! - Add load terms
+    lpain = " "
+    lpaout = " "
+    lchin = " "
+    lchout = " "
+    do iLoad = 1, nbLoad
+        loadName = listLoadName(iLoad) (1:8)
+        loadNume = listLoadInfo(nbLoad+iLoad+1)
+        loadPreObject = loadName(1:8)//'.CHTH'
+        loadLigrel = loadPreObject(1:13)//'.LIGRE'
+
+! ----- Standard input fields
         lpain(1) = 'PGEOMER'
-        lchin(1) = chgeom
-        lpain(2) = 'PMATERC'
-        lchin(2) = mateco
-        lpain(3) = 'PCACOQU'
-        lchin(3) = chcara(7)
-        lpain(4) = 'PTEMPER'
-        lchin(4) = temp_prev
-        lpain(5) = 'PTEMPEI'
-        lchin(5) = temp_iter
-        option = 'RIGI_THER_TRANS'
-        ilires = ilires+1
-        call codent(ilires, 'D0', lchout(1) (12:14))
-        call calcul('S', option, ligrel(1), 5, lchin, &
-                    lpain, 1, lchout, lpaout, 'V', &
-                    'OUI')
-        call reajre(matr_elem, lchout(1), 'V')
-    end if
-!
-    if (nb_load .gt. 0) then
-        do i_load = 1, nb_load
-            load_name = v_load_name(i_load) (1:8)
-            load_nume = v_load_info(nb_load+i_load+1)
-            if (load_nume .gt. 0) then
-                ligrel(2) = load_name//'.CHTH.LIGRE'
-                lpain(1) = 'PGEOMER'
-                lchin(1) = chgeom
-                lpain(3) = 'PINSTR'
-                lchin(3) = time
-                lpain(4) = 'PTEMPEI'
-                lchin(4) = temp_iter
-                lpain(5) = 'PDEPLAR'
-                lchin(5) = '&&DEPPLU'
-                lpaout(1) = 'PMATTTR'
-                lchout(1) = matr_elem(1:8)//'.ME001'
-                do k = 1, nbchmx
-                    lchin(2) = load_name(1:8)//'.CHTH'//nomchp(k)//'.DESC'
-                    call jeexin(lchin(2), iret)
-                    if (iret .gt. 0) then
-                        if (load_nume .eq. 1) then
-                            option = nomopr(k)
-                            lpain(2) = nompar(k)
-                        else if (load_nume .eq. 2 .or. load_nume .eq. 3) then
-                            option = nomopf(k)
-                            lpain(2) = nompaf(k)
-                        end if
-                        if (option(11:14) .eq. 'PARO') then
-                            lpain(3) = 'PINSTR'
-                            lchin(3) = time_move
-                        end if
-                        if (k .eq. 2) lchin(4) = temp_iter
-                        ilires = ilires+1
-                        call codent(ilires, 'D0', lchout(1) (12:14))
-                        call calcul('S', option, ligrel(nligr(k)), nbopt(k), lchin, &
-                                    lpain, 1, lchout, lpaout, 'V', &
-                                    'OUI')
-                        call reajre(matr_elem, lchout(1), 'V')
-                    end if
-                end do
-            end if
-        end do
-    end if
+        lchin(1) = chgeom(1:19)
+        lpain(2) = 'PTEMPEI'
+        lchin(2) = tempIter(1:19)
+        lpain(3) = 'PDEPLAR'
+        lchin(3) = '&&DEPPLU'
+        nbFieldIn = 3
+
+! ----- Set output field
+        lpaout(1) = 'PMATTTR'
+
+        if (loadNume .gt. 0) then
+            call compLoadMatr(l_stat, theta, &
+                              model, timeMapMatr, &
+                              loadNume, &
+                              loadPreObject, loadLigrel, &
+                              nbFieldIn, lpain, lchin, &
+                              jvBase, resuElem, matrElem, &
+                              lMove, timeMapMove)
+
+        end if
+    end do
+
 !
 end subroutine

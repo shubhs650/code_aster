@@ -34,6 +34,7 @@ subroutine aceama(nomu, noma, lmax, nbocc)
 #include "asterfort/copisd.h"
 #include "asterfort/utmess.h"
 #include "asterfort/assert.h"
+#include "asterfort/chpchd.h"
     integer(kind=8) :: lmax, nbocc
     character(len=8) :: nomu, noma
 !     AFFE_CARA_ELEM
@@ -53,6 +54,7 @@ subroutine aceama(nomu, noma, lmax, nbocc)
 !-----------------------------------------------------------------------
     integer(kind=8) :: i, ioc, jdcc, jdls, jdvc, naxe, neul
     integer(kind=8) :: ng, nm, norig, nrep, jdls2, ncham, ndim
+    character(len=4) :: fieldDisc
 !-----------------------------------------------------------------------
     call jemarq()
     cartma = nomu//'.CARMASSI'
@@ -67,8 +69,15 @@ subroutine aceama(nomu, noma, lmax, nbocc)
     end do
 
     if (ncham .ne. 0) then
-! --- CAS OU ON DONNE LA CARTE CARMASS DIRECTEMENT SOUS LE MOT-CLE CHAM_ORIE
-        call copisd('CHAMP_GD', 'G', chorie(1:19), cartma(1:19))
+        call dismoi('TYPE_CHAMP', chorie, 'CHAMP', repk=fieldDisc)
+        if (fieldDisc .eq. "ELEM") then
+            call chpchd(chorie, "CART", " ", "NON", 'G', cartma, nomu)
+        else
+            call copisd('CHAMP_GD', 'G', chorie(1:19), cartma(1:19))
+        end if
+
+!
+
     else
 !
 ! --- SINON ON CONSTRUIT LA CARTE AVEC LES INFORMATIONS (GROUP_MA, ANGLE_REP...) DONNEES SOUS MASSIF

@@ -29,7 +29,7 @@
 #define LOAD_NEUM_NBMAXIN 48
 
 ! Maximum number of Neumann loads type (mechanic)
-#define LOAD_NEUM_NBTYPE 21
+#define LOAD_NEUM_NBTYPE 20
 
 ! Identified types for Neumann loads (mechanic)
 #define LOAD_NEUM_UNKNOWN -1
@@ -43,16 +43,15 @@
 #define LOAD_NEUM_GRAVITY 8
 #define LOAD_NEUM_ROTATION 9
 #define LOAD_NEUM_PRESSURE 10
-#define LOAD_NEUM_FORC_ELEC 11
-#define LOAD_NEUM_FORC_SHEL_3D 12
-#define LOAD_NEUM_FORC_SHEL_2D 13
-#define LOAD_NEUM_PRE_EPSI 14
-#define LOAD_NEUM_FLUX 15
-#define LOAD_NEUM_VECT_ASSE 16
-#define LOAD_NEUM_PRE_SIGM 17
-#define LOAD_NEUM_EFFE_FOND 18
-#define LOAD_NEUM_THM_ECHA 19
-#define LOAD_NEUM_THM_ECHAH 20
+#define LOAD_NEUM_FORC_SHEL_3D 11
+#define LOAD_NEUM_FORC_SHEL_2D 12
+#define LOAD_NEUM_PRE_EPSI 13
+#define LOAD_NEUM_FLUX 14
+#define LOAD_NEUM_VECT_ASSE 15
+#define LOAD_NEUM_PRE_SIGM 16
+#define LOAD_NEUM_EFFE_FOND 17
+#define LOAD_NEUM_THM_ECHA 18
+#define LOAD_NEUM_THM_ECHAH 19
 
 #define LOAD_NEUM_PWAVE 100
 #define LOAD_NEUM_VITE_FACE 101

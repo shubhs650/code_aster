@@ -17,23 +17,15 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nm1dis(fami, kpg, ksp, imate, em,&
-                      ep, sigm, deps, vim, option,&
-                      rela_comp, materi, sigp, vip, dsde)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: imate
-        real(kind=8) :: em
-        real(kind=8) :: ep
-        real(kind=8) :: sigm
-        real(kind=8) :: deps
-        real(kind=8) :: vim(*)
-        character(len=16) :: option
-        character(len=16) :: rela_comp
-        character(len=*) :: materi
-        real(kind=8) :: sigp
-        real(kind=8) :: vip(*)
-        real(kind=8) :: dsde
+    subroutine nm1dis(materPara, &
+                      option, relaComp, materPoin, &
+                      em, ep, sigm, deps, vim, &
+                      sigp, vip, dsde)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16) :: option, relaComp
+        character(len=*) :: materPoin
+        real(kind=8) :: em, ep, sigm, deps, vim(*), sigy
+        real(kind=8) :: vip(*), sigp, dsde
     end subroutine nm1dis
 end interface

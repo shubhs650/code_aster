@@ -16,12 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine dstrig(nomte, xyzl, option, pgl, rig, &
-                  ener)
+subroutine dstrig(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  rig, ener)
+!
+    use plate_type
     implicit none
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8gaem.h"
+#include "asterf_types.h"
 #include "asterfort/bsthpl.h"
 #include "asterfort/dstbfa.h"
 #include "asterfort/dstbfb.h"
@@ -42,20 +45,22 @@ subroutine dstrig(nomte, xyzl, option, pgl, rig, &
 #include "asterfort/utdtab.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpvgl.h"
+#include "jeveux.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    type(plateCara_Para), intent(in) :: plateCara
     real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
-    character(len=16) :: option, nomte
+    character(len=16) :: option
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     MATRICE DE RIGIDITE DE L'ELEMENT DE PLAQUE DST (AVEC CISAILLEMENT)
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES TROIS NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT RIG    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_POT (EPOT_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ndim, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
     integer(kind=8) :: int, multic, perm(9), perm2(36)
-    integer(kind=8) :: i, j, jcoqu, jdepg, k, k1, k2
+    integer(kind=8) :: i, j, jdepg, k, k1, k2
     real(kind=8) :: wgt, aire
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
@@ -76,9 +81,9 @@ subroutine dstrig(nomte, xyzl, option, pgl, rig, &
     real(kind=8) :: mefl(6, 9), mefli(6, 9), depl(18)
     real(kind=8) :: kfc11(9, 3), kfc21(9), kmc(6, 3)
     real(kind=8) :: kmf12(6, 3), kmf12a(36)
-    real(kind=8) :: bsigth(24), enerth, excent, un, zero
-    real(kind=8) :: qsi, eta, carat3(21), t2iu(4), t2ui(4), t1ve(9)
-    aster_logical :: coupmf, exce, indith, ismultic
+    real(kind=8) :: enerth, excent, un, zero
+    real(kind=8) :: qsi, eta, carat3(21)
+    aster_logical :: coupmf, exce, ismultic
 !     ------------------------------------------------------------------
     real(kind=8) :: ctor
     data perm/1, 4, 7, 2, 5, 8, 3, 6, 9/
@@ -88,9 +93,10 @@ subroutine dstrig(nomte, xyzl, option, pgl, rig, &
      &             4, 10, 16, 22, 28, 34,&
      &             5, 11, 17, 23, 29, 35,&
      &             6, 12, 18, 24, 30, 36/
-!     ----------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
                      jgano=jgano)
 !
@@ -104,21 +110,21 @@ subroutine dstrig(nomte, xyzl, option, pgl, rig, &
     call r8inir(36, zero, kmf12a, 1)
     enerth = zero
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-    exce = .false.
-    if (abs(excent) .gt. un/r8gaem()) exce = .true.
+!
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+    exce = (abs(excent) .gt. un/r8gaem())
     ismultic = .false.
 !
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE TRIANGLE --------
     call gtria3(xyzl, carat3)
 !
 !     ----- CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION,
-!           MEMBRANE ET CISAILLEMENT INVERSEE -------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+!           MEMBRANE ET CISAILLEMENT INVERSEE
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !   VERIFICATION CAS EXCENTREMENT MULTICOUCHES
     if (multic .gt. 0) ismultic = .true.
     if (exce .and. ismultic) then
@@ -358,13 +364,15 @@ subroutine dstrig(nomte, xyzl, option, pgl, rig, &
         call utpvgl(3, 6, pgl, zr(jdepg), depl)
         call dxtloe(flex, memb, mefl, ctor, coupmf, &
                     depl, ener)
-        call bsthpl(nomte, bsigth, indith)
-        if (indith) then
-            do i = 1, 18
-                enerth = enerth+depl(i)*bsigth(i)
-            end do
-            ener(1) = ener(1)-enerth
-        end if
+        ! call bsthpl(plateCara, plateOrie, &
+        !             jvGeom, nomte, xyzl, &
+        !             bsigth)
+        ! if (indith) then
+        !     do i = 1, 18
+        !         enerth = enerth+depl(i)*bsigth(i)
+        !     end do
+        !     ener(1) = ener(1)-enerth
+        ! end if
     end if
 !
 end subroutine

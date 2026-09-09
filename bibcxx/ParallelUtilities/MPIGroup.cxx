@@ -32,40 +32,49 @@ void MPIGroup::buildFromProcsVector( const MPI_Comm &parentComm, const VectorInt
     MPI_Comm_size( parentComm, &nbProc );
 
     const int size = procIdVector.size();
+    _groupSize = size;
     if ( size < nbProc ) {
         MPI_Group_incl( _parentGroup, size, procIdVector.data(), &_currentGroup );
         MPI_Comm_create_group( parentComm, _currentGroup, 0, &_groupComm );
-        groupCreated = true;
-        newGroupCreated = true;
+        _groupCreated = true;
+        _newGroupCreated = true;
         auto commWorld = aster_get_comm_world();
-        asterComm.id = _groupComm;
-        asterComm.parent = commWorld;
-        asterComm.level = 1;
-        asterComm.nbchild = 0;
+        _asterComm.id = _groupComm;
+        _asterComm.parent = commWorld;
+        _asterComm.level = 1;
+        _asterComm.nbchild = 0;
         AS_ASSERT( commWorld->nbchild < MAX_CHILDS );
-        commWorld->childs[commWorld->nbchild] = &asterComm;
+        commWorld->childs[commWorld->nbchild] = &_asterComm;
         commWorld->nbchild++;
     } else if ( size == nbProc ) {
         _currentGroup = _parentGroup;
         _groupComm = parentComm;
-        groupCreated = true;
-        newGroupCreated = false;
+        _groupCreated = true;
+        _newGroupCreated = false;
+        _asterComm = *aster_get_comm_world();
     } else {
         throw std::runtime_error( "MPI parent group must be bigger than child one" );
     }
 };
 
 MPI_Comm MPIGroup::getCommunicator() const {
-    if ( groupCreated )
+    if ( _groupCreated )
         return _groupComm;
     else
         throw std::runtime_error( "MPI group not created" );
 };
 
+const aster_comm_t *MPIGroup::getAsterCommunicator() const {
+    if ( _groupCreated )
+        return &_asterComm;
+    else
+        throw std::runtime_error( "MPI group not created" );
+};
+
 MPIGroup::~MPIGroup() {
-    if ( newGroupCreated ) {
+    if ( _newGroupCreated ) {
         int i = 0, j;
-        aster_comm_t *node = &asterComm;
+        aster_comm_t *node = &_asterComm;
         auto parent = node->parent;
         auto nb = parent->nbchild;
         while ( i < nb && parent->childs[i] != node ) {
@@ -80,8 +89,8 @@ MPIGroup::~MPIGroup() {
 
         MPI_Group_free( &_currentGroup );
     }
-    groupCreated = false;
-    newGroupCreated = false;
+    _groupCreated = false;
+    _newGroupCreated = false;
 };
 
 #endif /* ASTER_HAVE_MPI */

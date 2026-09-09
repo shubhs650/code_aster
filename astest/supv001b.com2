@@ -17,6 +17,7 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
+import sys
 
 from code_aster.Commands import *
 from code_aster import CA
@@ -29,6 +30,7 @@ CA.init("--test", "--continue", debug=True, ERREUR=_F(ALARME="EXCEPTION"))
 
 test = CA.TestCase()
 test.assertEqual(four(0.0), 4.0, msg="evaluate four")
+test.assertEqual(sys.getrefcount(six), 2)
 test.printSummary()
 
 FIN()

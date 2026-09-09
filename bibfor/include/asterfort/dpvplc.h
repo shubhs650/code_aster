@@ -15,18 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine dpvplc(typmod, option, imate, carcri, instam,&
-                      instap, depsm,&
-                      sigm, vim, sig, vip, dsidep,&
+    subroutine dpvplc(typmod, option, imate, carcri, instam, &
+                      instap, depsm, &
+                      sigm, vim, sig, vip, dsidep, &
                       iret)
         character(len=8) :: typmod(*)
         character(len=16) :: option
         integer(kind=8) :: imate
-        real(kind=8) :: carcri(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: depsm(6)

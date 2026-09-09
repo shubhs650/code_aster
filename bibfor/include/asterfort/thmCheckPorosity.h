@@ -16,11 +16,10 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmCheckPorosity(j_mater, meca, ds_thm)
+interface
+    subroutine thmCheckPorosity(relaMeca, ds_thm)
         use THM_type
-        integer(kind=8), intent(in) :: j_mater
-        character(len=16), intent(in) :: meca
+        character(len=16), intent(in) :: relaMeca
         type(THM_DS), intent(in) :: ds_thm
     end subroutine thmCheckPorosity
-end interface 
+end interface

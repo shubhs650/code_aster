@@ -18,8 +18,7 @@
 ! aslint: disable=W1504
 !
 subroutine thmCpl004(ds_thm, &
-                     lMatr, lSigm, lVari, angl_naut, &
-                     j_mater, &
+                     lMatr, lSigm, lVari, &
                      ndim, nbvari, &
                      dimdef, dimcon, &
                      adcome, adcote, adcp11, adcp12, adcp21, &
@@ -84,8 +83,7 @@ subroutine thmCpl004(ds_thm, &
 !
     type(THM_DS), intent(inout) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm, lVari
-    real(kind=8), intent(in) :: angl_naut(3)
-    integer(kind=8), intent(in) :: j_mater, ndim, nbvari
+    integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: adcome, adcote, adcp11, adcp12, adcp21
     integer(kind=8), intent(in) :: addeme, addete, addep1, addep2
@@ -110,11 +108,6 @@ subroutine thmCpl004(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  dimdef           : dimension of generalized strains vector
@@ -237,7 +230,8 @@ subroutine thmCpl004(ds_thm, &
 !
 ! - Evaluation of initial saturation
 !
-    call thmEvalSatuInit(ds_thm, j_mater, p1m, p1, temp-dtemp, temp, &
+    call thmEvalSatuInit(ds_thm, &
+                         p1m, p1, temp-dtemp, temp, &
                          saturm, satur, dsatur, retcom)
 !
 ! - Evaluation of initial porosity
@@ -258,7 +252,7 @@ subroutine thmCpl004(ds_thm, &
 ! - Prepare initial parameters for coupling law
 !
     call inithm(ds_thm, &
-                angl_naut, tbiot, phi0, &
+                tbiot, phi0, &
                 epsv, depsv, &
                 epsvm, cs, mdal, dalal, &
                 alpha0, alphfi, cbiot, unsks)
@@ -275,10 +269,9 @@ subroutine thmCpl004(ds_thm, &
 ! ----- Compute standard porosity
         if (ds_thm%ds_elem%l_dof_meca) then
             if ((ds_thm%ds_behaviour%rela_hydr) .eq. 'HYDR_TABBAL') then
-!
-!--------------Get BJH parameters
-!
-                call thmGetParaBJH(ds_thm, j_mater, p1)
+
+! ------------- Get BJH parameters
+                call thmGetParaBJH(ds_thm, p1)
 !
 !--------------Evaluate the variation of hydraulic pressure
 !
@@ -288,7 +281,8 @@ subroutine thmCpl004(ds_thm, &
                 sbjh = ds_thm%ds_material%bjh%SBJH
                 wbjh = ds_thm%ds_material%bjh%WBJH
 
-                call varpi(ds_thm, j_mater, p1, p1m, dp1, dp2, &
+                call varpi(ds_thm, &
+                           p1, p1m, dp1, dp2, &
                            ep, surf, shut, &
                            phi0, dpi, sbjhm, &
                            wbjhm, epm, sbjh, wbjh)
@@ -374,7 +368,7 @@ subroutine thmCpl004(ds_thm, &
 ! - Update differential thermal expansion ratio
 !
     if (ds_thm%ds_elem%l_dof_meca) then
-        call dilata(ds_thm, angl_naut, phi, tbiot, alphfi)
+        call dilata(ds_thm, phi, tbiot, alphfi)
     end if
 !
 ! - Update Biot modulus

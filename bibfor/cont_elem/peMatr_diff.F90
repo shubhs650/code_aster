@@ -71,7 +71,7 @@ subroutine peMatr_diff(parameters, geom, matr_cont, matr_fric)
     order = 1
     l_dof = [character(len=8) :: "DX", "DY", "DZ"]
     ref = 'ref'
-    l_print = ASTER_TRUE
+    l_print = ASTER_FALSE
 
 !
 ! - Slave node is not paired -> Special treatment

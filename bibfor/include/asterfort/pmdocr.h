@@ -18,7 +18,7 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine pmdocr(carcri)
-        real(kind=8), intent(out) :: carcri(CARCRI_SIZE)
+    subroutine pmdocr(carcriList)
+        real(kind=8), intent(out) :: carcriList(CARCRI_SIZE)
     end subroutine pmdocr
 end interface

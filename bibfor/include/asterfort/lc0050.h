@@ -17,27 +17,25 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine lc0050(BEHinteg,&
-                      fami   , kpg   , ksp   , ndim  , typmod,&
-                      imate  , compor, carcri, instam, instap,&
-                      neps   , epsm  , deps  , nsig  , sigm  ,&
-                      nvi    , vim   , option, angmas,&
-                      stress , statev, dsidep, codret)
+    subroutine lc0050(BEHinteg, &
+                      fami, kpg, ksp, ndim, typmod, &
+                      jvMaterCode, compor, carcri, instam, instap, &
+                      neps, epsm, deps, nsig, sigm, &
+                      nvi, vim, option, &
+                      stress, statev, dsidep, codret)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg, ksp, ndim
-        character(len=8), intent(in) :: typmod(*)
-        integer(kind=8), intent(in) :: imate
-        character(len=16), intent(in) :: compor(*)
-        real(kind=8), intent(in) :: carcri(*)
+        character(len=8), intent(in) :: typmod(2)
+        integer(kind=8), intent(in) :: jvMaterCode
+        character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
         real(kind=8), intent(in) :: instam, instap
         integer(kind=8), intent(in) :: neps, nsig, nvi
         real(kind=8), intent(in) :: epsm(6), deps(6)
         real(kind=8), intent(in) :: sigm(6)
-        real(kind=8), intent(in) :: vim(*)
-        character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(*)
+        real(kind=8), intent(in) :: vim(nvi)
         real(kind=8), intent(out) :: stress(6)
         real(kind=8), intent(out) :: statev(nvi)
         real(kind=8), intent(out) :: dsidep(6, 6)

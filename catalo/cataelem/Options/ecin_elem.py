@@ -23,7 +23,6 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PNBSP_I = InputParameter(
     phys=PHY.NBSP_I, container="CARA!.CANBSP", comment="""  PNBSP_I :  NOMBRE DE SOUS_POINTS """
 )
@@ -34,7 +33,7 @@ PVARCPR = InputParameter(phys=PHY.VARI_R, comment="""  PVARCPR: TEMPERATURES INS
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU,
            ISSUE DE AFFE_CARA_ELEM MOT CLE ORIENTATION """,
 )

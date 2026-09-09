@@ -32,16 +32,14 @@ DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="NON"))
 #
 
 # Donnée materiau et fonction
-# Paramêtres élastiques
+# Paramètres élastiques
 YOUNG = 32000.0
 POISSON = 0.2
 # parametres viscosite
 K_RS = 200000.0
-K_IS = 20000.0
 ETA_RS = 350000.0
 ETA_IS = 2500000.0
 K_RD = 100000.0
-K_ID = 90000.0
 ETA_RD = 2000000.0
 ETA_ID = 3000000.0
 # autres parametres
@@ -53,11 +51,9 @@ BETON = [None] * 3
 C_Pa = 1.0e6
 YOUNG_Pa = YOUNG * C_Pa
 K_RS_Pa = K_RS * C_Pa
-K_IS_Pa = K_IS * C_Pa
 ETA_RS_Pa = ETA_RS * C_Pa
 ETA_IS_Pa = ETA_IS * C_Pa
 K_RD_Pa = K_RD * C_Pa
-K_ID_Pa = K_ID * C_Pa
 ETA_RD_Pa = ETA_RD * C_Pa
 ETA_ID_Pa = ETA_ID * C_Pa
 SIGUC_Pa = SIGUC * C_Pa
@@ -77,11 +73,9 @@ BETON[0] = DEFI_MATERIAU(
         ENDO_DRUPRA=0.15,
         # Unités : Pa Jour
         FLUA_SPH_KR=K_RS_Pa,
-        FLUA_SPH_KI=K_IS_Pa,
         FLUA_SPH_NR=ETA_RS_Pa,
         FLUA_SPH_NI=ETA_IS_Pa,
         FLUA_DEV_KR=K_RD_Pa,
-        FLUA_DEV_KI=K_ID_Pa,
         FLUA_DEV_NR=ETA_RD_Pa,
         FLUA_DEV_NI=ETA_ID_Pa,
     ),
@@ -100,11 +94,9 @@ BETON[1] = DEFI_MATERIAU(
         ENDO_DRUPRA=0.15,
         # Unités : Pa Jour
         FLUA_SPH_KR=K_RS,
-        FLUA_SPH_KI=K_IS,
         FLUA_SPH_NR=ETA_RS,
         FLUA_SPH_NI=ETA_IS,
         FLUA_DEV_KR=K_RD,
-        FLUA_DEV_KI=K_ID,
         FLUA_DEV_NR=ETA_RD,
         FLUA_DEV_NI=ETA_ID,
     ),

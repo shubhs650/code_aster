@@ -41,8 +41,8 @@ class AbstractErrorCpp : public std::exception {
     VectorReal _valr;
 
   public:
-    AbstractErrorCpp( std::string idmess, VectorString valk = {}, VectorLong vali = {},
-                      VectorReal valr = {} )
+    AbstractErrorCpp( const std::string idmess, const VectorString &valk = {},
+                      const VectorLong &vali = {}, const VectorReal &valr = {} )
         : _idmess( idmess ), _valk( valk ), _vali( vali ), _valr( valr ) {}
 
     const char *what() const noexcept { return _idmess.c_str(); }
@@ -60,8 +60,8 @@ class ErrorCpp : public AbstractErrorCpp {
     int _id = Id;
 
   public:
-    ErrorCpp( std::string idmess, VectorString valk = {}, VectorLong vali = {},
-              VectorReal valr = {} )
+    ErrorCpp( const std::string idmess, const VectorString &valk = {}, const VectorLong &vali = {},
+              const VectorReal &valr = {} )
         : AbstractErrorCpp( idmess, valk, vali, valr ) {}
 
     int id() const { return _id; }
@@ -76,7 +76,8 @@ using TimeLimitErrorCpp = ErrorCpp< ASTER_TIMELIMIT_ERROR >;
 
 void createExceptions( py::module_ &mod );
 
-void raiseAsterError( const std::string idmess = "VIDE_1" );
+void raiseAsterError( const std::string idmess = "VIDE_1", const VectorString &valk = {},
+                      const VectorLong &vali = {}, const VectorReal &valr = {} );
 
 extern "C" void DEFPSPSPPPP( UEXCEP, uexcep, _IN ASTERINTEGER *exc_id, _IN char *idmess,
                              _IN STRING_SIZE lidmess, _IN ASTERINTEGER *nbk, _IN char *valk,

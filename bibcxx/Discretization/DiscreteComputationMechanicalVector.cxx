@@ -24,6 +24,7 @@
 
 #include "aster_fort_calcul.h"
 #include "aster_fort_superv.h"
+#include "aster_fort_utils.h"
 
 #include "DataFields/FieldOnCellsBuilder.h"
 #include "Discretization/Calcul.h"
@@ -212,6 +213,7 @@ DiscreteComputation::getMechanicalNeumannForces( const ASTERDOUBLE time_curr,
             }
             if ( currElemChara ) {
                 calcul->addElementaryCharacteristicsField( currElemChara );
+                calcul->addOrientationField( currElemChara );
             }
 
             calcul->addXFEMField( currModel );
@@ -344,6 +346,7 @@ DiscreteComputation::getMechanicalVolumetricForces( const ASTERDOUBLE time_curr,
             }
             if ( currElemChara ) {
                 calcul->addElementaryCharacteristicsField( currElemChara );
+                calcul->addOrientationField( currElemChara );
             }
 
             calcul->addXFEMField( currModel );
@@ -800,6 +803,7 @@ DiscreteComputation::getMechanicalNodalForces( const FieldOnCellsRealPtr stress,
     // Add input fields: elementary characteristics
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
 
     // Add input fields: for XFEM
@@ -984,11 +988,14 @@ FieldOnNodesRealPtr DiscreteComputation::getResidualReference(
 
     AS_ASSERT( _phys_problem->getModel()->isMechanical() );
 
-    VectorString list_cmp = { "SIGM",   "EPSI",   "FTHERM", "FHYDR1", "FHYDR2", "VARI",
-                              "EFFORT", "MOMENT", "DEPL",   "LAG_GV", "PI" };
-    VectorString list_name = { "SIGM_REFE",      "EPSI_REFE", "FLUX_THER_REFE", "FLUX_HYD1_REFE",
-                               "FLUX_HYD2_REFE", "VARI_REFE", "EFFORT_REFE",    "MOMENT_REFE",
-                               "DEPL_REFE",      "LAGR_REFE", "PI_REFE" };
+    VectorString list_cmp = { "SIGM",   "EPSI", "FLUXTHER", "FLUXHYD1", "FLUXHYD2", "EFFORT",
+                              "MOMENT", "VARI", "DEPL",     "LAGR",     "PI" };
+    VectorString list_name = { "SIGM_REFE",      "EPSI_REFE",   "FLUX_THER_REFE", "FLUX_HYD1_REFE",
+                               "FLUX_HYD2_REFE", "EFFORT_REFE", "MOMENT_REFE",    "VARI_REFE",
+                               "DEPL_REFE",      "LAGR_REFE",   "PI_REFE" };
+    VectorString list_neut = { "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11" };
+
+    const ASTERDOUBLE r8vide = CALL_R8VIDE();
     VectorReal list_vale;
     list_vale.reserve( list_name.size() );
     for ( int i = 0; i < list_name.size(); ++i ) {
@@ -996,16 +1003,27 @@ FieldOnNodesRealPtr DiscreteComputation::getResidualReference(
         if ( it != vale_by_name.end() )
             list_vale.push_back( it->second );
         else
-            list_vale.push_back( std::numeric_limits< double >::quiet_NaN() );
+            list_vale.push_back( r8vide );
     }
 
-    auto chrefe = std::make_shared< ConstantFieldOnCellsReal >( _phys_problem->getMesh() );
-    const std::string physicalName( "PREC_R" );
-    chrefe->allocate( physicalName );
     ConstantFieldOnZone a( _phys_problem->getMesh() );
+
+    auto chrefe_val = std::make_shared< ConstantFieldOnCellsReal >( _phys_problem->getMesh() );
+    const std::string physicalName_val( "RESIREF" );
+    chrefe_val->allocate( physicalName_val );
     AS_ASSERT( list_cmp.size() == list_vale.size() );
-    ConstantFieldValues< ASTERDOUBLE > b( list_cmp, list_vale );
-    chrefe->setValueOnZone( a, b );
+    ConstantFieldValues< ASTERDOUBLE > b_val( list_cmp, list_vale );
+    chrefe_val->setValueOnZone( a, b_val );
+
+    std::vector< JeveuxChar8 > list_cmp_k8;
+    for ( const auto &s : list_cmp ) {
+        list_cmp_k8.emplace_back( s );
+    }
+    auto chrefe_cmp = std::make_shared< ConstantFieldOnCellsChar8 >( _phys_problem->getMesh() );
+    const std::string physicalName_cmp( "RESICMP" );
+    chrefe_cmp->allocate( physicalName_cmp );
+    ConstantFieldValues< JeveuxChar8 > b_cmp( list_neut, list_cmp_k8 );
+    chrefe_cmp->setValueOnZone( a, b_cmp );
 
     // Get main parameters
     auto currModel = _phys_problem->getModel();
@@ -1024,10 +1042,12 @@ FieldOnNodesRealPtr DiscreteComputation::getResidualReference(
     calcul->addBehaviourField( currBehaviour );
     if ( currElemChara ) {
         calcul->addElementaryCharacteristicsField( currElemChara );
+        calcul->addOrientationField( currElemChara );
     }
     calcul->addInputField( "PGEOMER", currModel->getMesh()->getCoordinates() );
     calcul->addInputField( "PMATERC", currCodedMater->getCodedMaterialField() );
-    calcul->addInputField( "PREFCO", chrefe );
+    calcul->addInputField( "PRESICMP", chrefe_cmp );
+    calcul->addInputField( "PRESIREF", chrefe_val );
     calcul->addXFEMField( currModel );
     calcul->addHHOField( currModel );
     calcul->addOutputElementaryTerm( "PVECTUR", std::make_shared< ElementaryTermReal >() );

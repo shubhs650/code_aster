@@ -15,30 +15,32 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0413
+!
 subroutine te0146(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/assert.h"
 #include "asterfort/clcplq.h"
-#include "asterfort/sandwich.h"
 #include "asterfort/jevech.h"
+#include "asterfort/sandwich.h"
 #include "asterfort/tecach.h"
-#include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
 !
-!.....................................................................
+! --------------------------------------------------------------------------------------------------
+!
 !  BUT: CALCUL DE L'OPTION FERRAILLAGE POUR LES ELEMENTS DE COQUE
-!.....................................................................
-!_____________________________________________________________________
 !
 ! CALCUL DES DENSITES DE FERRAILLAGE DANS LE BETON ARME
 !              (METHODE DE CAPRA ET MAURY)
 !
-! VERSION DU 24/09/2021
-!_____________________________________________________________________
+! --------------------------------------------------------------------------------------------------
 !
 ! PARAMETRES D'ECHANGE ENTRE CODE_ASTER ET CLCPLQ
 ! (POINT D'ENTREE DU CALCUL DE FERRAILLAGE PAR CAPRA ET MAURY)
@@ -155,7 +157,8 @@ subroutine te0146(option, nomte)
 !     CONSTRUC   INDICATEUR DE COMPLEXITE DE CONSTRUCTIBILITE (-)
 !     IERRL      CODE RETOUR LONGI (0 = OK)
 !     IERRT      CODE RETOUR TRNSV (0 = OK)
-!---------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: cequi, sigs, sigci, sigcs, sigcyi, sigcys, sigczi, sigczs
     real(kind=8) :: alphacc, effrts(8), dnsits(6), dnsmin(4)
@@ -166,20 +169,24 @@ subroutine te0146(option, nomte)
     real(kind=8) :: wmaxi, wmaxs, wmaxyi, wmaxys, wmaxzi, wmaxzs, sigelsqp, kt
     real(kind=8) :: phixi, phixs, phiyi, phiys, phizi, phizs
     real(kind=8) :: reinf, shear, stirrups, thiter, epiter, aphiter
-    integer(kind=8) :: ierr, ierrl, ierrt, jepais, jefge, jfer1, jfer2, itab(7)
+    integer(kind=8) :: ierrl, ierrt, jefge, jfer1, jfer2, itab(7)
     integer(kind=8) :: typcmb, typco, ferrmin, typdiag, ferrsyme, epucisa
     integer(kind=8) ::  clacier, uc, um, ferrminfiss, effechel
     integer(kind=8) :: ino, icmp, iret, comp, meth2D, cond109, precs, nno
-    integer(kind=8) :: iadzi, iazk24, compress, ferrcomp, typstru, nb
+    integer(kind=8) :: compress, ferrcomp, typstru, nb
     real(kind=8) :: k, hs, N, M, Asmininf, Asminsup, Act, kc, k1, sigma_c, m1
     real(kind=8) ::  chi0, fctm, unite_m, unite_pa, b
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
-    call tecael(iadzi, iazk24, noms=0)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PCACOQU', 'L', jepais)
     call jevech('PFERRA1', 'L', jfer1)
     call jevech('PFERRA2', 'E', jfer2)
-    ht = zr(jepais)
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+    ht = plateCara%thick
 !
     call jevech('PEFFORR', 'L', jefge)
     call tecach('OOO', 'PEFFORR', 'L', iret, nval=7, itab=itab)

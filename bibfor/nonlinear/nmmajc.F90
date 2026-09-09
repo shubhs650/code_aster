@@ -69,7 +69,6 @@ subroutine nmmajc(fonact, sddyna, sdnume, deltat, numedd, &
 !
 !
     aster_logical :: lgrot, ldyna, lstat, lexpl
-    aster_logical :: lendo
     aster_logical :: lexge, ltcha, lmuap
     aster_logical :: ldepl, lvite, lacce
     character(len=19) :: depplu, vitplu, accplu, depmoi, vitmoi
@@ -108,7 +107,6 @@ subroutine nmmajc(fonact, sddyna, sdnume, deltat, numedd, &
     lexge = ndynlo(sddyna, 'EXPL_GENE')
     lexpl = ndynlo(sddyna, 'EXPLICITE')
     ltcha = ndynlo(sddyna, 'TCHAMWA')
-    lendo = isfonc(fonact, 'ENDO_NO')
     lmuap = ndynlo(sddyna, 'MULTI_APPUI')
 !
 ! --- TYPE DE FORMULATION SCHEMA DYNAMIQUE GENERAL
@@ -128,23 +126,23 @@ subroutine nmmajc(fonact, sddyna, sdnume, deltat, numedd, &
     coefpr = 1.d0
     if (ldepl) then
         if (lstat) then
-            call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+            call nmmaji(numedd, lgrot, sdnume, coefpr, &
                         depdel, ddepla, depdel, 0)
-            call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+            call nmmaji(numedd, lgrot, sdnume, coefpr, &
                         depplu, ddepla, depplu, 1)
         end if
     else if (lvite) then
-        call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+        call nmmaji(numedd, lgrot, sdnume, coefpr, &
                     vitdel, dvitla, vitdel, 0)
-        call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+        call nmmaji(numedd, lgrot, sdnume, coefpr, &
                     vitplu, dvitla, vitplu, 1)
     else if (lacce) then
         if (lexpl) then
             call copisd('CHAMP_GD', 'V', daccla, accplu)
         else
-            call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+            call nmmaji(numedd, lgrot, sdnume, coefpr, &
                         accdel, daccla, accdel, 0)
-            call nmmaji(numedd, lgrot, lendo, sdnume, coefpr, &
+            call nmmaji(numedd, lgrot, sdnume, coefpr, &
                         accplu, daccla, accplu, 1)
         end if
     else

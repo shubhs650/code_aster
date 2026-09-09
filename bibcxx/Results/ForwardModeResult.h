@@ -58,6 +58,10 @@ class ForwardModeResultPtr {
     bool isSet() const;
 
     void setPointer( const ModeResultPtr &ptr );
+
+    const std::string getName();
+
+    const ASTERINTEGER getNumberOfIndexes();
 };
 
 #endif /* FORWARDMECHANICALMODERESULT_H_ */

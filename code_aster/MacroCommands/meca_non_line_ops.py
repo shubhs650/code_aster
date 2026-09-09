@@ -41,7 +41,6 @@ def _contact_check(model, CONTACT):
         # currently max=1 in C_CONTACT
         if len(CONTACT) > 1 and model.getMesh().isParallel():
             raise TypeError("Only one CONTACT factor keyword is allowed with a ParallelMesh")
-        assert CONTACT[0]["ALGO_RESO_GEOM"] == "NEWTON"
         contDefi = CONTACT[0]["DEFINITION"]
         for zone in contDefi.getContactZones():
             assert not zone.hasSmoothing
@@ -101,6 +100,7 @@ def meca_non_line_ops(self, **args):
         "REUSE": args["reuse"],
         "INCREMENT": args["INCREMENT"],
         "SCHEMA_TEMPS": args.get("SCHEMA_TEMPS"),
+        "OBSERVATION": args["OBSERVATION"],
     }
     if kwds["SOLVEUR"]["METHODE"] == "PETSC":
         if kwds["SOLVEUR"]["PRE_COND"] == "LDLT_SP":

@@ -17,10 +17,15 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine metnth(model, loadNameJv, caraElem, mateco, time, &
-                      chtni, metrnl)
-        character(len=*) :: loadNameJv, mateco
-        character(len=8) :: model, caraElem
-        character(len=24) :: metrnl, time, chtni
+    subroutine metnth(model, loadNameJv, loadInfoJv, &
+                      caraElem, materCodeZ, &
+                      timeMap, tempPrev, matrElem)
+        character(len=8), intent(in) :: model
+        character(len=24), intent(in) :: loadNameJv, loadInfoJv
+        character(len=8), intent(in) :: caraElem
+        character(len=*), intent(in) :: materCodeZ
+        character(len=24), intent(in) :: timeMap
+        character(len=24), intent(in) :: tempPrev
+        character(len=24), intent(in) :: matrElem
     end subroutine metnth
 end interface

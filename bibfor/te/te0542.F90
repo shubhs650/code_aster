@@ -19,6 +19,7 @@
 subroutine te0542(option, nomte)
 !
 !
+    use resi_refe_module, only: RESI_REFE
     implicit none
 #include "asterf_types.h"
 #include "jeveux.h"
@@ -29,7 +30,6 @@ subroutine te0542(option, nomte)
 #include "asterfort/ltequa.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/teattr.h"
-#include "asterfort/terefe.h"
 #include "asterfort/xbsig.h"
 #include "asterfort/xbsir.h"
 #include "asterfort/xteddl.h"
@@ -51,6 +51,7 @@ subroutine te0542(option, nomte)
     aster_logical :: lbid
     real(kind=8) :: sigref(1), depref
     character(len=8) :: enr, elref
+    type(RESI_REFE):: refe
 ! DEB ------------------------------------------------------------------
 !
 ! ---- CARACTERISTIQUES DU TYPE D'ELEMENT :
@@ -111,8 +112,11 @@ subroutine te0542(option, nomte)
 !
 ! --- ON RECUPERE CONTRAINTE ET SAUT DE DEPLACEMENT DE REFERENCE
 !
-        call terefe('SIGM_REFE', 'MECA_INTERFACE', sigref(1))
-        call terefe('DEPL_REFE', 'MECA_INTERFACE', depref)
+        call refe%Init(nomte)
+        sigref(1) = refe%GetRef('SIGM')
+        depref = refe%GetRef('DEPL')
+        call refe%Check()
+
         if (nfe .gt. 0) then
             call jevech('PSTANO', 'L', jstno)
         end if

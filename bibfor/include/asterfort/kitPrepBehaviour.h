@@ -15,14 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine kitPrepBehaviour(compor, nvi_tot, compor_creep, compor_plas)
-        character(len=16), intent(in) :: compor(*)
+    subroutine kitPrepBehaviour(compor, nvi_tot, comporFlua, comporPlas)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
         integer(kind=8), intent(in) :: nvi_tot
-        character(len=16), intent(out) :: compor_creep(:)
-        character(len=16), intent(out) :: compor_plas(:)
+        character(len=16), intent(out) :: comporFlua(COMPOR_SIZE)
+        character(len=16), intent(out) :: comporPlas(COMPOR_SIZE)
     end subroutine kitPrepBehaviour
 end interface

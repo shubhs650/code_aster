@@ -26,12 +26,12 @@ subroutine te0494(nomopt, nomte)
 !
     implicit none
 !
-#include "jeveux.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/HHO_basis_module.h"
 #include "asterfort/HHO_size_module.h"
 #include "asterfort/writeVector.h"
+#include "jeveux.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !  HHO - Generic
@@ -47,7 +47,8 @@ subroutine te0494(nomopt, nomte)
     type(HHO_basis_cell) :: hhoBasisCell
     type(HHO_basis_face) :: hhoBasisFace
     real(kind=8) :: basis(6*MAX_FACE_COEF+MAX_CELL_COEF)
-    integer(kind=8) :: dec, iFace, size
+    integer(kind=8) :: dec, iFace, nbCoeffFace, nbCoeffCell
+    integer(kind=8) :: max_deg_cell, max_deg_face, face_size, cell_size
 !
     ASSERT(nomopt .eq. 'HHO_PRECALC_BS')
 !
@@ -55,18 +56,22 @@ subroutine te0494(nomopt, nomte)
 !
     call hhoInfoInitCellAndFace(hhoCell, hhoData)
 !
+    call hhoGetMaxDegree(max_deg_cell, max_deg_face)
+!
     dec = 1
     do iFace = 1, hhoCell%nbfaces
         call hhoBasisFace%initialize(hhoCell%faces(iFace))
-        size = maxval(hhoBasisFace%coeff_shift)-1
-        call dcopy_1(size, hhoBasisFace%coeff_mono, basis(dec))
-        dec = dec+size
+        face_size = hhoBasisFace%BSSize(0, max_deg_face)
+        nbCoeffFace = face_size*(face_size+1)/2
+        call dcopy_1(nbCoeffFace, hhoBasisFace%coeff_mono, basis(dec))
+        dec = dec+nbCoeffFace
     end do
 !
     call hhoBasisCell%initialize(hhoCell)
-    size = maxval(hhoBasisCell%coeff_shift)-1
-    call dcopy_1(size, hhoBasisCell%coeff_mono, basis(dec))
-    dec = dec+size
+    cell_size = hhoBasisCell%BSSize(0, max_deg_cell)
+    nbCoeffCell = cell_size*(cell_size+1)/2
+    call dcopy_1(nbCoeffCell, hhoBasisCell%coeff_mono, basis(dec))
+    dec = dec+nbCoeffCell
 !
 ! -- Save - the name is not PCHHOBS because reading this field in basis
 !

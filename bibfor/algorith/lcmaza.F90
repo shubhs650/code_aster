@@ -15,9 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine lcmaza(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, epsm, deps, vim, &
+                  imate, epsm, deps, vim, &
                   option, sig, vip, dsidep)
     implicit none
 #include "asterf_types.h"
@@ -32,7 +33,7 @@ subroutine lcmaza(fami, kpg, ksp, ndim, typmod, &
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
     character(len=8) :: typmod(2)
-    character(len=16) :: compor(*), option
+    character(len=16) :: option
     character(len=*) :: fami
     integer(kind=8) :: ndim, imate, kpg, ksp
     real(kind=8) :: epsm(6), deps(6), vim(4)

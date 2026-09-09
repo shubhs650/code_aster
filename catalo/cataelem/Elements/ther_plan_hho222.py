@@ -79,7 +79,7 @@ class THER2DQ9_HHO222(Element):
         OP.CHAR_THER_EVOL(
             te=445,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PTEMPER, DDL_THER),
@@ -131,7 +131,7 @@ class THER2DQ9_HHO222(Element):
         OP.FLUX_ELGA(
             te=487,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PTEMPER, DDL_THER),
@@ -272,7 +272,7 @@ class THER2DQ9_HHO222(Element):
             para_in=(
                 (OP.RAPH_THER.PCOMPOR, LC.CCOMPOT),
                 (SP.PGEOMER, LC.EGEOM2D),
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PTEMPEI, DDL_THER),
                 (OP.RAPH_THER.PVARCPR, LC.ZVARCPG),
@@ -285,7 +285,7 @@ class THER2DQ9_HHO222(Element):
         OP.RIGI_THER(
             te=454,
             para_in=(
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PINSTR, LC.CTIMETR),
@@ -301,7 +301,7 @@ class THER2DQ9_HHO222(Element):
             para_in=(
                 (OP.RIGI_THER_TANG.PCOMPOR, LC.CCOMPOT),
                 (SP.PGEOMER, LC.EGEOM2D),
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PTEMPEI, DDL_THER),
                 (OP.RIGI_THER_TANG.PVARCPR, LC.ZVARCPG),
@@ -320,10 +320,20 @@ class THER2DQ9_HHO222(Element):
             ),
             para_out=((SP.PTEMP_R, LC.ETEMPPG),),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),)),
         OP.TOU_INI_ELEM(
             te=99,
-            para_out=((OP.TOU_INI_ELEM.PCOEH_R, LC.EHECHPR), (OP.TOU_INI_ELEM.PSOUR_R, LC.CSOURCR)),
+            para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D), (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER)),
+        ),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PCOEH_R, LC.EHECHPR),
+                (OP.TOU_INI_ELEM.PSOUR_R, LC.CSOURCR),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
@@ -335,6 +345,7 @@ class THER2DQ9_HHO222(Element):
                 (OP.TOU_INI_ELGA.PSOUR_R, LC.ESOURCR),
                 (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
                 (SP.PTEMP_R, LC.ETEMPPG),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
@@ -344,9 +355,10 @@ class THER2DQ9_HHO222(Element):
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM2D),
                 (OP.TOU_INI_ELNO.PHYDR_R, LC.EHYDRNO),
                 (OP.TOU_INI_ELNO.PINST_R, LC.ENINST_R),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PVARI_R, LC.EPHASES),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VERI_JACOBIEN(

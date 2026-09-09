@@ -17,15 +17,15 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine epstmc(fami, poum, kpg, ksp, ndim, &
-                      time, anglNaut, jvMaterCode, &
+    subroutine epstmc(materPara, poum, time, ndim, &
                       indxVarcStrain, allVarcStrain, &
                       epsiVarc_)
         use BehaviourStrain_type
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp, ndim
-        real(kind=8), intent(in) :: time, anglNaut(3)
-        integer(kind=8), intent(in) :: jvMaterCode
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        character(len=*), intent(in) :: poum
+        real(kind=8), intent(in) :: time
+        integer(kind=8), intent(in) :: ndim
         integer(kind=8), intent(in) :: indxVarcStrain
         type(All_Varc_Strain), intent(inout) :: allVarcStrain
         real(kind=8), optional, intent(out) :: epsiVarc_(6)

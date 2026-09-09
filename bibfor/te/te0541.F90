@@ -100,6 +100,7 @@ subroutine te0541(option, nomte)
         call jevech('PPMILTO', 'L', jpmilt)
     if (nfiss .gt. 1) call jevech('PFISNO', 'L', jfisno)
     if (nfe .gt. 0) call jevech('PMATERC', 'L', imate)
+
 !
 !     CALCUL DES CONTRAINTES THERMIQUES
     call xsigth(ndim, zi(jlonch), zr(itemps), nbsig, zr(icontt))

@@ -23,10 +23,12 @@ subroutine niinit(typmod, &
     implicit none
 !
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 !
     character(len=8), intent(in) :: typmod(*)
     integer(kind=8), intent(in) :: ndim, nno1, nno2, nno3, nno4
-    integer(kind=8), intent(out) :: vu(3, 27), vg(27), vp(27), vpi(3, 27)
+    integer(kind=8), intent(out) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX)
+    integer(kind=8), intent(out) :: vp(MT_NNOMAX), vpi(3, MT_NNOMAX)
 !
 ! --------------------------------------------------------------------------------------------------
 !

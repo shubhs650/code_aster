@@ -26,10 +26,8 @@ subroutine nmsfon(refe, ndim, nno, npg, nddl, &
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
 #include "asterfort/nmbeps.h"
-#include "asterfort/rcvala.h"
 #include "asterfort/teattr.h"
 #include "jeveux.h"
 

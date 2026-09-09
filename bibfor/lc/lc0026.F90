@@ -15,25 +15,29 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+! aslint: disable=W0104
+!
 subroutine lc0026(fami, kpg, ksp, ndim, imate, &
-                  compor, crit, instam, instap, epsm, &
-                  deps, sigm, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, materi, &
-                  nvi, dsidep, codret)
-! aslint: disable=W1504,W0104
+                  compor, instam, instap, epsm, &
+                  deps, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, &
+                  dsidep, codret)
+!
     implicit none
+!
+#include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmgran.h"
 #include "asterfort/rcvarc.h"
-    integer(kind=8) :: imate, ndim, kpg, ksp, codret, icomp, nvi, iret
-    real(kind=8) :: crit(*), angmas(*)
+!
+    integer(kind=8) :: imate, ndim, kpg, ksp, codret, nvi, iret
     real(kind=8) :: instam, instap
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigm(6), sigp(6)
-    real(kind=8) :: vim(*), vip(*), tm, tp, tref
+    real(kind=8) :: vim(nvi), vip(nvi), tm, tp, tref
     real(kind=8) :: dsidep(6, 6)
-    character(len=16) :: compor(*), option
-    character(len=8) :: typmod(*), materi
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    character(len=8) :: typmod(*)
     character(len=*) :: fami
 !
 !     GRANGER*
@@ -41,11 +45,16 @@ subroutine lc0026(fami, kpg, ksp, ndim, imate, &
 ! RAISON: CETTE ROUTINE EST APPELEE PAR NMCPLA AVEC COMME
 ! TEMPERATURE LES VALEURS MIN ET MAX... IL FAUT DONC LAISSER
 ! L ARGUMENT
+    character(len=16) :: relaComp
+
     call rcvarc(' ', 'TEMP', '-', fami, kpg, ksp, tm, iret)
     call rcvarc(' ', 'TEMP', '+', fami, kpg, ksp, tp, iret)
     call rcvarc(' ', 'TEMP', 'REF', fami, kpg, ksp, tref, iret)
+
+    ASSERT(nvi .eq. 55)
+    relaComp = compor(RELA_NAME)
     call nmgran(fami, kpg, ksp, typmod, imate, &
-                compor, instam, instap, tm, tp, &
+                relaComp, instam, instap, tm, tp, &
                 deps, sigm, vim, option, sigp, &
-                vip, dsidep, materi)
+                vip, dsidep)
 end subroutine

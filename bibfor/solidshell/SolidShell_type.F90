@@ -19,7 +19,7 @@
 module SolidShell_type
 !
     use Behaviour_type
-!
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -124,12 +124,10 @@ module SolidShell_type
 
 ! Type to define properties of material
     type SSH_MATE_PARA
-! - JEVEUX adress to coded material
-        integer(kind=8)         :: jvMater = 0
-! - Local basis for non-isotropic material properties
-        real(kind=8)    :: mateBase(3) = 0.d0
-! - Elasticity matrix at center of element
-        real(kind=8)    :: elemHookeMatrix(SSH_SIZE_TENS, SSH_SIZE_TENS) = 0.d0
+! ----- Parameters of material
+        type(Material_Para) :: materPara
+! ----- Elasticity matrix at center of element
+        real(kind=8) :: elemHookeMatrix(SSH_SIZE_TENS, SSH_SIZE_TENS) = 0.d0
     end type SSH_MATE_PARA
 
 ! Type to define general properties of finite element
@@ -307,7 +305,7 @@ module SolidShell_type
 ! - Type of integration scheme (COMP_ELAS/COMP_INCR)
         character(len=16)     :: typeComp = ' '
 ! - Main behaviour datastructure
-        type(Behaviour_Integ) :: BEHinteg
+        type(Behaviour_Integ) :: BEHInteg
     end type SSH_BEHA_PARA
 
 !

@@ -15,17 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "MeshTypes_type.h"
 !
 interface
-    subroutine mmdonf(ndim, nno, alias, ksi1, ksi2,&
-                      dff)
-        integer(kind=8) :: ndim
-        integer(kind=8) :: nno
-        character(len=8) :: alias
-        real(kind=8) :: ksi1
-        real(kind=8) :: ksi2
-        real(kind=8) :: dff(2, 9)
+    subroutine mmdonf(cellCode, ksi1, ksi2, dff)
+        character(len=8), intent(in) :: cellCode
+        real(kind=8), intent(in) :: ksi1, ksi2
+        real(kind=8), intent(out) :: dff(2, MT_NNOMAX2D)
     end subroutine mmdonf
 end interface

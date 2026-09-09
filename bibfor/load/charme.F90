@@ -51,7 +51,6 @@ subroutine charme(load, valeType)
 #include "asterfort/caveas.h"
 #include "asterfort/caveis.h"
 #include "asterfort/cbchei.h"
-#include "asterfort/cbelec.h"
 #include "asterfort/cbonde.h"
 #include "asterfort/cbondp.h"
 #include "asterfort/cbpesa.h"
@@ -190,9 +189,6 @@ subroutine charme(load, valeType)
 
 ! ----- ROTATION
         call carota(load, mesh, valeType)
-
-! ----- FORCE_ELEC
-        call cbelec(load, mesh)
 
 ! ----- VECT_ASSE
         call caveas(load)

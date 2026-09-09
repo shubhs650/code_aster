@@ -15,23 +15,25 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
+!
 subroutine nmgran(fami, kpg, ksp, typmod, imate, &
-                  compor, instam, instap, tpmxm, tpmxp, &
+                  relaComp, instam, instap, tpmxm, tpmxp, &
                   depst, sigm, vim, option, sigp, &
-                  vip, dsidep, materi)
+                  vip, dsidep)
 !
     implicit none
-#include "asterf_types.h"
+!
 #include "asterc/r8t0.h"
+#include "asterf_types.h"
 #include "asterfort/granvi.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/utmess.h"
+!
     integer(kind=8) :: imate, kpg, ksp
-    character(len=8) :: typmod(*), materi
-    character(len=16) :: compor(*), option, phenbid
+    character(len=8) :: typmod(2)
+    character(len=16) :: relaComp, option, phenbid
     character(len=*) :: fami
     real(kind=8) :: instam, instap
     real(kind=8) :: tpmxm, tpmxp
@@ -67,6 +69,7 @@ subroutine nmgran(fami, kpg, ksp, typmod, imate, &
 !
 ! ----------------------------------------------------------------------
 !
+    character(len=8), parameter :: materi = " "
     real(kind=8) :: valres(16), tm, tp, tref
     real(kind=8) :: e, nu, troisk, deuxmu
     real(kind=8) :: delta, dteqt, agem, agep, dage, tceq
@@ -81,6 +84,7 @@ subroutine nmgran(fami, kpg, ksp, typmod, imate, &
     integer(kind=8) :: icodre(16), ndt, ndi
     character(len=16) :: nomres(16)
     character(len=8) :: nompar, mod
+
     real(kind=8) :: valpam, valpap
     real(kind=8) :: bendom, bendop, kdessm, kdessp
     real(kind=8) :: j(8), taux(8), hygrm, hygrp, vieil
@@ -97,7 +101,7 @@ subroutine nmgran(fami, kpg, ksp, typmod, imate, &
     call rcvarc('F', 'TEMP', '+', fami, kpg, ksp, tp, iret3)
     call rcvarc('F', 'TEMP', 'REF', fami, kpg, ksp, tref, iret1)
     if ((iret1+iret2+iret3) .ge. 1) then
-        call utmess('F', 'COMPOR5_40', sk=compor(1))
+        call utmess('F', 'COMPOR5_40', sk=relaComp)
     end if
     nompar = 'TEMP'
 !
@@ -112,8 +116,8 @@ subroutine nmgran(fami, kpg, ksp, typmod, imate, &
     call granvi(mod, ndimsi, ibid, ibid2)
     call granvi(mod, ndt, ndi)
     dsidep(:, :) = 0.d0
-    if (.not. (compor(1) (1:13) .eq. 'BETON_GRANGER')) then
-        call utmess('F', 'ALGORITH4_50', sk=compor(1))
+    if (.not. (relaComp(1:13) .eq. 'BETON_GRANGER')) then
+        call utmess('F', 'ALGORITH4_50', sk=relaComp)
     end if
     delta = instap-instam
     temp = (tp+tm)/2
@@ -263,7 +267,7 @@ subroutine nmgran(fami, kpg, ksp, typmod, imate, &
 !
 !  ------- CARACTERISTIQUES EFFET DU VIEILLISSEMENT
 !
-    if (compor(1) (1:15) .eq. 'BETON_GRANGER_V') then
+    if (relaComp(1:15) .eq. 'BETON_GRANGER_V') then
 !       FONCTION MULTIPLICATIVE - VIEILLISSEMENT K
 !           AGE EQUIVALENT DU BETON : AGE
 !               coefv=(-qsrv)*(1/temp-1/tkref)

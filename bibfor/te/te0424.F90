@@ -20,17 +20,17 @@ subroutine te0424(option, nomte)
 !
     implicit none
 !
-#include "jeveux.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrefe_info.h"
+#include "asterfort/evalPressure.h"
 #include "asterfort/jevecd.h"
 #include "asterfort/jevech.h"
-#include "asterfort/evalPressure.h"
-#include "asterfort/nmpr3d_vect.h"
-#include "asterfort/nmpr3d_matr.h"
-#include "asterfort/mb_pres.h"
-#include "asterfort/tecach.h"
 #include "asterfort/lteatt.h"
+#include "asterfort/mb_pres.h"
+#include "asterfort/nmpr3d_matr.h"
+#include "asterfort/nmpr3d_vect.h"
+#include "asterfort/tecach.h"
+#include "jeveux.h"
 !
     character(len=16), intent(in) :: option, nomte
 !

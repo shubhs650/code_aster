@@ -17,20 +17,18 @@
 ! --------------------------------------------------------------------
 !
 subroutine getBehaviourPara(l_mfront_proto, l_kit_thm, &
-                            keywf, i_comp, algo_inte, &
+                            factorKeyword, iFactorKeyword, algo_inte, &
                             iter_inte_maxi, resi_inte)
 !
     use NonLin_Datastructure_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/nmdocv.h"
 !
-    aster_logical, intent(in) :: l_mfront_proto
-    aster_logical, intent(in) :: l_kit_thm
-    character(len=16), intent(in) :: keywf
-    integer(kind=8), intent(in) :: i_comp
+    aster_logical, intent(in) :: l_mfront_proto, l_kit_thm
+    character(len=16), intent(in) :: factorKeyword
+    integer(kind=8), intent(in) :: iFactorKeyword
     character(len=16), intent(in) :: algo_inte
     integer(kind=8), pointer :: iter_inte_maxi
     real(kind=8), pointer :: resi_inte
@@ -43,19 +41,19 @@ subroutine getBehaviourPara(l_mfront_proto, l_kit_thm, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  l_mfront_proto     : .true. if MFront prototype
-! In  l_kit_thm          : .true. if kit THM
-! In  keywf              : factor keyword to read (COMPORTEMENT)
-! In  i_comp             : factor keyword index
-! In  algo_inte          : algorithm for integration of behaviour
-! Out iter_inte_maxi     : value for ITER_INTE_MAXI
-! Out resi_inte     : value for RESI_INTE
+! In  l_mfront_proto   : .true. if MFront prototype
+! In  l_kit_thm        : .true. if kit THM
+! In  factorKeyword    : factor keyword to read (COMPORTEMENT)
+! In  iFactorKeyword   : index of factor keyword
+! In  algo_inte        : algorithm for integration of behaviour
+! Out iter_inte_maxi   : value for ITER_INTE_MAXI
+! Out resi_inte        : value for RESI_INTE
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    call nmdocv(keywf, i_comp, algo_inte, 'ITER_INTE_MAXI', &
+    call nmdocv(factorKeyword, iFactorKeyword, algo_inte, 'ITER_INTE_MAXI', &
                 l_mfront_proto, l_kit_thm, vali=iter_inte_maxi)
-    call nmdocv(keywf, i_comp, algo_inte, 'RESI_INTE     ', &
+    call nmdocv(factorKeyword, iFactorKeyword, algo_inte, 'RESI_INTE     ', &
                 l_mfront_proto, l_kit_thm, valr=resi_inte)
 !
 end subroutine

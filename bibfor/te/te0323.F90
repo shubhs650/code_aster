@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 
 subroutine te0323(option, nomte)
+    use resi_refe_module, only: RESI_REFE
 !
 !
     implicit none
@@ -30,7 +31,6 @@ subroutine te0323(option, nomte)
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
 #include "asterfort/lteatt.h"
-#include "asterfort/terefe.h"
     character(len=16) :: option, nomte
 ! ----------------------------------------------------------------------
 !    OPTION FORC_NODA ET REFE_FORC_NODA POUR LES JOINTS QUADRA ET HYME
@@ -42,6 +42,7 @@ subroutine te0323(option, nomte)
     integer(kind=8) :: iw, ivf1, idf1, igeom, ivectu, jvSief, ndim, ntrou
     integer(kind=8) :: iu(3, 16), ip(8)
     real(kind=8) :: sigref, fhyref
+    type(RESI_REFE):: refe
 !
     call elref2(nomte, 2, lielrf, ntrou)
     call elrefe_info(elrefe=lielrf(1), fami='RIGI', ndim=ndim, nno=nno1, nnos=nnos, &
@@ -71,14 +72,17 @@ subroutine te0323(option, nomte)
 !
     else if (option .eq. 'REFE_FORC_NODA') then
 !
-        call terefe('SIGM_REFE', 'THM_JOINT', sigref)
+        call refe%Init(nomte)
+        sigref = refe%GetRef('SIGM')
+
 !
 !      EN MECA PURE ON IMPOSE LA VALEUR DE FLUX DE REFERENCE A 1
         if (lteatt('TYPMOD2', 'EJ_HYME')) then
-            call terefe('FLUX_HYD1_REFE', 'THM_JOINT', fhyref)
+            fhyref = refe%GetRef('FLUXHYD1')
         else if (lteatt('TYPMOD2', 'ELEMJOIN')) then
             fhyref = 1.D0
         end if
+        call refe%Check()
 !
         call ejfore(ndim, nddl, axi, nno1, nno2, &
                     npg, iw, zr(iw), zr(ivf1), zr(ivf2), &

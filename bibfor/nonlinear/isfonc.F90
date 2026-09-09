@@ -86,7 +86,6 @@ function isfonc(list_func_acti, func_name_z)
 !       THM                :  MODELISATION THM
 !       HHO                :  MODELISATION HHO
 !       MACR_ELEM_STAT     :  MACRO-ELEMENTS STATIQUES
-!       ENDO_NO            :  MODELISATION ENDO AUX NOEUDS *_GVNO
 !
 !       ENERGIE            :  CALCUL DES ENERGIES
 !       CRIT_STAB          :  CALCUL DE STABILITE
@@ -188,8 +187,6 @@ function isfonc(list_func_acti, func_name_z)
         isfonc = list_func_acti(14) .eq. 1
     else if (func_name .eq. 'GD_ROTA') then
         isfonc = list_func_acti(15) .eq. 1
-    else if (func_name .eq. 'ENDO_NO') then
-        isfonc = list_func_acti(40) .eq. 1
     else if (func_name .eq. 'CRIT_STAB') then
         isfonc = list_func_acti(18) .eq. 1
     else if (func_name .eq. 'DDL_STAB') then

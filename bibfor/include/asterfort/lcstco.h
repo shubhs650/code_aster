@@ -33,7 +33,7 @@ interface
         real(kind=8), intent(out) :: gapi
         integer(kind=8), intent(out) :: nmcp
         integer(kind=8), intent(out) :: nb_poin_inte
-        real(kind=8), intent(out) :: poin_inte_sl(16)
-        real(kind=8), intent(out) :: poin_inte_ma(16)
+        real(kind=8), intent(out) :: poin_inte_sl(2,8)
+        real(kind=8), intent(out) :: poin_inte_ma(2,8)
     end subroutine lcstco
 end interface

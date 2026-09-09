@@ -105,6 +105,22 @@ subroutine elrfvf(elrefz, x, ff, nno_)
         ff(8) = (un-x0)*(un+y0)*(un+z0)*uns8
         ff(9) = 0.d0
 
+    case ('H10')
+        x0 = x(1)
+        y0 = x(2)
+        z0 = x(3)
+        ff(1) = (un-x0)*(un-y0)*(un-z0)*uns8
+        ff(2) = (un+x0)*(un-y0)*(un-z0)*uns8
+        ff(3) = (un+x0)*(un+y0)*(un-z0)*uns8
+        ff(4) = (un-x0)*(un+y0)*(un-z0)*uns8
+        ff(5) = (un-x0)*(un-y0)*(un+z0)*uns8
+        ff(6) = (un+x0)*(un-y0)*(un+z0)*uns8
+        ff(7) = (un+x0)*(un+y0)*(un+z0)*uns8
+        ff(8) = (un-x0)*(un+y0)*(un+z0)*uns8
+        ff(9:27) = 0.d0
+        ff(23) = (un+x0)/deux
+        ff(25) = (un-x0)/deux
+
     case ('H20')
         x0 = x(1)
         y0 = x(2)

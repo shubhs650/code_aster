@@ -22,55 +22,68 @@ subroutine te0076(option, nomte)
     use FE_quadrature_module
     use FE_basis_module
     use FE_stiffness_module
-!
+    use FE_eval_module
+    use coorSyst_module, only: hasOrieField
     implicit none
-#include "jeveux.h"
+!
 #include "asterfort/nlcomp.h"
 #include "asterfort/jevech.h"
 #include "asterfort/rccoma.h"
+#include "asterfort/utmess.h"
 #include "asterfort/writeMatrix.h"
 #include "FE_module.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:   OPTION : 'RIGI_THER'
+    character(len=16), intent(in) :: option, nomte
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
+! --------------------------------------------------------------------------------------------------
 !
-! ......................................................................
+! Elementary computation
+!
+! Elements: THER_*
+!
+! Options: RIGI_THER
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuadCell
     type(FE_basis) :: FEBasis
 !
     character(len=8), parameter :: famiR = "RIGI"
-    integer(kind=8) :: icamas, kp, imate, itemps
-    integer(kind=8) :: icodre(1)
-    character(len=32) :: phenom
-    real(kind=8) ::   time
-    real(kind=8) :: rigi(MAX_BS, MAX_BS)
-    real(kind=8) ::  valQPK(3, 3, MAX_QP)
-! ----------------------------------------------------------------------
+    integer(kind=8) :: kpg, jvMaterc, jvInstr
+    integer(kind=8) :: propCode(1)
+    character(len=16) :: therKeyword
+    real(kind=8) :: time
+    real(kind=8) :: rigi(MAX_BS_CG, MAX_BS_CG)
+    real(kind=8) :: valQPK(3, 3, MAX_QP)
+!
+! --------------------------------------------------------------------------------------------------
+!
     call FECell%init()
     call FEQuadCell%initCell(FECell, famiR)
     call FEBasis%initCell(FECell)
 !
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PINSTR', 'L', itemps)
-    time = zr(itemps)
+    call jevech('PMATERC', 'L', jvMaterc)
+    call jevech('PINSTR', 'L', jvInstr)
+    time = zr(jvInstr)
 !
-    call rccoma(zi(imate), 'THER', 1, phenom, icodre(1))
-!   pour stopper le calcul si PCAMASS n'est pas disponible
-    if (phenom .eq. 'THER_ORTH') then
-        call jevech('PCAMASS', 'L', icamas)
+    call rccoma(zi(jvMaterc), 'THER', 1, therKeyword, propCode(1))
+    if (therKeyword == "THER_ORTH") then
+        if (.not. hasOrieField()) then
+            call utmess('F', 'THERMIQUE1_3')
+        end if
     end if
 !
     valQPK = 0.d0
-    do kp = 1, FEQuadCell%nbQuadPoints
-        call nlcomp(phenom, famiR, kp, imate, FECell%ndim, FEQuadCell%points(1:3, kp), &
-                    time, 0.d0, valQPK(1:3, 1:3, kp))
+    do kpg = 1, FEQuadCell%nbQuadPoints
+        call nlcomp(therKeyword, famiR, kpg, jvMaterc, FECell%ndim, FEQuadCell%points(1:3, kpg), &
+                    time, 0.d0, valQPK(1:3, 1:3, kpg))
     end do
 !
     call FEStiffJacoScal(FEQuadCell, FEBasis, valQPK, rigi)

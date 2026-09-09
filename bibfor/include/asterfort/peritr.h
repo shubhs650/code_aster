@@ -15,15 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
 !
-!
-interface 
-    subroutine peritr(resu,modele,cara,nh,nbocc)
-        character(len=*) :: resu
-        character(len=*) :: modele
-        character(len=*) :: cara
-        integer(kind=8) :: nh
-        integer(kind=8) :: nbocc
+interface
+    subroutine peritr(tablOutZ, &
+                      modelZ, numeHarm, &
+                      nbFactorKeyword)
+        character(len=*), intent(in) :: tablOutZ
+        character(len=*), intent(in) :: modelZ
+        integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
     end subroutine peritr
 end interface

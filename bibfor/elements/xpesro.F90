@@ -32,6 +32,7 @@ subroutine xpesro(elrefp, ndim, coorse, igeom, jheavt, ncomp, &
 #include "asterfort/iselli.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/reeref.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xkamat.h"
 #include "asterfort/xcalfev_wrap.h"
 #include "asterfort/xcalc_code.h"
@@ -40,7 +41,7 @@ subroutine xpesro(elrefp, ndim, coorse, igeom, jheavt, ncomp, &
     real(kind=8) :: coorse(*)
     integer(kind=8) :: igeom, ndim, ddlc, nfe, nnop
     integer(kind=8) :: ivectu, jlsn, jlst, imate, jbaslo, jstno
-    integer(kind=8) :: jheavt, nfh, nfiss, ise, heavn(27, 5), ncomp
+    integer(kind=8) :: jheavt, nfh, nfiss, ise, heavn(MT_NNOMAX3D, 5), ncomp
     real(kind=8) :: fno(ndim*nnop)
 !-----------------------------------------------------------------------
 ! FONCTION REALISEE : CALCUL DU SECOND MEMBRE AUX PG DU SOUS EL COURANT
@@ -73,7 +74,7 @@ subroutine xpesro(elrefp, ndim, coorse, igeom, jheavt, ncomp, &
     integer(kind=8) :: ndimb, nno, nnos, nnops, npgbis, pos, ifiz, he(nfiss), hea_se
     integer(kind=8) :: jcoopg, ipoids, ivf, idfde, jdfd2, jgano, kpg
     real(kind=8) :: xe(ndim), xg(ndim), ff(nnop)
-    real(kind=8) :: fk(27, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX3D, 3, 3), ka, mu
     integer(kind=8) :: alp, singu
     real(kind=8) :: forvol(ndim)
     real(kind=8) :: poids, r

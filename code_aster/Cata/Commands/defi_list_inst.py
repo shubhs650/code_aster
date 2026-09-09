@@ -81,45 +81,6 @@ bloc_deco = BLOC(
     b_deco_auto=bloc_auto,
 )
 
-# Bloc pour extrapolation du nombre d'iterations de Newton
-bloc_supp = BLOC(
-    fr=tr("Action d'extrapolation du nombre d'iterations de Newton"),
-    condition="""equal_to("ACTION", 'ITER_SUPPL')""",
-    PCENT_ITER_PLUS=SIMP(
-        fr=tr("Pourcentage d'itérations autorisées en plus"),
-        statut="f",
-        typ="I",
-        val_min=20,
-        max=1,
-        defaut=50,
-    ),
-    SUBD_METHODE=SIMP(
-        fr=tr("Méthode de subdivision des pas de temps en cas de divergence"),
-        statut="f",
-        typ="TXM",
-        max=1,
-        into=("MANUEL", "AUTO"),
-        defaut="MANUEL",
-    ),
-    b_deco_manu=bloc_manu,
-    b_deco_auto=bloc_auto,
-)
-
-# Bloc pour adaptation du coefficient de penalisation
-bloc_pene = BLOC(
-    fr=tr("Action d' adaptation du coefficient de penalisation"),
-    condition="""equal_to("ACTION", 'ADAPT_COEF_PENA')""",
-    COEF_MAXI=SIMP(
-        fr=tr("Coefficient multiplicateur maximum du coefficient de penalisation"),
-        statut="f",
-        typ="R",
-        val_min=1.0,
-        max=1,
-        defaut=1e12,
-    ),
-)
-
-
 DEFI_LIST_INST = OPER(
     nom="DEFI_LIST_INST",
     op=28,
@@ -165,6 +126,7 @@ DEFI_LIST_INST = OPER(
             regles=(UN_PARMI("LIST_INST", "VALE"),),
             VALE=SIMP(statut="f", typ="R", max="**"),
             LIST_INST=SIMP(statut="f", typ=listr8_sdaster),
+            PAS_INIT=SIMP(statut="f", typ="R", max=1, val_min=1.0e-12),
             PAS_MINI=SIMP(statut="f", typ="R", max=1, val_min=1.0e-12),
             PAS_MAXI=SIMP(statut="f", typ="R", max=1),
             NB_PAS_MAXI=SIMP(statut="f", typ="I", max=1, val_max=1000000, defaut=1000000),
@@ -200,11 +162,10 @@ DEFI_LIST_INST = OPER(
                 statut="f",
                 max=1,
                 typ="TXM",
-                into=("ARRET", "DECOUPE", "ITER_SUPPL"),
+                into=("ARRET", "DECOUPE"),
                 defaut="DECOUPE",
             ),
             b_deco=bloc_deco,
-            b_supp=bloc_supp,
         ),
         b_edelta=BLOC(
             fr=tr("Event: l'increment d'une composante d'un champ depasse le seuil"),
@@ -226,7 +187,7 @@ DEFI_LIST_INST = OPER(
                 statut="f",
                 max=1,
                 typ="TXM",
-                into=("ARRET", "DECOUPE"),
+                into=("ARRET", "DECOUPE", "ARCHIVAGE"),
                 defaut="DECOUPE",
             ),
             b_deco=bloc_deco,
@@ -240,10 +201,9 @@ DEFI_LIST_INST = OPER(
                 statut="f",
                 max=1,
                 typ="TXM",
-                into=("ARRET", "ADAPT_COEF_PENA"),
-                defaut="ADAPT_COEF_PENA",
+                into=("ARRET",),
+                defaut="ARRET",
             ),
-            b_pene=bloc_pene,
         ),
         b_dive_resi=BLOC(
             fr=tr("Event: divergence du residu"),
@@ -259,7 +219,7 @@ DEFI_LIST_INST = OPER(
             b_deco=bloc_deco,
         ),
         b_resi_maxi=BLOC(
-            fr=tr("Event: residu troup grande"),
+            fr=tr("Event: residu trop grand"),
             condition="""equal_to("EVENEMENT", 'RESI_MAXI') """,
             RESI_GLOB_MAXI=SIMP(fr=tr("Valeur du seuil"), statut="o", typ="R", max=1),
             ACTION=SIMP(
@@ -273,7 +233,7 @@ DEFI_LIST_INST = OPER(
             b_deco=bloc_deco,
         ),
         b_instabilite=BLOC(
-            fr=tr("Event: instabilite"),
+            fr=tr("Event: instabilité"),
             condition="""equal_to("EVENEMENT", 'INSTABILITE') """,
             ACTION=SIMP(
                 fr=tr("Actions possibles"),

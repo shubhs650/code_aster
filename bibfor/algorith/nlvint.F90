@@ -65,6 +65,8 @@ subroutine nlvint(sd_nl_)
             add = NBVARINT_FVRL
         case (NL_DIS_CHOC_ELAS)
             add = NBVARINT_DCG
+        case (NL_DIS_ECRO_CINE)
+            add = NBVARINT_DECI
         case default
             ASSERT(.false.)
         end select

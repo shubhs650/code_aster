@@ -60,7 +60,6 @@ subroutine te0242(option, nomte)
     integer(kind=8) :: icodre(nbres)
     real(kind=8) :: tpg, diff, difl, difv, hygr, pcap
     real(kind=8) :: sechpg, valres(nbres), valpar(nbpar)
-    real(kind=8) :: BSEval(MAX_BS)
     real(kind=8), pointer :: fieldOutGauss(:) => null()
     real(kind=8), pointer :: sechr(:) => null()
 

@@ -17,29 +17,39 @@
 ! --------------------------------------------------------------------
 !
 subroutine utpsgl(nn, nc, p, sg, sl)
+!
     implicit none
+!
 #include "asterfort/mavec.h"
 #include "asterfort/vecma.h"
-    real(kind=8) :: p(3, 3), sg(*), sl(*)
-!     ------------------------------------------------------------------
+!
+    integer(kind=8), intent(in) :: nn, nc
+    real(kind=8), intent(in) :: p(3, 3)
+    real(kind=8), intent(in) :: sg(*)
+    real(kind=8), intent(out) :: sl(*)
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     PASSAGE EN 3D D'UNE MATRICE TRIANGULAIRE DE NN*NC LIGNES
 !     DU REPERE GLOBAL AU REPERE LOCAL
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !IN   I   NN   NOMBRE DE NOEUDS
 !IN   I   NC   NOMBRE DE COMPOSANTES
 !IN   R   P    MATRICE DE PASSAGE 3D DE GLOBAL A LOCAL
 !IN   R   SG   NN*NC COMPOSANTES DE LA TRIANGULAIRE SG DANS GLOBAL
 !OUT  R   SL   NN*NC COMPOSANTES DE LA TRIANGULAIRE SL DANS LOCAL
-!     ------------------------------------------------------------------
-    real(kind=8) :: r(9), zero
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: in(3)
+    real(kind=8) :: r(9)
     real(kind=8) :: ml14(14, 14), mr14(14, 14), mtr14(14, 14), mv14(14, 14)
     real(kind=8) :: ml16(16, 16), mr16(16, 16), mtr16(16, 16), mv16(16, 16)
-    integer(kind=8) :: in(3)
-!-----------------------------------------------------------------------
     integer(kind=8) :: i, j, k, l, m, n, nb
-    integer(kind=8) :: nc, nn
-!-----------------------------------------------------------------------
-    data zero/0.d0/
+!
+! --------------------------------------------------------------------------------------------------
 !
     if (mod(nc, 3) .eq. 0) then
         nb = nn*nc/3
@@ -50,7 +60,6 @@ subroutine utpsgl(nn, nc, p, sg, sl)
                 in(2) = (k+1)*(k+2)/2+3*(j-1)
                 in(3) = (k+2)*(k+3)/2+3*(j-1)
                 if (i .eq. j) then
-!             --------- BLOC DIAGONAL
                     r(1) = sg(in(1)+1)
                     r(2) = sg(in(2)+1)
                     r(3) = sg(in(3)+1)
@@ -62,35 +71,24 @@ subroutine utpsgl(nn, nc, p, sg, sl)
                     r(9) = sg(in(3)+3)
                     do m = 1, 3
                         do n = 1, m
-                            sl(in(m)+n) = zero
+                            sl(in(m)+n) = 0.d0
                             do l = 1, 3
-                                sl(in(m)+n) = sl( &
-                                              in(m)+n)+p(m, &
-                                                         l)*( &
-                                              r( &
-                                              3*(l-1)+1)*p(n, 1)+r(3*(l-1)+2)*p(n, &
-                                                                                2)+r(3*(l-1)+3 &
-                                                                                     )*p(n, 3 &
-                                                                                         ) &
-                                              )
+                                sl(in(m)+n) = sl(in(m)+n)+ &
+                                              p(m, l)*(r(3*(l-1)+1)*p(n, 1)+ &
+                                                       r(3*(l-1)+2)*p(n, 2)+ &
+                                                       r(3*(l-1)+3)*p(n, 3))
                             end do
                         end do
                     end do
                 else
-!             --------- BLOC EXTRA - DIAGONAL
                     do m = 1, 3
                         do n = 1, 3
-                            sl(in(m)+n) = zero
+                            sl(in(m)+n) = 0.d0
                             do l = 1, 3
-                                sl(in(m)+n) = sl( &
-                                              in(m)+n)+p(m, &
-                                                         l)*( &
-                                              sg( &
-                                              in(l)+1)*p(n, 1)+sg(in(l)+2)*p(n, &
-                                                                             2)+sg(in(l)+3 &
-                                                                                   )*p(n, 3 &
-                                                                                       ) &
-                                              )
+                                sl(in(m)+n) = sl(in(m)+n)+ &
+                                              p(m, l)*(sg(in(l)+1)*p(n, 1)+ &
+                                                       sg(in(l)+2)*p(n, 2)+ &
+                                                       sg(in(l)+3)*p(n, 3))
                             end do
                         end do
                     end do
@@ -99,11 +97,7 @@ subroutine utpsgl(nn, nc, p, sg, sl)
         end do
 !
     else if (mod(nc, 3) .eq. 1) then
-        do i = 1, 14
-            do j = 1, 14
-                mtr14(i, j) = 0.d0
-            end do
-        end do
+        mtr14 = 0.d0
         do i = 1, 3
             do j = 1, 3
                 mtr14(i, j) = p(i, j)
@@ -121,11 +115,7 @@ subroutine utpsgl(nn, nc, p, sg, sl)
         call mavec(mtr14, 14, sg, 105)
 !
     else if (mod(nc, 3) .eq. 2) then
-        do i = 1, 16
-            do j = 1, 16
-                mtr16(i, j) = 0.d0
-            end do
-        end do
+        mtr16 = 0.d0
         do i = 1, 3
             do j = 1, 3
                 mtr16(i, j) = p(i, j)

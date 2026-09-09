@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine calsta(proj, gamma, dh, def, nno, &
+subroutine calsta(gamma, dh, def, nno, &
                   kpg, sig, tmp, kk, kkd, &
                   matuu, dsidep, jac)
 !
@@ -26,7 +26,7 @@ subroutine calsta(proj, gamma, dh, def, nno, &
 !
     implicit none
 !
-    integer(kind=8) :: kpg, kk, kkd, n, i, m, j, kl, nno, j1, ifiltr, proj
+    integer(kind=8) :: kpg, kk, kkd, n, i, m, j, kl, nno, j1, ifiltr
     real(kind=8) :: dsidep(6, 6), f(3, 3)
     real(kind=8) :: tmp, sig(6)
     real(kind=8) :: gamma(4), dh(8)
@@ -66,99 +66,34 @@ subroutine calsta(proj, gamma, dh, def, nno, &
     do ifiltr = 1, 3
         do n = 1, nno
             do i = 1, 2
+
 !
-!         QUAS4 SANS PROJECTION
-!         ---------------------
-                if (proj .eq. 0) then
+                defst1(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*0.5d0*filtr1(1, ifiltr)+ &
+                                  def(1, n, i)*filtr1(2, ifiltr)+ &
+                                  f(i, 2)*(-0.5d0)*dh(2*kpg)*gamma(n)
 !
-                    defst1(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*filtr1(1, ifiltr)+ &
-                                      def(1, n, i)*filtr1(2, ifiltr)
+                defst1(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*0.5d0*filtr1(1, ifiltr)+ &
+                                  def(2, n, i)*filtr1(2, ifiltr)+ &
+                                  f(i, 1)*(-0.5d0)*dh(2*kpg-1)*gamma(n)
 !
-                    defst1(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*filtr1(1, ifiltr)+ &
-                                      def(2, n, i)*filtr1(2, ifiltr)
+                defst1(3, n, i) = 0.d0
 !
-                    defst1(3, n, i) = 0.d0
-!
-                    defst1(4, n, i) = (filtr1(1, ifiltr)* &
-                                       (f(i, 1)*gamma(n)*dh(2*kpg)+ &
-                                        f(i, 2)*gamma(n)*dh(2*kpg-1))/rac2)+ &
-                                      def(4, n, i)*filtr1(2, ifiltr)
+                defst1(4, n, i) = def(4, n, i)*filtr1(2, ifiltr)
 !
 !
 !
-                    defst2(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*filtr2(1, ifiltr)+ &
-                                      def(1, n, i)*filtr2(2, ifiltr)
+                defst2(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*0.5d0*filtr2(1, ifiltr)+ &
+                                  def(1, n, i)*filtr2(2, ifiltr)+ &
+                                  f(i, 2)*gamma(n)*dh(2*kpg)*(-0.5d0)
 !
-                    defst2(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*filtr2(1, ifiltr)+ &
-                                      def(2, n, i)*filtr2(2, ifiltr)
+                defst2(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*0.5d0*filtr2(1, ifiltr)+ &
+                                  def(2, n, i)*filtr2(2, ifiltr)+ &
+                                  f(i, 1)*gamma(n)*dh(2*kpg-1)*(-0.5d0)
 !
-                    defst2(3, n, i) = 0.d0
+                defst2(3, n, i) = 0.d0
 !
-!
-                    defst2(4, n, i) = (filtr2(1, ifiltr)* &
-                                       (f(i, 1)*gamma(n)*dh(2*kpg)+f(i, 2)* &
-                                        gamma(n)*dh(2*kpg-1))/rac2)+ &
-                                      def(4, n, i)*filtr2(2, ifiltr)
-!
-!         OPTIMAL BENDING
-!         ---------------
-                else if (proj .eq. 1) then
-!
-                    defst1(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*filtr1(1, ifiltr)+ &
-                                      def(1, n, i)*filtr1(2, ifiltr)
-!
-                    defst1(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*filtr1(1, ifiltr)+ &
-                                      def(2, n, i)*filtr1(2, ifiltr)
-!
-                    defst1(3, n, i) = 0.d0
-!
-                    defst1(4, n, i) = def(4, n, i)*filtr1(2, ifiltr)
-!
-!
-!
-                    defst2(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*filtr2(1, ifiltr)+ &
-                                      def(1, n, i)*filtr2(2, ifiltr)
-!
-                    defst2(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*filtr2(1, ifiltr)+ &
-                                      def(2, n, i)*filtr2(2, ifiltr)
-!
-                    defst2(3, n, i) = 0.d0
-!
-!
-                    defst2(4, n, i) = def(4, n, i)*filtr2(2, ifiltr)
-!
-!
-!         INCOMPRESSIBLE
-!         --------------
-                else if (proj .eq. 2) then
-!
-                    defst1(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*0.5d0*filtr1(1, ifiltr)+ &
-                                      def(1, n, i)*filtr1(2, ifiltr)+ &
-                                      f(i, 2)*(-0.5d0)*dh(2*kpg)*gamma(n)
-!
-                    defst1(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*0.5d0*filtr1(1, ifiltr)+ &
-                                      def(2, n, i)*filtr1(2, ifiltr)+ &
-                                      f(i, 1)*(-0.5d0)*dh(2*kpg-1)*gamma(n)
-!
-                    defst1(3, n, i) = 0.d0
-!
-                    defst1(4, n, i) = def(4, n, i)*filtr1(2, ifiltr)
-!
-!
-!
-                    defst2(1, n, i) = f(i, 1)*gamma(n)*dh(2*kpg-1)*0.5d0*filtr2(1, ifiltr)+ &
-                                      def(1, n, i)*filtr2(2, ifiltr)+ &
-                                      f(i, 2)*gamma(n)*dh(2*kpg)*(-0.5d0)
-!
-                    defst2(2, n, i) = f(i, 2)*gamma(n)*dh(2*kpg)*0.5d0*filtr2(1, ifiltr)+ &
-                                      def(2, n, i)*filtr2(2, ifiltr)+ &
-                                      f(i, 1)*gamma(n)*dh(2*kpg-1)*(-0.5d0)
-!
-                    defst2(3, n, i) = 0.d0
-!
-                    defst2(4, n, i) = def(4, n, i)*filtr2(2, ifiltr)
-!
-                end if
+                defst2(4, n, i) = def(4, n, i)*filtr2(2, ifiltr)
+
             end do
         end do
 !

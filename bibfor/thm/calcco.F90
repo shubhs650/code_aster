@@ -18,8 +18,7 @@
 ! aslint: disable=W1504
 !
 subroutine calcco(ds_thm, &
-                  lMatr, lSigm, lVari, lMatrPred, angl_naut, &
-                  j_mater, &
+                  lMatr, lSigm, lVari, lMatrPred, &
                   ndim, nbvari, &
                   dimdef, dimcon, &
                   adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
@@ -34,8 +33,8 @@ subroutine calcco(ds_thm, &
                   vintm, vintp, dsde, &
                   retcom)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -53,8 +52,7 @@ subroutine calcco(ds_thm, &
 !
     type(THM_DS), intent(inout) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
-    real(kind=8), intent(in) :: angl_naut(3)
-    integer(kind=8), intent(in) :: j_mater, ndim, nbvari
+    integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: adcome, adcote, adcp11, adcp12, adcp21, adcp22
     integer(kind=8), intent(in) :: addeme, addete, addep1, addep2
@@ -79,11 +77,6 @@ subroutine calcco(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
-! In  j_mater          : coded material address
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  dimdef           : dimension of generalized strains vector
@@ -131,17 +124,15 @@ subroutine calcco(ds_thm, &
     h11 = 0.d0
     h12 = 0.d0
     retcom = 0
-!
+
 ! - Get parameters for coupling
-!
-    call thmGetParaCoupling(ds_thm, j_mater, temp)
-!
+    call thmGetParaCoupling(ds_thm, temp)
+
 ! - Compute
-!
     select case (ds_thm%ds_behaviour%nume_thmc)
     case (LIQU_SATU)
         call thmCpl001(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, &
@@ -157,7 +148,7 @@ subroutine calcco(ds_thm, &
         nl = phi
     case (GAZ)
         call thmCpl002(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, &
@@ -173,8 +164,7 @@ subroutine calcco(ds_thm, &
         nl = phi
     case (LIQU_VAPE)
         call thmCpl003(ds_thm, &
-                       lMatr, lSigm, lVari, lMatrPred, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, lMatrPred, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcote, adcp11, adcp12, &
@@ -191,8 +181,7 @@ subroutine calcco(ds_thm, &
         nl = phi
     case (LIQU_VAPE_GAZ)
         call thmCpl004(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, adcp12, adcp21, &
@@ -209,8 +198,7 @@ subroutine calcco(ds_thm, &
         nl = phi
     case (LIQU_GAZ)
         call thmCpl005(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, adcp21, &
@@ -226,8 +214,7 @@ subroutine calcco(ds_thm, &
         nl = phi
     case (LIQU_GAZ_ATM)
         call thmCpl006(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, &
@@ -241,11 +228,10 @@ subroutine calcco(ds_thm, &
                        vintm, vintp, dsde, &
                        retcom)
         nl = phi
-    case (LIQU_AD_GAZ_VAPE)
 
+    case (LIQU_AD_GAZ_VAPE)
         call thmCpl009(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
@@ -262,8 +248,7 @@ subroutine calcco(ds_thm, &
 
     case (LIQU_AD_GAZ)
         call thmCpl010(ds_thm, &
-                       lMatr, lSigm, lVari, angl_naut, &
-                       j_mater, &
+                       lMatr, lSigm, lVari, &
                        ndim, nbvari, &
                        dimdef, dimcon, &
                        adcome, adcote, adcp11, adcp12, adcp21, adcp22, &

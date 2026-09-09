@@ -15,6 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine cfluendo3d(fami, kpg, ksp, ndim, imate, &
                       compor, carcri, instam, instap, epsm, &
@@ -36,7 +37,7 @@ subroutine cfluendo3d(fami, kpg, ksp, ndim, imate, &
 !
     character(len=*) :: fami
     integer(kind=8) :: kpg, ksp, ndim, imate
-    character(len=16) :: compor(COMPOR_SIZE)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
     real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: instam, instap
     real(kind=8) :: epsm(6), deps(6)

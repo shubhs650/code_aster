@@ -15,22 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmtevp(fami, kpg, ksp, ndim, typmod,&
-                      imate, compor, crit, instam, instap,&
-                      deps, sigm, vim, option, sigp,&
-                      vip, dsidep, demu, cinco, iret)
+    subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
+                      imate, relaComp, carcri, instam, instap, &
+                      deps, sigm, vim, option, sigp, &
+                      vip, dsidep, iret)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: ndim
         character(len=8) :: typmod(*)
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: crit(6)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16) :: relaComp
         real(kind=8) :: instam
         real(kind=8) :: instap
         real(kind=8) :: deps(6)
@@ -40,8 +39,6 @@ interface
         real(kind=8) :: sigp(6)
         real(kind=8) :: vip(5)
         real(kind=8) :: dsidep(6, 6)
-        real(kind=8) :: demu
-        real(kind=8) :: cinco
         integer(kind=8) :: iret
     end subroutine nmtevp
 end interface

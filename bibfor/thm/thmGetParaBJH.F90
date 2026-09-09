@@ -16,19 +16,19 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmGetParaBJH(ds_thm, j_mater, p1)
+subroutine thmGetParaBJH(ds_thm, p1)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvala.h"
-#include "asterfort/utmess.h"
 #include "asterfort/THM_type.h"
+#include "asterfort/utmess.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
     real(kind=8), intent(in) :: p1
 !
 ! --------------------------------------------------------------------------------------------------
@@ -39,72 +39,57 @@ subroutine thmGetParaBJH(ds_thm, j_mater, p1)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  j_mater      : coded material address
-! In  p1           : capillary pressure - At end of current step
+! IO  ds_thm           : datastructure for THM
+! In  p1               : capillary pressure - At end of current step
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_para_bjh = 5
-    real(kind=8) :: para_vale_bjh(nb_para_bjh)
-    integer(kind=8) :: icodre_bjh(nb_para_bjh)
-    character(len=16), parameter :: para_name_bjh(nb_para_bjh) = (/'A0     ', &
-                                                                   'SHUTTLE', &
-                                                                   'EPAI   ', &
-                                                                   'S_BJH  ', &
-                                                                   'W_BJH  '/)
-
+    integer(kind=8), parameter :: nbPropBJH = 5
+    real(kind=8) :: propValeBJH(nbPropBJH)
+    integer(kind=8) :: propCodeBJH(nbPropBJH)
+    character(len=16), parameter :: propNameBJH(nbPropBJH) = (/'A0     ', &
+                                                               'SHUTTLE', &
+                                                               'EPAI   ', &
+                                                               'S_BJH  ', &
+                                                               'W_BJH  '/)
     real(kind=8) :: ep, surf, sbjh, wbjh
 !
 ! --------------------------------------------------------------------------------------------------
-    para_vale_bjh(:) = 0.d0
+    propValeBJH = 0.d0
     ep = 0.d0
     surf = 0.d0
 
     if ((ds_thm%ds_behaviour%rela_hydr) .eq. 'HYDR_TABBAL') then
-
-        call rcvala(j_mater, ' ', 'THM_DIFFU', &
+        call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'THM_DIFFU', &
                     1, 'PCAP', [p1], &
-                    nb_para_bjh, para_name_bjh, para_vale_bjh, icodre_bjh, &
-                    1)
+                    nbPropBJH, propNameBJH, propValeBJH, &
+                    propCodeBJH, 1)
+        surf = propValeBJH(1)
+        ds_thm%ds_material%bjh%shuttle = propValeBJH(2)
 
-        surf = para_vale_bjh(1)
-        ds_thm%ds_material%bjh%shuttle = para_vale_bjh(2)
-
-        ep = para_vale_bjh(3)
-        sbjh = para_vale_bjh(4)
-        wbjh = para_vale_bjh(5)
-!~         write (6,*) 'thmgetBJH1',ds_thm%ds_behaviour%rela_hydr
+        ep = propValeBJH(3)
+        sbjh = propValeBJH(4)
+        wbjh = propValeBJH(5)
 
         if (surf .lt. 0.d0) then
-
             call utmess('F', 'THM1_95')
-
         else
-
             ds_thm%ds_material%bjh%A0 = surf
-
         end if
 
         if (ep .lt. 0.d0) then
-
             call utmess('F', 'THM1_96')
-
         else
             ds_thm%ds_material%bjh%epai = ep
-
         end if
 
         if (sbjh .lt. 0.d0 .or. sbjh .gt. 1.d0 .or. wbjh .lt. 0.d0 .or. wbjh .gt. 1.d0) then
-
             call utmess('F', 'THM1_97')
-
         else
-
             ds_thm%ds_material%bjh%SBJH = sbjh
             ds_thm%ds_material%bjh%wBJH = wbjh
-
         end if
-
     end if
 
 end subroutine

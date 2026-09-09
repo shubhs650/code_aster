@@ -21,6 +21,7 @@
 #include "asterf_types.h"
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmproj(alias, nno, ndim, coorma, coorpt,&
                       itemax, epsmax, toleou, dirapp, dir,&
                       ksi1, ksi2, tau1, tau2, iproj,&
@@ -28,7 +29,7 @@ interface
         character(len=8) :: alias
         integer(kind=8) :: nno
         integer(kind=8) :: ndim
-        real(kind=8) :: coorma(27)
+        real(kind=8) :: coorma(3,MT_NNOMAX2D)
         real(kind=8) :: coorpt(3)
         integer(kind=8) :: itemax
         real(kind=8) :: epsmax

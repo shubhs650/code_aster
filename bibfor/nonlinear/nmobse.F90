@@ -147,9 +147,11 @@ subroutine nmobse(meshz, sd_obsv, time, &
             field_disc = v_extr_comp(4*(i_field_comp-1)+2) (1:4)
             field_type = v_extr_comp(4*(i_field_comp-1)+3)
             ligrel = v_extr_comp(4*(i_field_comp-1)+4) (1:19)
-            call nmextr_comp(field_comp, field_disc, field_type, meshz, modelz, &
-                             cara_elemz, ds_material, ds_constitutive, disp_curr, strx_curr, &
-                             varc_curr, time, ligrelz=ligrel)
+            call nmextr_comp(field_comp, field_disc, field_type, &
+                             meshz, modelz, cara_elemz, &
+                             ds_material, ds_constitutive, &
+                             disp_curr, strx_curr, varc_curr, &
+                             time, ligrelZ_=ligrel)
         end do
     end if
 !

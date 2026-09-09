@@ -18,6 +18,8 @@
 !
 subroutine te0218(option, nomte)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -25,7 +27,6 @@ subroutine te0218(option, nomte)
 #include "asterfort/bsigmc.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/ethdst.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/simtep.h"
@@ -44,14 +45,15 @@ subroutine te0218(option, nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8), parameter :: nharm = 0.d0
-    character(len=4), parameter :: fami = "RIGI"
-    real(kind=8) :: sigmEner(162), bsigmEner(81), anglNaut(3)
+    character(len=8), parameter :: fami = "RIGI"
+    real(kind=8) :: sigmEner(162), bsigmEner(81)
     real(kind=8) :: time
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
-    integer(kind=8) :: jvMater, jvGeom, jvDisp
+    integer(kind=8) :: jvMaterc, jvGeom, jvDisp
     integer(kind=8) :: i, jvEner
     integer(kind=8) :: nbsig, ndim, nno, npg
     real(kind=8) :: enerTherTher, enerPote
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -66,30 +68,36 @@ subroutine te0218(option, nomte)
     call jevech('PGEOMER', 'L', jvGeom)
 
 ! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
+    call jevech('PMATERC', 'L', jvMaterc)
 
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! - Current displacements (nodes)
     call jevech('PDEPLAR', 'L', jvDisp)
 
 ! - Compute "real" stress tensor at Gauss points
-    call simtep(fami, nno, ndim, nbsig, npg, &
+    call simtep(materPara, &
+                nno, ndim, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 zr(jvGeom), zr(jvDisp), &
-                time, anglNaut, zi(jvMater), nharm, &
+                time, nharm, &
                 sigmEner)
 
 ! - CALCUL DU VECTEUR DES FORCES INTERNES (BT*SIGMA)
-    call bsigmc(nno, ndim, nbsig, npg, jvGaussWeight, &
-                jvBaseFunc, jvDBaseFunc, zr(jvGeom), nharm, sigmEner, &
+    call bsigmc(nno, ndim, nbsig, npg, &
+                jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
+                zr(jvGeom), nharm, sigmEner, &
                 bsigmEner)
 
 ! - CALCUL DU TERME EPSTH_T*D*EPSTH
-    call ethdst(fami, nno, ndim, nbsig, npg, &
+    call ethdst(materPara, &
+                nno, ndim, nbsig, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
-                zr(jvGeom), time, anglNaut, zi(jvMater), &
+                zr(jvGeom), time, &
                 enerTherTher)
 
 ! - CALCUL DE L'ENERGIE POTENTIELLE : 1/2*UT*K*U - UT*FTH + 1/2*EPSTHT*D*EPSTH

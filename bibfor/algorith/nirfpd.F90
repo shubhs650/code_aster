@@ -27,8 +27,9 @@ subroutine nirfpd(ndim, nno1, nno2, nno3, npg, &
 #include "asterfort/dfdmip.h"
 #include "asterfort/r8inir.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: ndim, nno1, nno2, nno3, npg, iw, idff1
-    integer(kind=8) :: vu(3, 27), vg(27), vp(27)
+    integer(kind=8) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX), vp(MT_NNOMAX)
     real(kind=8) :: geomi(ndim, nno1)
     real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg), vff3(nno3, npg)
     real(kind=8) :: sigref, epsref

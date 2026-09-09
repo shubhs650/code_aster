@@ -26,7 +26,6 @@
 ! --------------------------------------------------------------------------------------------------
 ! Type of elasticity
 ! --------------------------------------------------------------------------------------------------
-!
 #define ELAS_UNDEF     0
 #define ELAS_ISOT      1
 #define ELAS_ORTH      2
@@ -40,11 +39,10 @@
 #define ELAS_MEMBRANE  10
 #define ELAS_COMPOSITE 11
 #define ELAS_FLUID     12
-!
+
 ! --------------------------------------------------------------------------------------------------
 ! External state variables linked to elasticity
 ! --------------------------------------------------------------------------------------------------
-
 #define ELAS_VARC_HYDR 1
 #define ELAS_VARC_SECH 1
 #define ELAS_VARC_PTOT 1

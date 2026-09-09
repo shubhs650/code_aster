@@ -101,14 +101,12 @@ def coupled_mechanics(cpl):
 
             Returns:
                 bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingField*]: Output fields, on nodes.
             """
 
             assert len(data) == 1, "expecting one field"
-            mc_ther = data["TEMP"]
 
             # MEDC field => .med => code_aster field
-            TEMP = self._medcpl.import_temperature(mc_ther)
+            TEMP = self._medcpl.import_temperature("TEMP")
 
             self.evol_ther = CREA_RESU(
                 TYPE_RESU="EVOL_THER",
@@ -134,11 +132,11 @@ def coupled_mechanics(cpl):
             )
 
             displ = self.result.getField("DEPL", self.result.getLastIndex())
-            mc_displ = self._medcpl.export_displacement(displ, "Displ")
+            self._medcpl.export_displacement("DEPL", displ)
             print("[Convert] Displacement field info:")
-            print(mc_displ.simpleRepr(), flush=True)
+            print(self._medcpl.get_field("DEPL").getField().simpleRepr(), flush=True)
 
-            return True, {"DEPL": mc_displ}
+            return True
 
     ################################################################################
     # loop on time steps
@@ -147,7 +145,7 @@ def coupled_mechanics(cpl):
     mech_solv = MechanicalSolver(cpl)
 
     cpl.setup(
-        interface=(ML, ["Volume"]),
+        interface=(ML, "Volume"),
         input_fields=[("TEMP", ["TEMP"], "NODES")],
         output_fields=[("DEPL", ["DX", "DY", "DZ"], "NODES")],
     )

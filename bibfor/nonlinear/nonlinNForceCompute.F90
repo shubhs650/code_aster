@@ -67,7 +67,7 @@ subroutine nonlinNForceCompute(model, cara_elem, list_func_acti, &
     integer(kind=8) :: ifm, niv
     character(len=19) :: disp_prev, strx_prev, sigm_prev, varc_prev
     character(len=19) :: disp_cumu_inst, sigm_extr
-    character(len=24) :: vrcmoi
+    character(len=24) :: varcAllPrev
     character(len=16), parameter :: option = 'FORC_NODA'
     aster_logical :: l_implex
 !
@@ -85,7 +85,7 @@ subroutine nonlinNForceCompute(model, cara_elem, list_func_acti, &
     call nmchex(hval_incr, 'VALINC', 'SIGMOI', sigm_prev)
     call nmchex(hval_incr, 'VALINC', 'SIGEXT', sigm_extr)
     call nmchex(hval_incr, 'VALINC', 'COMMOI', varc_prev)
-    call nmvcex('TOUT', varc_prev, vrcmoi)
+    call nmvcex('TOUT', varc_prev, varcAllPrev)
 
 ! - Active functionnalities
     l_implex = isfonc(list_func_acti, 'IMPLEX')
@@ -98,13 +98,13 @@ subroutine nonlinNForceCompute(model, cara_elem, list_func_acti, &
     if (l_implex) then
         call vefnme(option, model, ds_material%mateco, cara_elem, &
                     ds_constitutive%compor, 0, ' ', &
-                    vrcmoi, sigm_extr, ' ', &
+                    varcAllPrev, sigm_extr, ' ', &
                     disp_prev, &
                     'V', ds_system%vefnod)
     else
         call vefnme(option, model, ds_material%mateco, cara_elem, &
                     ds_constitutive%compor, 0, ' ', &
-                    vrcmoi, sigm_prev, strx_prev, &
+                    varcAllPrev, sigm_prev, strx_prev, &
                     disp_prev, &
                     'V', ds_system%vefnod)
     end if

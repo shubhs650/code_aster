@@ -15,39 +15,35 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
     subroutine lc8057(BEHinteg, &
-                      fami, kpg, ksp, ndim, imate, &
-                      compor, mult_comp, carcri, instam, instap, neps, &
-                      epsm, deps, nsig, sigm, vim, &
-                      option, angmas, sigp, nvi, vip, &
-                      typmod, icomp, ndsde, dsidep, codret)
+                      fami, kpg, ksp, ndim, jvMaterCode, &
+                      compor, carcri, instam, instap, neps, &
+                      epsm, deps, nsig, sigm, nvi, vim, &
+                      option, sigp, vip, &
+                      typmod, ndsde, dsidep, codret)
         use Behaviour_type
         type(Behaviour_Integ), intent(inout) :: BEHinteg
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg
         integer(kind=8), intent(in) :: ksp
         integer(kind=8), intent(in) :: ndim
-        integer(kind=8), intent(in) :: imate
-        character(len=16), intent(in) :: compor(*)
-        character(len=16), intent(in) :: mult_comp
-        real(kind=8), intent(in) :: carcri(*)
-        real(kind=8), intent(in) :: instam
-        real(kind=8), intent(in) :: instap
-        integer(kind=8), intent(in) :: neps
+        integer(kind=8), intent(in) :: jvMaterCode
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        real(kind=8), intent(in) :: instam, instap
+        integer(kind=8), intent(in) :: neps, nvi
         real(kind=8), intent(in) :: epsm(*)
         real(kind=8), intent(in) :: deps(*)
         integer(kind=8), intent(in) :: nsig
         real(kind=8), intent(in) :: sigm(*)
-        real(kind=8), intent(in) :: vim(*)
+        real(kind=8), intent(in) :: vim(nvi)
         character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(*)
         real(kind=8), intent(out) :: sigp(*)
-        real(kind=8), intent(out) :: vip(*)
-        character(len=8), intent(in) :: typmod(*)
-        integer(kind=8), intent(in) :: icomp
-        integer(kind=8), intent(in) :: nvi
+        real(kind=8), intent(out) :: vip(nvi)
+        character(len=8), intent(in) :: typmod(2)
         integer(kind=8), intent(in) :: ndsde
         real(kind=8), intent(out) :: dsidep(*)
         integer(kind=8), intent(out) :: codret

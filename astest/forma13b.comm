@@ -53,10 +53,10 @@ CHA_POM = AFFE_CHAR_MECA(
 CAR_POM = AFFE_CARA_ELEM(
     MODELE=POMPE,
     COQUE=(
-        _F(GROUP_MA="Pal_2D", EPAIS=0.03),
-        _F(GROUP_MA="Tuy_2D", EPAIS=0.01),
-        _F(GROUP_MA="Vol_2D", EPAIS=0.05),
-        _F(GROUP_MA=("tuy_vol", "vol_tuy", "vol_pal", "pal_vol"), EPAIS=0.05),
+        _F(GROUP_MA="Pal_2D", EPAIS=0.03, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA="Tuy_2D", EPAIS=0.01, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA="Vol_2D", EPAIS=0.05, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA=("tuy_vol", "vol_tuy", "vol_pal", "pal_vol"), EPAIS=0.05, VECTEUR=(0, 1, 0)),
     ),
 )
 
@@ -150,16 +150,27 @@ CHA_TUY = AFFE_CHAR_MECA(
 
 
 CAR_PAL = AFFE_CARA_ELEM(
-    MODELE=PALIER, COQUE=(_F(GROUP_MA="Pal_2D", EPAIS=0.03), _F(GROUP_MA="pal_vol", EPAIS=0.05))
+    MODELE=PALIER,
+    COQUE=(
+        _F(GROUP_MA="Pal_2D", EPAIS=0.03, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA="pal_vol", EPAIS=0.05, VECTEUR=(0, 1, 0)),
+    ),
 )
 
 CAR_VOL = AFFE_CARA_ELEM(
     MODELE=VOLUTE,
-    COQUE=(_F(GROUP_MA="Vol_2D", EPAIS=0.05), _F(GROUP_MA=("vol_pal", "vol_tuy"), EPAIS=0.05)),
+    COQUE=(
+        _F(GROUP_MA="Vol_2D", EPAIS=0.05, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA=("vol_pal", "vol_tuy"), EPAIS=0.05, VECTEUR=(0, 1, 0)),
+    ),
 )
 
 CAR_TUY = AFFE_CARA_ELEM(
-    MODELE=TUYAU, COQUE=(_F(GROUP_MA="Tuy_2D", EPAIS=0.01), _F(GROUP_MA="tuy_vol", EPAIS=0.05))
+    MODELE=TUYAU,
+    COQUE=(
+        _F(GROUP_MA="Tuy_2D", EPAIS=0.01, VECTEUR=(0, 1, 0)),
+        _F(GROUP_MA="tuy_vol", EPAIS=0.05, VECTEUR=(0, 1, 0)),
+    ),
 )
 
 MAC_PAL = CREA_ELEM_SSD(

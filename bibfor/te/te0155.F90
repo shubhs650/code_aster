@@ -82,7 +82,7 @@ subroutine te0155(option, nomte)
     real(kind=8) :: kendog(1), kdessi(1), sech, hydr
     real(kind=8) :: epsth, sref
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: poum, nomail
 !
     logical :: normal, global, okvent

@@ -18,13 +18,14 @@
 !
 subroutine te0334(option, nomte)
 !
+    use BehaviourStrain_module
+    use BehaviourStrain_type
     use FE_basis_module
     use FE_eval_module
     use FE_quadrature_module
     use FE_topo_module
-    use BehaviourStrain_type
-    use BehaviourStrain_module
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8nnem.h"
@@ -34,7 +35,6 @@ subroutine te0334(option, nomte)
 #include "asterfort/calcgr.h"
 #include "asterfort/dmatmc.h"
 #include "asterfort/ElasticityMaterial_type.h"
-#include "asterfort/get_elas_id.h"
 #include "asterfort/get_elas_para.h"
 #include "asterfort/granvi.h"
 #include "asterfort/jevech.h"
@@ -44,6 +44,7 @@ subroutine te0334(option, nomte)
 #include "asterfort/utmess.h"
 #include "FE_module.h"
 #include "jeveux.h"
+#include "MeshTypes_type.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -56,7 +57,7 @@ subroutine te0334(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8), parameter :: ksp = 1, mxcmel = 54
     integer(kind=8), parameter :: nbsgm = 4
     aster_logical :: l_modi_cp
@@ -64,20 +65,19 @@ subroutine te0334(option, nomte)
     real(kind=8) :: epsiTota(6), epsiVarc(6), epsiMeca(6), sigmEner(4)
     integer(kind=8) :: nbVari, variIndxTemp, nbVariGranger
     real(kind=8) :: e, nu, c1, c2, trsig
-    aster_logical :: l_creep, lTempInVari, lCplan, lDplan, lMetaLemaAni, lTHM
-    integer(kind=8) :: jvMater, jvDisp, jvCompor, jvVari, jvSigm, jvEpsi, jvTime
+    aster_logical :: l_creep, lTempInVari, lCplan, lDplan, lTHM
+    integer(kind=8) :: jvMaterc, jvDisp, jvCompor, jvVari, jvSigm, jvEpsi, jvTime
     integer(kind=8) :: kpg, npg, ndim, nno, iSig, iEps, nbSig, nbEps
     integer(kind=8) :: jtab(7), iret
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuad
     type(FE_basis) :: FEBasis
-    real(kind=8) :: BGSEval(3, MAX_BS)
-    real(kind=8) :: anglNaut(3), coorpg(3)
-    integer(kind=8) :: elasID
-    character(len=16) :: elasKeyword, relaComp, kit_comp_1, kit_comp_2
+    real(kind=8) :: BGSEval(3, MAX_BS_CG), coorpg(3)
+    character(len=16) :: relaComp, relaFlua, relaPlas
     type(All_Varc_Strain) :: allVarcStrain
     real(kind=8) :: tempkpg
     real(kind=8) :: d(4, 4)
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -90,12 +90,12 @@ subroutine te0334(option, nomte)
     call FECell%init()
     ndim = FECell%ndim
     nno = FECell%nbnodes
-    ASSERT(nno .le. 9)
+    ASSERT(nno .le. MT_NNOMAX2D)
 
 ! - Initialization of quadrature
     call FEQuad%initCell(FECell, fami)
     npg = FEQuad%nbQuadPoints
-    ASSERT(npg .le. 9)
+    ASSERT(npg .le. MT_NNOMAX2D)
 
 ! - Initialization of basis functions
     call FEBasis%initCell(FECell)
@@ -114,27 +114,28 @@ subroutine te0334(option, nomte)
     nbEps = nbSig
     ASSERT(nbSig .eq. nbsgm)
 
-! - Orthotropic parameters: cannot use => zero
-    anglNaut = 0.d0
-
 ! - Current time
     call jevech('PINSTR', 'L', jvTime)
     allVarcStrain%time = zr(jvTime)
     allVarcStrain%hasTime = ASTER_TRUE
 
-! - Material parameters
-    call jevech('PMATERC', 'L', jvMater)
-    call get_elas_id(zi(jvMater), elasID, elasKeyword)
-    if (elasID .ne. ELAS_ISOT) then
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+    if (materPara%elasID .ne. ELAS_ISOT) then
         call utmess('F', 'ELEMENTS6_2')
     end if
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
 
 ! - Behaviour
     call jevech('PCOMPOR', 'L', jvCompor)
     relaComp = zk16(jvCompor-1+RELA_NAME)
-    kit_comp_1 = zk16(jvCompor-1+CREEP_NAME)
-    kit_comp_2 = zk16(jvCompor-1+PLAS_NAME)
-    lMetaLemaAni = (relaComp == "META_LEMA_ANI")
+    relaFlua = zk16(jvCompor-1+CREEP_NAME)
+    relaPlas = zk16(jvCompor-1+PLAS_NAME)
 
 ! - Stress plane warning
     if (lCplan) then
@@ -147,7 +148,7 @@ subroutine te0334(option, nomte)
 
 ! - Detect Granger law (creep)
     if (relaComp(1:13) .ne. 'BETON_GRANGER' .and. &
-        (relaComp .ne. 'KIT_DDI' .or. kit_comp_1(1:13) .ne. 'BETON_GRANGER')) then
+        (relaComp .ne. 'KIT_DDI' .or. relaFlua(1:13) .ne. 'BETON_GRANGER')) then
         l_creep = ASTER_FALSE
     else
         call granvi("3D", nvi_=nbVariGranger)
@@ -160,8 +161,8 @@ subroutine te0334(option, nomte)
         variIndxTemp = 3
         lTempInVari = ASTER_TRUE
     else if (relaComp .eq. 'KIT_DDI') then
-        if (kit_comp_2 .eq. 'BETON_DOUBLE_DP') then
-            if (kit_comp_1(1:13) .eq. 'BETON_GRANGER') then
+        if (relaPlas .eq. 'BETON_DOUBLE_DP') then
+            if (relaFlua(1:13) .eq. 'BETON_GRANGER') then
                 variIndxTemp = nbVariGranger+3
                 lTempInVari = ASTER_TRUE
             else
@@ -182,9 +183,11 @@ subroutine te0334(option, nomte)
         epsiTota = FEEvalGradSymMat(FEBasis, zr(jvDisp), coorpg, BGSEval)
         epsiTota(4) = epsiTota(4)/sqrt(2.d0)
 
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
 ! ----- Detect external state variable
-        call strainDetectVarc('+', lTHM, fami, kpg, ksp, &
-                              allVarcStrain)
+        call strainDetectVarc('+', lTHM, materPara, allVarcStrain)
 
 ! ----- Get current temperature
         tempkpg = r8nnem()
@@ -204,26 +207,21 @@ subroutine te0334(option, nomte)
         allVarcStrain%temp = tempkpg
 
 ! ----- Get elastic parameters (only isotropic elasticity)
-        call get_elas_para(fami, zi(jvMater), '+', kpg, ksp, &
-                           elasID, elasKeyword, &
+        call get_elas_para(fami, zi(jvMaterc), '+', kpg, ksp, &
+                           materPara%elasID, materPara%elasKeyword, &
                            time=allVarcStrain%time, temp=allVarcStrain%temp, e_=e, nu_=nu)
-        ASSERT(elasID .eq. ELAS_ISOT)
 
 ! ----- Compute non-mechanical strains (epsiVarc) for some external state variables
-        call compVarcStrain(fami, '+', kpg, ksp, &
-                            zi(jvMater), lMetaLemaAni, &
-                            elasID, elasKeyword, &
-                            allVarcStrain)
-        call getVarcStrain('+', VARC_STRAIN_ALL, allVarcStrain, 6, epsiVarc)
+        call compVarcStrain('+', materPara, allVarcStrain)
+        call getVarcStrain('+', VARC_STRAIN_ALL, allVarcStrain, epsiVarc)
         epsiVarc(4) = epsiVarc(4)/sqrt(2.d0)
 
 ! ----- Compute mechanical strains epsiMeca = epsiTota - epsiVarc
         epsiMeca = 0.d0
         epsiMeca(1:4) = epsiTota(1:4)-epsiVarc(1:4)
-
         if (lCplan) then
-            call dmatmc(fami, zi(jvMater), allVarcStrain%time, '+', kpg, ksp, &
-                        anglNaut, nbSig, d, l_modi_cp)
+            call dmatmc(materPara, "+", allVarcStrain%time, &
+                        nbSig, d, l_modi_cp)
             epsiMeca(3) = -1.d0/d(3, 3)* &
                           (d(3, 1)*(epsiMeca(1)-epsiVarc(1))+ &
                            d(3, 2)*(epsiMeca(2)-epsiVarc(2))+ &

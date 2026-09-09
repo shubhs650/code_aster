@@ -69,7 +69,7 @@ subroutine vdsiro(np, nbsp, matev, sens, goun, &
     integer(kind=8) :: np, nbsp
 ! -----  VARIABLES LOCALES
     real(kind=8) :: workel(4), worklo(4), xab(2, 2)
-    real(kind=8) :: tampon(2), mattmp(2, 2)
+    real(kind=8) :: tampon(2), matrWork(2, 2)
     integer(kind=8) :: i, kpt, ksp, kpt2
 !.========================= DEBUT DU CODE EXECUTABLE ==================
 !
@@ -85,18 +85,16 @@ subroutine vdsiro(np, nbsp, matev, sens, goun, &
 !          LES MATRICES POUR FAMI='MASS'
         kpt2 = kpt
         if (goun .eq. 'G') kpt2 = 1
-!
-!       -- RECOPIE DE MATEV(KPT) DANS MATTMP :
-        mattmp(1, 1) = matev(1, 1, kpt2)
-        mattmp(2, 2) = matev(2, 2, kpt2)
-!
-!
+
+! ----- Create matrix to change frame
+        matrWork(1, 1) = matev(1, 1, kpt2)
+        matrWork(2, 2) = matev(2, 2, kpt2)
         if (sens .eq. 'IU') then
-            mattmp(1, 2) = matev(1, 2, kpt2)
-            mattmp(2, 1) = matev(2, 1, kpt2)
+            matrWork(1, 2) = matev(1, 2, kpt2)
+            matrWork(2, 1) = matev(2, 1, kpt2)
         else
-            mattmp(1, 2) = matev(2, 1, kpt2)
-            mattmp(2, 1) = matev(1, 2, kpt2)
+            matrWork(1, 2) = matev(2, 1, kpt2)
+            matrWork(2, 1) = matev(1, 2, kpt2)
         end if
 !
         do ksp = 1, nbsp
@@ -105,21 +103,16 @@ subroutine vdsiro(np, nbsp, matev, sens, goun, &
             workel(2) = tens1(4+6*(i-1))
             workel(3) = tens1(4+6*(i-1))
             workel(4) = tens1(2+6*(i-1))
-!
-            call utbtab('ZERO', 2, 2, workel, mattmp(1, 1), &
-                        xab, worklo)
-!
+            call utbtab('ZERO', 2, 2, workel, matrWork(1, 1), xab, worklo)
             tens2(1+6*(i-1)) = worklo(1)
             tens2(2+6*(i-1)) = worklo(4)
             tens2(3+6*(i-1)) = tens1(3+6*(i-1))
             tens2(4+6*(i-1)) = worklo(2)
             tampon(1) = tens1(5+6*(i-1))
             tampon(2) = tens1(6+6*(i-1))
-            tens2(5+6*(i-1)) = tampon(1)*mattmp(1, 1)+tampon(2)*mattmp(2, 1)
-            tens2(6+6*(i-1)) = tampon(1)*mattmp(1, 2)+tampon(2)*mattmp(2, 2)
-!
+            tens2(5+6*(i-1)) = tampon(1)*matrWork(1, 1)+tampon(2)*matrWork(2, 1)
+            tens2(6+6*(i-1)) = tampon(1)*matrWork(1, 2)+tampon(2)*matrWork(2, 2)
         end do
     end do
 !
-!.============================ FIN DE LA ROUTINE ======================
 end subroutine

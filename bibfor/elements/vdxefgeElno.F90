@@ -16,12 +16,17 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vdxefgeElno(nomte, nodeCoor, &
-                       nbLayer, efgeElno)
+subroutine vdxefgeElno(plateCara, plateOrie, &
+                       nomte, nodeCoor, &
+                       nbLayer, efgeElno, &
+                       matevn)
 !
+    use plate_type
+    use plateGeom_module, only: updateCoorSystCO3D
     implicit none
 !
 #include "asterc/r8nnem.h"
+#include "asterfort/assert.h"
 #include "asterfort/btdfn.h"
 #include "asterfort/btdmsn.h"
 #include "asterfort/btdmsr.h"
@@ -36,18 +41,20 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
 #include "asterfort/moytem.h"
 #include "asterfort/rcvarc.h"
 #include "asterfort/trndgl.h"
-#include "asterfort/utmess.h"
 #include "asterfort/vdefge.h"
 #include "asterfort/vdesga.h"
 #include "asterfort/vdxtemp.h"
-#include "asterfort/vectan.h"
 #include "asterfort/vectgt.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
     character(len=16), intent(in) :: nomte
     real(kind=8), intent(in) :: nodeCoor(3, 9)
     integer(kind=8), intent(in) :: nbLayer
     real(kind=8), intent(out) :: efgeElno(8, 9)
+    real(kind=8), intent(out) :: matevn(2, 2, 10)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -57,33 +64,31 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8), parameter :: zero = 0.d0, un = 1.d0
+    real(kind=8), parameter :: un = 1.d0
 ! NOMBRE DE POINTS DE GAUSS DANS LA TRANCHE
     ! (POUR RESTER COHERENT AVEC SIEF_ELGA EN PLASTICITE )
-    integer(kind=8), parameter :: npgLayer = 3
+    integer(kind=8), parameter :: npgLayer = 3, npgt = 10
     real(kind=8), parameter :: epsval(3) = (/-1.d0, 0.d0, +1.d0/)
     integer(kind=8) :: nb1, nb2, npgsn, npgsr
-    integer(kind=8) :: i, j, k
-    integer(kind=8) :: jvCacoqu, jvDisp, jvNbsp, jvMater
+    integer(kind=8) :: jvDisp, jvMaterc
     integer(kind=8) :: lzr, lzi
     integer(kind=8) :: iret
-    integer(kind=8) :: kpgLayer, kpgsr
-    integer(kind=8) :: kpgs, kwgt
+    integer(kind=8) :: kpgLayer, kpgsr, kwgt
     integer(kind=8) :: kInf, kMoy, kSup
     real(kind=8) :: tempRefe, tempKpg, tempMoy
-    real(kind=8) :: vecta(9, 2, 3), vectn(9, 3), vectpt(9, 2, 3)
-    real(kind=8) :: vectg(2, 3), vectt(3, 3)
+    real(kind=8) :: vectTangKpg(2, 3), vectBaseKpg(3, 3)
     real(kind=8) :: hsfm(3, 9), hss(2, 9), hsj1m(3, 9), hsj1s(2, 9)
     real(kind=8) :: btdm(4, 3, 42), btds(4, 2, 42)
     real(kind=8) :: hsf(3, 9), hsj1fx(3, 9), wgt
     real(kind=8) :: btdf(3, 42), btild(5, 42)
     real(kind=8) :: disp(42), rotf(9)
-    real(kind=8) :: sigmElno(6, 27)
+    real(kind=8) :: sigmElno(6, MT_NNOMAX3D)
     real(kind=8) :: alpha, epais
     real(kind=8) :: ksi3, ksi3s2, hic, zmin
     aster_logical :: hasTemp, hasTempRefe
     integer(kind=8) :: elasID
     character(len=16) :: elasKeyword
+    real(kind=8) :: matevg(2, 2, npgt)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -96,13 +101,12 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
     npgsr = zi(lzi-1+3)
     npgsn = zi(lzi-1+4)
     call jevete('&INEL.'//nomte(1:8)//'.DESR', ' ', lzr)
+    ASSERT(npgsr .le. 10)
 
 ! - Get thickness
-    call jevech('PCACOQU', 'L', jvCacoqu)
-    epais = zr(jvCacoqu)
+    epais = plateCara%thick
 
 ! - Get properties of shell
-    call jevech('PNBSP_I', 'L', jvNbsp)
     kInf = 1
     kMoy = (3*nbLayer+1)/2
     kSup = 3*nbLayer
@@ -110,49 +114,51 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
     zmin = -0.5d0
 
 ! - Get reference temperature
-    call rcvarc(' ', 'TEMP', 'REF', 'RIGI', 1, &
-                1, tempRefe, iret)
+    call rcvarc(' ', 'TEMP', 'REF', 'RIGI', 1, 1, tempRefe, iret)
     hasTempRefe = iret .eq. 0
 
 ! - Get displacements
     call jevech('PDEPLAR', 'L', jvDisp)
 
-! - Compute local basis
-    call vectan(nb1, nb2, nodeCoor, zr(lzr), vecta, &
-                vectn, vectpt)
-    call trndgl(nb2, vectn, vectpt, zr(jvDisp), disp, &
-                rotf)
+! - Change coordinates of displacement
+    call trndgl(nb2, plateOrie%vectNorm, plateOrie%vectTang, zr(jvDisp), &
+                disp, rotf)
 
-! - Get elasticity
-    call jevech('PMATERC', 'L', jvMater)
-    call get_elas_id(zi(jvMater), elasID, elasKeyword)
+! - Get type of elasticity
+    call jevech('PMATERC', 'L', jvMaterc)
+    call get_elas_id(zi(jvMaterc), elasID, elasKeyword)
 !
     kwgt = 0
-    kpgs = 0
-!
     do kpgLayer = 1, npgLayer
         ksi3 = epsval(kpgLayer)
         ksi3s2 = ksi3/2.d0
 
         do kpgsr = 1, npgsr
 ! --------- MEMBRANE ET CISAILLEMENT
-            call mahsms(0, nb1, nodeCoor, ksi3s2, kpgsr, &
-                        zr(lzr), epais, vectn, vectg, vectt, &
+            call mahsms(plateOrie, &
+                        0, nb1, &
+                        nodeCoor, ksi3s2, kpgsr, &
+                        zr(lzr), epais, &
+                        vectBaseKpg, vectTangKpg, &
                         hsfm, hss)
-            call hsj1ms(epais, vectg, vectt, hsfm, hss, &
+            call hsj1ms(epais, vectTangKpg, vectBaseKpg, hsfm, hss, &
                         hsj1m, hsj1s)
             call btdmsr(nb1, nb2, ksi3s2, kpgsr, zr(lzr), &
-                        epais, vectpt, hsj1m, hsj1s, btdm, &
-                        btds)
+                        epais, plateOrie%vectTang, &
+                        hsj1m, hsj1s, btdm, btds)
 
 ! --------- FLEXION
-            call mahsf(0, nb1, nodeCoor, ksi3s2, kpgsr, &
-                       zr(lzr), epais, vectn, vectg, vectt, &
+            call mahsf(plateOrie, &
+                       0, nb1, &
+                       nodeCoor, ksi3s2, kpgsr, &
+                       zr(lzr), epais, &
+                       vectBaseKpg, vectTangKpg, &
                        hsf)
-            call hsj1f(kpgsr, zr(lzr), epais, vectg, vectt, &
+            call hsj1f(kpgsr, zr(lzr), epais, vectTangKpg, vectBaseKpg, &
                        hsf, kwgt, hsj1fx, wgt)
             call btdfn(0, nb1, nb2, ksi3s2, kpgsr, &
-                       zr(lzr), epais, vectpt, hsj1fx, btdf)
+                       zr(lzr), epais, plateOrie%vectTang, &
+                       hsj1fx, btdf)
 
 ! --------- Final btild
             call btdmsn(0, nb1, kpgsr, npgsr, zr(lzr), &
@@ -170,15 +176,16 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
 ! --------- Get dilatation coefficient
             if (hasTemp) then
                 call matrth('MASS', &
-                            elasID, elasKeyword, zi(jvMater), &
+                            elasID, elasKeyword, zi(jvMaterc), &
                             hasTemp, tempMoy, alpha)
             else
                 alpha = r8nnem()
             end if
 
 ! --------- Compute stress
-            call vdesga(kwgt, nb1, nb2, &
-                        vectt, disp, btild, &
+            call vdesga(plateCara, plateOrie, &
+                        kwgt, nb1, &
+                        disp, btild, vectBaseKpg, &
                         hasTemp, alpha, tempKpg, &
                         sigmElno)
 
@@ -189,18 +196,10 @@ subroutine vdxefgeElno(nomte, nodeCoor, &
     call vdefge(nomte, nb1, npgsr, zr(lzr), epais, &
                 sigmElno, efgeElno)
 
-! - DETERMINATION DES REPERES  LOCAUX DE L'ELEMENT AUX POINTS
-! - D'INTEGRATION ET STOCKAGE DE CES REPERES DANS LE VECTEUR .DESR
-    k = 0
-    do kpgsr = 1, npgsr
-        call vectgt(0, nb1, nodeCoor, zero, kpgsr, &
-                    zr(lzr), epais, vectn, vectg, vectt)
-        do j = 1, 3
-            do i = 1, 3
-                k = k+1
-                zr(lzr+2000+k-1) = vectt(i, j)
-            end do
-        end do
-    end do
+! - Update for middle plane
+    call updateCoorSystCO3D(plateCara, plateOrie, &
+                            nomte, nodeCoor, &
+                            npgsr, nb1, lzr, &
+                            matevn, matevg)
 !
 end subroutine

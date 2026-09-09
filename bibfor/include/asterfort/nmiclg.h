@@ -18,23 +18,19 @@
 #include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmiclg(fami, kpg, ksp, option, rela_comp,&
-                      imate, epsm, deps, sigm, vim,&
-                      sigp, vip, dsde, carcri, codret)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: option
-        character(len=16) :: rela_comp
-        integer(kind=8) :: imate
-        real(kind=8) :: epsm
-        real(kind=8) :: deps
-        real(kind=8) :: sigm
-        real(kind=8) :: vim(*)
-        real(kind=8) :: sigp
-        real(kind=8) :: vip(*)
-        real(kind=8) :: dsde
+    subroutine nmiclg(materPara, &
+                      option, relaComp, carcri, &
+                      epsm, deps, sigm, vim, &
+                      sigp, vip, dsde, &
+                      codret)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: option, relaComp
         real(kind=8) :: carcri(CARCRI_SIZE)
+        real(kind=8) :: vim(*)
+        real(kind=8) :: vip(*)
+        real(kind=8) :: sigy, sigm, deps, sigp
+        real(kind=8) :: dsde, epsm
         integer(kind=8) :: codret
     end subroutine nmiclg
 end interface

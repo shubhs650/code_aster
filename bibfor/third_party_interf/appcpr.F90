@@ -43,7 +43,6 @@ subroutine appcpr(kptsc)
 #include "asterfort/ldsp1.h"
 #include "asterfort/ldsp2.h"
 #include "asterfort/utmess.h"
-#include "asterfort/PCHPDDMDumpAuxiliaryMat.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/as_allocate.h"
 #include "asterfort/isParallelMatrix.h"
@@ -80,7 +79,8 @@ subroutine appcpr(kptsc)
     character(len=8) :: nomail, nbp_str, typ, nbmode_str, typmat
     character(len=4) :: exilag
     character(len=3) :: matd
-    character(len=800) :: myopt
+    character(len=1000) :: myopt
+    character(len=100) :: myopt_eps
     character(len=24), dimension(:), pointer :: slvk => null()
 !
     real(kind=8) :: fillin, val
@@ -544,6 +544,11 @@ subroutine appcpr(kptsc)
         call codent(nbp, 'D', nbp_str, 'F')
         write (seuil_str, '(E24.16)') slvr(6)
         if (typ == "GENEO") then
+            if (slvr(6) > 0.d0) then
+                myopt_eps = '-eps_threshold_absolute '//trim(seuil_str)//' '
+            else
+                myopt_eps = '-eps_nev '//trim(nbmode_str)//' '
+            end if
             myopt = '-prefix_push pc_hpddm_ '// &
                     '-prefix_push levels_1_ '// &
                     '-pc_type asm '// &
@@ -554,9 +559,9 @@ subroutine appcpr(kptsc)
                     '-sub_mat_mumps_icntl_25 0 '// &
                     '-sub_mat_mumps_cntl_3 1.e-50 '// &
                     '-sub_mat_mumps_cntl_5 0. '// &
-                    '-eps_nev '//trim(nbmode_str)//' '// &
                     '-st_pc_factor_mat_solver_type mumps '// &
                     '-st_share_sub_ksp '// &
+                    myopt_eps// &
                     '-prefix_pop '// &
                     '-prefix_push coarse_ '// &
                     '-pc_factor_mat_solver_type mumps '// &
@@ -571,14 +576,16 @@ subroutine appcpr(kptsc)
                     '-define_subdomains '// &
                     '-has_neumann '// &
                     '-prefix_pop '
-            if (slvr(6) > 0) then
-                myopt = myopt//'-pc_hpddm_levels_1_eps_threshold_absolute '//trim(seuil_str)//' '
-            end if
         else
             if (factor == 'lu') then
                 typmat = 'baij'
             else
                 typmat = 'sbaij'
+            end if
+            if (slvr(6) > 0.d0) then
+                myopt_eps = '-svd_threshold_relative '//trim(seuil_str)//' '
+            else
+                myopt_eps = '-svd_nsv '//trim(nbmode_str)//' '
             end if
             myopt = '-prefix_push pc_hpddm_ '// &
                     '-prefix_push levels_1_ '// &
@@ -591,9 +598,8 @@ subroutine appcpr(kptsc)
                     '-sub_mat_mumps_cntl_3 1.e-50 '// &
                     '-sub_mat_mumps_cntl_5 0. '// &
                     '-svd_type lanczos '// &
-                    '-svd_nsv '//trim(nbmode_str)//' '// &
-                    '-st_pc_factor_mat_solver_type mumps '// &
                     '-st_share_sub_ksp '// &
+                    myopt_eps// &
                     '-prefix_pop '// &
                     '-prefix_push coarse_ '// &
                     '-correction deflated '// &
@@ -610,9 +616,6 @@ subroutine appcpr(kptsc)
                     '-define_subdomains '// &
                     '-harmonic_overlap 5 '// &
                     '-prefix_pop '
-            if (slvr(6) > 0) then
-                myopt = myopt//'-pc_hpddm_levels_1_svd_relative_threshold '//trim(seuil_str)//' '
-            end if
         end if
         call PetscOptionsInsertString(PETSC_NULL_OPTIONS, myopt, ierr)
         ASSERT(ierr == 0)

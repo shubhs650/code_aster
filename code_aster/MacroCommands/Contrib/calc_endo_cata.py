@@ -21,11 +21,11 @@ from ...Cata.Commons import *
 from ...Cata.Commons.c_comportement import compat_syntax
 from ...Cata.DataStructure import *
 from ...Cata.Syntax import *
-from .calc_endo_ops import calc_endo_ops
+from .calc_endo_pilo_ops import calc_endo_pilo_ops
 
-CALC_ENDO = MACRO(
-    nom="CALC_ENDO",
-    op=calc_endo_ops,
+CALC_ENDO_PILO = MACRO(
+    nom="CALC_ENDO_PILO",
+    op=calc_endo_pilo_ops,
     compat_syntax=compat_syntax,
     sd_prod=evol_noli,
     reentrant="n",

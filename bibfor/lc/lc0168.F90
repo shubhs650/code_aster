@@ -18,28 +18,30 @@
 
 subroutine lc0168(fami, kpg, ksp, ndim, imate, &
                   compor, carcri, instam, instap, epsm, &
-                  deps, sigm, vim, option, &
+                  deps, sigm, nvi, vim, option, &
                   sigp, vip, typmod, &
                   dsidep, codret)
+!
     implicit none
+!
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cfluendo3d.h"
-
 !
 ! ======================================================================
 !.......................................................................
 !     BUT: LOI DE RGI_BETON
 !
-    integer(kind=8) :: imate, ndim, kpg, ksp, codret
+    integer(kind=8) :: imate, ndim, kpg, ksp, codret, nvi
     real(kind=8) :: instam, instap
     real(kind=8) :: epsm(6), deps(6)
     real(kind=8) :: sigm(6), sigp(6)
-    real(kind=8) :: vim(*), vip(*)
+    real(kind=8) :: vim(nvi), vip(nvi)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: dsidep(6, 6)
-    character(len=16) :: compor(*), option
+    character(len=16) :: option
     character(len=8) :: typmod(*)
     character(len=*) :: fami
-    real(kind=8), intent(in) :: carcri(*)
-!
 !
     call cfluendo3d(fami, kpg, ksp, ndim, imate, &
                     compor, carcri, instam, instap, epsm, &

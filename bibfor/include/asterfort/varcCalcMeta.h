@@ -17,17 +17,16 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine varcCalcMeta(modelz,&
-                            nbin  , nbout     ,&
-                            lpain , lchin     ,&
-                            lpaout, lchout    ,&
-                            base  , vect_elemz)
-        character(len=*), intent(in) :: modelz
-        integer(kind=8), intent(in) :: nbin, nbout
+    subroutine varcCalcMeta(modelZ, &
+                            nbFieldIn, nbFieldOut, &
+                            lpain, lchin, &
+                            lpaout, lchout, &
+                            vectElemZ)
+        character(len=*), intent(in) :: modelZ
+        integer(kind=8), intent(in) :: nbFieldIn, nbFieldOut
         character(len=8), intent(in) :: lpain(*), lpaout(*)
         character(len=19), intent(in) :: lchin(*)
         character(len=19), intent(inout) :: lchout(*)
-        character(len=1), intent(in) :: base
-        character(len=*), intent(in) :: vect_elemz
+        character(len=*), intent(in) :: vectElemZ
     end subroutine varcCalcMeta
 end interface

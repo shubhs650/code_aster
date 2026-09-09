@@ -19,10 +19,11 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine arlcp3(nbma1 ,nbma2 ,numno1,numno2,m3dea , &
                   m1dea ,numn1t,numn2t,len1  ,len2  , lisrel, charge)
        integer(kind=8) :: nbnomx
-       parameter    (nbnomx=27)
+       parameter    (nbnomx=MT_NNOMAX3D)
        integer(kind=8)          :: nbma1,nbma2
        integer(kind=8)          :: len1,len2
        real(kind=8)     :: m3dea(12,3*nbnomx,nbma1),m1dea(12,12,nbma2)

@@ -41,8 +41,9 @@ def dry_(x, y, **kwargs):
 
 
 # Global parameters
+TOLERANCE = 1e-2
 COARSE_REFINEMENT = 3
-FINE_REFINEMENT = 5
+FINE_REFINEMENT = 6
 
 YOUNG = 10920.0
 POISSON = 0.3
@@ -65,11 +66,12 @@ FORM2 = FORMULE(
 
 PRES = FORMULE(VALE="FORM1(X,Y) + FORM2(X,Y)", NOM_PARA=["X", "Y"], FORM1=FORM1, FORM2=FORM2)
 
+variable_list = ["DZ", "DRX", "DRY"]
 error_table = np.zeros((3, 2))
 non_regression_values = [
-    (0.00022199499420792052, 0.0008880088034420156),
-    (0.00175368360055673440, 0.0070146449892310000),
-    (0.00175368360055673400, 0.0070146449892309900),
+    (0.00022199499420792052, 0.0017760176078494066),
+    (0.00175368360055673440, 0.014029289934328096),
+    (0.00175368360055673400, 0.0140292899343281),
 ]
 
 for k, refine in enumerate([COARSE_REFINEMENT, FINE_REFINEMENT]):
@@ -120,53 +122,43 @@ for k, refine in enumerate([COARSE_REFINEMENT, FINE_REFINEMENT]):
     )
     drx_numeric = displacement.restrict(["DRX"])
     dry_numeric = displacement.restrict(["DRY"])
+    numerical_values = [w_numeric, drx_numeric, dry_numeric]
 
     # ANALYTICAL COMPUTATION
 
     analytical_values = []
-    for i, (mesh, func, name, nonreg) in enumerate(
-        zip(
-            [mesh_line, mesh_quad, mesh_quad],
-            [w_, drx_, dry_],
-            ["DZ", "DRX", "DRY"],
-            non_regression_values,
-        )
+    for i, (mesh, func, variable) in enumerate(
+        zip([mesh_line, mesh_quad, mesh_quad], [w_, drx_, dry_], variable_list)
     ):
         coords = mesh.getCoordinatesAsSimpleFieldOnNodes()
         field = func(coords.X, coords.Y, t=THICKNESS, nu=POISSON)
-        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [name], prol_zero=True)
-        temp.setComponentValues(name, field)
+        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [variable], prol_zero=True)
+        temp.setComponentValues(variable, field)
         value = temp.toFieldOnNodes()
         analytical_values.append(value)
         a = value.norm("NORM_2")
         b = non_regression_values[i][k]
         test.assertAlmostEqual(a, b, places=6)
 
-    err_w = analytical_values[0] - w_numeric
-    error_table[0, k] = err_w.norm("NORM_2")
+    for i, (ana_val, num_val) in enumerate(zip(analytical_values, numerical_values)):
+        diff = ana_val - num_val
+        error_table[i, k] = diff.norm("NORM_2") / ana_val.norm("NORM_2")
 
-    err_drx = analytical_values[1] - drx_numeric
-    error_table[1, k] = err_drx.norm("NORM_2")
-
-    err_dry = analytical_values[2] - dry_numeric
-    error_table[2, k] = err_dry.norm("NORM_2")
-
-TOLERANCE = 1e-3
-for j in range(2):
-    for i in range(3):
-        error = error_table[i, j]
-        if not (error <= TOLERANCE):
-            test.assertTrue(False, msg=f"{error:.3e} >> {TOLERANCE}")
+for k, (level, tolerance) in enumerate(zip(["coarse", "fine"], [40 * TOLERANCE, TOLERANCE])):
+    for i, variable in enumerate(variable_list):
+        error = error_table[i, k]
+        if not (error <= tolerance):
+            test.assertTrue(
+                False, msg=f"{error:.3e} >> {tolerance} for {variable} in a {level} mesh."
+            )
         else:
-            test.assertTrue(True)
-
+            test.assertTrue(
+                True, msg=f"{error:.3e} << {tolerance} for {variable} in a {level} mesh."
+            )
 
 # =====================================
 
-TOLERANCE = 1e-3
-FINE_REFINEMENT = 6
-
-for thickness in [0.1, 0.001]:
+for thickness, tolerance in zip([0.1, 0.001], [TOLERANCE, TOLERANCE]):
 
     # NUMERICAL COMPUTATION
 
@@ -219,27 +211,32 @@ for thickness in [0.1, 0.001]:
     # ANALYTICAL COMPUTATION
 
     analytical_values = []
-    for mesh, func, name in zip(
-        [mesh_line, mesh_quad, mesh_quad], [w_, drx_, dry_], ["DZ", "DRX", "DRY"]
+    for mesh, func, variable in zip(
+        [mesh_line, mesh_quad, mesh_quad], [w_, drx_, dry_], variable_list
     ):
         coords = mesh.getCoordinatesAsSimpleFieldOnNodes()
         field = func(coords.X, coords.Y, t=thickness, nu=POISSON)
-        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [name], prol_zero=True)
-        temp.setComponentValues(name, field)
+        temp = CA.SimpleFieldOnNodesReal(mesh, "DEPL_R", [variable], prol_zero=True)
+        temp.setComponentValues(variable, field)
         value = temp.toFieldOnNodes()
         analytical_values.append(value)
 
-    for i in range(len(analytical_values)):
-        difference = analytical_values[i] - numerical_values[i]
-        error = difference.norm("NORM_2")
-        if not (error <= TOLERANCE):
-            test.assertTrue(False, msg=f"{error:.3e} >> {TOLERANCE}")
+    for i, (variable, ana_val, num_val) in enumerate(
+        zip(variable_list, analytical_values, numerical_values)
+    ):
+        diff = ana_val - num_val
+        error = diff.norm("NORM_2") / ana_val.norm("NORM_2")
+        if not (error <= tolerance):
+            test.assertTrue(
+                False,
+                msg=f"{error:.3e} >> {tolerance} for {variable}. The thickness of the fine mesh is {thickness}.",
+            )
         else:
-            test.assertTrue(True)
+            test.assertTrue(True, msg=f"{error:.3e} << {tolerance} for {variable}.")
 
     # Compare deflection
     deflection_num = np.max(numerical_values[0].getValues())
     deflection_ana = w_(0.5, 0.5, thickness, POISSON)
-    test.assertAlmostEqual(deflection_ana, deflection_num, delta=0.01 * deflection_num)
+    test.assertAlmostEqual(deflection_ana, deflection_num, delta=tolerance * deflection_num)
 
 FIN()

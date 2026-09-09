@@ -23,10 +23,10 @@ cata_msg = {
     2: _("""La déformation de type %(k1)s n'est pas disponible pour l'élément d'interface."""),
     3: _(
         """Les données d'orientation sont indisponibles pour cet élément d'interface.
-    
+
     Vérifiez que vous les avez bien déclarées dans AFFE_CARA_ELEM/MASSIF."""
     ),
     47: _(
-        """Il n'est pas possible d'utiliser ANGL_AXE et ORIG_AXE de AFFE_CARA_ELEM pour les modélisations 3D_INTERFACE, PLAN_INTERFACE ou AXIS_INTERFACE."""
+        """Il n'est pas possible d'utiliser ANGL_AXE et ORIG_AXE de AFFE_CARA_ELEM pour les modélisations 3D_INTERFACE, PLAN_INTERFACE, AXIS_INTERFACE ou les joints hydro-mécaniques."""
     ),
 }

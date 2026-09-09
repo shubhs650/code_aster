@@ -15,14 +15,36 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
+#include "asterf_types.h"
 !
-subroutine pmimpr(ind, inst, indimp, valimp, &
-                  iter, eps, sig, vi, nbvari, &
-                  r, ee, eini)
+subroutine pmimpr(prtLevel, &
+                  timeCurr, iterNewt, &
+                  loadType_, valeImpo_, &
+                  epsi_, sigm_, nbVari_, vi_, resi_, &
+                  ee_, eini_)
 !
-!-----------------------------------------------------------------------
-!     OPERATEUR CALC_POINT_MAT : IMPRESSIONS DE NIVEAU 2
-!-----------------------------------------------------------------------
+    implicit none
+!
+#include "asterfort/infniv.h"
+!
+    integer(kind=8), intent(in) :: prtLevel
+    real(kind=8), intent(in) :: timeCurr
+    integer(kind=8), intent(in) :: iterNewt
+    integer(kind=8), optional, intent(in) :: loadType_(6)
+    real(kind=8), optional, intent(in) :: valeImpo_(6)
+    integer(kind=8), optional, intent(in) :: nbvari_
+    real(kind=8), optional, intent(in) :: epsi_(6), sigm_(6), vi_(*), resi_(12)
+    real(kind=8), optional, intent(in) :: ee_, eini_
+!
+! --------------------------------------------------------------------------------------------------
+!
+! SIMU_POINT_MAT
+!
+! Print
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  IND    : 0 pour l'état initial
 !                1 pour l'itaration courante
 !                2 pour la convergence
@@ -38,85 +60,88 @@ subroutine pmimpr(ind, inst, indimp, valimp, &
 ! IN  R      : RESIDU ACTUEL
 ! IN  EE     : ERREUR
 ! IN  EINI   : ERREUR INITIALE
-!-----------------------------------------------------------------------
-    implicit none
-#include "asterfort/infniv.h"
-    integer(kind=8) :: nbvari, niv, ifm, ind, i, iter, idbg, indimp(6)
-    real(kind=8) :: inst, valimp(6), eps(6), sig(6), vi(nbvari), r(12), ee, eini
-    character(len=4) :: nomeps(6), nomsig(6)
-    data nomeps/'EPXX', 'EPYY', 'EPZZ', 'EPXY', 'EPXZ', 'EPYZ'/
-    data nomsig/'SIXX', 'SIYY', 'SIZZ', 'SIXY', 'SIXZ', 'SIYZ'/
-!-----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
+    aster_logical, parameter :: lDebug = ASTER_FALSE
+    character(len=4), parameter :: epsiName(6) = (/'EPXX', 'EPYY', 'EPZZ', &
+                                                   'EPXY', 'EPXZ', 'EPYZ'/)
+    character(len=4), parameter :: sigmName(6) = (/'SIXX', 'SIYY', 'SIZZ', &
+                                                   'SIXY', 'SIXZ', 'SIYZ'/)
+    integer(kind=8) :: niv, ifm, i
+!
+! --------------------------------------------------------------------------------------------------
 !
     call infniv(ifm, niv)
-    idbg = 0
-!
+
     if (niv .ge. 2) then
-        if (ind .eq. 0) then
+        if (prtLevel .eq. 0) then
             write (ifm, *) ' '
             write (ifm, *) ' ==============================================='
-            write (ifm, *) 'INST', inst
+            write (ifm, *) 'INST', timeCurr
             do i = 1, 6
-                if (valimp(i) .ne. 0.d0) then
-                    if (indimp(i) .eq. 0) then
-                        write (ifm, *) nomsig(i), ' IMPOSEE =', valimp(i)
-                    else if (indimp(i) .eq. 1) then
-                        write (ifm, *) nomeps(i), ' IMPOSEE =', valimp(i)
+                if (valeImpo_(i) .ne. 0.d0) then
+                    if (loadType_(i) .eq. 0) then
+                        write (ifm, *) sigmName(i), ' IMPOSEE =', valeImpo_(i)
+                    else if (loadType_(i) .eq. 1) then
+                        write (ifm, *) epsiName(i), ' IMPOSEE =', valeImpo_(i)
                     end if
                 end if
             end do
-            if (idbg .eq. 1) then
+            if (lDebug) then
                 write (ifm, *) ' ETAT INITIAL '
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPSM', eps
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIGM', sig
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'VIM', (vi(i), i=1, min(6, &
-                                                                           nbvari))
-                if (nbvari .gt. 6) then
-                    write (ifm, '(1X,A4,6(1X,E12.5))') '   ', (vi(i), i=7, nbvari)
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPSM', epsi_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIGM', sigm_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'VIM', (vi_(i), i=1, min(6, nbVari_))
+                if (nbVari_ .gt. 6) then
+                    write (ifm, '(1X,A4,6(1X,E12.5))') '   ', (vi_(i), i=7, nbVari_)
                 end if
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', r
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', resi_
             end if
-        else if (ind .eq. 1) then
-            if (idbg .eq. 1) then
+
+        else if (prtLevel .eq. 1) then
+            if (lDebug) then
                 write (ifm, *) '  '
-                write (ifm, *) ' ITERATION', iter
+                write (ifm, *) ' ITERATION', iterNewt
                 write (ifm, *) ' '
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPS', eps
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIG', sig
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'VAR', (vi(i), i=1, min(6, &
-                                                                           nbvari))
-                if (nbvari .gt. 6) then
-                    write (ifm, '(5X,6(1X,E12.5))') (vi(i), i=7, nbvari)
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPS', epsi_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIG', sigm_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'VAR', (vi_(i), i=1, min(6, nbVari_))
+                if (nbVari_ .gt. 6) then
+                    write (ifm, '(5X,6(1X,E12.5))') (vi_(i), i=7, nbVari_)
                 end if
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', r
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', resi_
             end if
-        else if (ind .eq. 2) then
-            if (idbg .eq. 1) then
+
+        else if (prtLevel .eq. 2) then
+            if (lDebug) then
                 write (ifm, *) '  '
                 write (ifm, *) ' ==============================================='
-                write (ifm, *) ' CONVERGENCE ITERATION ', iter
+                write (ifm, *) ' CONVERGENCE ITERATION ', iterNewt
                 write (ifm, *) ' ==============================================='
                 write (ifm, *) ' '
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPS', eps
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIG', sig
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'VAR', (vi(i), i=1, min(6, &
-                                                                           nbvari))
-                if (nbvari .gt. 6) then
-                    write (ifm, '(1X,A4,6(1X,E12.5))') '   ', (vi(i), i=7, nbvari)
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'EPS', epsi_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'SIG', sigm_
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'VAR', (vi_(i), i=1, min(6, nbVari_))
+                if (nbVari_ .gt. 6) then
+                    write (ifm, '(1X,A4,6(1X,E12.5))') '   ', (vi_(i), i=7, nbVari_)
                 end if
-                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', r
+                write (ifm, '(1X,A4,6(1X,E12.5))') 'RESI', resi_
                 write (ifm, *) ' '
                 write (ifm, *) ' ==============================================='
             end if
-        else if (ind .eq. 4) then
-            write (ifm, *) ' -------------------------------------'
-            write (ifm, '(1X,A4,E12.5,1X,A4,I5,1X,A7,E12.5)') 'INST', inst, &
-                'ITER', iter, 'ERR_ABS', ee
-        else if (ind .eq. 3) then
+
+        else if (prtLevel .eq. 3) then
             write (ifm, *) ' -----------------------------------------------'
             write (ifm, '(1X,A4,E12.5,1X,A4,I5,1X,A12,E12.5,1X,A14,E12.5)') &
-                'INST', inst, 'ITER', iter, 'ERR.RELATIVE', ee, 'RESIDU INITIAL', &
-                eini
+                'INST', timeCurr, 'ITER', iterNewt, 'ERR.RELATIVE', ee_, 'RESIDU INITIAL', &
+                eini_
+
+        else if (prtLevel .eq. 4) then
+            write (ifm, *) ' -------------------------------------'
+            write (ifm, '(1X,A4,E12.5,1X,A4,I5,1X,A7,E12.5)') 'INST', timeCurr, &
+                'ITER', iterNewt, 'ERR_ABS', ee_
+
         end if
     end if
 end subroutine

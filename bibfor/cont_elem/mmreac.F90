@@ -25,17 +25,18 @@ subroutine mmreac(elem_dime, nb_node_slav, nb_node_mast, &
 !
     implicit none
 !
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
     integer(kind=8), intent(in) :: elem_dime, nb_node_slav, nb_node_mast
     integer(kind=8), intent(in) :: jv_disp, jv_disp_incr
     real(kind=8), intent(in) :: ppe
-    real(kind=8), intent(in) :: elem_slav_init(nb_node_slav, elem_dime)
-    real(kind=8), intent(in) :: elem_mast_init(nb_node_mast, elem_dime)
-    real(kind=8), intent(out) :: elem_slav_coor(nb_node_slav, elem_dime)
-    real(kind=8), intent(out) :: elem_mast_coor(nb_node_mast, elem_dime)
+    real(kind=8), intent(in) :: elem_slav_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: elem_mast_init(3, MT_NNOMAX2D)
+    real(kind=8), intent(out) :: elem_slav_coor(3, MT_NNOMAX2D)
+    real(kind=8), intent(out) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8), optional, intent(in) :: nbdm_, nb_lagr_, indi_lagc_(10)
-    real(kind=8), optional, intent(out) :: ddepmam_(9, 3)
+    real(kind=8), optional, intent(out) :: ddepmam_(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -84,8 +85,8 @@ subroutine mmreac(elem_dime, nb_node_slav, nb_node_mast, &
             deca = deca+indi_lagc_(i_node_slav)
         end if
         do i_dime = 1, elem_dime
-            elem_slav_coor(i_node_slav, i_dime) = &
-                elem_slav_init(i_node_slav, i_dime)+ &
+            elem_slav_coor(i_dime, i_node_slav) = &
+                elem_slav_init(i_dime, i_node_slav)+ &
                 zr(jv_disp+(i_node_slav-1)*(elem_dime)+deca+i_dime-1)+ &
                 ppe*zr(jv_disp_incr+(i_node_slav-1)*(elem_dime)+deca+i_dime-1)
         end do
@@ -100,12 +101,12 @@ subroutine mmreac(elem_dime, nb_node_slav, nb_node_mast, &
     end if
     do i_node_mast = 1, nb_node_mast
         do i_dime = 1, elem_dime
-            elem_mast_coor(i_node_mast, i_dime) = &
-                elem_mast_init(i_node_mast, i_dime)+ &
+            elem_mast_coor(i_dime, i_node_mast) = &
+                elem_mast_init(i_dime, i_node_mast)+ &
                 zr(jv_disp+(i_node_mast-1)*elem_dime+deca+i_dime-1)+ &
                 ppe*zr(jv_disp_incr+(i_node_mast-1)*elem_dime+deca+i_dime-1)
             if (present(ddepmam_)) then
-                ddepmam_(i_node_mast, i_dime) = &
+                ddepmam_(i_dime, i_node_mast) = &
                     zr(jv_disp_incr+(i_node_mast-1)*elem_dime+deca+i_dime-1)
             end if
         end do

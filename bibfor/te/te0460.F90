@@ -57,8 +57,8 @@ subroutine te0460(nomopt, nomte)
     call hhoTherNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, gbs)
 !
 !   Array to large to be saved
-    if ((hhoCell%ndim == 3 .and. hhoData%cell_degree() > 2) .or. &
-        hhoData%cell_degree() > 3) then
+    if ((hhoCell%ndim == 3 .and. hhoData%grad_degree() > 2) .or. &
+        hhoData%grad_degree() > 3) then
         goto 999
     end if
 !

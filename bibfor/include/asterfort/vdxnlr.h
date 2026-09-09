@@ -15,17 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vdxnlr(option, nomte, xi, rig, nb1,&
-                      codret)
-        character(len=16) :: option
-        character(len=16) :: nomte
-        real(kind=8) :: xi(3, 9)
-        real(kind=8) :: rig(51, 51)
-        integer(kind=8) :: nb1
-        integer(kind=8) :: codret
+    subroutine vdxnlr(plateCara, plateOrie, &
+                      BEHInteg, &
+                      option, nomte, nodeCoor, &
+                      matrTang, codret)
+        use Behaviour_type
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
+        character(len=16), intent(in) :: option, nomte
+        real(kind=8), intent(in) :: nodeCoor(3, 9)
+        real(kind=8), intent(out) :: matrTang(51, 51)
+        integer(kind=8), intent(out) :: codret
     end subroutine vdxnlr
 end interface

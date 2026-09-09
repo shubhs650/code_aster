@@ -17,24 +17,23 @@
 ! --------------------------------------------------------------------
 !
 subroutine thmEvalConductivity(ds_thm, &
-                               angl_naut, ndim, j_mater, &
+                               ndim, &
                                satur, phi, &
                                lambs, dlambs, lambp, dlambp, &
                                tlambt, tlamct, tdlamt)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterfort/rcvala.h"
-#include "asterfort/THM_type.h"
 #include "asterfort/tdlamb.h"
 #include "asterfort/telamb.h"
+#include "asterfort/THM_type.h"
 #include "asterfort/tlambc.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    integer(kind=8), intent(in) :: j_mater
-    real(kind=8), intent(in) :: angl_naut(3)
     integer(kind=8), intent(in) :: ndim
     real(kind=8), intent(in) :: satur, phi
     real(kind=8), intent(out) :: lambs, dlambs
@@ -48,15 +47,10 @@ subroutine thmEvalConductivity(ds_thm, &
 ! THM
 !
 ! Evaluate thermal conductivity
-!
+!n
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  j_mater          : coded material address
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
 ! In  ndim             : dimension of space
 ! In  satur            : saturation
 ! In  phi              : porosity
@@ -66,52 +60,51 @@ subroutine thmEvalConductivity(ds_thm, &
 ! Out dlambp           : derivative of thermal conductivity depending on porosity
 ! Out tlambt           : tensor of thermal conductivity
 ! Out tlamct           : tensor of thermal conductivity (constant part)
-! Out tdlamt           : tensor of derivatives for thermal conductivity
+! Out tdlamt           : tensor of dnerivatives for thermal conductivity
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_para = 2
-    real(kind=8) :: para_vale(nb_para)
-    character(len=4), parameter :: para_name(nb_para) = (/'SAT ', 'PORO'/)
-    integer(kind=8), parameter :: nb_resu = 4
-    real(kind=8) :: resu_vale(nb_resu)
-    character(len=16), parameter :: resu_name(nb_resu) = (/'LAMB_S  ', 'D_LB_S  ', &
-                                                           'LAMB_PHI', 'D_LB_PHI'/)
-    integer(kind=8) :: icodre(nb_resu)
+    integer(kind=8), parameter :: nbPara = 2
+    real(kind=8) :: paraVale(nbPara)
+    character(len=4), parameter :: paraName(nbPara) = (/'SAT ', 'PORO'/)
+    integer(kind=8), parameter :: nbProp = 4
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'LAMB_S  ', 'D_LB_S  ', &
+                                                         'LAMB_PHI', 'D_LB_PHI'/)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: anglNaut(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    anglNaut = ds_thm%ds_behaviour%BEHInteg%materPara%lcsPara%lcsAngle
     lambs = 1.d0
     dlambs = 0.d0
     lambp = 1.d0
     dlambp = 0.d0
-    resu_vale(:) = 0.d0
-    resu_vale(1) = 1.d0
-    resu_vale(3) = 1.d0
-!
+    propVale = 0.d0
+    propVale(1) = 1.d0
+    propVale(3) = 1.d0
+
 ! - Get parameters depending on porosity and saturation
-!
-    para_vale(1) = satur
-    para_vale(2) = phi
-    call rcvala(j_mater, ' ', 'THM_DIFFU', &
-                nb_para, para_name, para_vale, &
-                nb_resu, resu_name, resu_vale, &
-                icodre, 0, nan='NON')
-    lambs = resu_vale(1)
-    dlambs = resu_vale(2)
-    lambp = resu_vale(3)
-    dlambp = resu_vale(4)
-!
+    paraVale(1) = satur
+    paraVale(2) = phi
+    call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
+                nbPara, paraName, paraVale, &
+                nbProp, propName, propVale, &
+                propCode, 0, nan='NON')
+    lambs = propVale(1)
+    dlambs = propVale(2)
+    lambp = propVale(3)
+    dlambp = propVale(4)
+
 ! - Compute tensor of thermal conductivity
-!
-    call telamb(ds_thm, angl_naut, ndim, tlambt)
-!
+    call telamb(ds_thm, anglNaut, ndim, tlambt)
+
 ! - Compute tensor of thermal conductivity (constant part)
-!
-    call tlambc(ds_thm, angl_naut, ndim, tlamct)
-!
+    call tlambc(ds_thm, anglNaut, ndim, tlamct)
+
 ! - Compute tensor of derivatives (by temperature) for thermal conductivity
-!
-    call tdlamb(ds_thm, angl_naut, ndim, tdlamt)
+    call tdlamb(ds_thm, anglNaut, ndim, tdlamt)
 !
 end subroutine

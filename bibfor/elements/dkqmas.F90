@@ -15,60 +15,67 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! Contributors    : nunziante.valoroso@uniparthenope.it
 !
-subroutine dkqmas(xyzl, option, pgl, mas, ener)
+subroutine dkqmas(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  mas, ener)
+!
+    use plate_type
     implicit none
-#include "blas/dcopy.h"
-#include "blas/dscal.h"
-#include "asterf_types.h"
-#include "jeveux.h"
+!
 #include "asterc/r8gaem.h"
-#include "asterfort/utctab.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/dialum.h"
 #include "asterfort/dkqnib.h"
-#include "asterfort/dkqniw.h"
 #include "asterfort/dkqnim.h"
-#include "asterfort/dxqloc.h"
-#include "asterfort/dxqloe.h"
-#include "asterfort/dxmate.h"
+#include "asterfort/dkqniw.h"
 #include "asterfort/dkqshp.h"
+#include "asterfort/dxmate.h"
+#include "asterfort/dxqgm.h"
+#include "asterfort/dxqloc.h"
 #include "asterfort/dxqlocdri1.h"
 #include "asterfort/dxqlocdri2.h"
 #include "asterfort/dxqlocdri3.h"
 #include "asterfort/dxqlocdri4.h"
+#include "asterfort/dxqloe.h"
 #include "asterfort/dxqnim.h"
-#include "asterfort/dxqgm.h"
 #include "asterfort/dxroep.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/gquad4.h"
 #include "asterfort/jevech.h"
 #include "asterfort/jquad4.h"
+#include "asterfort/r8inir.h"
 #include "asterfort/tecach.h"
+#include "asterfort/utctab.h"
 #include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
+#include "blas/dcopy.h"
+#include "blas/dscal.h"
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
     real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
     character(len=16) :: option
-! Contributors    : nunziante.valoroso@uniparthenope.it
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     MATRICE MASSE DE L'ELEMENT DE PLAQUE DKQ
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT MAS    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_CIN (ECIN_ELEM)
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     integer(kind=8), parameter :: ii(8) = [1, 10, 19, 28, 37, 46, 55, 64]
     integer(kind=8), parameter :: jj(8) = [5, 14, 23, 32, 33, 42, 51, 60]
-    integer(kind=8), parameter :: ll(16) = [3, 7, 12, 16, 17, 21, 26, 30, 35, 39, 44, 48, 49, 53, 58, 62]
+    integer(kind=8), parameter :: ll(16) = &
+                                  [3, 7, 12, 16, 17, 21, 26, 30, 35, 39, 44, 48, 49, 53, 58, 62]
     real(kind=8), parameter :: zero = 0.d0, un = 1.d0, neuf = 9.d0
     real(kind=8), parameter :: douze = 12.d0, unquar = 0.25d0, undemi = 0.5d0
     integer(kind=8) :: i, j, k, i1, i2, i0
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-    integer(kind=8) :: jdepg, jcoqu, jvitg, iret
+    integer(kind=8) :: ndim, npg, ipoids, icoopg
+    integer(kind=8) :: jdepg, jvitg, iret
     real(kind=8) :: roe, rho, epais, rof
     real(kind=8) :: qsi, eta
     real(kind=8) :: detj, wgt
@@ -96,15 +103,15 @@ subroutine dkqmas(xyzl, option, pgl, mas, ener)
     real(kind=8) :: df(9), dm(9), dmf(9), dc(4), dci(4)
     real(kind=8) :: dmf2(9)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
-    real(kind=8) :: t2iu(4), t2ui(4), t1ve(9)
     integer(kind=8) :: multic, irot
     real(kind=8) :: xab1(3, 12), bf(3, 12), bm(3, 8)
     aster_logical :: dri, coupmf
     blas_int :: b_incx, b_incy, b_n
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, npg=npg, &
+                     jpoids=ipoids, jcoopg=icoopg)
 !
     roe = 0.0
     rho = 0.0
@@ -145,34 +152,24 @@ subroutine dkqmas(xyzl, option, pgl, mas, ener)
     dmf2(9) = 0.0
     dmc(3, 2) = 0.0
     dfc(3, 2) = 0.0
-    t2iu(4) = 0.0
-    t2ui(4) = 0.0
-    t1ve(9) = 0.0
     xab1(3, 12) = 0.0
     bf(3, 12) = 0.0
     bm(3, 8) = 0.0
     dri = ASTER_FALSE
     coupmf = ASTER_FALSE
-    exce = ASTER_FALSE
-    iner = ASTER_FALSE
-!
-    call dxroep(rho, epais)
+
+! - Get parameters
+    call dxroep(plateCara, rho, epais)
     roe = rho*epais
     rof = rho*epais*epais*epais/douze
-    excent = zero
-!
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-    xinert = zr(jcoqu+5)
-! COEF_RIGI_DRZ ACTIVE = -1 --> dri = true,  dri =  false sinon
-    dri = ASTER_FALSE
-    if (ctor .lt. 0.0d0) dri = ASTER_TRUE
-!
-    exce = ASTER_FALSE
-    iner = ASTER_FALSE
-    if (abs(excent) .gt. un/r8gaem()) exce = ASTER_TRUE
-    if (abs(xinert) .gt. un/r8gaem()) iner = ASTER_TRUE
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+    xinert = plateCara%inerRota
+
+! - Flags
+    dri = ctor .lt. 0.0d0
+    exce = (abs(excent) .gt. un/r8gaem())
+    iner = (abs(xinert) .gt. un/r8gaem())
     if (.not. iner) rof = 0.0d0
 !
 ! --- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE :
@@ -196,9 +193,10 @@ subroutine dkqmas(xyzl, option, pgl, mas, ener)
         call r8inir(144, 0.d0, bxb, 1)
 !
 !     ----- CALCUL DES MATRICES DE RIGIDITE : DRILLING ROTATION --------------------------
-        call dxmate('RIGI', df, dm, dmf, dc, &
-                    dci, dmc, dfc, nno, pgl, &
-                    multic, coupmf, t2iu, t2ui, t1ve)
+        call dxmate(plateCara, plateOrie, &
+                    'RIGI', df, dm, dmf, dc, &
+                    dci, dmc, dfc, &
+                    multic, coupmf)
 !
         gam = abs(ctor)*dm(1)
         do iishp = 1, npg
@@ -321,20 +319,7 @@ subroutine dkqmas(xyzl, option, pgl, mas, ener)
                     ntgm(i, j) = ntgm(i, j)+nm2(i)*gm2(j)*wgt
                 end do
             end do
-!
-!        -- MEMBRANE (DRILLING PART) Gm:
-!        call dxqgm(shpr1(1,1,i0), shpr2(1,1,i0), gm)
-!
-!        ----- CALCUL DU PRODUIT GMT.DM.GM
-!        call dcopy(9, dm, 1, dm2, 1)
-!        call dscal(9, wgt, dm2, 1)
-!        call utbtab('CUMU', 3, 4, dm2, gm,&
-!                    xab1, gmemb)
-!!        ----- CALCUL DU PRODUIT BMT.DM.GM
-!        call dcopy(9, dm, 1, dm2, 1)
-!        call dscal(9, wgt, dm2, 1)
-!        call utctab('CUMU', 3, 4, 8, dm2,&
-!                    gm, bm, xab1, ntgm)
+
 !
 !        ----- CALCUL DU PRODUIT gam/Omega*b(x)b
 !
@@ -446,108 +431,15 @@ subroutine dkqmas(xyzl, option, pgl, mas, ener)
                         mefl(i2, j) = mefl(i2, j)+nmi(k)*nfy(j)*wgtmf
                     end do
                 end do
-!
-! ---     TERMES DE COUPLAGE MEMBRANE-FLEXION U*BETA : (8x12)
-!         ------------------------------------------
-!            do i = 1, 8
-!                do j = 1, 12
-!                    mefl(i,j) = mefl(i,j)+nm1(i)*nfx(j)*wgtmf
-!                    mefl(i,j) = mefl(i,j)+nm2(i)*nfy(j)*wgtmf
-!                end do
-!            end do
-!
-! ---     TERMES DE COUPLAGE DRILLING-FLEXION U*BETA: (4x12)
-!         ------------------------------------------
-!
-!     if(dri) then
-!            do i = 1, 4
-!                do j = 1, 12
-!                    gmefl(i,j) = gmefl(i,j)+gm1(i)*nfx(j)*wgtmf
-!                    gmefl(i,j) = gmefl(i,j)+gm2(i)*nfy(j)*wgtmf
-!                end do
-!            end do
-!
-!!        ----- CALCUL DU PRODUIT gam/Omega*b(x)b
-!
-!        do iishp = 1, 12
-!          fact = wgt*gam/dArea * bb(iishp,i0)
-!          do jjshp = 1, 12
-!            bxb(iishp,jjshp) = bxb(iishp,jjshp) + fact * bb(jjshp,i0)
-!          end do
-!        end do
-!     endif
+
             else
                 ASSERT(ASTER_FALSE)
             end if
         end if
-! ---   FIN DU TRAITEMENT DU CAS D'UN ELEMENT EXCENTRE
-!       ----------------------------------------------
     end do
-! --- FIN DE LA BOUCLE SUR LES POINTS D'INTEGRATION
-!     ---------------------------------------------
-!
-!====================================================================
-! ---  CAS OU L'ELEMENT EST EXCENTRE                                =
-!====================================================================
-!
-!        if (exce) then
-!
-! ---     FONCTIONS D'INTERPOLATION MEMBRANE
-!         ----------------------------------
-!            call dxqnim(qsi, eta, nmi)
-!
-!====================================================================
-! ---  CALCUL DE LA PARTIE MEMBRANE-FLEXION DE LA MATRICE DE MASSE  =
-!====================================================================
-!
-! ---     POUR LE COUPLAGE MEMBRANE-FLEXION, ON DOIT TENIR COMPTE
-! ---     DE LA MASSE VOLUMIQUE
-! ---     RHO_MF = D*EPAIS*RHO  :
-!         --------------------
-!            wgtmf = zr(ipoids+i0-1)*detj*excent*roe
-!
-! ---     TERMES DE COUPLAGE MEMBRANE-FLEXION U*BETA : (8x12)
-!         ------------------------------------------
-!            do k = 1, 4
-!                i1 = 2*(k-1)+1
-!                i2 = i1 +1
-!                do j = 1, 12
-!                    mefl(i1,j) = mefl(i1,j)+nmi(k)*nfx(j)*wgtmf
-!                    mefl(i2,j) = mefl(i2,j)+nmi(k)*nfy(j)*wgtmf
-!                end do
-!            end do
-!
-! ---     TERMES DE COUPLAGE MEMBRANE-FLEXION U*BETA : (8x12)
-!         ------------------------------------------
-!            do i = 1, 8
-!                do j = 1, 12
-!                    mefl(i,j) = mefl(i,j)+nm1(i)*nfx(j)*wgtmf
-!                    mefl(i,j) = mefl(i,j)+nm2(i)*nfy(j)*wgtmf
-!                end do
-!            end do
-!
-! ---     TERMES DE COUPLAGE DRILLING-FLEXION U*BETA: (4x12)
-!         ------------------------------------------
-!
-!            do i = 1, 4
-!                do j = 1, 12
-!                    gmefl(i,j) = gmefl(i,j)+gm1(i)*nfx(j)*wgtmf
-!                    gmefl(i,j) = gmefl(i,j)+gm2(i)*nfy(j)*wgtmf
-!                end do
-!            end do
-!        endif
-! ---   FIN DU TRAITEMENT DU CAS D'UN ELEMENT EXCENTRE
-!       ----------------------------------------------
-!    end do
-! --- FIN DE LA BOUCLE SUR LES POINTS D'INTEGRATION
-!     ---------------------------------------------
-! --- FIN DE LA BOUCLE SUR LES POINTS D'INTEGRATION
-!     ---------------------------------------------
-!
 !
 ! --- INSERTION DES DIFFERENTES PARTIES CALCULEES DE LA MATRICE
-! --- DE MASSE A LA MATRICE ELLE MEME :
-!     ===============================
+! --- DE MASSE A LA MATRICE ELLE MEME
     if ((option .eq. 'MASS_MECA') .or. (option .eq. 'M_GAMMA')) then
         if (.not. dri) then
             call dxqloc(flex, memb, mefl, ctor, mas)

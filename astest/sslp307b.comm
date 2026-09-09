@@ -1,0 +1,132 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"), DEBUG=_F(SDVERI="OUI"))
+
+test = CA.TestCase()
+
+# Global parameters
+YOUNG = 1.0e6
+POISSON = 0.3
+THICKNESS = 1e-3
+PRES = 1.0
+
+
+from numpy import pi, sin, sinh, cosh
+
+
+def A_m(m: int, nu: float) -> float:
+    alp = m * pi / 2
+    num = nu * (1 + nu) * sinh(alp) - nu * (1 - nu) * alp * cosh(alp)
+    dem = (3 + nu) * (1 - nu) * sinh(alp) * cosh(alp) - (1 - nu) ** 2 * alp
+    return (4 / (m * pi) ** 5) * num / dem
+
+
+def B_m(m: int, nu: float) -> float:
+    alp = m * pi / 2
+    num = nu * (1 - nu) * sinh(alp)
+    dem = (3 + nu) * (1 - nu) * sinh(alp) * cosh(alp) - (1 - nu) ** 2 * alp
+    return (4 / (m * pi) ** 5) * num / dem
+
+
+def w_(x, y, NB: int = 101):
+    s = 0.0
+    for i in range(NB):
+        m = 2 * i + 1
+        a_m = A_m(m, POISSON)
+        b_m = B_m(m, POISSON)
+        xnorm = m * pi * x
+        ynorm = m * pi * (y - 0.5)
+        s += (
+            4 / (pi * m) ** 5 + a_m * ynorm.apply(cosh) + b_m * ynorm * ynorm.apply(sinh)
+        ) * xnorm.apply(sin)
+    return PRES * s
+
+
+list_error = [1.92e-03, 4.95e-04, 1.31e-04]
+
+for i, refinement in enumerate(range(4, 7)):
+
+    tolerance = list_error[i]
+
+    # NUMERICAL COMPUTATION
+
+    mesh_line = CA.Mesh.buildSquare(refine=refinement)
+
+    mesh_line = CREA_MAILLAGE(MAILLAGE=mesh_line, MODI_MAILLE=_F(OPTION="QUAD_TRIA3", TOUT="OUI"))
+
+    mesh_quad = mesh_line.convertToQuadratic()
+
+    mesh_quad = DEFI_GROUP(
+        reuse=mesh_quad,
+        MAILLAGE=mesh_quad,
+        CREA_GROUP_NO=(_F(GROUP_MA=("SURFACE",), NOM="SURFACE"),),
+    )
+
+    model = AFFE_MODELE(
+        AFFE=_F(MODELISATION=("PLAQ_MITC",), PHENOMENE="MECANIQUE", TOUT="OUI"),
+        MAILLAGE=mesh_quad,
+        DISTRIBUTION=_F(METHODE="CENTRALISE"),
+    )
+
+    cara_elem = AFFE_CARA_ELEM(MODELE=model, COQUE=_F(GROUP_MA="SURFACE", EPAIS=THICKNESS))
+
+    mater = DEFI_MATERIAU(ELAS=_F(E=YOUNG, NU=POISSON, RHO=1.0))
+
+    cham_mater = AFFE_MATERIAU(MODELE=model, AFFE=_F(MATER=(mater,), TOUT="OUI"))
+
+    meca_bcs = AFFE_CHAR_MECA(MODELE=model, DDL_IMPO=(_F(DZ=0, GROUP_MA=("LEFT", "RIGHT")),))
+
+    NEWPRES = PRES * YOUNG / (12 * (1 - POISSON**2))
+    meca_chr = AFFE_CHAR_MECA(MODELE=model, PRES_REP=_F(GROUP_MA="SURFACE", PRES=NEWPRES))
+
+    result = MECA_STATIQUE(
+        MODELE=model,
+        CHAM_MATER=cham_mater,
+        EXCIT=(_F(CHARGE=meca_bcs), _F(CHARGE=meca_chr)),
+        OPTION="SANS",
+        CARA_ELEM=cara_elem,
+    )
+
+    displacement = result.getField("DEPL", para="INST", value=0.0)
+    w_numerical = PROJ_CHAMP(
+        CHAM_GD=displacement.restrict(["DZ"]), MAILLAGE_1=mesh_quad, MAILLAGE_2=mesh_line
+    )
+
+    # ANALYTICAL COMPUTATION
+
+    coord = mesh_line.getCoordinatesAsSimpleFieldOnNodes()
+    field = w_(coord.X, coord.Y)
+    value = CA.SimpleFieldOnNodesReal(mesh_line, "DEPL_R", ["DZ"], prol_zero=True)
+    value.setComponentValues("DZ", field)
+    w_analytical = value.toFieldOnNodes()
+
+    # ERROR COMPUTATION
+
+    diff = w_analytical - w_numerical
+    error = diff.norm("NORM_2") / w_analytical.norm("NORM_2")
+    if not (error <= tolerance):
+        test.assertTrue(
+            False,
+            msg=f"{error:.3e} >> {tolerance} for DZ. The thickness of the fine mesh is {THICKNESS}.",
+        )
+    else:
+        test.assertTrue(True, msg=f"{error:.3e} << {tolerance} for DZ.")
+
+FIN()

@@ -15,28 +15,27 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 subroutine lcdp_wrap(fami, kpg, ksp, ndim, imate, &
-                     crit, instam, instap, neps, epsm, &
-                     deps, vim, option, sigm, sigp, &
-                     vip, typmod, dsidep, codret)
+                     carcri, neps, epsm, &
+                     deps, vim, option, sigp, &
+                     vip, dsidep, codret)
 !
     use lcdp_module, only: dp_material
-!
     implicit none
+!
 #include "asterfort/lcdp_compute.h"
 #include "asterfort/lcdp_material.h"
 !
     integer(kind=8) :: imate, ndim, kpg, ksp, codret, neps
-    real(kind=8) :: instam, instap
-    real(kind=8) :: crit(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8) :: epsm(neps), deps(neps)
-    real(kind=8) :: sigp(neps), sigm(neps)
+    real(kind=8) :: sigp(neps)
     real(kind=8) :: vim(*), vip(*)
     real(kind=8) :: dsidep(neps, neps)
     character(len=16) :: option
     character(len=*) :: fami
-    character(len=8) :: typmod(*)
 ! ----------------------------------------------------------------------
     real(kind=8), parameter, dimension(6)::rac2 = [1.d0, 1.d0, 1.d0, &
                                                    sqrt(2.d0), sqrt(2.d0), sqrt(2.d0)]
@@ -54,8 +53,8 @@ subroutine lcdp_wrap(fami, kpg, ksp, ndim, imate, &
     elas = option(11:14) .eq. 'ELAS'
     rigi = option(1:4) .eq. 'RIGI' .or. option(1:4) .eq. 'FULL'
     resi = option(1:4) .eq. 'FULL' .or. option(1:4) .eq. 'RAPH'
-    itemax = nint(crit(1))
-    prec = crit(3)
+    itemax = nint(carcri(1))
+    prec = carcri(3)
     ndimsi = 2*ndim
 !
 ! EXTRACTION DES DONNEES CINEMATIQUES

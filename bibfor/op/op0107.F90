@@ -56,49 +56,54 @@ subroutine op0107()
 #include "asterfort/utmess.h"
 #include "jeveux.h"
 !
-    integer(kind=8) :: nh, iret, jordr, n1, n2, nbocc, nbordr, nc, np, nr, ier
+    integer(kind=8) :: numeHarm, iret, jordr, n1, n2, nbFactorKeyword, nbordr, nc, np, nr, ier
     real(kind=8) :: prec
-    character(len=8) :: k8b, modele, carele, deform, resuco, crit, mesh
+    character(len=8) :: model, caraElem, deform, result, crit, mesh, k8b
     character(len=16) :: concep, nomcmd
-    character(len=19) :: resu, knum, tabtyp(3)
-    character(len=24) :: mate, mateco, chdef
+    character(len=19) :: tablOut, knum, tabtyp(3)
+    character(len=24) :: materField, materCode, chdef
 !
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
-    call getres(resu, concep, nomcmd)
-    call getvid(' ', 'RESULTAT', scal=resuco, nbret=nr)
-!
-    if (nr .eq. 0) resuco = ' '
-!
     call infmaj()
+    k8b = " "
+
+! - Get output table
+    call getres(tablOut, concep, nomcmd)
+
+! - Get input result
+    call getvid(' ', 'RESULTAT', scal=result, nbret=nr)
+    if (nr .eq. 0) then
+        result = ' '
+    end if
+
 !
-    call getfac('TRAV_EXT', nbocc)
-    if (nbocc .ne. 0) then
-        call pewext(resu)
+    call getfac('TRAV_EXT', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call pewext(tablOut)
     end if
 !
-    call getfac('CHAR_LIMITE', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mateco=mateco)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('CHAR_LIMITE', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, mateco=materCode)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call pechli(resu, modele, mateco)
+        call pechli(tablOut, model, materCode)
     end if
 !
-    call getfac('AIRE_INTERNE', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('AIRE_INTERNE', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peaire(resu, mesh, nbocc)
+        call peaire(tablOut, mesh, nbFactorKeyword)
     end if
 !
-    call getfac('MASS_INER', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('MASS_INER', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
         chdef = ' '
         call getvtx(' ', 'GEOMETRIE', scal=deform, nbret=n1)
@@ -109,173 +114,174 @@ subroutine op0107()
                 tabtyp(2) = 'NOEU#TEMP_R'
                 tabtyp(3) = 'ELEM#ENER_R'
                 knum = '&&OP0107.NUME_ORDRE'
-                call getvid(' ', 'RESULTAT', scal=resuco, nbret=nr)
+                call getvid(' ', 'RESULTAT', scal=result, nbret=nr)
                 call getvr8(' ', 'PRECISION', scal=prec, nbret=np)
                 call getvtx(' ', 'CRITERE', scal=crit, nbret=nc)
-                call rsutnu(resuco, ' ', 0, knum, nbordr, &
+                call rsutnu(result, ' ', 0, knum, nbordr, &
                             prec, crit, iret)
                 if (nbordr .ne. 1) then
                     call utmess('F', 'POSTELEM_10')
                 end if
                 if (iret .ne. 0) goto 999
                 call jeveuo(knum, 'L', jordr)
-                call rsexch('F', resuco, 'DEPL', zi(jordr), chdef, &
+                call rsexch('F', result, 'DEPL', zi(jordr), chdef, &
                             iret)
                 call chpve2(chdef, 3, tabtyp, ier)
             end if
         end if
-        call pemain(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, chdef)
-!
+        call pemain(tablOut, &
+                    model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, chdef)
     end if
 !
-    call getfac('ENER_POT', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_POT', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peepot(resu, modele, mate, mateco, carele, nh, &
-                    nbocc)
-!
+        call peepot(tablOut, &
+                    model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword)
     end if
 !
-    call getfac('ENER_CIN', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_CIN', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peecin(resu, modele, mate, mateco, carele, nh, &
-                    nbocc)
+        call peecin(tablOut, &
+                    model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword)
 !
     end if
 !
-    call getfac('INTEGRALE', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele)
-        call peeint(resu, modele, nbocc)
+    call getfac('INTEGRALE', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model)
+        call peeint(tablOut, model, nbFactorKeyword)
     end if
 !
-    call getfac('NORME', nbocc)
-    if (nbocc .ne. 0) then
+    call getfac('NORME', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
 !         --- ON RECUPERE LE MODELE
         call getvid('NORME', 'CHAM_GD', iocc=1, scal=chdef, nbret=n1)
         if (n1 .ne. 0) then
-            call getvid('NORME', 'MODELE', iocc=1, scal=modele, nbret=n2)
+            call getvid('NORME', 'MODELE', iocc=1, scal=model, nbret=n2)
         else
-            call getvid('NORME', 'RESULTAT', iocc=1, scal=resuco, nbret=nr)
-            call medomp(resuco, modele)
+            call getvid('NORME', 'RESULTAT', iocc=1, scal=result, nbret=nr)
+            call medomp(result, model)
         end if
-        call penorm(resu, modele)
+        call penorm(tablOut, model)
     end if
 !
-    call getfac('VOLUMOGRAMME', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, carele=carele)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('VOLUMOGRAMME', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, carele=caraElem)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call pevolu(resu, modele, carele, nbocc)
+        call pevolu(tablOut, model, caraElem, nbFactorKeyword)
     end if
 !
-    call getfac('MINMAX', nbocc)
-    if (nbocc .ne. 0) then
+    call getfac('MINMAX', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
         call getvid('MINMAX', 'CHAM_GD', iocc=1, scal=chdef, nbret=n1)
         if (n1 .ne. 0) then
-            call getvid('MINMAX', 'MODELE', iocc=1, scal=modele, nbret=n2)
+            call getvid('MINMAX', 'MODELE', iocc=1, scal=model, nbret=n2)
         else
-            call getvid('MINMAX', 'RESULTAT', iocc=1, scal=resuco, nbret=nr)
-            call medomp(resuco, modele)
+            call getvid('MINMAX', 'RESULTAT', iocc=1, scal=result, nbret=nr)
+            call medomp(result, model)
         end if
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ! ASSERT(.not. isParallelMesh(mesh))
-        call pemima(n1, chdef, resu, modele, nbocc)
+        call pemima(n1, chdef, tablOut, model, nbFactorKeyword)
     end if
 !
-    call getfac('WEIBULL', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('WEIBULL', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peweib(resu, modele, mate, mateco, carele, k8b, &
-                    nh, nbocc, 0, nomcmd)
+        call peweib(tablOut, model, materField, materCode, caraElem, k8b, &
+                    numeHarm, nbFactorKeyword, 0, nomcmd)
     end if
 !
-    call getfac('RICE_TRACEY', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, carele=carele, nh=nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('RICE_TRACEY', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, nh=numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peritr(resu, modele, carele, nh, nbocc)
+        call peritr(tablOut, model, numeHarm, nbFactorKeyword)
     end if
 !
-    call getfac('CARA_GEOM', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('CARA_GEOM', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call pecage(resu, modele, nbocc)
+        call pecage(tablOut, model, nbFactorKeyword)
     end if
 !
-    call getfac('CARA_POUTRE', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, carele=carele, nh=nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('CARA_POUTRE', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, carele=caraElem, nh=numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call pecapo(resu, modele, carele, nh)
+        call pecapo(tablOut, model, numeHarm)
     end if
 !
-    call getfac('INDIC_ENER', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('INDIC_ENER', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'INDIC_ENER')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'INDIC_ENER')
     end if
 !
-    call getfac('INDIC_SEUIL', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('INDIC_SEUIL', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'INDIC_SEUIL')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'INDIC_SEUIL')
     end if
 !
-    call getfac('ENER_ELAS', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_ELAS', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'ENER_ELAS')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'ENER_ELAS')
     end if
 !
-    call getfac('ENER_ELTR', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_ELTR', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'ENER_ELTR')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'ENER_ELTR')
     end if
 
 !
-    call getfac('ENER_TOTALE', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_TOTALE', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'ENER_TOTALE')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'ENER_TOTALE')
     end if
 !
-    call getfac('ENER_DISS', nbocc)
-    if (nbocc .ne. 0) then
-        call medomp(resuco, modele, mate, mateco, carele, nh)
-        call dismoi('NOM_MAILLA', modele, 'MODELE', repk=mesh)
+    call getfac('ENER_DISS', nbFactorKeyword)
+    if (nbFactorKeyword .ne. 0) then
+        call medomp(result, model, materField, materCode, caraElem, numeHarm)
+        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
         ASSERT(.not. isParallelMesh(mesh))
-        call peingl(resu, modele, mate, mateco, carele, nh, &
-                    nbocc, 'ENER_DISS')
+        call peingl(tablOut, model, materField, materCode, caraElem, numeHarm, &
+                    nbFactorKeyword, 'ENER_DISS')
     end if
 !
 999 continue

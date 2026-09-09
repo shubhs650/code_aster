@@ -21,7 +21,19 @@
 from ..Commons import *
 from ..Language.DataStructure import *
 from ..Language.Syntax import *
-from ..Commons.c_comportement import compat_syntax
+from ..Commons.c_comportement import compat_syntax as comportement_compat_syntax
+from ..Commons.c_convergence import compat_syntax as convergence_compat_syntax
+
+
+def compat_syntax(keywords):
+    """Adapt keywords before syntax checking.
+
+    Arguments:
+        keywords (dict): Keywords arguments of user's keywords, changed in place.
+    """
+    comportement_compat_syntax(keywords)
+    convergence_compat_syntax(keywords)
+
 
 CALC_PRECONT = MACRO(
     nom="CALC_PRECONT",
@@ -39,7 +51,8 @@ CALC_PRECONT = MACRO(
     CABLE_BP_INACTIF=SIMP(statut="f", typ=cabl_precont, validators=NoRepeat(), max="**"),
     INCREMENT=C_INCREMENT(),
     RECH_LINEAIRE=C_RECH_LINEAIRE(),
-    CONVERGENCE=C_CONVERGENCE("MECA_NON_LINE"),
+    CONVERGENCE=C_CONVERGENCE("STAT_NON_LINE"),
+    CONVERGENCE_REFE=C_CONVERGENCE_REFE("MECA_NON_LINE"),
     ARCHIVAGE=C_ARCHIVAGE(),
     # -------------------------------------------------------------------
     ETAT_INIT=C_ETAT_INIT("MECA_NON_LINE", "f"),

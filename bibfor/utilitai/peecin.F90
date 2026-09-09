@@ -15,20 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
+subroutine peecin(tablOutZ, &
+                  modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                  numeHarm, nbFactorKeyword)
 !
     implicit none
 !
-#include "asterf_types.h"
-#include "jeveux.h"
-#include "asterfort/gettco.h"
 #include "asterc/r8depi.h"
 #include "asterc/r8vide.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/char8_to_int.h"
 #include "asterfort/chpve2.h"
+#include "asterfort/compEnergyKinetic.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/exlim3.h"
+#include "asterfort/gettco.h"
 #include "asterfort/getvem.h"
 #include "asterfort/getvid.h"
 #include "asterfort/getvr8.h"
@@ -43,7 +47,6 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/mecact.h"
-#include "asterfort/compEnergyKinetic.h"
 #include "asterfort/mecham.h"
 #include "asterfort/mechti.h"
 #include "asterfort/meharm.h"
@@ -58,221 +61,253 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
 #include "asterfort/vrcins.h"
 #include "asterfort/vrcref.h"
 #include "asterfort/wkvect.h"
-#include "asterfort/char8_to_int.h"
+#include "jeveux.h"
 !
-    integer(kind=8) :: nh, nbocc
-    character(len=*) :: resu, modele, mate, mateco, cara
+    character(len=*), intent(in) :: tablOutZ
+    character(len=*), intent(in) :: modelZ, materFieldZ, materCodeZ, caraElemZ
+    integer(kind=8), intent(in) :: numeHarm, nbFactorKeyword
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     OPERATEUR   POST_ELEM
-!     TRAITEMENT DU MOT CLE-FACTEUR "ENER_CIN"
-!     ------------------------------------------------------------------
+!     TRAITEMENT DU MOT CLE-FACTEUR "ENERCIN"
 !
-    integer(kind=8) :: nd, nr, ni, iret, np, nc, jord, jins, jad, nbordr, iord, numord, iainst, jnmo, ibid
-    integer(kind=8) :: ie, nt, nm, ng, nbgrma, ig, jgr, nbma, nume, im, lfreq, nbparr, nbpard
-    integer(kind=8) :: nbpaep, iocc, jma, nf, inume, ier, nbMaiT
-    parameter(nbpaep=2, nbparr=6, nbpard=4)
-    real(kind=8) :: prec, xfreq, varpep(nbpaep), valer(3), inst
+! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: option = 'ENER_CIN'
+    integer(kind=8) :: iret, np, nc, jad, nbStore, iStore, numeStore, jvPara, jnmo, ibid
+    integer(kind=8) :: ie, nt, nm, ng, nbgrma, ig, jgr, nbma, nume, im, lfreq
+    integer(kind=8) :: iFactorKeyword, jma, massDiagIndx, ier, nbMaiT, nbret
+    integer(kind=8), parameter :: nbpaep = 2
+    real(kind=8) :: varpep(nbpaep)
+    real(kind=8) :: prec, xfreq, valer(3), inst
     real(kind=8) :: rundf
-    character(len=1) :: base
+    character(len=1), parameter :: jvBase = "V"
     character(len=2) :: codret
-    character(len=8) :: k8b, noma, resul, crit, nommai, nommas, typarr(nbparr), typard(nbpard)
-    character(len=8) :: valk(2), nomgd
-    character(len=16) :: typres, option, noparr(nbparr), nopard(nbpard), optmas, tabtyp(3)
-    character(len=19) :: chelem, knum, kins, field_node, field_elem, ligrel, chvarc, chvref
+    character(len=8) :: k8b, mesh, result, crit, nommai, nommas
+    character(len=8) :: valk(2), physQuanName
+    character(len=16) :: resultType, optmas
+    character(len=19) :: field, ligrel
+    character(len=19) :: ecinElemUser, ecinElem
     character(len=19) :: chdisp, chvite
-    character(len=24) :: chmasd, chfreq, typcha, chtime, chgeom, chcara(18)
-    character(len=24) :: chtemp, opt, mlggma, chharm, nomgrm, valk2(2)
-    aster_logical :: exitim, l_modal
+    character(len=24) :: fieldType, chtime, chgeom
+    character(len=24), parameter :: chmasd = '&&PEECIN.MASD', chfreq = '&&PEECIN.OMEGA2'
+    character(len=24) :: chtemp, opt, chharm, nomgrm, valk2(2)
+    aster_logical :: l_modal
     complex(kind=8) :: c16b
+    character(len=19), parameter :: chvarc = '&&PEECIN.VARC'
+    character(len=19), parameter :: listStoreJv = '&&PEECIN.NUME_ORDRE'
+    integer(kind=8), pointer :: listStore(:) => null()
+    character(len=19), parameter :: listTimeJv = '&&PEECIN.INSTANT'
+    real(kind=8), pointer :: listTime(:) => null()
+    aster_logical :: lFieldUser, lResultUser, lHasFreq, lHasTime
+    integer(kind=8), parameter :: nbParaResu = 6, nbParaField = 4
+    character(len=16) :: tablRParaName(nbParaResu)
+    character(len=8), parameter :: tablRParaType(nbParaResu) = &
+                                   (/'I  ', 'R  ', &
+                                     'K24', 'K8 ', 'R  ', 'R  '/)
+    character(len=16), parameter :: tablFParaName(nbParaField) = &
+                                    (/'LIEU      ', 'ENTITE    ', 'TOTALE    ', 'POUR_CENT '/)
+    character(len=8), parameter :: tablFParaType(nbParaField) = &
+                                   (/'K24', 'K8 ', 'R  ', 'R  '/)
+    character(len=16), parameter :: fieldTypePara(3) = &
+                                    (/'NOEU#DEPL_R', 'NOEU#TEMP_R', 'ELEM#ENER_R'/)
 !
-    data noparr/'NUME_ORDRE', 'FREQ', 'LIEU', 'ENTITE', 'TOTALE',&
-     &     'POUR_CENT'/
-    data typarr/'I', 'R', 'K24', 'K8', 'R', 'R'/
-    data nopard/'LIEU', 'ENTITE', 'TOTALE', 'POUR_CENT'/
-    data typard/'K8', 'K8', 'R', 'R'/
-    data tabtyp/'NOEU#DEPL_R', 'NOEU#TEMP_R', 'ELEM#ENER_R'/
-    data chvarc, chvref/'&&PEECIN.VARC', '&&PEECIN.VARC_REF'/
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
+
+! - Initializations
     c16b = (0.d0, 0.d0)
-!
-    base = 'V'
     rundf = r8vide()
-    exitim = .false.
+    lHasTime = ASTER_FALSE
     inst = 0.d0
     chdisp = ' '
     chvite = ' '
     chtemp = ' '
-    chfreq = ' '
-    typres = ' '
-    call getvid(' ', 'CHAM_GD', scal=field_node, nbret=nd)
-    if (nd .ne. 0) then
-        call chpve2(field_node, 3, tabtyp, ier)
-        call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
-        call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
-    end if
-    call getvr8(' ', 'FREQ', scal=xfreq, nbret=nf)
-    call getvid(' ', 'RESULTAT', scal=resul, nbret=nr)
-    call getvr8(' ', 'INST', scal=inst, nbret=ni)
+    resultType = ' '
 
-    if (ni .ne. 0) exitim = .true.
-    if (nr .ne. 0) then
-        call gettco(resul, typres)
-        if (typres(1:9) .eq. 'MODE_MECA') then
-            noparr(2) = 'FREQ'
-        else if (typres(1:9) .eq. 'EVOL_THER' .or. typres(1:9) .eq. 'EVOL_ELAS' .or. &
-                 typres(1:9) .eq. 'EVOL_NOLI' .or. typres(1:10) .eq. 'DYNA_TRANS') then
-            noparr(2) = 'INST'
+! - Get field from user
+    call getvid(' ', 'CHAM_GD', scal=field, nbret=nbret)
+    lFieldUser = nbret .ne. 0
+    if (lFieldUser) then
+        call chpve2(field, 3, fieldTypePara, ier)
+        call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
+        call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
+    end if
+
+! - Get parameters
+    call getvr8(' ', 'FREQ', scal=xfreq, nbret=nbRet)
+    lHasFreq = nbRet .ne. 0
+    call getvr8(' ', 'INST', scal=inst, nbret=nbRet)
+    lHasTime = nbRet .ne. 0
+    call getvid(' ', 'RESULTAT', scal=result, nbret=nbRet)
+    lResultUser = nbret .ne. 0
+
+! - Parameters in output table
+    tablRParaName(1) = 'NUME_ORDRE'
+    tablRParaName(3) = 'LIEU      '
+    tablRParaName(4) = 'ENTITE    '
+    tablRParaName(5) = 'TOTALE    '
+    tablRParaName(6) = 'POUR_CENT '
+    if (lResultUser) then
+        call gettco(result, resultType)
+        if (resultType(1:9) .eq. 'MODE_MECA') then
+            tablRParaName(2) = 'FREQ'
+        else if (resultType(1:9) .eq. 'EVOL_THER' .or. resultType(1:9) .eq. 'EVOL_ELAS' .or. &
+                 resultType(1:9) .eq. 'EVOL_NOLI' .or. resultType(1:10) .eq. 'DYNA_TRANS') then
+            tablRParaName(2) = 'INST'
         else
             ASSERT(ASTER_FALSE)
         end if
     end if
-!
-    option = 'ENER_CIN'
-    call mecham(option, modele, cara, nh, chgeom, &
-                chcara, chharm, iret)
+
+! - Check and prepare input fields
+    call mecham(option, modelZ, numeHarm, &
+                chgeom, chharm, iret)
     if (iret .ne. 0) goto 90
-    noma = chgeom(1:8)
-    mlggma = noma//'.GROUPEMA'
+    mesh = chgeom(1:8)
 !
-    call exlim3('ENER_CIN', 'V', modele, ligrel)
-!
-    knum = '&&PEECIN.NUME_ORDRE'
-    kins = '&&PEECIN.INSTANT'
-    inume = 1
-!
-    if (nd .ne. 0) then
-        if (nf .eq. 0) then
-            xfreq = 1.d0
-            call utmess('I', 'UTILITAI3_69')
-        else
+    call exlim3(option, 'V', modelZ, ligrel)
+
+! - Create list of time steps and storing
+    if (lFieldUser) then
+        if (lHasFreq) then
             call utmess('I', 'UTILITAI3_70')
             xfreq = (r8depi()*xfreq)**2
+        else
+            xfreq = 1.d0
+            call utmess('I', 'UTILITAI3_69')
         end if
-        nbordr = 1
-        call wkvect(knum, 'V V I', nbordr, jord)
-        zi(jord) = 1
-        call wkvect(kins, 'V V R', nbordr, jins)
-        zr(jins) = inst
-        call tbcrsd(resu, 'G')
-        call tbajpa(resu, nbpard, nopard, typard)
+        nbStore = 1
+        call wkvect(listStoreJv, 'V V I', nbStore, vi=listStore)
+        liststore(1) = 1
+        call wkvect(listTimeJv, 'V V R', nbStore, vr=listTime)
+        listTime(1) = inst
+        call tbcrsd(tablOutZ, 'G')
+        call tbajpa(tablOutZ, nbParaField, tablFParaName, tablFParaType)
     else
+        ASSERT(lResultUser)
         call getvr8(' ', 'PRECISION', scal=prec, nbret=np)
         call getvtx(' ', 'CRITERE', scal=crit, nbret=nc)
-        call rsutnu(resul, ' ', 0, knum, nbordr, prec, crit, iret)
+        call rsutnu(result, ' ', 0, listStoreJv, nbStore, prec, crit, iret)
         if (iret .ne. 0) goto 80
-        call jeveuo(knum, 'L', jord)
-!        - DANS LE CAS OU CE N'EST PAS UN RESULTAT DE TYPE EVOL_NOLI -
-!        --- ON RECUPERE L'OPTION DE CALCUL DE LA MATRICE DE MASSE ---
-        if (typres(1:9) .ne. 'EVOL_NOLI') then
-            call dismoi('REF_MASS_PREM', resul, 'RESU_DYNA', repk=nommas, arret='C')
+        call jeveuo(listStoreJv, 'L', vi=listStore)
+
+! ----- Create list of time steps
+        call wkvect(listTimeJv, 'V V R', nbStore, vr=listTime)
+
+! ----- Get frequencies
+        call jenonu(jexnom(result//'           .NOVA', 'FREQ'), iret)
+        if (iret .ne. 0) then
+            do iStore = 1, nbStore
+                numeStore = listStore(iStore)
+                call rsadpa(result, 'L', 1, 'FREQ', numeStore, 0, sjv=jvPara, istop=0)
+                listTime(iStore) = zr(jvPara)
+            end do
+        end if
+
+! ----- Get time steps
+        call jenonu(jexnom(result//'           .NOVA', 'INST'), iret)
+        if (iret .ne. 0) then
+            lHasTime = ASTER_TRUE
+            do iStore = 1, nbStore
+                numeStore = listStore(iStore)
+                call rsadpa(result, 'L', 1, 'INST', numeStore, 0, sjv=jvPara, istop=0)
+                listTime(iStore) = zr(jvPara)
+            end do
+        end if
+        call tbcrsd(tablOutZ, 'G')
+        call tbajpa(tablOutZ, nbParaResu, tablRParaName, tablRParaType)
+    end if
+
+! - Get option of mass
+    massDiagIndx = 1
+    if (lResultUser) then
+        if (resultType(1:9) .ne. 'EVOL_NOLI') then
+            call dismoi('REF_MASS_PREM', result, 'RESU_DYNA', repk=nommas, arret='C')
             if (nommas .ne. ' ') then
                 call dismoi('SUR_OPTION', nommas, 'MATR_ASSE', repk=opt, arret='C', ier=ie)
                 if (ie .ne. 0) then
                     call utmess('A', 'UTILITAI3_71')
                 else
-                    if (opt(1:14) .eq. 'MASS_MECA_DIAG') inume = 0
+                    if (opt(1:14) .eq. 'MASS_MECA_DIAG') then
+                        massDiagIndx = 0
+                    end if
                 end if
             end if
         end if
-!        --- ON VERIFIE SI L'UTILISATEUR A DEMANDE L'UTILISATION ---
-!        --- D'UNE MATRICE DE MASSE DIAGONALE                    ---
-!        --- DANS LA COMMANDE POST_ELEM                          ---
         call getvtx(option(1:9), 'OPTION', iocc=1, scal=optmas, nbret=nt)
         if (optmas(1:14) .eq. 'MASS_MECA_DIAG') then
-            inume = 0
+            massDiagIndx = 0
             call utmess('I', 'UTILITAI3_72')
         end if
-!
-        call wkvect(kins, 'V V R', nbordr, jins)
-!            CAS D'UN CALCUL MODAL
-!        --- ON RECUPERE LES FREQUENCES ---
-        call jenonu(jexnom(resul//'           .NOVA', 'FREQ'), iret)
-        if (iret .ne. 0) then
-            do iord = 1, nbordr
-                numord = zi(jord+iord-1)
-                call rsadpa(resul, 'L', 1, 'FREQ', numord, &
-                            0, sjv=iainst, styp=k8b, istop=0)
-                zr(jins+iord-1) = zr(iainst)
-            end do
-        end if
-!            CAS CALCUL TRANSITOIRE
-!            RECUPERATION DES INSTANTS
-        call jenonu(jexnom(resul//'           .NOVA', 'INST'), iret)
-        if (iret .ne. 0) then
-            exitim = .true.
-            do iord = 1, nbordr
-                numord = zi(jord+iord-1)
-                call rsadpa(resul, 'L', 1, 'INST', numord, &
-                            0, sjv=iainst, styp=k8b, istop=0)
-                zr(jins+iord-1) = zr(iainst)
-            end do
-        end if
-        call tbcrsd(resu, 'G')
-        call tbajpa(resu, nbparr, noparr, typarr)
     end if
+
+! - Create input field for lumped mass
+    call mecact('V', chmasd, 'MAILLA', mesh, 'POSI', &
+                ncmp=1, nomcmp='POS', si=massDiagIndx)
 !
-    chmasd = '&&PEECIN.MASD'
-    call mecact('V', chmasd, 'MAILLA', noma, 'POSI', &
-                ncmp=1, nomcmp='POS', si=inume)
-!
-    do iord = 1, nbordr
+    do iStore = 1, nbStore
         call jemarq()
         call jerecu('V')
         l_modal = ASTER_FALSE
-        numord = zi(jord+iord-1)
-        inst = zr(jins+iord-1)
+
+! ----- Current storing index
+        numeStore = listStore(iStore)
+        inst = listTime(iStore)
         ASSERT(inst .ne. rundf)
         valer(1) = inst
-        if (typres .eq. 'FOURIER_ELAS') then
-            call rsadpa(resul, 'L', 1, 'NUME_MODE', numord, &
-                        0, sjv=jnmo, styp=k8b)
-            call meharm(modele, zi(jnmo), chharm)
+        if (resultType .eq. 'FOURIER_ELAS') then
+            call rsadpa(result, 'L', 1, 'NUME_MODE', numeStore, 0, sjv=jnmo)
+            call meharm(modelZ, zi(jnmo), chharm)
         end if
         chtime = ' '
-        if (exitim) call mechti(noma, inst, rundf, rundf, chtime)
+        if (lHasTime) then
+            call mechti(mesh, inst, rundf, rundf, chtime)
+        end if
 !
-        if (nr .ne. 0) then
-            call rsexch(' ', resul, 'ECIN_ELEM', numord, field_elem, iret)
+        if (lResultUser) then
+            call rsexch(' ', result, 'ECIN_ELEM', numeStore, ecinElemUser, iret)
             if (iret .gt. 0) then
-                if (exitim) then
-                    call rsexch(' ', resul, 'VITE', numord, field_node, iret)
+                if (lHasTime) then
+                    call rsexch(' ', result, 'VITE', numeStore, field, iret)
                     if (iret .gt. 0) goto 72
-                    call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
-                    call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
+                    call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
+                    call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
                 else
                     l_modal = ASTER_TRUE
-                    call rsexch(' ', resul, 'DEPL', numord, field_node, iret)
+                    call rsexch(' ', result, 'DEPL', numeStore, field, iret)
                     if (iret .gt. 0) goto 72
-                    call dismoi('NOM_GD', field_node, 'CHAMP', repk=nomgd)
-                    call dismoi('TYPE_SUPERVIS', field_node, 'CHAMP', repk=typcha)
+                    call dismoi('NOM_GD', field, 'CHAMP', repk=physQuanName)
+                    call dismoi('TYPE_SUPERVIS', field, 'CHAMP', repk=fieldType)
                 end if
             else
-                call dismoi('NOM_GD', field_elem, 'CHAMP', repk=nomgd)
-                call dismoi('TYPE_SUPERVIS', field_elem, 'CHAMP', repk=typcha)
+                call dismoi('NOM_GD', ecinElemUser, 'CHAMP', repk=physQuanName)
+                call dismoi('TYPE_SUPERVIS', ecinElemUser, 'CHAMP', repk=fieldType)
             end if
-            if (exitim) then
+            if (lHasTime) then
                 xfreq = 1.d0
             else
-                call rsadpa(resul, 'L', 1, 'OMEGA2', numord, 0, sjv=lfreq)
+                call rsadpa(result, 'L', 1, 'OMEGA2', numeStore, 0, sjv=lfreq)
                 xfreq = zr(lfreq)
             end if
         end if
-!
-        chfreq = '&&PEECIN.OMEGA2'
-        call mecact('V', chfreq, 'MAILLA', noma, 'OME2_R', &
+
+! ----- Create field for frequency
+        call mecact('V', chfreq, 'MAILLA', mesh, 'OME2_R', &
                     ncmp=1, nomcmp='OMEG2', sr=xfreq)
 !
-        if (typcha(1:7) .eq. 'CHAM_NO') then
-            if (nomgd(1:4) .eq. 'DEPL') then
-                call vrcins(modele, mate, cara, inst, chvarc, codret)
-                call vrcref(modele(1:8), mate(1:8), cara(1:8), chvref(1:19))
+        if (fieldType(1:7) .eq. 'CHAM_NO') then
+            if (physQuanName(1:4) .eq. 'DEPL') then
+                call vrcins(modelZ, materFieldZ, caraElemZ, inst, chvarc, codret)
             else
                 call utmess('F', 'UTILITAI3_73')
             end if
-        else if (typcha(1:9) .eq. 'CHAM_ELEM') then
-            if (nomgd(1:4) .eq. 'ENER') then
-                chelem = field_elem
+
+        else if (fieldType(1:9) .eq. 'CHAM_ELEM') then
+            if (physQuanName(1:4) .eq. 'ENER') then
+                ecinElem = ecinElemUser
                 goto 30
             else
                 call utmess('F', 'UTILITAI3_73')
@@ -280,73 +315,74 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
         else
             call utmess('F', 'UTILITAI3_73')
         end if
-        chelem = '&&PEECIN.CHAM_ELEM'
+        ecinElem = '&&PEECIN.CHAM_ELEM'
         ibid = 0
         if (l_modal) then
             chvite = ' '
-            chdisp = field_node
+            chdisp = field
         else
-            chvite = field_node
+            chvite = field
             chdisp = ' '
         end if
 
-        call compEnergyKinetic(modele, ligrel, l_modal, &
-                               chdisp, chvite, chfreq, chgeom, mateco, &
-                               chcara, chmasd, chvarc, &
-                               base, chelem, iret)
+! ----- Compute kinetic energy
+        call compEnergyKinetic(l_modal, modelZ, materCodeZ, caraElemZ, &
+                               chdisp, chvite, chFreq, chgeom, &
+                               chmasd, chvarc, &
+                               ligrel, jvBase, ecinElem, iret)
 30      continue
 !
 !        --- ON CALCULE L'ENERGIE TOTALE ---
-        call peenca(chelem, nbpaep, varpep, 0, [ibid])
+        call peenca(ecinElem, nbpaep, varpep, 0, [ibid])
 !
-        do iocc = 1, nbocc
-            call getvtx(option(1:9), 'TOUT', iocc=iocc, nbval=0, nbret=nt)
-            call getvem(noma, 'MAILLE', option(1:9), 'MAILLE', iocc, &
+        do iFactorKeyword = 1, nbFactorKeyword
+            call getvtx(option(1:9), 'TOUT', iocc=iFactorKeyword, nbval=0, nbret=nt)
+            call getvem(mesh, 'MAILLE', option(1:9), 'MAILLE', iFactorKeyword, &
                         0, k8b, nm)
-            call getvem(noma, 'GROUP_MA', option(1:9), 'GROUP_MA', iocc, &
+            call getvem(mesh, 'GROUP_MA', option(1:9), 'GROUP_MA', iFactorKeyword, &
                         0, k8b, ng)
             if (nt .ne. 0) then
-                call peenca(chelem, nbpaep, varpep, 0, [ibid])
-                valk(1) = noma
+                call peenca(ecinElem, nbpaep, varpep, 0, [ibid])
+                valk(1) = mesh
                 valk(2) = 'TOUT'
-                if (nr .ne. 0) then
+                if (lResultUser) then
                     valer(2) = varpep(1)
                     valer(3) = varpep(2)
-                    call tbajli(resu, nbparr, noparr, [numord], valer, &
+                    call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                 [c16b], valk, 0)
                 else
-                    call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                    call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                 [c16b], valk, 0)
                 end if
             end if
             if (ng .ne. 0) then
                 nbgrma = -ng
                 call wkvect('&&PEECIN_GROUPM', 'V V K24', nbgrma, jgr)
-                call getvem(noma, 'GROUP_MA', option(1:9), 'GROUP_MA', iocc, &
+                call getvem(mesh, 'GROUP_MA', option(1:9), 'GROUP_MA', iFactorKeyword, &
                             nbgrma, zk24(jgr), ng)
                 valk2(2) = 'GROUP_MA'
                 do ig = 1, nbgrma
                     nomgrm = zk24(jgr+ig-1)
-                    call jeexin(jexnom(mlggma, nomgrm), iret)
+                    call jeexin(jexnom(mesh//'.GROUPEMA', nomgrm), iret)
                     if (iret .eq. 0) then
                         call utmess('A', 'UTILITAI3_46', sk=nomgrm)
                         goto 40
                     end if
-                    call jelira(jexnom(mlggma, nomgrm), 'LONUTI', nbma)
+                    call jelira(jexnom(mesh//'.GROUPEMA', nomgrm), 'LONUTI', nbma)
                     if (nbma .eq. 0) then
                         call utmess('A', 'UTILITAI3_47', sk=nomgrm)
                         goto 40
                     end if
-                    call jeveuo(jexnom(mlggma, nomgrm), 'L', jad)
-                    call peenca(chelem, nbpaep, varpep, nbma, zi(jad))
+                    call jeveuo(jexnom(mesh//'.GROUPEMA', nomgrm), 'L', jad)
+                    call peenca(ecinElem, nbpaep, varpep, nbma, zi(jad))
                     valk2(1) = nomgrm
-                    if (nr .ne. 0) then
+                    if (lResultUser) then
                         valer(2) = varpep(1)
                         valer(3) = varpep(2)
-                        call tbajli(resu, nbparr, noparr, [numord], valer, &
+                        call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                     [c16b], valk2, 0)
                     else
-                        call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                        call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                     [c16b], valk2, 0)
                     end if
 40                  continue
@@ -356,10 +392,10 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
             if (nm .ne. 0) then
                 nbma = -nm
                 call wkvect('&&PEECIN_MAILLE', 'V V K8', nbma, jma)
-                call getvem(noma, 'MAILLE', option(1:9), 'MAILLE', iocc, &
+                call getvem(mesh, 'MAILLE', option(1:9), 'MAILLE', iFactorKeyword, &
                             nbma, zk8(jma), nm)
                 valk(2) = 'MAILLE'
-                call jelira(noma//'.TYPMAIL', 'LONMAX', nbMaiT)
+                call jelira(mesh//'.TYPMAIL', 'LONMAX', nbMaiT)
                 do im = 1, nbma
                     nommai = zk8(jma+im-1)
                     nume = char8_to_int(nommai)
@@ -367,15 +403,15 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
                         call utmess('A', 'UTILITAI3_49', sk=nommai)
                         goto 50
                     end if
-                    call peenca(chelem, nbpaep, varpep, 1, [nume])
+                    call peenca(ecinElem, nbpaep, varpep, 1, [nume])
                     valk(1) = nommai
-                    if (nr .ne. 0) then
+                    if (lResultUser) then
                         valer(2) = varpep(1)
                         valer(3) = varpep(2)
-                        call tbajli(resu, nbparr, noparr, [numord], valer, &
+                        call tbajli(tablOutZ, nbParaResu, tablRParaName, [numeStore], valer, &
                                     [c16b], valk, 0)
                     else
-                        call tbajli(resu, nbpard, nopard, [numord], varpep, &
+                        call tbajli(tablOutZ, nbParaField, tablFParaName, [numeStore], varpep, &
                                     [c16b], valk, 0)
                     end if
 50                  continue
@@ -389,8 +425,8 @@ subroutine peecin(resu, modele, mate, mateco, cara, nh, nbocc)
     end do
 !
 80  continue
-    call jedetr(knum)
-    call jedetr(kins)
+    call jedetr(listStoreJv)
+    call jedetr(listTimeJv)
 !
 90  continue
     call jedema()

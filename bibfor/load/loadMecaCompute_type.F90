@@ -37,7 +37,7 @@ module loadMecaCompute_type
                                     'FORCE_INTERNE#2D        ', 'FORCE_CONTOUR           ', &
                                     'FORCE_POUTRE            ', 'PESANTEUR               ', &
                                     'ROTATION                ', 'PRES_REP                ', &
-                                    'FORCE_ELEC              ', 'FORCE_COQUE#3D          ', &
+                                    'FORCE_COQUE#3D          ', &
                                     'FORCE_COQUE#2D          ', 'PRE_EPSI                ', &
                                     'FLUX_THM_REP            ', 'VECT_ASSE               ', &
                                     'PRE_SIGM                ', 'EFFE_FOND               ', &
@@ -51,7 +51,7 @@ module loadMecaCompute_type
                                    '.F2D2D', '.F1D2D', &
                                    '.F1D1D', '.PESAN', &
                                    '.ROTAT', '.PRESS', &
-                                   '.FELEC', '.FCO3D', &
+                                   '.FCO3D', &
                                    '.FCO2D', '.EPSIN', &
                                    '.FLUX ', '.VEASS', &
                                    '.SIINT', '.EFOND', &
@@ -65,7 +65,7 @@ module loadMecaCompute_type
                                                                  .false._1, .false._1, &
                                                                  .true._1, .true._1, &
                                                                  .true._1, .true._1, &
-                                                                 .false._1, .true._1, &
+                                                                 .true._1, &
                                                                  .false._1, .false._1, &
                                                                  .false._1, .false._1, &
                                                                  .false._1, .true._1, &
@@ -79,7 +79,7 @@ module loadMecaCompute_type
                                                                  .true._1, .true._1, &
                                                                  .true._1, .true._1, &
                                                                  .false._1, .true._1, &
-                                                                 .false._1, .true._1, &
+                                                                 .true._1, &
                                                                  .true._1, .false._1, &
                                                                  .true._1, .true._1, &
                                                                  .false._1, .true._1, &
@@ -93,7 +93,7 @@ module loadMecaCompute_type
                                    'PFR2D2D ', 'PFR1D2D ', &
                                    'PFR1D1D ', 'PPESANR ', &
                                    'PROTATR ', 'PPRESSR ', &
-                                   'PFRELEC ', 'PFRCO3D ', &
+                                   'PFRCO3D ', &
                                    'PFRCO2D ', 'PEPSINR ', &
                                    'PFLUXR  ', 'NoInput ', &
                                    'PSIEFR  ', 'PEFOND  ', &
@@ -107,7 +107,7 @@ module loadMecaCompute_type
                                    'PFF2D2D ', 'PFF1D2D ', &
                                    'PFF1D1D ', 'PPESANR ', &
                                    'PROTATR ', 'PPRESSF ', &
-                                   'PFRELEC ', 'PFFCO3D ', &
+                                   'PFFCO3D ', &
                                    'PFFCO2D ', 'PEPSINF ', &
                                    'PFLUXF  ', 'NoInput ', &
                                    'NoInput ', 'PEFOND  ', &
@@ -121,7 +121,7 @@ module loadMecaCompute_type
                                     'CHAR_MECA_FR2D2D', 'CHAR_MECA_FR1D2D', &
                                     'CHAR_MECA_FR1D1D', 'CHAR_MECA_PESA_R', &
                                     'CHAR_MECA_ROTA_R', 'CHAR_MECA_PRES_R', &
-                                    'CHAR_MECA_FRELEC', 'CHAR_MECA_FRCO3D', &
+                                    'CHAR_MECA_FRCO3D', &
                                     'CHAR_MECA_FRCO2D', 'CHAR_MECA_EPSI_R', &
                                     'CHAR_MECA_FLUX_R', 'Copy_Load       ', &
                                     'FORC_NODA       ', 'CHAR_MECA_EFON_R', &
@@ -135,7 +135,7 @@ module loadMecaCompute_type
                                     'NoVector        ', 'NoVector        ', &
                                     'CHAR_MECA_SR1D1D', 'CHAR_MECA_PESA_R', &
                                     'CHAR_MECA_ROTA_R', 'CHAR_MECA_PRSU_R', &
-                                    'NoVector        ', 'CHAR_MECA_SRCO3D', &
+                                    'CHAR_MECA_SRCO3D', &
                                     'NoVector        ', 'NoVector        ', &
                                     'NoVector        ', 'NoVector        ', &
                                     'NoVector        ', 'CHAR_MECA_EFSU_R', &
@@ -149,7 +149,7 @@ module loadMecaCompute_type
                                     'CHAR_MECA_FF2D2D', 'CHAR_MECA_FF1D2D', &
                                     'CHAR_MECA_FF1D1D', 'CHAR_MECA_PESA_R', &
                                     'CHAR_MECA_ROTA_R', 'CHAR_MECA_PRES_F', &
-                                    'CHAR_MECA_FRELEC', 'CHAR_MECA_FFCO3D', &
+                                    'CHAR_MECA_FFCO3D', &
                                     'CHAR_MECA_FFCO2D', 'CHAR_MECA_EPSI_F', &
                                     'CHAR_MECA_FLUX_F', 'Copy_Load       ', &
                                     'FORC_NODA       ', 'CHAR_MECA_EFON_F', &
@@ -163,7 +163,7 @@ module loadMecaCompute_type
                                     'NoVector        ', 'NoVector        ', &
                                     'CHAR_MECA_SF1D1D', 'NoVector        ', &
                                     'NoVector        ', 'CHAR_MECA_PRSU_F', &
-                                    'NoVector        ', 'CHAR_MECA_SFCO3D', &
+                                    'CHAR_MECA_SFCO3D', &
                                     'NoVector        ', 'NoVector        ', &
                                     'NoVector        ', 'NoVector        ', &
                                     'NoVector        ', 'CHAR_MECA_EFSU_F', &
@@ -177,7 +177,7 @@ module loadMecaCompute_type
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     'RIGI_MECA_RO    ', 'RIGI_MECA_PRSU_R', &
-                                    "NoMatrix        ", 'RIGI_MECA_SRCO3D', &
+                                    'RIGI_MECA_SRCO3D', &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", 'RIGI_MECA_EFSU_R', &
@@ -191,7 +191,7 @@ module loadMecaCompute_type
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", 'RIGI_MECA_PRSU_F', &
-                                    "NoMatrix        ", 'RIGI_MECA_SFCO3D', &
+                                    'RIGI_MECA_SFCO3D', &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", "NoMatrix        ", &
                                     "NoMatrix        ", 'RIGI_MECA_EFSU_F', &
@@ -205,7 +205,7 @@ module loadMecaCompute_type
                                    "NoMatrix", "NoMatrix", &
                                    "NoMatrix", "NoMatrix", &
                                    'PMATUUR ', 'PMATUNS ', &
-                                   "NoMatrix", 'PMATUNS ', &
+                                   'PMATUNS ', &
                                    "NoMatrix", "NoMatrix", &
                                    "NoMatrix", "NoMatrix", &
                                    "NoMatrix", 'PMATUNS ', &

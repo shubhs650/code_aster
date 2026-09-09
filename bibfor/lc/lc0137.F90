@@ -17,46 +17,42 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine lc0137(BEHinteg, &
-                  fami, kpg, ksp, ndim, imate, &
-                  compor, mult_comp, carcri, instam, instap, &
-                  neps, epsm, deps, sigm, vim, option, &
-                  angmas, sigp, vip, &
-                  typmod, icomp, &
-                  nvi, dsidep, codret)
+subroutine lc0137(BEHInteg, &
+                  fami, kpg, ksp, ndim, jvMaterCode, &
+                  compor, multComp, carcri, instam, instap, &
+                  neps, epsm, deps, sigm, nvi, vim, option, &
+                  sigp, vip, &
+                  typmod, &
+                  dsidep, codret)
 !
     use Behaviour_type
-!
     implicit none
 !
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmvprk.h"
 #include "asterfort/plasti.h"
 #include "asterfort/utlcal.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
-    integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    character(len=16), intent(in) :: mult_comp
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
+    integer(kind=8), intent(in) :: jvMaterCode, nvi
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    character(len=16), intent(in) :: multComp
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8), intent(in) :: instam, instap
     integer(kind=8), intent(in) :: neps
     real(kind=8), intent(in) :: epsm(neps)
     real(kind=8), intent(in) :: deps(neps)
     real(kind=8), intent(in) :: sigm(6)
-    real(kind=8), intent(in) :: vim(*)
+    real(kind=8), intent(in) :: vim(nvi)
     character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(3)
     real(kind=8), intent(out) :: sigp(6)
-    real(kind=8), intent(out) :: vip(*)
-    character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
-    integer(kind=8), intent(in) :: nvi
+    real(kind=8), intent(out) :: vip(nvi)
+    character(len=8), intent(in) :: typmod(2)
     real(kind=8), intent(out) :: dsidep(6, 6)
     integer(kind=8), intent(out) :: codret
 !
@@ -68,39 +64,53 @@ subroutine lc0137(BEHinteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  BEHinteg       : parameters for integration of behaviour
+! In  BEHInteg       : parameters for integration of behaviour
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=16) :: algo_inte
+    character(len=16) :: algoInte, relaComp
     character(len=11) :: meting
     common/meti/meting
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    if (compor(1) .eq. 'POLYCRISTAL') then
-        call nmvprk(fami, kpg, ksp, ndim, typmod, &
-                    imate, compor, carcri, instam, instap, &
+    relaComp = COMPOR(RELA_NAME)
+    if (relaComp .eq. 'POLYCRISTAL') then
+        call nmvprk(BEHInteg, &
+                    option, typmod, ndim, &
+                    compor, carcri, &
+                    instam, instap, &
                     neps, epsm, deps, sigm, nvi, vim, &
-                    option, angmas, sigp, vip, dsidep, &
-                    codret, mult_comp)
-    elseif (compor(1) .eq. 'MONOCRISTAL') then
-        call utlcal('VALE_NOM', algo_inte, carcri(6))
-        if (algo_inte(1:6) .eq. 'NEWTON') then
-            meting = algo_inte(1:11)
-            call plasti(BEHinteg, &
-                        fami, kpg, ksp, typmod, imate, &
+                    sigp, vip, dsidep, &
+                    codret, multComp)
+
+    elseif (relaComp .eq. 'MONOCRISTAL') then
+        call utlcal('VALE_NOM', algoInte, carcri(6))
+        if (algoInte(1:6) .eq. 'NEWTON') then
+            meting = algoInte(1:11)
+            call plasti(BEHInteg, &
+                        option, typmod, &
+                        fami, kpg, ksp, jvMaterCode, &
                         compor, carcri, instam, instap, &
-                        epsm, deps, sigm, &
-                        vim, option, angmas, sigp, vip, &
-                        dsidep, icomp, nvi, codret, mult_comp)
-        else if (algo_inte .eq. 'RUNGE_KUTTA') then
+                        epsm, deps, &
+                        sigm, &
+                        nvi, vim, &
+                        sigp, vip, &
+                        dsidep, codret, &
+                        multComp)
+
+        else if (algoInte .eq. 'RUNGE_KUTTA') then
             meting = 'RUNGE_KUTTA'
-            call nmvprk(fami, kpg, ksp, ndim, typmod, &
-                        imate, compor, carcri, instam, instap, &
+            call nmvprk(BEHInteg, &
+                        option, typmod, ndim, &
+                        compor, carcri, &
+                        instam, instap, &
                         neps, epsm, deps, sigm, nvi, vim, &
-                        option, angmas, sigp, vip, dsidep, &
-                        codret, mult_comp)
+                        sigp, vip, dsidep, &
+                        codret, multComp)
+        else
+            write (6, *) 'ALGOInte:', algoInte
+            ASSERT(ASTER_FALSE)
         end if
     else
         ASSERT(ASTER_FALSE)

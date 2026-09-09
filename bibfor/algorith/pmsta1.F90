@@ -19,7 +19,7 @@
 subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
                   nbVari, nbVariTabl, &
                   vim, vip, &
-                  tablNbParaMaxi, tablNbPara, tablType, &
+                  tablNbPara, tablType, &
                   tablParaName, tablParaType, tablVale, &
                   lLoadGrad, variName, sddisc, &
                   liccvg, lIterNewtMaxi, conver, newtLoopAction)
@@ -40,15 +40,14 @@ subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
 #include "asterfort/wkvect.h"
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
-#include "blas/dscal.h"
 !
     real(kind=8), intent(in) :: sigmPrev(6), sigmCurr(6), epsiIncr(9)
     integer(kind=8), intent(in)  :: nbVari, nbVariTabl
     real(kind=8), intent(in) :: vim(nbVari), vip(nbVari)
-    integer(kind=8), intent(in) :: tablNbParaMaxi
     integer(kind=8), intent(in) :: tablNbPara, tablType
-    character(len=16), intent(in) :: tablParaName(tablNbParaMaxi), tablParaType(tablNbParaMaxi)
-    real(kind=8), intent(inout) :: tablVale(tablNbParaMaxi)
+    character(len=16), dimension(:), intent(in) :: tablParaName
+    character(len=8), dimension(:), intent(in) :: tablParaType
+    real(kind=8), dimension(:), intent(inout) :: tablVale
     aster_logical, intent(in) :: lLoadGrad
     character(len=8), intent(in) :: variName(nbVari)
     character(len=19), intent(in) :: sddisc
@@ -93,30 +92,16 @@ subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
     end if
 
 ! - Transform increment of strains for event
-    b_n = to_blas_int(nbCmpEpsi)
-    b_incx = to_blas_int(1)
-    b_incy = to_blas_int(1)
-    call dcopy(b_n, epsiIncr, b_incx, epsiIncrTabl, b_incy)
+    epsiIncrTabl(1:nbCmpEpsi) = epsiIncr(1:nbCmpEpsi)
     if (.not. lLoadGrad) then
-        b_n = to_blas_int(3)
-        b_incx = to_blas_int(1)
-        call dscal(b_n, 1.d0/rac2, epsiIncrTabl(4), b_incx)
+        epsiIncrTabl(4:6) = (1.d0/rac2)*epsiIncrTabl(4:6)
     end if
 
 ! - Compute increment of stress
-    b_n = to_blas_int(6)
-    b_incx = to_blas_int(1)
-    b_incy = to_blas_int(1)
-    call dcopy(b_n, sigmCurr, b_incx, sigmIncr, b_incy)
-    b_n = to_blas_int(6)
-    b_incx = to_blas_int(1)
-    b_incy = to_blas_int(1)
-    call daxpy(b_n, -1.d0, sigmPrev, b_incx, sigmIncr, b_incy)
+    sigmIncr = sigmCurr-sigmPrev
 
 ! - Compute invariants of increment of stress
-    b_n = to_blas_int(3)
-    b_incx = to_blas_int(1)
-    call dscal(b_n, 1.d0/rac2, sigmIncr, b_incx)
+    sigmIncr(1:3) = (1.d0/rac2)*sigmIncr(1:3)
     call fgequi(sigmIncr, 'SIGM_DIR', 3, sigmEqui)
 
 ! - Create table for incremental values
@@ -125,31 +110,18 @@ subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
     call tbajpa(tablIncr, tablNbPara, tablParaName, tablParaType)
 !
     if (tablType .eq. 0) then
-! ----- Compute increment of isnternal state variables and save them in table
-        b_n = to_blas_int(nbVariTabl)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, vip, b_incx, tablVale(1+nbCmpEpsi+6+3), b_incy)
-        b_n = to_blas_int(nbVariTabl)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call daxpy(b_n, -1.d0, vim, b_incx, tablVale(1+nbCmpEpsi+6+3), b_incy)
-
 ! ----- Save increment of strains in table
-        b_n = to_blas_int(nbCmpEpsi)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, epsiIncrTabl, b_incx, tablVale(2), b_incy)
+        tablVale(2:2+nbCmpEpsi-1) = epsiIncrTabl(1:nbCmpEpsi)
 
 ! ----- Save increment of stresses in table
-        b_n = to_blas_int(6)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, sigmIncr, b_incx, tablVale(nbCmpEpsi+2), b_incy)
+        tablVale(2+nbCmpEpsi:2+nbCmpEpsi+6-1) = sigmIncr(1:6)
 
 ! ----- Save invariants of increment of stress in table
         tablVale(nbCmpEpsi+8) = sigmEqui(16)
         tablVale(nbCmpEpsi+9) = sigmEqui(1)
+
+! ----- Compute increment of internal state variables and save them in table
+        tablVale(2+nbCmpEpsi+8:2+nbCmpEpsi+8+nbVariTabl-1) = vip(1:nbVariTabl)-vim(1:nbVariTabl)
 
 ! ----- Add line in table
         call tbajli(tablIncr, tablNbPara, tablParaName, [0], tablVale, &
@@ -158,7 +130,7 @@ subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
     else
         call wkvect(variIncrJv, 'V V R8', nbVariTabl, jvVariIncr)
 
-! ----- Compute increment of external state variables
+! ----- Compute increment of internal state variables
         b_n = to_blas_int(nbVariTabl)
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)

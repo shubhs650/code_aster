@@ -15,12 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dpvpma(mod, imat, nbmat, tempd, materd,&
-                      materf, matcst, ndt, ndi, nvi,&
+    subroutine dpvpma(mod, imat, nbmat, tempd, materd, &
+                      materf, ndt, ndi, nvi, &
                       indal)
         integer(kind=8) :: nbmat
         character(len=8) :: mod
@@ -28,7 +26,6 @@ interface
         real(kind=8) :: tempd
         real(kind=8) :: materd(nbmat, 2)
         real(kind=8) :: materf(nbmat, 2)
-        character(len=3) :: matcst
         integer(kind=8) :: ndt
         integer(kind=8) :: ndi
         integer(kind=8) :: nvi

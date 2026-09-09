@@ -155,6 +155,7 @@ COMB_SISM_MODAL = MACRO(
                 "NRC_GROUPING",
                 "NRC_DSA",
                 "NRC_TEN_PERCENT",
+                "CQC_SIGNE",
             ),
             defaut="CQC",
         ),
@@ -166,6 +167,13 @@ COMB_SISM_MODAL = MACRO(
         b_dsc=BLOC(condition="""equal_to("TYPE", 'DSC') """, DUREE=SIMP(statut="o", typ="R")),
         b_nrc_dsa=BLOC(
             condition="""equal_to("TYPE", 'NRC_DSA') """, DUREE=SIMP(statut="o", typ="R")
+        ),
+        b_cqc_signe=BLOC(
+            condition="""equal_to("TYPE", 'CQC_SIGNE') """,
+            regles=(AU_MOINS_UN("NUME_MODE_X", "NUME_MODE_Y", "NUME_MODE_Z")),
+            NUME_MODE_X=SIMP(statut="f", typ="I"),
+            NUME_MODE_Y=SIMP(statut="f", typ="I"),
+            NUME_MODE_Z=SIMP(statut="f", typ="I"),
         ),
     ),
     # --- regle combinaison des directions

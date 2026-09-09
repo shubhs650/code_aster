@@ -48,13 +48,13 @@ subroutine turigi(nbNode, nbFourier, nbDof)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     integer(kind=8) :: jvMatr
     real(kind=8) :: rigi(nbDof, nbDof)
     real(kind=8) :: radiusLayer
     real(kind=8) :: poids, weightLayer(2*PIPE_MAX_LAYERS+1), weightSect(2*PIPE_MAX_SECTORS+1)
-    integer(kind=8) :: jvMaterCode
+    integer(kind=8) :: jvMaterc
     real(kind=8) :: meanTemp
     real(kind=8) :: elasMatr(PIPE_TENS_SIZE, PIPE_TENS_SIZE)
     real(kind=8) :: jacobi, xpg(PIPE_MAX_NPG)
@@ -102,8 +102,8 @@ subroutine turigi(nbNode, nbFourier, nbDof)
     end if
 
 ! - Get elastic properties
-    call jevech('PMATERC', 'L', jvMaterCode)
-    call pipeGetElasProp(jvMaterCode, temp_=meanTemp, &
+    call jevech('PMATERC', 'L', jvMaterc)
+    call pipeGetElasProp(zi(jvMaterc), temp_=meanTemp, &
                          c_=elasMatr)
 
 ! - Loop on Gauss points (on segment)

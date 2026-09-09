@@ -73,7 +73,7 @@ subroutine rcvarc(arret, varc_name_, poum, &
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=8) :: varc_name, fami
-    integer(kind=8) :: nb2vrc, k
+    integer(kind=8) :: nb2vrc, k, i
     integer(kind=8) :: varc_indx, ibid, nbsp, kpgvrc
     integer(kind=8) :: iadzi, iazk24, kpgmat
     integer(kind=8) :: itabm(7), itabp(7), itabr(7)
@@ -150,7 +150,11 @@ subroutine rcvarc(arret, varc_name_, poum, &
 ! - Get index of gauss point in MATER integration rule
 !
     k = indik8(zk8(ca_jfpgl_), fami, 1, ca_nfpg_)
+
     if (k .eq. 0) then
+        do i = 1, ca_nfpg_
+            WRITE (6, *) "RCVRAC <", fami(1:8), ">:", i, zk8(ca_jfpgl_-1+i)
+        end do
         valk(1) = varc_name
         valk(2) = fami
         valk(3) = ca_option_

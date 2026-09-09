@@ -15,9 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
+! aslint: disable=W0413
+!
+subroutine dxmat1(plateOrie, &
+                  famiZ, epais, df, dm, dmf, pgl, indith, npg)
+!
+    use plate_type
     implicit none
+!
 #include "jeveux.h"
 #include "asterc/r8dgrd.h"
 #include "asterc/r8prem.h"
@@ -27,21 +32,28 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=*), intent(in) :: famiZ
     integer(kind=8) :: indith, npg
-    real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dmc(3, 2), dfc(3, 2)
+    real(kind=8) :: epais, df(3, 3), dm(3, 3), dmf(3, 3), dmc(3, 2), dfc(3, 2)
     real(kind=8) :: pgl(3, 3)
-    character(len=4) :: fami
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCUL DES MATRICES DE COEFFCIENTS THERMOELASTIQUES DE FLEXION,
 !  MEMBRANE, COUPLAGE MEMBRANE-FLEXION POUR LE DKTG (MATERIAU ISOTROPE)
 !     LA VARIABLE INDITH EST INITIALISEE A 0
 !     DANS LE CAS OU LE COEFFICIENT DE DILATATION ALPHA N'A
 !     PAS ETE DONNE, INDITH VAUT -1 ET ON  NE CALCULE PAS LES
 !     CONTRAINTES THERMIQUES
-!     ------------------------------------------------------------------
-    integer(kind=8) :: jcoqu, jmate, iret
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: jvMaterc, iret
     integer(kind=8) :: nbpar
     real(kind=8) :: cdf, cdm, valres(21)
-    real(kind=8) :: young, nu, epais, valpar
+    real(kind=8) :: young, nu, valpar
     real(kind=8) :: dh(3, 3)
     real(kind=8) :: dx, dy, dz, norm
     real(kind=8) :: ps, pjdx, pjdy, pjdz, alphat
@@ -49,10 +61,12 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
     real(kind=8) :: em, ef, num, nuf
     integer(kind=8) :: icodre(21)
     character(len=16) :: nomres(21)
-    character(len=8) :: nompar
-    character(len=32) :: phenom
-!     ------------------------------------------------------------------
+    character(len=8) :: nompar, fami
+    character(len=32) :: elasKeyword
 !
+! --------------------------------------------------------------------------------------------------
+!
+    fami = famiZ
     call r8inir(9, 0.d0, dm, 1)
     call r8inir(9, 0.d0, df, 1)
     call r8inir(9, 0.d0, dh, 1)
@@ -60,10 +74,8 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
     call r8inir(6, 0.d0, dmc, 1)
     call r8inir(6, 0.d0, dfc, 1)
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    epais = zr(jcoqu)
-    alpha = zr(jcoqu+1)*r8dgrd()
-    beta = zr(jcoqu+2)*r8dgrd()
+    alpha = plateOrie%alpha
+    beta = plateOrie%beta
 !
     dx = cos(beta)*cos(alpha)
     dy = cos(beta)*sin(alpha)
@@ -77,19 +89,20 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
     pjdy = dy-ps*pgl(3, 2)
     pjdz = dz-ps*pgl(3, 3)
     norm = sqrt(pjdx*pjdx+pjdy*pjdy+pjdz*pjdz)
-!     ------------------------------------------------
-    indith = 0
-    call jevech('PMATERC', 'L', jmate)
-    call rccoma(zi(jmate), 'ELAS', 1, phenom, icodre(1))
 !
-    if (phenom .eq. 'ELAS') then
+    indith = 0
+    call jevech('PMATERC', 'L', jvMaterc)
+    call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
+!
+    if (elasKeyword .eq. 'ELAS') then
         if (norm .le. r8prem()) then
             call utmess('F', 'PLATE1_40')
         end if
         nomres(1) = 'E'
         nomres(2) = 'NU'
         nomres(3) = 'ALPHA'
-    else if (phenom .eq. 'ELAS_GLRC') then
+
+    else if (elasKeyword .eq. 'ELAS_GLRC') then
         if (norm .le. r8prem()) then
             call utmess('F', 'PLATE1_40')
         end if
@@ -98,11 +111,11 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
         nomres(3) = 'E_F'
         nomres(4) = 'NU_F'
         nomres(5) = 'ALPHA'
-    else if (phenom .eq. 'ELAS_DHRC') then
+    else if (elasKeyword .eq. 'ELAS_DHRC') then
         indith = -1
         goto 90
     else
-        call utmess('F', 'ELEMENTS_44', sk=phenom)
+        call utmess('F', 'ELEMENTS_44', sk=elasKeyword)
     end if
 !
 !===============================================================
@@ -113,12 +126,12 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
     nompar = 'TEMP'
 !===============================================================
 !
-    if (phenom .eq. 'ELAS') then
+    if (elasKeyword .eq. 'ELAS') then
 !        ------ MATERIAU ISOTROPE ------------------------------------
 !
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
+        call rcvalb(fami, 1, 1, '+', zi(jvMaterc), ' ', elasKeyword, nbpar, nompar, [valpar], &
                     2, nomres, valres, icodre, 1)
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
+        call rcvalb(fami, 1, 1, '+', zi(jvMaterc), ' ', elasKeyword, nbpar, nompar, [valpar], &
                     1, nomres(3), valres(3), icodre(3), 0)
         if ((icodre(3) .ne. 0) .or. (valres(3) .eq. 0.d0)) then
             indith = -1
@@ -142,16 +155,16 @@ subroutine dxmat1(fami, epais, df, dm, dmf, pgl, indith, npg)
         dm(2, 1) = dm(1, 2)
         dm(2, 2) = dm(1, 1)
 !
-    else if (phenom .eq. 'ELAS_GLRC') then
+    else if (elasKeyword .eq. 'ELAS_GLRC') then
 !        ------ MATERIAU GLRC ------------------------------------
 !
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
+        call rcvalb(fami, 1, 1, '+', zi(jvMaterc), ' ', elasKeyword, nbpar, nompar, [valpar], &
                     2, nomres, valres, icodre, 1)
 !
         em = valres(1)
         num = valres(2)
 !
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
+        call rcvalb(fami, 1, 1, '+', zi(jvMaterc), ' ', elasKeyword, nbpar, nompar, [valpar], &
                     3, nomres(3), valres(3), icodre(3), 0)
         if ((icodre(5) .ne. 0) .or. (valres(5) .eq. 0.d0)) then
             indith = -1

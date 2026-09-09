@@ -49,7 +49,7 @@ loi = LoiComportement(
         "PRESF",
     ),
     mc_mater=("JOINT_MECA_FROT",),
-    modelisation=("3D", "PLAN", "AXIS", "ELEMJOINT", "EJ_HYME"),
+    modelisation=("3D", "PLAN", "AXIS", "ELEMJOIN", "EJ_HYME"),
     deformation=("PETIT",),
     algo_inte=("ANALYTIQUE",),
     type_matr_tang=("PERTURBATION", "VERIFICATION"),

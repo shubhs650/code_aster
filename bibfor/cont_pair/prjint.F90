@@ -32,6 +32,7 @@ subroutine prjint(proj_tole, elem_dime, &
 #include "asterfort/reereg.h"
 #include "asterfort/apinte_norm.h"
 #include "asterfort/apelem_getvertex.h"
+#include "MeshTypes_type.h"
 #include "asterfort/apelem_inside.h"
 #include "asterfort/apinte_weight.h"
 #include "asterfort/apinte_chck.h"
@@ -40,12 +41,12 @@ subroutine prjint(proj_tole, elem_dime, &
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_mast_nbnode
-    real(kind=8), intent(in) :: elem_mast_coor(3, 9)
+    real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_mast_code
     integer(kind=8), intent(in) :: elem_slav_nbnode
-    real(kind=8), intent(in) :: elem_slav_coor(3, 9)
+    real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
     character(len=8), intent(in) :: elem_slav_code
-    real(kind=8), intent(out) :: poin_inte(elem_dime-1, 16)
+    real(kind=8), intent(out) :: poin_inte(2, 16)
     real(kind=8), intent(out) :: inte_weight
     integer(kind=8), intent(out) :: nb_poin_inte
     integer(kind=8), optional, intent(inout) :: inte_neigh_(4)
@@ -75,8 +76,8 @@ subroutine prjint(proj_tole, elem_dime, &
 ! --------------------------------------------------------------------------------------------------
 !
     aster_logical :: debug, l_inter
-    real(kind=8) :: node_line_coop(elem_dime-1, 4)
-    real(kind=8) :: proj_coop(elem_dime-1, 4), coor(3, 4)
+    real(kind=8) :: node_line_coop(2, 4)
+    real(kind=8) :: proj_coop(2, 4), coor(3, 4)
     real(kind=8) :: xpt, ypt, xe(3), pt(3)
     real(kind=8) :: xp1, yp1, xp2, yp2
     integer(kind=8) :: test, list_next(16), nb_node_line
@@ -91,9 +92,9 @@ subroutine prjint(proj_tole, elem_dime, &
     nb_poin_inte = 0
     inte_weight = 0.d0
     iret = 0
-    poin_inte(:, :) = 0.d0
+    poin_inte = 0.d0
     debug = ASTER_FALSE
-    node_line_coop(elem_dime-1, 4) = 0.d0
+    node_line_coop(2, 4) = 0.d0
     inte_neigh(1:4) = 0
     if (present(inte_neigh_)) then
         inte_neigh(:) = inte_neigh_(:)
@@ -177,7 +178,7 @@ subroutine prjint(proj_tole, elem_dime, &
             end if
         else if (test .eq. -1) then
             nb_poin_inte = 0
-            poin_inte(1:elem_dime-1, 1:16) = 0.d0
+            poin_inte = 0.d0
             inte_neigh(1:4) = 0
             goto 99
         end if
@@ -228,7 +229,7 @@ subroutine prjint(proj_tole, elem_dime, &
             if (test .eq. 1) then
                 iret = 1
                 nb_poin_inte = 0
-                poin_inte(1:elem_dime-1, 1:16) = 0.d0
+                poin_inte = 0.d0
                 inte_neigh(1:4) = 0
                 goto 99
             end if
@@ -250,7 +251,7 @@ subroutine prjint(proj_tole, elem_dime, &
     if (nb_poin_inte .gt. 8) then
         iret = 1
         nb_poin_inte = 0
-        poin_inte(1:elem_dime-1, 1:16) = 0.d0
+        poin_inte = 0.d0
         inte_neigh(1:4) = 0
         goto 99
     end if

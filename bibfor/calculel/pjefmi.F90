@@ -24,6 +24,7 @@ subroutine pjefmi(elrefp, nnop, coor, xg, ndim, &
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/elrfvf.h"
+#include "MeshTypes_type.h"
     character(len=8) :: elrefp
     integer(kind=8) :: nnop, ndim
     real(kind=8) :: coor(ndim*nnop)
@@ -55,7 +56,7 @@ subroutine pjefmi(elrefp, nnop, coor, xg, ndim, &
 !
 ! ----------------------------------------------------------------------
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX)
     real(kind=8) :: xr1(3), xr2(3), d1, d2
     real(kind=8) :: ff(nbnomx)
     integer(kind=8) :: k, idim, ino, nno

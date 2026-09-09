@@ -78,7 +78,7 @@ recursive subroutine comp_meca_l(rela_comp, whatz, l_detec, post_iter)
         call lcdiscard(rela_comp_py)
         l_detec = ldctyp == 'mfront'
     else if (what .eq. 'MFRONT_PROTO') then
-        l_detec = (rela_comp .eq. 'MFRONT')
+        l_detec = (rela_comp .eq. 'MFRONT' .or. rela_comp .eq. 'CZM_MFRONT')
     else if (what .eq. 'MFRONT') then
         call comp_meca_l(rela_comp, 'MFRONT_PROTO', l_detec)
         if (.not. l_detec) then

@@ -18,22 +18,25 @@
 !
 subroutine te0588(option, nomte)
 !
-    use Behaviour_module, only: behaviourOption
+    use Behaviour_module
+    use Behaviour_type
+    use MaterialPara_module
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
+#include "asterc/ismaem.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/elref1.h"
 #include "asterfort/iselli.h"
-#include "asterc/ismaem.h"
 #include "asterfort/jevech.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
+#include "asterfort/thmGetElemModel.h"
 #include "asterfort/xasshm.h"
 #include "asterfort/xcaehm.h"
 #include "asterfort/xfnohm.h"
@@ -41,8 +44,6 @@ subroutine te0588(option, nomte)
 #include "asterfort/xhmini.h"
 #include "asterfort/xpeshm.h"
 #include "jeveux.h"
-#include "asterfort/thmGetElemModel.h"
-#include "asterfort/Behaviour_type.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -62,11 +63,11 @@ subroutine te0588(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nno, imatuu, ndim, imate, iinstm, jcret
+    integer(kind=8) :: nno, imatuu, ndim, jvMaterc, jvInstmr, jcret
     integer(kind=8) :: dimmat, npi, npg, li, ibid, yaenrm
     integer(kind=8) :: codret, icodre(1)
-    integer(kind=8) :: ipoids, ivf, idfde, igeom
-    integer(kind=8) :: iinstp, ideplm, ideplp, icarcr, ipesa
+    integer(kind=8) :: ipoids, ivf, idfde, jvGeom
+    integer(kind=8) :: jvInstpr, ideplm, ideplp, jvCarcri, ipesa
     integer(kind=8) :: icontm, ivarip, ivarim, ivectu, icontp
     integer(kind=8) :: mecani(5), press1(7), press2(7), tempe(5), dimuel
     integer(kind=8) :: dimdef, dimcon, nbvari, nddls, nddlm
@@ -80,9 +81,9 @@ subroutine te0588(option, nomte)
     real(kind=8), dimension(:, :), pointer :: work1 => null(), work2 => null(), b => null()
     character(len=3) :: modint
     character(len=8) :: typmod(2)
-    character(len=16) :: phenom, elref
+    character(len=16) :: thmDiffusionKeyword, elref
     real(kind=8) :: rho(1), rbid(1)
-    aster_logical :: axi, fnoevo
+    aster_logical :: axi
     type(THM_DS) :: ds_thm
 ! =====================================================================
 !  CETTE ROUTINE FAIT UN CALCUL EN HM AVEC XFEM
@@ -134,10 +135,7 @@ subroutine te0588(option, nomte)
 ! DIMDEF    DIMENSION DES DEFORMATIONS GENERALISEES ELEMENTAIRES
 ! IVF       FONCTIONS DE FORMES QUADRATIQUES
 ! =====================================================================
-    real(kind=8) :: dt
-! =====================================================================
-! DECLARATION POUR XFEM
-!
+    character(len=8), parameter :: famiMater = 'RIGI'
     integer(kind=8) :: nfh, nfiss, jfisno, ddlc, contac
     integer(kind=8) :: ddld, ddlm, ddlp, nnop, nnops, nnopm
     integer(kind=8) :: enrmec(3), nenr, dimenr, enrhyd(3)
@@ -145,10 +143,10 @@ subroutine te0588(option, nomte)
     integer(kind=8) :: jlonch, jlst, jstno
     character(len=8) :: enr
     aster_logical :: lVect, lMatr, lVari, lSigm
-    character(len=16) :: compor_copy(COMPOR_SIZE)
+    character(len=16) :: comporCopy(COMPOR_SIZE)
     character(len=16), pointer :: compor(:) => null()
-    integer(kind=8) :: iCompor
     integer(kind=8) :: itabin(2), iSigm, iret
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -161,11 +159,8 @@ subroutine te0588(option, nomte)
     allocate (work2(25, 52*20))
     allocate (b(25, 52*20))
 
-!
 ! - Get model of finite element
-!
     call thmGetElemModel(ds_thm)
-! INITIALISATION POUR XFEM
 !
     call xhmini(nomte, nfh, ddld, ddlm, ddlp, nfiss, ddlc, contac)
     call xcaehm(ds_thm, nomte, axi, typmod, modint, &
@@ -175,71 +170,71 @@ subroutine te0588(option, nomte)
                 nddls, nddlm, dimuel, ipoids, ivf, &
                 idfde, ddld, ddlm, ddlp, enrmec, nenr, &
                 dimenr, nnop, nnops, nnopm, enrhyd, ddlc, nfh)
-! =====================================================================
-! --- PARAMETRES PROPRES A XFEM ---------------------------------------
-! =====================================================================
+
+! - Get finite element
+    call elref1(elref)
+    call teattr('S', 'XFEM', enr, ibid)
+    ASSERT(enr(1:2) .eq. 'XH')
+
+! - Input fields for XFEM
     call jevech('PPINTTO', 'L', jpintt)
     call jevech('PCNSETO', 'L', jcnset)
     call jevech('PHEAVTO', 'L', jheavt)
     call jevech('PLONCHA', 'L', jlonch)
     call jevech('PLST', 'L', jlst)
     call jevech('PSTANO', 'L', jstno)
-    call elref1(elref)
-    call teattr('S', 'XFEM', enr, ibid)
-    ASSERT(enr(1:2) .eq. 'XH')
     call jevech('PHEA_NO', 'L', jheavn)
-!
-! PARAMÈTRES PROPRES AUX ÉLÉMENTS 1D ET 2D QUADRATIQUES
-!
     if ((ibid .eq. 0) .and. (enr(1:2) .eq. 'XH') .and. .not. iselli(elref)) then
         call jevech('PPMILTO', 'L', jpmilt)
     end if
-! PARAMETRE PROPRE AU MULTI-HEAVISIDE
     if (nfiss .gt. 1) then
         call jevech('PFISNO', 'L', jfisno)
     end if
-! =====================================================================
-! --- DEBUT DES DIFFERENTES OPTIONS -----------------------------------
-! =====================================================================
-! --- 2. OPTIONS : RIGI_MECA_TANG , FULL_MECA , RAPH_MECA -------------
-! =====================================================================
+
+! - Generic input fields
+    call jevech('PGEOMER', 'L', jvGeom)
+
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell(famiMater, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+
+! - Transfer type of elasticity
+    ds_thm%ds_material%elas%id = materPara%elasID
+    ds_thm%ds_material%elas%keyword = materPara%elasKeyword
+
     if ((option(1:9) .eq. 'RIGI_MECA') .or. (option(1:9) .eq. 'RAPH_MECA') .or. &
         (option(1:9) .eq. 'FULL_MECA')) then
-! =====================================================================
-! --- PARAMETRES EN ENTREE --------------------------------------------
-! =====================================================================
-        call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
-        call jevech('PINSTMR', 'L', iinstm)
-        call jevech('PINSTPR', 'L', iinstp)
+        call jevech('PINSTMR', 'L', jvInstmr)
+        call jevech('PINSTPR', 'L', jvInstpr)
         call jevech('PDEPLMR', 'L', ideplm)
         call jevech('PDEPLPR', 'L', ideplp)
-        call jevech('PCOMPOR', 'L', vk16=compor)
-        call jevech('PCARCRI', 'L', icarcr)
         call jevech('PVARIMR', 'L', ivarim)
         call jevech('PCONTMR', 'L', icontm)
 
-! ---- Make copy of COMPOR map
-        do iCompor = 1, COMPOR_SIZE
-            compor_copy(iCompor) = compor(iCompor)
-        end do
+! ----- Get fields for non-linear behaviour
+        call jevech('PCARCRI', 'L', jvCarcri)
+        call jevech('PCOMPOR', 'L', vk16=compor)
 
 ! ----- Force DEFO_LDC="MECANIQUE" for THM
+        comporCopy = compor
         if (option(1:9) .eq. 'RIGI_MECA') then
-            compor_copy(DEFO_LDC) = "MECANIQUE"
+            comporCopy(DEFO_LDC) = "MECANIQUE"
         end if
+        read (comporCopy(NVAR), '(I16)') nbvari
 
-        read (compor_copy(NVAR), '(I16)') nbvari
-! =====================================================================
-! ----RECUPERATION DES ANGLES NAUTIQUES/EULER DEFINIS PAR AFFE_CARA_ELEM
-! --- ORIENTATION DU MASSIF
-! --- COORDONNEES DU BARYCENTRE ( POUR LE REPRE CYLINDRIQUE )
-! --- CONVERSION DES ANGLES NAUTIQUES EN ANGLES D'EULER
-! =====================================================================
-!
-        call getElemOrientation(ndim, nno, igeom, angnau)
+! ----- Set main parameters for behaviour (on cell)
+        call behaviourSetParaCell(typmod, option, &
+                                  compor, zr(jvCarcri), &
+                                  zr(jvInstmr), zr(jvInstpr), &
+                                  materPara, ds_thm%ds_behaviour%BEHInteg)
+
 ! ----- Select objects to construct from option name
-        call behaviourOption(option, compor_copy, &
+        call behaviourOption(option, comporCopy, &
                              lMatr, lVect, &
                              lVari, lSigm, &
                              codret)
@@ -268,18 +263,18 @@ subroutine te0588(option, nomte)
         if (option(1:9) .eq. 'RIGI_MECA') then
             call xasshm(ds_thm, &
                         nno, npg, npi, ipoids, ivf, &
-                        idfde, igeom, zr(igeom), zr(icarcr), zr(ideplm), &
+                        idfde, jvGeom, zr(jvGeom), zr(jvCarcri), zr(ideplm), &
                         zr(ideplm), zr(icontm), zr(icontp), zr(ivarim), zr(ivarim), &
                         defgem, defgep, drds, drdsr, dsde, &
                         b, dfdi, dfdi2, r, sigbar, &
                         c, ck, cs, zr(imatuu), zr(ivectu), &
-                        zr(iinstm), zr(iinstp), option, zi(imate), mecani, &
+                        zr(jvInstmr), zr(jvInstpr), option, mecani, &
                         press1, press2, tempe, dimdef, dimcon, &
                         dimuel, nbvari, nddls, nddlm, nmec, &
-                        np1, ndim, compor_copy, axi, modint, &
+                        np1, ndim, comporCopy, axi, modint, &
                         codret, nnop, nnops, nnopm, enrmec, &
                         dimenr, zi(jheavt), zi(jlonch), zi(jcnset), jpintt, &
-                        jpmilt, jheavn, angnau, dimmat, enrhyd, nfiss, nfh, jfisno, &
+                        jpmilt, jheavn, dimmat, enrhyd, nfiss, nfh, jfisno, &
                         work1, work2, lVect, lMatr, lVari, lSigm)
         else
             do li = 1, dimuel
@@ -287,92 +282,65 @@ subroutine te0588(option, nomte)
             end do
             call xasshm(ds_thm, &
                         nno, npg, npi, ipoids, ivf, &
-                        idfde, igeom, zr(igeom), zr(icarcr), zr(ideplm), &
+                        idfde, jvGeom, zr(jvGeom), zr(jvCarcri), zr(ideplm), &
                         zr(ideplp), zr(icontm), zr(icontp), zr(ivarim), zr(ivarip), &
                         defgem, defgep, drds, drdsr, dsde, &
                         b, dfdi, dfdi2, r, sigbar, &
                         c, ck, cs, zr(imatuu), zr(ivectu), &
-                        zr(iinstm), zr(iinstp), option, zi(imate), mecani, &
+                        zr(jvInstmr), zr(jvInstpr), option, mecani, &
                         press1, press2, tempe, dimdef, dimcon, &
                         dimuel, nbvari, nddls, nddlm, nmec, &
-                        np1, ndim, compor_copy, axi, modint, &
+                        np1, ndim, comporCopy, axi, modint, &
                         codret, nnop, nnops, nnopm, enrmec, &
                         dimenr, zi(jheavt), zi(jlonch), zi(jcnset), jpintt, &
-                        jpmilt, jheavn, angnau, dimmat, enrhyd, nfiss, nfh, jfisno, &
+                        jpmilt, jheavn, dimmat, enrhyd, nfiss, nfh, jfisno, &
                         work1, work2, lVect, lMatr, lVari, lSigm)
         end if
         if (lSigm) then
             zi(jcret) = codret
         end if
-! =====================================================================
-! --- SUPRESSION DES DDLS HEAVISIDE SUPERFLUS -------------------------
-! =====================================================================
+
         call xhmddl(ndim, nfh, nddls, dimuel, nnop, nnops, &
                     zi(jstno), .false._1, option, nomte, zr(imatuu), &
                     zr(ivectu), nddlm, nfiss, jfisno, .false._1, contac)
     end if
-! =====================================================================
-! --- 3. OPTION : CHAR_MECA_PESA_R ------------------------------------
-! =====================================================================
+
     if (option .eq. 'CHAR_MECA_PESA_R') then
-        call jevech('PGEOMER', 'L', igeom)
-        call jevech('PMATERC', 'L', imate)
         call jevech('PPESANR', 'L', ipesa)
         call jevech('PVECTUR', 'E', ivectu)
-        call rccoma(zi(imate), 'THM_DIFFU', 1, phenom, icodre(1))
-        call rcvalb('FPG1', 1, 1, '+', zi(imate), &
-                    ' ', phenom, 0, ' ', [0.d0], &
+
+        call rccoma(zi(jvMaterc), 'THM_DIFFU', 1, thmDiffusionKeyword, icodre(1))
+        call rcvalb('FPG1', 1, 1, '+', zi(jvMaterc), &
+                    ' ', thmDiffusionKeyword, 0, ' ', [0.d0], &
                     1, 'RHO', rho(1), icodre, 1)
-!
-!        INDICATEUR POUR SAVOIR SI ON A DE L'ENRICHISSEMENT
+
+!       INDICATEUR POUR SAVOIR SI ON A DE L'ENRICHISSEMENT
         yaenrm = enrmec(1)
 !
         call xpeshm(nno, nnop, nnops, ndim, nddls, &
-                    nddlm, npg, igeom, jpintt, jpmilt, jheavn, &
+                    nddlm, npg, jvGeom, jpintt, jpmilt, jheavn, &
                     ivf, ipoids, idfde, ivectu, ipesa, &
                     zi(jheavt), zi(jlonch), zi(jcnset), rho(1), axi, &
                     yaenrm, nfiss, nfh, jfisno)
-!
-! =====================================================================
-! --- SUPRESSION DES DDLS HEAVISIDE SUPERFLUS -------------------------
-! =====================================================================
         call xhmddl(ndim, nfh, nddls, dimuel, nnop, nnops, &
                     zi(jstno), .false._1, option, nomte, rbid, &
                     zr(ivectu), nddlm, nfiss, jfisno, .false._1, contac)
+
     end if
-! ======================================================================
-! --- 4. OPTION : FORC_NODA --------------------------------------------
-! ======================================================================
+
     if (option .eq. 'FORC_NODA') then
-! ======================================================================
-! --- PARAMETRES EN ENTREE ---------------------------------------------
-! ======================================================================
-        call jevech('PGEOMER', 'L', igeom)
         call jevech('PSIEFR', 'L', icontm)
-        call jevech('PMATERC', 'L', imate)
-
-! ----- Not a transient computation (CALC_CHAMP only !)
-        dt = 0.d0
-        fnoevo = .false.
-
-! ======================================================================
-! --- PARAMETRES EN SORTIE ---------------------------------------------
-! ======================================================================
         call jevech('PVECTUR', 'E', ivectu)
-!
+        ds_thm%ds_behaviour%BEHInteg%materPara = materPara
         call xfnohm(ds_thm, &
-                    fnoevo, dt, nno, npg, ipoids, &
-                    ivf, idfde, zr(igeom), zr(icontm), b, &
-                    dfdi, dfdi2, r, zr(ivectu), zi(imate), &
+                    nno, npg, ipoids, &
+                    ivf, idfde, zr(jvGeom), zr(icontm), b, &
+                    dfdi, dfdi2, r, zr(ivectu), &
                     mecani, press1, dimcon, nddls, nddlm, &
                     dimuel, nmec, np1, ndim, axi, &
-                    dimenr, nnop, nnops, nnopm, igeom, &
+                    dimenr, nnop, nnops, nnopm, jvGeom, &
                     jpintt, jpmilt, jheavn, zi(jlonch), zi(jcnset), zi(jheavt), &
                     enrmec, enrhyd, nfiss, nfh, jfisno)
-!
-! =====================================================================
-! --- SUPRESSION DES DDLS HEAVISIDE SUPERFLUS -------------------------
-! =====================================================================
         call xhmddl(ndim, nfh, nddls, dimuel, nnop, nnops, &
                     zi(jstno), .false._1, option, nomte, rbid, &
                     zr(ivectu), nddlm, nfiss, jfisno, .false._1, contac)

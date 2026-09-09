@@ -733,7 +733,7 @@ TEST_RESU(
             RESULTAT=REPONSE,
             NOM_CHAM="DEPL",
             NOM_CMP="DZ",
-            VALE_CALC=2.72459502022e-3,
+            VALE_CALC=0.0027242697928737654,
         ),
         _F(
             NUME_ORDRE=21,
@@ -741,7 +741,7 @@ TEST_RESU(
             RESULTAT=REPONSE,
             NOM_CHAM="SIEF_ELGA",
             NOM_CMP="SIZZ",
-            VALE_CALC=587.955522247,
+            VALE_CALC=587.952856010828,
             GROUP_MA="M1",
         ),
         _F(

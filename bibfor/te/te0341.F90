@@ -17,6 +17,7 @@
 ! --------------------------------------------------------------------
 
 subroutine te0341(option, nomte)
+    use resi_refe_module, only: RESI_REFE
 !
 !
     implicit none
@@ -29,7 +30,6 @@ subroutine te0341(option, nomte)
 #include "asterfort/elref2.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/terefe.h"
 #include "asterfort/Behaviour_type.h"
     character(len=16) :: option, nomte
 ! ......................................................................
@@ -50,6 +50,7 @@ subroutine te0341(option, nomte)
     real(kind=8) :: tang(3, 3), forref, sigref, depref, a
     real(kind=8) :: geom(3, 3)
     aster_logical :: reactu
+    type(RESI_REFE):: refe
 !
 !
     call elref2(nomte, 2, lielrf, ntrou)
@@ -108,9 +109,11 @@ subroutine te0341(option, nomte)
         call jevech('PCAGNBA', 'L', isect)
         a = zr(isect)
 !
-        call terefe('SIGM_REFE', 'MECA_CG', sigref)
-        call terefe('DEPL_REFE', 'MECA_CG', depref)
-        call terefe('EFFORT_REFE', 'MECA_CG', forref)
+        call refe%Init(nomte)
+        sigref = refe%GetRef('SIGM')
+        depref = refe%GetRef('DEPL')
+        forref = refe%GetRef('EFFORT')
+        call refe%Check()
 !
         call cgfore(ndim, nno1, nno2, npg, zr(iw), &
                     zr(ivf1), zr(ivf2), zr(idf1), a, geom, &

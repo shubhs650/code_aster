@@ -15,31 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine pipdef(ndim, nno, kpg, ipoids, ivf,&
-                      idfde, geom, typmod, compor, deplm,&
-                      ddepl, depl0, depl1, dfdi, fm,&
-                      epsm, epsp, epsd)
-        integer(kind=8) :: ndim
-        integer(kind=8) :: nno
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ipoids
-        integer(kind=8) :: ivf
-        integer(kind=8) :: idfde
-        real(kind=8) :: geom(ndim, *)
-        character(len=8) :: typmod(*)
-        character(len=16) :: compor(*)
-        real(kind=8) :: deplm(*)
-        real(kind=8) :: ddepl(*)
-        real(kind=8) :: depl0(*)
-        real(kind=8) :: depl1(*)
-        real(kind=8) :: dfdi(*)
-        real(kind=8) :: fm(3, 3)
-        real(kind=8) :: epsm(6)
-        real(kind=8) :: epsp(6)
-        real(kind=8) :: epsd(6)
+    subroutine pipdef(typmod, &
+                    ndim, nno, kpg, jv_poids, jv_vff, &
+                    jv_dfde, geom, deplm, &
+                    ddepl, depl0, depl1, &
+                    epsm, deps_cst, deps_pil)
+        character(len=8), intent(in) :: typmod(:)
+        integer(kind=8), intent(in) :: ndim, nno, kpg
+        integer(kind=8),intent(in) :: jv_poids, jv_vff, jv_dfde
+        real(kind=8),intent(in) :: geom(:,:), deplm(:,:), ddepl(:,:), depl0(:,:), depl1(:,:)
+        real(kind=8), intent(out) :: epsm(:), deps_cst(:), deps_pil(:)
     end subroutine pipdef
 end interface

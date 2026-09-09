@@ -17,12 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine op0155()
-! ======================================================================
-!     COMMANDE :  POST_CHAMP
-! ----------------------------------------------------------------------
+!
+    use coorSyst_module, only: setOrieFields
+    use result_module, only: rsCopyPara
     implicit none
 !
-#include "jeveux.h"
 #include "asterc/getres.h"
 #include "asterfort/assert.h"
 #include "asterfort/copisd.h"
@@ -45,123 +44,57 @@ subroutine op0155()
 #include "asterfort/w155ce.h"
 #include "asterfort/w155ex.h"
 #include "asterfort/w155mx.h"
-    integer(kind=8) :: ifm, niv, n0, iret, jordr, nbordr, ie, nuordr
-    integer(kind=8) :: i, j, jnompa, iadin, iadou, nbac, nbpa, nbpara
-    character(len=16) :: crit, typesd, k16b, nopara
-    character(len=8) :: resu, nomres
-    character(len=3) :: type
-    character(len=19) :: resu19, nomr19, comporToCopy, comporToSave
+#include "jeveux.h"
+!
+! --------------------------------------------------------------------------------------------------
+!
+! POST_CHAMP
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ifm, niv, nbStore, iret
+    character(len=16) :: crit, resultType, cmdName
+    character(len=8) :: resultIn, resultOut
     real(kind=8) :: prec
-    character(len=24) :: nompar
-!     ------------------------------------------------------------------
+    integer(kind=8), pointer :: listStore(:) => null()
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
-!
     call infmaj()
     call infniv(ifm, niv)
-!
-    call getres(nomres, typesd, k16b)
-    call getvid(' ', 'RESULTAT', scal=resu, nbret=n0)
-    resu19 = resu
-!
-!     -- SELECTION DES NUMERO D'ORDRE :
-!     ---------------------------------
+
+! - Get input/output results
+    call getres(resultOut, resultType, cmdName)
+    call getvid(' ', 'RESULTAT', scal=resultIn, nbret=iret)
+
+! - Get all storing index
     prec = -1.d0
     crit = ' '
-    call getvr8(' ', 'PRECISION', scal=prec, nbret=ie)
-    call getvtx(' ', 'CRITERE', scal=crit, nbret=ie)
-    call rsutnu(resu19, ' ', 0, '&&OP0155.NUME_ORDRE', nbordr, &
-                prec, crit, iret)
+    call getvr8(' ', 'PRECISION', scal=prec, nbret=iret)
+    call getvtx(' ', 'CRITERE', scal=crit, nbret=iret)
+    call rsutnu(resultIn, ' ', 0, '&&OP0155.NUME_ORDRE', nbStore, prec, crit, iret)
     ASSERT(iret .eq. 0)
-    ASSERT(nbordr .gt. 0)
-    call jeveuo('&&OP0155.NUME_ORDRE', 'L', jordr)
-!
-!
-!     -- 1. ON CREE LA SD_RESULTAT NOMRES :
-!     ---------------------------------------------
-    call rscrsd('G', nomres, typesd, nbordr)
-!
-!
-!     -- 2. MOTS CLES EXTR_XXXX :
-!     ----------------------------
-    call w155ex(nomres, resu, nbordr, zi(jordr))
-!
-!
-!     -- 3. MOT CLE MIN_MAX_SP :
-!     ----------------------------
-    call w155mx(nomres, resu, nbordr, zi(jordr))
-!
-!
-!     -- 4. MOT CLE COQU_EXCENT :
-!     ----------------------------
-    call w155ce(nomres, resu, nbordr, zi(jordr))
-!
-!
-!     -- 5. RECOPIE DES PARAMETRES DE RESU VERS NOMRES :
-!           ET DE LA CARTE DE COMPORTEMENT
-!     --------------------------------------------------
-    nompar = '&&OP0155'//'.NOMS_PARA'
-    call rsnopa(resu, 2, nompar, nbac, nbpa)
-    nbpara = nbac+nbpa
-    call jeveuo(nompar, 'L', jnompa)
-    nomr19 = nomres
-    call jeveuo(nomr19//'.ORDR', 'L', jordr)
-    call jelira(nomr19//'.ORDR', 'LONUTI', nbordr)
-!
-    do i = 1, nbordr
-        nuordr = zi(jordr-1+i)
-!            COPIE DE LA CARTE DE COMPORTEMENT
-!            --UTILE SI ON RÉCUPÈRE LES NOMS DES VARIABLES INTERNES
-!     --------------------------------------------------
-!
-        call rsexch(' ', resu19, 'COMPORTEMENT', nuordr, comporToCopy, &
-                    iret)
-        if (iret .eq. 0) then
-            call rsexch(' ', nomr19, 'COMPORTEMENT', nuordr, comporToSave, &
-                        iret)
-            call copisd('CHAMP_GD', 'G', comporToCopy, comporToSave)
-        end if
-!            COPIE DES PARAMÈTRES
-!     --------------------------------------------------
-!
-        do j = 1, nbpara
-            nopara = zk16(jnompa-1+j)
-            call rsadpa(resu, 'L', 1, nopara, nuordr, &
-                        1, sjv=iadin, styp=type, istop=0)
-            call rsadpa(nomres, 'E', 1, nopara, nuordr, &
-                        1, sjv=iadou, styp=type)
-            if (type(1:1) .eq. 'I') then
-                zi(iadou) = zi(iadin)
-            else if (type(1:1) .eq. 'R') then
-                zr(iadou) = zr(iadin)
-            else if (type(1:1) .eq. 'C') then
-                zc(iadou) = zc(iadin)
-            else if (type(1:3) .eq. 'K80') then
-                zk80(iadou) = zk80(iadin)
-            else if (type(1:3) .eq. 'K32') then
-                zk32(iadou) = zk32(iadin)
-            else if (type(1:3) .eq. 'K24') then
-                zk24(iadou) = zk24(iadin)
-                if (nopara(1:5) .eq. 'EXCIT' .and. zk24(iadin) (1:2) .ne. '  ') then
-                    zk24(iadou) = nomres//zk24(iadin) (9:)
-                    call copisd(' ', 'G', zk24(iadin) (1:19), zk24(iadou) (1:19))
-                end if
-            else if (type(1:3) .eq. 'K16') then
-                zk16(iadou) = zk16(iadin)
-            else if (type(1:2) .eq. 'K8') then
-                zk8(iadou) = zk8(iadin)
-            end if
-        end do
-    end do
-    call jedetr(nompar)
-!
-!
-!     -- 6. RECOPIE DE L'OBJET .REFD (SI NECESSAIRE) :
-!     --------------------------------------------------
-    call refdcp(resu19, nomr19)
-!
-!
+    ASSERT(nbStore .gt. 0)
+    call jeveuo('&&OP0155.NUME_ORDRE', 'L', vi=listStore)
+
+! - Create output result
+    call rscrsd('G', resultOut, resultType, nbStore)
+
+! - EXTR_XXXX
+    call w155ex(resultOut, resultIn, nbStore, listStore)
+
+! - MIN_MAX_SP
+    call w155mx(resultOut, resultIn, nbStore, listStore)
+
+! - COQU_EXCENT
+    call w155ce(resultOut, resultIn, nbStore, listStore)
+
+! - Copy parameters
+    call rsCopyPara(resultIn, resultOut, nbStore, listStore, copyField_=ASTER_TRUE)
+
+! - RECOPIE DE L'OBJET .REFD
+    call refdcp(resultIn, resultOut)
 !
     call jedetr('&&OP0155.NUME_ORDRE')
     call jedema()

@@ -15,12 +15,16 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine q4grig(nomte, xyzl, option, pgl, rig, &
-                  ener)
+! aslint: disable=W0413
+!
+subroutine q4grig(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  matrRigi_, ener_)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/bsthpl.h"
 #include "asterfort/dsqbfb.h"
 #include "asterfort/dxmate.h"
@@ -32,80 +36,73 @@ subroutine q4grig(nomte, xyzl, option, pgl, rig, &
 #include "asterfort/jevech.h"
 #include "asterfort/jquad4.h"
 #include "asterfort/q4gbc.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/utbtab.h"
 #include "asterfort/utctab.h"
 #include "asterfort/utdtab.h"
 #include "asterfort/utpvgl.h"
-    real(kind=8) :: xyzl(3, *), pgl(*), rig(*), ener(*)
-    character(len=16) :: option, nomte
+#include "jeveux.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
+    type(plateCara_Para), intent(in) :: plateCara
+    real(kind=8), intent(in) :: xyzl(3, *), pgl(*)
+    character(len=16), intent(in) :: option
+    real(kind=8), optional, intent(out) :: matrRigi_(300), ener_(3)
+!
+! --------------------------------------------------------------------------------------------------
 !
 !     MATRICE DE RIGIDITE DE L'ELEMENT Q4GAMMA (AVEC CISAILLEMENT)
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT RIG    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_POT (EPOT_ELEM)
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: zero = 0.d0
+    integer(kind=8) :: npg, ndim, ipoids, icoopg
     integer(kind=8) :: multic
     real(kind=8) :: wgt, depl(24)
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
-    real(kind=8) :: bf(3, 12)
-    real(kind=8) :: bc(2, 12)
-    real(kind=8) :: bm(3, 8)
+    real(kind=8) :: bf(3, 12), bc(2, 12), bm(3, 8)
     real(kind=8) :: xab1(3, 12), xab2(2, 12), xab3(3, 8)
     real(kind=8) :: xab4(3, 12)
-!                   ---(12,12)---
-    real(kind=8) :: kf(144)
-    real(kind=8) :: kc(144)
-!                   -----(12,12) ----(12,12)
+    real(kind=8) :: kf(144), kc(144)
     real(kind=8) :: flexi(144), flex(144)
-!                   -----(8,8)   -----(8,8)
     real(kind=8) :: membi(64), memb(64)
-!                   -----(8,12)  -----(8,12)
     real(kind=8) :: mefli(96), mefl(96), kmc(96), kfc(144)
-    real(kind=8) :: bsigth(24), enerth, caraq4(25)
-    real(kind=8) :: t2iu(4), t2ui(4), t1ve(9), jacob(5), qsi, eta
-    aster_logical :: coupmf, indith
-    integer(kind=8) :: i, jcoqu, jdepg, k
-    real(kind=8) :: ctor, excent, zero
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
-!     ------------------------------------------------------------------
+    real(kind=8) :: enerTher, caraq4(25)
+    real(kind=8) :: jacob(5), qsi, eta
+    aster_logical :: coupmf
+    integer(kind=8) :: i, jvDisp, k
+    real(kind=8) :: ctor, excent
+    real(kind=8) :: matrRigi(300), ener(3)
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
-                     jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
-                     jgano=jgano)
+! --------------------------------------------------------------------------------------------------
 !
-    zero = 0.0d0
-    enerth = zero
+    enerTher = zero
+
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-!
-! --- ON NE CALCULE PAS ENCORE LA MATRICE DE RIGIDITE D'UN ELEMENT
-! --- Q4G EXCENTRE, ON S'ARRETE EN ERREUR FATALE :
-!     ------------------------------------------
+    call elrefe_info(fami='RIGI', npg=npg, ndim=ndim, &
+                     jpoids=ipoids, jcoopg=icoopg)
+
+! - Get parameters
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
     if (excent .ne. zero) then
         coupmf = .true.
     end if
-!
-    call r8inir(96, zero, kmc, 1)
-    call r8inir(144, zero, kfc, 1)
-!
-!     ----- CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION,
-!           MEMBRANE ET CISAILLEMENT INVERSEE --------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
-!     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
+
+! - Geometric properties
     call gquad4(xyzl, caraq4)
-!
-    call r8inir(144, zero, flex, 1)
-    call r8inir(64, zero, memb, 1)
-    call r8inir(96, zero, mefl, 1)
+
+! - Get elementary matrix of rigidity
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
+
+    memb = 0.d0
+    flex = 0.d0
+    mefl = 0.d0
+    kmc = 0.d0
+    kfc = 0.d0
 !
     do i = 1, npg
         qsi = zr(icoopg-1+ndim*(i-1)+1)
@@ -166,20 +163,29 @@ subroutine q4grig(nomte, xyzl, option, pgl, rig, &
     end do
 !
     if (option .eq. 'RIGI_MECA') then
-        call dxqloc(flex, memb, mefl, ctor, rig)
-!
+        call dxqloc(flex, memb, mefl, ctor, matrRigi)
     else if (option .eq. 'EPOT_ELEM') then
-        call jevech('PDEPLAR', 'L', jdepg)
-        call utpvgl(4, 6, pgl, zr(jdepg), depl)
+        call jevech('PDEPLAR', 'L', jvDisp)
+        call utpvgl(4, 6, pgl, zr(jvDisp), depl)
         call dxqloe(flex, memb, mefl, ctor, coupmf, &
                     depl, ener)
-        call bsthpl(nomte, bsigth, indith)
-        if (indith) then
-            do i = 1, 24
-                enerth = enerth+depl(i)*bsigth(i)
-            end do
-            ener(1) = ener(1)-enerth
-        end if
+        ! call bsthpl(plateCara, plateOrie, &
+        !             jvGeom, nomte, xyzl, &
+        !             bsigth)
+        ! if (indith) then
+        !     enerTher = 0.d0
+        !     do i = 1, 24
+        !         enerTher = enerTher+depl(i)*bsigth(i)
+        !     end do
+        !     ener(1) = ener(1)-enerTher
+        ! end if
+    end if
+!
+    if (present(matrRigi_)) then
+        matrRigi_ = matrRigi
+    end if
+    if (present(ener_)) then
+        ener_ = ener
     end if
 !
 end subroutine

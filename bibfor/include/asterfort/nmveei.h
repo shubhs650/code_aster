@@ -17,26 +17,23 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmveei(fami, kpg, ksp, ndim, typmod,&
-                      imate, compor, carcri, instam, instap,&
-                      epsm, deps, sigm, nvi, vim, option,&
+    subroutine nmveei(materPara, &
+                      carcri, compor, ndim, typmod, &
+                      instam, instap, &
+                      epsm, deps, sigm, nvi, vim, option, &
                       sigp, vip, dsidep, iret)
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        character(len=8), intent(in) :: typmod(2)
+        integer(kind=8), intent(in) :: nvi, ndim
+        character(len=16), intent(in) ::  option
+        real(kind=8) :: instam, instap
         real(kind=8) :: epsm(6)
         real(kind=8) :: deps(6)
         real(kind=8) :: sigm(6)
         real(kind=8) :: vim(*)
-        integer(kind=8), intent(in):: nvi
-        character(len=16) :: option
         real(kind=8) :: sigp(6)
         real(kind=8) :: vip(*)
         real(kind=8) :: dsidep(6, 6)

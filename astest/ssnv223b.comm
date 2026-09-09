@@ -154,7 +154,7 @@ EVOL = STAT_NON_LINE(
     SOLVEUR=_F(METHODE="MUMPS"),
 )
 
-tfin_pilo = 9.0
+tfin_pilo = EVOL.getAccessParameters()["INST"][-1]
 
 # -----------------------------------------------------
 #    EXTRAPOLATION DES VARIABLES INTERNES AUX NOEUDS
@@ -196,7 +196,7 @@ TEST_TABLE(
     VALE_REFE=0.59999999999999998,
     NOM_PARA="V1",
     TABLE=RESU,
-    FILTRE=(_F(NOM_PARA="INST", VALE=9.0), _F(NOM_PARA="COOR_Y", VALE=0)),
+    FILTRE=(_F(NOM_PARA="INST", VALE=tfin_pilo), _F(NOM_PARA="COOR_Y", VALE=0)),
 )
 
 TEST_TABLE(
@@ -206,7 +206,7 @@ TEST_TABLE(
     VALE_REFE=0.59999999999999998,
     NOM_PARA="V1",
     TABLE=RESU,
-    FILTRE=(_F(NOM_PARA="INST", VALE=9.0), _F(NOM_PARA="COOR_Y", VALE=1)),
+    FILTRE=(_F(NOM_PARA="INST", VALE=tfin_pilo), _F(NOM_PARA="COOR_Y", VALE=1)),
 )
 
 TEST_TABLE(
@@ -216,7 +216,7 @@ TEST_TABLE(
     VALE_REFE=0.59999999999999998,
     NOM_PARA="V1",
     TABLE=RESU,
-    FILTRE=(_F(NOM_PARA="INST", VALE=9.0), _F(NOM_PARA="COOR_Y", VALE=2)),
+    FILTRE=(_F(NOM_PARA="INST", VALE=tfin_pilo), _F(NOM_PARA="COOR_Y", VALE=2)),
 )
 
 

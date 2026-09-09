@@ -15,17 +15,38 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine gerpas(fami, kpg, ksp, rela_comp, mod, &
-                  imat, matcst, nbcomm, cpmono, nbphas, &
+! aslint: disable=W1306,W1504
+!
+subroutine gerpas(materPara, &
+                  relaComp, typmod1, &
+                  matcst, nbcomm, cpmono, nbphas, &
                   nvi, nmat, y, pas, itmax, &
                   eps, toly, cothe, coeff, dcothe, &
-                  dcoeff, coel, pgl, angmas, neps, &
+                  dcoeff, coel, pgl, neps, &
                   epsd, detot, x, nfs, nsg, &
                   nhsr, numhsr, hsr, iret)
-! aslint: disable=W1306,W1504
+!
+    use MaterialPara_type
     implicit none
 !
+#include "asterfort/calcmm.h"
+#include "asterfort/calcms.h"
+#include "asterfort/rk21co.h"
+#include "asterfort/rkcah1.h"
+#include "asterfort/rkcah2.h"
+!
+    type(Material_Para), intent(in) :: materPara
+    character(len=16), intent(in) :: relaComp
+    character(len=8), intent(in) :: typmod1
+    integer(kind=8) :: nmat, nbcomm(nmat, 3), ne, ny, na, nvi, kpok, ip, i, neps
+    integer(kind=8) :: nbphas, nfs, itmax, iret, nsg, nhsr, numhsr(*), irota
+    character(len=24) :: cpmono(5*nmat+1)
+    character(len=3) :: matcst
+    real(kind=8) :: coel(nmat), hsr(nsg, nsg, nhsr), x, pas, h, toly, xr, w, wz
+    real(kind=8) :: eps
+    real(kind=8) :: cothe(nmat), dcothe(nmat), coeff(nmat), dcoeff(nmat)
+    real(kind=8) :: epsd(neps), detot(neps), pgl(3, 3)
+    !
 !     INTEGRATION DE LOIS DE COMPORTEMENT ELASTO-VISCOPLASTIQUE
 !     PAR UNE METHODE DE RUNGE KUTTA
 !
@@ -56,33 +77,18 @@ subroutine gerpas(fami, kpg, ksp, rela_comp, mod, &
 !         NSG     :  NOMBRE MAX DE DE SYSTEMES DE GLISSEMENT MONOCRISTAL
 !     OUT X       :  INSTANT COURANT
 !     -
-#include "asterfort/calcmm.h"
-#include "asterfort/calcms.h"
-#include "asterfort/rk21co.h"
-#include "asterfort/rkcah1.h"
-#include "asterfort/rkcah2.h"
-    integer(kind=8) :: nmat, imat, nbcomm(nmat, 3), ne, ny, na, nvi, kpok, ip, i, neps
-    integer(kind=8) :: nbphas, nfs, kpg, ksp, itmax, iret, nsg, nhsr, numhsr(*), irota
-    character(len=16) :: rela_comp
-    character(len=24) :: cpmono(5*nmat+1)
-    character(len=8) :: mod
-    character(len=3) :: matcst
-    character(len=*) :: fami
-    real(kind=8) :: coel(nmat), hsr(nsg, nsg, nhsr), x, pas, h, toly, xr, w, wz
-    real(kind=8) :: eps
-    real(kind=8) :: cothe(nmat), dcothe(nmat), coeff(nmat), dcoeff(nmat)
-    real(kind=8) :: epsd(neps), detot(neps), pgl(3, 3), angmas(3)
 !     TABLEAUX AUTOMATIQUES F90
     real(kind=8) :: y(nvi), wk(3*nvi), ymfs(nvi)
 !      POUR GAGNER EN TEMPS CPU. ATTENTION TABLEAU POUVANT ETRE GROS
 !      UTILISE SEULEMENT POUR POLYCRISTAL LCMMOP
     real(kind=8) :: toutms(nbphas*nfs*nsg*7)
 !
-    if (rela_comp .eq. 'POLYCRISTAL') then
-        call calcms(nbphas, nbcomm, cpmono, nmat, pgl, &
-                    coeff, angmas, nfs, nsg, toutms)
+    if (relaComp .eq. 'POLYCRISTAL') then
+        call calcms(materPara, &
+                    nbphas, nbcomm, cpmono, nmat, pgl, &
+                    coeff, nfs, nsg, toutms)
     end if
-    if (rela_comp .eq. 'MONOCRISTAL') then
+    if (relaComp .eq. 'MONOCRISTAL') then
         irota = 0
         call calcmm(nbcomm, cpmono, nmat, pgl, nfs, &
                     nsg, toutms, nvi, y, &
@@ -120,8 +126,9 @@ subroutine gerpas(fami, kpg, ksp, rela_comp, mod, &
 60  continue
 !
 !
-    call rk21co(fami, kpg, ksp, rela_comp, mod, &
-                imat, matcst, nbcomm, cpmono, nfs, &
+    call rk21co(materPara, &
+                relaComp, typmod1, &
+                matcst, nbcomm, cpmono, nfs, &
                 nsg, toutms, nvi, nmat, y, &
                 kpok, wk(ne+1), wk(na+1), h, pgl, &
                 nbphas, cothe, coeff, dcothe, dcoeff, &
@@ -146,7 +153,7 @@ subroutine gerpas(fami, kpg, ksp, rela_comp, mod, &
             goto 999
         else
 !           CALCUL DU NOUVEAU PAS DE TEMPS H (AUGMENTATION)
-            call rkcah1(rela_comp, y, pas, nvi, w, &
+            call rkcah1(relaComp, y, pas, nvi, w, &
                         wk, h, eps, iret)
             if (iret .gt. 0) then
                 goto 999
@@ -164,7 +171,7 @@ subroutine gerpas(fami, kpg, ksp, rela_comp, mod, &
         x = xr
         ip = 0
 !        CALCUL DU NOUVEAU PAS DE TEMPS H (DIMINUTION)
-        call rkcah2(rela_comp, y, pas, nvi, w, &
+        call rkcah2(relaComp, y, pas, nvi, w, &
                     wk, h, eps, iret)
         if (iret .gt. 0) then
             goto 999

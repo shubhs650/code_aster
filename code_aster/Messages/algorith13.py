@@ -69,6 +69,11 @@ cata_msg = {
  numéro dans votre liste : %(i1)d
 """
     ),
+    38: _(
+        """
+DYNA_VIBRA : le groupe de maille fournie au comportement DIS_ECRO_CINE comporte plusieurs mailles alors qu'une seule est attendue.
+"""
+    ),
     39: _(
         """
  choc mal défini

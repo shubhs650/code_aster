@@ -33,11 +33,11 @@ subroutine interNodesInside(proj_tole, elem_dime, &
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     character(len=8), intent(in) :: elem_mast_code, elem_slave_code
-    real(kind=8), intent(in) :: proj_coor(elem_dime-1, 9)
+    real(kind=8), intent(in) :: proj_coor(2, 9)
     integer(kind=8), intent(in) :: nb_node_proj
     integer(kind=8), intent(out) :: inte_neigh(4), nb_poin_inte
-    real(kind=8), intent(inout) :: poin_inte(elem_dime-1, 16)
-    real(kind=8), intent(inout) :: poin_inte_ori(elem_dime-1, 16)
+    real(kind=8), intent(inout) :: poin_inte(2, 16)
+    real(kind=8), intent(inout) :: poin_inte_ori(2, 16)
     integer(kind=8), intent(out) :: iret
 !
 ! --------------------------------------------------------------------------------------------------
@@ -59,8 +59,8 @@ subroutine interNodesInside(proj_tole, elem_dime, &
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: min_sl, max_sl
-    real(kind=8) :: elem_mast_line_coop(elem_dime-1, 4)
-    real(kind=8) :: elem_slave_line_coop(elem_dime-1, 4)
+    real(kind=8) :: elem_mast_line_coop(2, 4)
+    real(kind=8) :: elem_slave_line_coop(2, 4)
     integer(kind=8) :: elem_mast_line_nbnode, i_node, test, elem_slav_line_nbnode
     character(len=8) :: elem_mast_line_code, elem_slav_line_code
     real(kind=8) :: xpt, ypt, cor_inte_ori(2), t1

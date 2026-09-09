@@ -18,18 +18,17 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine refthm(ds_thm   ,&
-                      jv_mater , ndim     , l_axi    , fnoevo ,&
-                      mecani   , press1   , press2   , tempe    , second, &
-                      nno      , nnos     , npi      , npg      ,&
-                      elem_coor, dt       , dimdef   , dimcon   , dimuel ,&
-                      jv_poids , jv_poids2,&
-                      jv_func  , jv_func2 , jv_dfunc , jv_dfunc2,&
-                      nddls    , nddlm    , nddl_meca, nddl_p1  , nddl_p2, nddl_2nd, &
-                      b        , r        , vectu )
+    subroutine refthm(ds_thm, &
+                      ndim, l_axi, fnoevo, &
+                      mecani, press1, press2, tempe, second, &
+                      nno, nnos, npi, npg, &
+                      elem_coor, dt, dimdef, dimcon, dimuel, &
+                      jv_poids, jv_poids2, &
+                      jv_func, jv_func2, jv_dfunc, jv_dfunc2, &
+                      nddls, nddlm, nddl_meca, nddl_p1, nddl_p2, nddl_2nd, &
+                      b, r, vectu)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
-        integer(kind=8), intent(in) :: jv_mater
         integer(kind=8), intent(in) :: ndim
         aster_logical, intent(in) :: l_axi
         aster_logical, intent(in) :: fnoevo

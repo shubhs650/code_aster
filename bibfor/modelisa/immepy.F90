@@ -200,7 +200,7 @@ subroutine immepy(nbcnx, xyzma, x3dca, itetra, xbar, &
             end if
 !
             if (immer .lt. 0) then
-                call utmess('F', 'MODELISA4_72')
+                call utmess('F', 'MODELISA4_72', nr=3, valr=x3dca)
             end if
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

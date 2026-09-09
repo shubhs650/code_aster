@@ -51,3 +51,4 @@
 #define LOOP_STATE_ERROR    3
 #define LOOP_STATE_STOP     4
 #define LOOP_STATE_CTCD     5
+#define LOOP_STATE_ARCH     6

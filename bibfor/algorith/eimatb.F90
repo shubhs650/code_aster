@@ -19,24 +19,25 @@
 !
 subroutine eimatb(nomte, ndim, axi, nno1, nno2, npg, &
                   wref, vff1, vff2, dffr2, geom, &
-                  ang, b, wg, ni2ldc)
+                  anglNautPg, b, wg, ni2ldc)
 
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/dfdm1d.h"
+#include "asterfort/eiinit.h"
 #include "asterfort/matrot.h"
 #include "asterfort/subaco.h"
 #include "asterfort/sumetr.h"
-#include "asterfort/eiinit.h"
 !
     character(len=16) :: nomte
-    aster_logical, intent(in):: axi
-    integer(kind=8), intent(in)      :: ndim, nno1, nno2, npg
+    aster_logical, intent(in) :: axi
+    integer(kind=8), intent(in) :: ndim, nno1, nno2, npg
     real(kind=8), intent(in) :: vff1(nno1, npg), vff2(nno2, npg), geom(ndim, nno2)
     real(kind=8), intent(in) :: wref(npg)
-    real(kind=8), intent(in) :: dffr2(ndim-1, nno2, npg), ang(merge(1, 3, ndim .eq. 2), nno2)
+    real(kind=8), intent(in) :: dffr2(ndim-1, nno2, npg)
+    real(kind=8), intent(in) :: anglNautPg(merge(1, 3, ndim .eq. 2), nno2)
     real(kind=8), intent(out):: b(2*ndim, npg, 2*ndim*nno1+ndim*nno2)
     real(kind=8), intent(out):: wg(2*ndim, npg)
     real(kind=8), intent(out):: ni2ldc(2*ndim, npg)
@@ -92,7 +93,7 @@ subroutine eimatb(nomte, ndim, axi, nno1, nno2, npg, &
         wg(:, g) = w
 
         ! Angles nautiques au point d'integration
-        angloc(1:nang) = matmul(ang, vff2(:, g))
+        angloc(1:nang) = matmul(anglNautPg, vff2(:, g))
 
         ! Matrice de rotation global -> local
         call matrot(angloc, rot)

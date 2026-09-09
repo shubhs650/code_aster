@@ -26,6 +26,7 @@ subroutine chpchd(chin, type, celmod, prol0, base, &
 #include "asterfort/carces.h"
 #include "asterfort/celces.h"
 #include "asterfort/celfpg.h"
+#include "asterfort/cescar.h"
 #include "asterfort/cescel.h"
 #include "asterfort/cesces.h"
 #include "asterfort/cescns.h"
@@ -394,6 +395,11 @@ subroutine chpchd(chin, type, celmod, prol0, base, &
         call cnscno(cns1, ' ', 'NON', base, chou, &
                     'F', ibid)
         call detrsd('CHAM_NO_S', cns1)
+
+    else if (cas .eq. 'ELEM->CART') then
+        call celces(chin, 'V', ces1)
+        call cescar(ces1, chou, "G")
+        call detrsd('CHAM_ELEM_S', ces1)
 
     else
 !       CAS NON ENCORE PROGRAMME

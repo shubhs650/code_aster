@@ -15,26 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 #include "asterf_types.h"
 interface
-    subroutine mmnewt(type_elem, nb_node  , nb_dim, elem_coor, pt_coor,&
-                      iter_maxi, tole_maxi, ksi1  , ksi2     , tang_1 ,&
-                      tang_2   , error, l_reli_)
-        character(len=8), intent(in) :: type_elem
-        integer(kind=8), intent(in) :: nb_node
-        integer(kind=8), intent(in) :: nb_dim
-        real(kind=8), intent(in) :: elem_coor(27)
-        real(kind=8), intent(in) :: pt_coor(3)
-        integer(kind=8), intent(in) :: iter_maxi
-        real(kind=8), intent(in) :: tole_maxi
-        real(kind=8), intent(out) :: ksi1
-        real(kind=8), intent(out) :: ksi2
-        real(kind=8), intent(out) :: tang_1(3)
-        real(kind=8), intent(out) :: tang_2(3)
-        integer(kind=8), intent(out) :: error
-        aster_logical, intent(in), optional:: l_reli_
+#include "MeshTypes_type.h"
+    subroutine mmnewt(cellCode, cellNbNode, cellDime, cellCoor, poinCoor, &
+                      newtIterMaxi, newtToleMaxi, &
+                      ksi1, ksi2, &
+                      tang_1, tang_2, &
+                      projError, lLineSearch_, lPrintDbg_, lCurvature_)
+        character(len=8), intent(in) :: cellCode
+        integer(kind=8), intent(in) :: cellNbNode, cellDime
+        real(kind=8), intent(in) :: cellCoor(3,MT_NNOMAX2D)
+        real(kind=8), intent(in) :: poinCoor(3)
+        integer(kind=8), intent(in) :: newtIterMaxi
+        real(kind=8), intent(in) :: newtToleMaxi
+        real(kind=8), intent(out) :: ksi1, ksi2
+        real(kind=8), intent(out) :: tang_1(3), tang_2(3)
+        integer(kind=8), intent(out) :: projError
+        aster_logical, intent(in), optional :: lLineSearch_, lPrintDbg_, lCurvature_
     end subroutine mmnewt
 end interface

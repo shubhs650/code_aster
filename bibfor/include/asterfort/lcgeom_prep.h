@@ -16,6 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine lcgeom_prep(elem_dime    , l_axis        , l_upda_jaco,&
@@ -29,12 +30,12 @@ interface
         aster_logical, intent(in) :: l_axis, l_upda_jaco
         integer(kind=8), intent(in) :: nb_node_slav, nb_node_mast
         character(len=8), intent(in) :: elem_slav_code, elem_mast_code
-        real(kind=8), intent(in) :: elem_mast_init(nb_node_mast, elem_dime)
-        real(kind=8), intent(in) :: elem_slav_init(nb_node_slav, elem_dime)
-        real(kind=8), intent(in) :: elem_mast_coor(nb_node_mast, elem_dime)
-        real(kind=8), intent(in) :: elem_slav_coor(nb_node_slav, elem_dime)
+        real(kind=8), intent(in) :: elem_mast_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_slav_init(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_mast_coor(3, MT_NNOMAX2D)
+        real(kind=8), intent(in) :: elem_slav_coor(3, MT_NNOMAX2D)
         real(kind=8), intent(in) :: gauss_coot_sl(2), gauss_coot_ma(2)
-        real(kind=8), intent(out) :: shape_func_sl(9), shape_func_ma(9)
+        real(kind=8), intent(out) :: shape_func_sl(MT_NNOMAX2D), shape_func_ma(MT_NNOMAX2D)
         real(kind=8), intent(out) :: jacobian_sl, jacobian_ma
         real(kind=8), intent(out) :: dist_vect_sl(3), dist_vect_ma(3)
     end subroutine lcgeom_prep

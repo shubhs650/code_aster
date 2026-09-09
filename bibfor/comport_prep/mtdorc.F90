@@ -21,7 +21,6 @@ subroutine mtdorc(factorKeyword, model, comporMeta, lEmptyMap)
     use Metallurgy_type
     implicit none
 !
-#include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/comp_init.h"
 #include "asterfort/comp_meta_clean.h"

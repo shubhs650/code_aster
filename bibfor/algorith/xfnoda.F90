@@ -16,40 +16,63 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine xfnoda(ds_thm, imate, mecani, press1, enrmec, dimenr, &
-                  dimcon, ndim, dt, fnoevo, congem, &
+subroutine xfnoda(ds_thm, &
+                  mecani, press1, enrmec, dimenr, &
+                  dimcon, ndim, congem, &
                   r, enrhyd, nfh)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/rcvalb.h"
-    type(THM_DS), intent(inout) :: ds_thm
-    aster_logical :: fnoevo
+!
+    type(THM_DS), intent(in) :: ds_thm
     integer(kind=8) :: mecani(5), press1(7), enrmec(3), dimenr, dimcon
-    integer(kind=8) :: ndim, imate, yaenrm, adenme
+    integer(kind=8) :: ndim, yaenrm, adenme
     integer(kind=8) :: enrhyd(3), yaenrh, adenhy, nfh
-    real(kind=8) :: dt, congem(dimcon), r(dimenr)
-! ======================================================================
-    integer(kind=8) :: nhom, addeme, adcome
+    real(kind=8) :: congem(dimcon), r(dimenr)
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: kpgFPG1 = 1, kspFPG1 = 1
+    character(len=8), parameter :: famiFPG1 = "FPG1"
+    type(Material_Para) :: materParaFPG1
+    character(len=8), parameter :: poum = "+"
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    integer(kind=8), parameter :: nbProp = 3
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    character(len=8), parameter :: propName(nbProp) = (/'PESA_X', 'PESA_Y', 'PESA_Z'/)
+    integer(kind=8) :: addeme, adcome
     integer(kind=8) :: addep1, adcp11, i, ifh
-    parameter(nhom=3)
-    real(kind=8) :: hom(nhom), pesa(3), rac2
-    integer(kind=8) :: icodre(nhom)
-    character(len=8) :: ncra5(nhom)
-    data ncra5/'PESA_X', 'PESA_Y', 'PESA_Z'/
-! ======================================================================
-! --- RECUPERATION DE LA PESANTEUR DANS DEFI_MATERIAU ------------------
-! ======================================================================
-    call rcvalb('FPG1', 1, 1, '+', imate, &
-                ' ', 'THM_DIFFU', 0, ' ', [0.d0], &
-                nhom, ncra5, hom, icodre, 1)
-    pesa(1) = hom(1)
-    pesa(2) = hom(2)
-    pesa(3) = hom(3)
-    rac2 = sqrt(2.0d0)
+    real(kind=8) :: gravity(3)
+    type(Material_Para) :: materPara
+!
+! --------------------------------------------------------------------------------------------------
+!
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
+
+! - Copy material parameters with other scheme parameters
+    call copyMaterPara(materPara, famiFPG1, kpgFPG1, kspFPG1, &
+                       materParaFPG1)
+
+! - Get parameters of gravity
+    call rcvalb(materParaFPG1%schemePara%fami, &
+                materParaFPG1%schemePara%kpg, &
+                materParaFPG1%schemePara%ksp, &
+                poum, &
+                materParaFPG1%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+    gravity(1) = propVale(1)
+    gravity(2) = propVale(2)
+    gravity(3) = propVale(3)
+
 ! ======================================================================
 ! --- DETERMINATION DES VARIABLES CARACTERISANT LE MILIEU --------------
 ! ======================================================================
@@ -84,7 +107,7 @@ subroutine xfnoda(ds_thm, imate, mecani, press1, enrmec, dimenr, &
         end do
         if (ds_thm%ds_elem%l_dof_pre1) then
             do i = 1, ndim
-                r(addeme+i-1) = r(addeme+i-1)-pesa(i)*congem(adcp11)
+                r(addeme+i-1) = r(addeme+i-1)-gravity(i)*congem(adcp11)
             end do
         end if
     end if
@@ -97,21 +120,10 @@ subroutine xfnoda(ds_thm, imate, mecani, press1, enrmec, dimenr, &
                 do ifh = 1, nfh
                     do i = 1, ndim
                         r(adenme+i-1+(ifh-1)*(ndim+1)) = &
-                            r(adenme+i-1+(ifh-1)*(ndim+1))-pesa(i)*congem(adcp11)
+                            r(adenme+i-1+(ifh-1)*(ndim+1))-gravity(i)*congem(adcp11)
                     end do
                 end do
             end if
-        end if
-    end if
-! ======================================================================
-    if (fnoevo) then
-! ======================================================================
-! --- TERMES DEPENDANT DE DT DANS FORC_NODA POUR STAT_NON_LINE ---------
-! ======================================================================
-        if (ds_thm%ds_elem%l_dof_pre1) then
-            do i = 1, ndim
-                r(addep1+i) = r(addep1+i)+dt*congem(adcp11+i)
-            end do
         end if
     end if
 !

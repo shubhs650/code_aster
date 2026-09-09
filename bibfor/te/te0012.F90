@@ -59,7 +59,7 @@ subroutine te0012(option, nomte)
 !
     integer(kind=8) :: icodre(1)
     character(len=16) :: phenom
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=3) :: stopz
     real(kind=8) :: a(3, 3, 27, 27), matp(81, 81), matv(3321)
     real(kind=8) :: poids, rho(1)

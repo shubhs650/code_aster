@@ -15,6 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1504,W1306
 !
 subroutine xgelem(elrefp, ndim, coorse, igeom, jheavt, &
                   ise, nfh, ddlc, ddlm, nfe, &
@@ -46,6 +47,7 @@ subroutine xgelem(elrefp, ndim, coorse, igeom, jheavt, &
 #include "asterfort/xcalc_heav.h"
 #include "asterfort/xcalc_code.h"
 #include "asterfort/xcalfev_wrap.h"
+#include "MeshTypes_type.h"
 #include "asterfort/xkamat.h"
 #include "asterfort/xnbddl.h"
 !
@@ -93,18 +95,18 @@ subroutine xgelem(elrefp, ndim, coorse, igeom, jheavt, &
     real(kind=8) :: dtdm(3, 4)
     real(kind=8) :: rbid
     real(kind=8) :: tthe, r, rp, ppg
-    real(kind=8) :: depla(3), theta(3), tgudm(3), tpn(27), tref
-    real(kind=8) :: dfdm(3, 4), dfdx(27), dfdy(27), dfdz(27)
+    real(kind=8) :: depla(3), theta(3), tgudm(3), tpn(MT_NNOMAX3D), tref
+    real(kind=8) :: dfdm(3, 4), dfdx(MT_NNOMAX3D), dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D)
     real(kind=8) :: dtx, dty, dtz
     real(kind=8) :: energi(2), sigl(6), prod, prod2, rac2, sr(3, 3), tcla, divt
-    real(kind=8) :: tfor, sigse(6*27)
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3), ka, mu2
+    real(kind=8) :: tfor, sigse(6*MT_NNOMAX3D)
+    real(kind=8) :: fk(MT_NNOMAX3D, 3, 3), dkdgl(MT_NNOMAX3D, 3, 3, 3), ka, mu2
     character(len=8) :: elrese(6), fami(6), typmod(2)
     character(len=16) :: compor(4)
     aster_logical :: cp, axi, l_temp_noeu
     integer(kind=8) :: irese, ddli, nnoi, indeni, nnops, ifiss
     integer(kind=8) :: iret1, iret2, iret3
-    type(Behaviour_Integ) :: BEHinteg
+    type(Behaviour_Integ) :: BEHInteg
 !
     real(kind=8) :: tini, prod1, dsigin(6, 3), sigin(6), epsref(6), epsp(6)
     real(kind=8) :: mu, nu(1), e(1)
@@ -121,7 +123,7 @@ subroutine xgelem(elrefp, ndim, coorse, igeom, jheavt, &
 !
 ! - Initialisation of behaviour datastructure
 !
-    call behaviourInit(BEHinteg)
+    call behaviourInit(BEHInteg)
 !
 !     VERIF QUE LES TABLEAUX LOCAUX DYNAMIQUES NE SONT PAS TROP GRANDS
 !     (VOIR CRS 1404)
@@ -482,7 +484,7 @@ subroutine xgelem(elrefp, ndim, coorse, igeom, jheavt, &
             end if
 
         else
-            call nmelnl(BEHinteg, &
+            call nmelnl(BEHInteg, &
                         'XFEM', kpg+idecpg, 1, ndim, &
                         typmod, matcod, compor, &
                         eps, 0.d0, 0.d0, sigl, energi)

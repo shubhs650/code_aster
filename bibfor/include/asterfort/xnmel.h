@@ -15,46 +15,38 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine xnmel(nnop, nfh, nfe, ddlc,&
-                     ddlm, igeom, typmod, option, imate,&
-                     compor, lgpg, carcri, jpintt, cnset,&
-                     heavt, lonch, basloc, instam, instap, idepl, lsn,&
-                     lst, sig, vi, matuu, ivectu,&
-                     codret, jpmilt, nfiss, jheavn, jstno,&
-                     l_line, l_nonlin, lMatr, lVect, lSigm)
+    subroutine xnmel(materPara, typmod, &
+                     nnop, nfh, nfe, &
+                     ddlc, ddlm, jvGeom, &
+                     lgpg, jpintt, cnset, &
+                     heavt, lonch, basloc, &
+                     lsn, lst, &
+                     matuu, &
+                     jpmilt, nfiss, jheavn, jstno)
+        use MaterialPara_type
+        type(Material_Para), intent(inout) :: materPara
+        character(len=8), intent(in) :: typmod(2)
         integer(kind=8) :: nfiss
         integer(kind=8) :: nnop
         integer(kind=8) :: nfh
         integer(kind=8) :: nfe
         integer(kind=8) :: ddlc
         integer(kind=8) :: ddlm
-        integer(kind=8) :: igeom
-        character(len=8) :: typmod(*)
-        character(len=16) :: option
-        integer(kind=8) :: imate
-        character(len=16) :: compor(*)
+        integer(kind=8) :: jvGeom
         integer(kind=8) :: lgpg
-        real(kind=8) :: carcri(*)
         integer(kind=8) :: jpintt
         integer(kind=8) :: cnset(128)
         integer(kind=8) :: heavt(*)
         integer(kind=8) :: lonch(10)
         real(kind=8) :: basloc(*)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
-        integer(kind=8) :: idepl
         real(kind=8) :: lsn(nnop)
         real(kind=8) :: lst(nnop)
-        real(kind=8) :: sig(*)
-        real(kind=8) :: vi(*)
         real(kind=8) :: matuu(*)
-        integer(kind=8) :: ivectu
-        integer(kind=8) :: codret
         integer(kind=8) :: jpmilt
         integer(kind=8) :: jheavn
         integer(kind=8) :: jstno
-        aster_logical, intent(in) :: l_line, l_nonlin, lMatr, lVect, lSigm
     end subroutine xnmel
 end interface

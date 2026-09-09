@@ -15,14 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterf_types.h"
 !
 interface
-    subroutine pk2cau(nomte, ncmp, pk2, sigma)
-        integer(kind=8) :: ncmp
-        character(len=16) :: nomte
-        real(kind=8) :: pk2(ncmp, *)
-        real(kind=8) :: sigma(ncmp, *)
+    subroutine pk2cau(plateOrie, &
+                      nbLayer, eptot, &
+                      nomte, ncmp, &
+                      pk2Vect, sigma)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: nbLayer
+        real(kind=8), intent(in) :: eptot
+        character(len=16), intent(in) :: nomte
+        integer(kind=8), intent(in) :: ncmp
+        real(kind=8), intent(in) :: pk2Vect(ncmp, *)
+        real(kind=8), intent(out) :: sigma(ncmp, *)
     end subroutine pk2cau
 end interface

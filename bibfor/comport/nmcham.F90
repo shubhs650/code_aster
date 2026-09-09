@@ -15,12 +15,24 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nmcham(fami, kpg, ksp, imate, compor, &
+! aslint: disable=W0413
+!
+subroutine nmcham(fami, kpg, ksp, imate, relaComp, &
                   matel, mat, nbvar, memo, visc, &
                   idelta, coef)
 !
     implicit none
+!
+#include "asterc/r8prem.h"
+#include "asterfort/assert.h"
+#include "asterfort/rcvalb.h"
+#include "asterfort/utmess.h"
+#include "asterfort/verift.h"
+!
+    integer(kind=8) :: imate, nbvar, kpg, ksp, memo, visc, idelta, nrad
+    character(len=16), intent(in) :: relaComp
+    real(kind=8) :: mat(18), matel(4)
+    character(len=*) :: fami
 !
 !      NMCHAM   -- COEFFICIENTS MATERIAU DES LOIS DE COMPORTEMENT
 !                  'VMIS_CINx_CHAB'  'VISC_CINx_CHAB'
@@ -31,51 +43,42 @@ subroutine nmcham(fami, kpg, ksp, imate, compor, &
 !     COMPOR    IN    K16  COMPOR(1) NOM DU COMPORTEMENT
 !     MAT       OUT   R    COEF MATERIAU
 !
-! ---- ARGUMENTS
-#include "asterc/r8prem.h"
-#include "asterfort/rcvalb.h"
-#include "asterfort/utmess.h"
-#include "asterfort/verift.h"
-    integer(kind=8) :: imate, nbvar, kpg, ksp, memo, visc, idelta, nrad
-    character(len=16) :: compor(3), valk(2), texte(2), nomres(12)
-    real(kind=8) :: mat(18), matel(4)
-    character(len=*) :: fami
-! ---- VARIABLES LOCALES
+
     real(kind=8) :: coef, valres(12), c2inf, gamm20, delta1, delta2
     real(kind=8) :: r0, rinf, b, cinf, k, w, gamma0, epsi
     real(kind=8) :: un, ainf, kvi, valden, unskvi
     integer(kind=8) :: icodre(12)
+    character(len=16) :: valk(2), texte(2), nomres(12)
     character(len=8) :: nomemo(4)
 !.========================= DEBUT DU CODE EXECUTABLE ==================
 !
     nbvar = 0
-    if (compor(1) (6:9) .eq. 'CIN1') then
+    if (relaComp(6:9) .eq. 'CIN1') then
         nbvar = 1
-    else if (compor(1) (6:9) .eq. 'CIN2') then
+    else if (relaComp(6:9) .eq. 'CIN2') then
         nbvar = 2
-    else if (compor(1) (6:9) .eq. 'MEMO') then
+    else if (relaComp(6:9) .eq. 'MEMO') then
         nbvar = 2
     else
-        call utmess('F', 'ALGORITH4_50', sk=compor(1))
+        ASSERT(ASTER_FALSE)
     end if
 !
-    if (compor(1) (1:4) .eq. 'VMIS') then
+    if (relaComp(1:4) .eq. 'VMIS') then
         visc = 0
-    else if (compor(1) (1:4) .eq. 'VISC') then
+    else if (relaComp(1:4) .eq. 'VISC') then
         visc = 1
     else
-        call utmess('F', 'ALGORITH4_50', sk=compor(1))
+        ASSERT(ASTER_FALSE)
     end if
 !
     memo = 0
-!
-    if (compor(1) (11:14) .eq. 'MEMO') then
+    if (relaComp(11:14) .eq. 'MEMO') then
         memo = 1
-    else if (compor(1) (6:9) .eq. 'MEMO') then
+    else if (relaComp(6:9) .eq. 'MEMO') then
         memo = 1
     end if
 !
-    if (compor(1) (11:14) .eq. 'NRAD') then
+    if (relaComp(11:14) .eq. 'NRAD') then
         nrad = 1
     else
         nrad = 0
@@ -155,13 +158,13 @@ subroutine nmcham(fami, kpg, ksp, imate, compor, &
     mat(8) = ainf
 !
     if (b < 0.d0) then
-        valk(1) = compor(1)
+        valk(1) = relaComp
         valk(2) = 'b'
         call utmess('A', 'COMPOR1_84', nk=2, valk=valk, sr=b)
     end if
 !
     if (w < 0.d0) then
-        valk(1) = compor(1)
+        valk(1) = relaComp
         valk(2) = 'w'
         call utmess('A', 'COMPOR1_84', nk=2, valk=valk, sr=w)
     end if
@@ -238,8 +241,8 @@ subroutine nmcham(fami, kpg, ksp, imate, compor, &
                 call utmess('F', 'ALGORITH6_69')
             end if
         else
-            texte(1) = compor(1)
-            texte(2) = "VMIS"//compor(1) (5:16)
+            texte(1) = relaComp
+            texte(2) = "VMIS"//relaComp(5:16)
             call utmess('F', 'COMPOR1_32', nk=2, valk=texte)
         end if
     else

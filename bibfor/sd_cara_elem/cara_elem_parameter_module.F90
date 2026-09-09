@@ -172,12 +172,12 @@ module cara_elem_parameter_module
     integer(kind=8), parameter :: ACE_NU_THHMM     =  9
     integer(kind=8), parameter :: ACE_NU_HHO       = 10
 !
-    integer(kind=8), parameter :: ACE_NB_POUTRE    = 13
+    integer(kind=8), parameter :: ACE_NB_POUTRE    = 14
     character(len=16), parameter :: ACE_EL_POUTRE(ACE_NB_POUTRE) =[ &
         'MECA_POU_D_T    ', 'MECA_POU_D_E    ', 'MECA_POU_D_T_GD ', 'MEFS_POU_D_T    ', &
         'MECA_POU_D_TG   ', 'MECA_POHO_HEXA8 ', 'MECA_POHO_HEXA20', 'MET3SEG3        ', &
         'MET6SEG3        ', 'MET3SEG4        ', 'MECA_POU_D_EM   ', 'MECA_POU_D_TGM  ', &
-        'MECA_POU_D_SQUE ']
+        'MECA_POU_D_SQUE ', 'MECA_S8P2       ']
 !
     integer(kind=8), parameter :: ACE_MECA_POU_D_T          =  1
     integer(kind=8), parameter :: ACE_MECA_POU_D_E          =  2
@@ -192,6 +192,7 @@ module cara_elem_parameter_module
     integer(kind=8), parameter :: ACE_MECA_POU_D_EM         = 11
     integer(kind=8), parameter :: ACE_MECA_POU_D_TGM        = 12
     integer(kind=8), parameter :: ACE_MECA_POU_D_SQUE       = 13
+    integer(kind=8), parameter :: ACE_MECA_S8P2             = 14
 !
 ! --------------------------------------------------------------------------------------------------
     integer(kind=8), parameter :: ACE_NB_DISCRET   = 8
@@ -209,7 +210,7 @@ module cara_elem_parameter_module
     integer(kind=8), parameter :: ACE_MECA_2D_DIS_TR_L  = 8
 !
 ! --------------------------------------------------------------------------------------------------
-    integer(kind=8), parameter :: ACE_NB_COQUE = 28
+    integer(kind=8), parameter :: ACE_NB_COQUE = 29
     character(len=16), parameter :: ACE_EL_COQUE(ACE_NB_COQUE) = [ &
                                     'THCOTR3         ', 'THCOTR6         ', &
                                     'THCOQU4         ', 'THCOQU8         ', &
@@ -224,7 +225,8 @@ module cara_elem_parameter_module
                                     'MEC3TR7H        ', 'MEBODKT         ', &
                                     'MEBODST         ', 'MEBOQ4G         ', &
                                     'MEBOCQ3         ', 'THCOSE3         ', &
-                                    'THCOSE2         ', 'PLAQ_MITC       ']
+                                    'THCOSE2         ', 'PLAQ_MITC_QUAD9 ', &
+                                    'PLAQ_MITC_TRIA6 ']
 !
 ! --------------------------------------------------------------------------------------------------
     integer(kind=8), parameter :: ACE_NB_CABLE     = 2
@@ -232,9 +234,10 @@ module cara_elem_parameter_module
         'MECABL2         ', 'MEPOULI         ' ]
 !
 ! --------------------------------------------------------------------------------------------------
-    integer(kind=8), parameter :: ACE_NB_BARRE     = 3
+    integer(kind=8), parameter :: ACE_NB_BARRE     = 7
     character(len=16),parameter :: ACE_EL_BARRE(ACE_NB_BARRE) =[ &
-        'MECA_BARRE      ', 'MECA_2D_BARRE   ', 'MECGSEG3        ' ]
+        'MECA_BARRE      ', 'MECA_2D_BARRE   ', 'MECGSEG3        ', &
+        'MEBA2DSE2       ', 'MEBA2DSE3       ', 'MEBA3DSE2       ', 'MEBA3DSE3       ' ]
 !
 ! --------------------------------------------------------------------------------------------------
     integer(kind=8), parameter :: ACE_NB_GRILLE    = 6

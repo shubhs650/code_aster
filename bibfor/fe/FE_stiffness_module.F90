@@ -23,6 +23,8 @@ module FE_stiffness_module
     use FE_algebra_module
     use HHO_utils_module, only: hhoCopySymPartMat
 !
+! aslint: disable=C1505
+!
     implicit none
 !
     private
@@ -55,9 +57,9 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(in), dimension(3, MAX_BS)  :: BGSEval
+        real(kind=8), intent(in), dimension(3, MAX_BS_CG)  :: BGSEval
         real(kind=8), intent(in)            :: weight
-        real(kind=8), intent(inout)         :: vec(MAX_BS)
+        real(kind=8), intent(inout)         :: vec(MAX_BS_CG)
         real(kind=8), intent(in)            :: ValuesQP(3)
 ! --------------------------------------------------------------------------------------------------
 !   FE
@@ -96,7 +98,7 @@ contains
 !
         type(FE_Quadrature), intent(in)     :: FEQuad
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(out)           :: vec(MAX_BS)
+        real(kind=8), intent(out)           :: vec(MAX_BS_CG)
         real(kind=8), intent(in)            :: ValuesQP(3, MAX_QP)
 ! --------------------------------------------------------------------------------------------------
 !
@@ -111,7 +113,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: ipg
-        real(kind=8), dimension(3, MAX_BS) :: BSEval
+        real(kind=8), dimension(3, MAX_BS_CG) :: BSEval
 !
         vec = 0.d0
 !
@@ -135,9 +137,9 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(in), dimension(3, MAX_BS) :: BGSEval
+        real(kind=8), intent(in), dimension(3, MAX_BS_CG) :: BGSEval
         real(kind=8), intent(in)            :: weight
-        real(kind=8), intent(inout)         :: mat(MAX_BS, MAX_BS)
+        real(kind=8), intent(inout)         :: mat(MAX_BS_CG, MAX_BS_CG)
         real(kind=8), intent(in)            :: ValueQP(3, 3)
 ! --------------------------------------------------------------------------------------------------
 !
@@ -179,7 +181,7 @@ contains
 !
         type(FE_Quadrature), intent(in)     :: FEQuad
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(out)           :: mat(MAX_BS, MAX_BS)
+        real(kind=8), intent(out)           :: mat(MAX_BS_CG, MAX_BS_CG)
         real(kind=8), intent(in)            :: ValuesQP(3, 3, MAX_QP)
 ! --------------------------------------------------------------------------------------------------
 !
@@ -194,7 +196,7 @@ contains
 !
 ! ----- Local variables
         integer(kind=8) :: ipg
-        real(kind=8), dimension(3, MAX_BS) :: BSEval
+        real(kind=8), dimension(3, MAX_BS_CG) :: BSEval
 !
         mat = 0.d0
 !
@@ -223,7 +225,7 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(in), dimension(6, MAX_BS, 3) :: def
+        real(kind=8), intent(in), dimension(6, MAX_BS_CG, 3) :: def
         real(kind=8), intent(in)            :: weight
         real(kind=8), intent(inout)         :: vec(*)
         real(kind=8), intent(in)            :: stress(6)
@@ -264,7 +266,7 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(in), dimension(6, MAX_BS, 3) :: def
+        real(kind=8), intent(in), dimension(6, MAX_BS_CG, 3) :: def
         real(kind=8), intent(in)            :: weight
         aster_logical, intent(in)           :: l_matsym
         real(kind=8), intent(inout)         :: mat(*)
@@ -358,7 +360,7 @@ contains
         implicit none
 !
         type(FE_Basis), intent(in)          :: FEBasis
-        real(kind=8), intent(in), dimension(6, MAX_BS, MAX_BS) :: pff
+        real(kind=8), intent(in), dimension(6, MAX_BS_CG, MAX_BS_CG) :: pff
         real(kind=8), intent(in)            :: weight
         aster_logical, intent(in)           :: l_matsym
         real(kind=8), intent(inout)         :: mat(*)
@@ -375,7 +377,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
         integer(kind=8) :: i_n, kkd, j_n, i_d
-        real(kind=8) :: stress_w(6), tmp(MAX_BS)
+        real(kind=8) :: stress_w(6), tmp(MAX_BS_CG)
 !
         stress_w = weight*stress
 !
@@ -443,10 +445,10 @@ contains
 !
         implicit none
 !
-        real(kind=8), intent(in)    :: BSEval(MAX_BS)
-        real(kind=8), intent(in)    :: weight, BGSEval(3, MAX_BS)
+        real(kind=8), intent(in)    :: BSEval(MAX_BS_CG)
+        real(kind=8), intent(in)    :: weight, BGSEval(3, MAX_BS_CG)
         real(kind=8), intent(in)    :: ValueQP(3)
-        real(kind=8), intent(inout) :: mat(MAX_BS, MAX_BS)
+        real(kind=8), intent(inout) :: mat(MAX_BS_CG, MAX_BS_CG)
 ! --------------------------------------------------------------------------------------------------
 !
 !
@@ -458,7 +460,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
 !
 ! ----- Local variables
-        real(kind=8) :: gloDt(3, MAX_BS)
+        real(kind=8) :: gloDt(3, MAX_BS_CG)
 
         gloDt(1, :) = ValueQP(1)*BSEval
         gloDt(2, :) = ValueQP(2)*BSEval

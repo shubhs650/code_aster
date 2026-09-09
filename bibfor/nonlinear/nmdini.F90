@@ -16,8 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine nmdini(factorKeyword, listInstJv, tole, &
-                  nbInst, numeInstInit, instInit)
+subroutine nmdini(factorKeyword, listInstJv, tole, nbInst, numeInstInit)
 !
     implicit none
 !
@@ -34,13 +33,12 @@ subroutine nmdini(factorKeyword, listInstJv, tole, &
     real(kind=8), intent(in) :: tole
     integer(kind=8), intent(in) :: nbInst
     integer(kind=8), intent(out) :: numeInstInit
-    real(kind=8), intent(out) :: instInit
 !
 ! --------------------------------------------------------------------------------------------------
 !
 ! *_NON_LINE - Time discretization datastructure
 !
-! Index of initial time
+! Index of initial time in list of times
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -48,10 +46,11 @@ subroutine nmdini(factorKeyword, listInstJv, tole, &
 ! In  listInstJv       : name of JEVEUX object for list of times from INCREMENT/LIST_INST
 ! In  tole             : tolerance to search time
 ! In  nbInst           : number of time steps in list
-! Out numeInstInit     : index of initial time
+! Out numeInstInit     : index of initial time in list of times
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    real(kind=8) :: instInit
     integer(kind=8) :: n1, n2, iInst
     real(kind=8), pointer :: listInst(:) => null()
 !

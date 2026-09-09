@@ -28,7 +28,6 @@ subroutine ccliop(option, jvBaseName, listOptEffJv, nbOptEff)
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/jexnum.h"
-#include "asterfort/utmess.h"
 #include "asterfort/wkvect.h"
 #include "jeveux.h"
 !

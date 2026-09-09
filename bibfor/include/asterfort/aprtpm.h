@@ -22,18 +22,19 @@ interface
                       elem_slav_nbnode, elem_slav_coor, elem_slav_code,&
                       poin_inte_sl    , nb_poin_inte  , poin_inte_ma  ,&
                       poin_gaus_ma    , iret)
+#include "MeshTypes_type.h"
         real(kind=8), intent(in) :: pair_tole
         integer(kind=8), intent(in) :: elem_dime
         integer(kind=8), intent(in) :: elem_mast_nbnode
-        real(kind=8), intent(in) :: elem_mast_coor(3,9)
+        real(kind=8), intent(in) :: elem_mast_coor(3,MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_mast_code
         integer(kind=8), intent(in) :: elem_slav_nbnode
-        real(kind=8), intent(in) :: elem_slav_coor(3,9)
+        real(kind=8), intent(in) :: elem_slav_coor(3,MT_NNOMAX2D)
         character(len=8), intent(in) :: elem_slav_code
         integer(kind=8), intent(in) :: nb_poin_inte
-        real(kind=8), intent(out) :: poin_inte_ma(elem_dime-1,8)
-        real(kind=8), intent(out) :: poin_gaus_ma(elem_dime-1,36)
-        real(kind=8), intent(in) :: poin_inte_sl(elem_dime-1,8)
+        real(kind=8), intent(out) :: poin_inte_ma(2,8)
+        real(kind=8), intent(out) :: poin_gaus_ma(2,36)
+        real(kind=8), intent(in) :: poin_inte_sl(2,8)
         integer(kind=8), intent(out) :: iret
     end subroutine aprtpm
 end interface

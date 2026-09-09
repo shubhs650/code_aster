@@ -21,7 +21,7 @@
 
 #include "asterf_types.h"
 !
-interface 
+interface
     subroutine piesgv(neps, tau, mat, lccrma, vim,&
                       epsm, epsp, epsd, typmod, lcesga,&
                       etamin, etamax, lcesbo, copilo)
@@ -40,15 +40,15 @@ interface
         end subroutine lcesga
 
         subroutine lcesbo(ep0, ep1, l0, l1, etamin, etamax, vide, etam, etap)
-        real(kind=8),intent(in) :: ep0(6),ep1(6),l0,l1,etamin,etamax   
-        aster_logical, intent(out)    :: vide     
-        real(kind=8),intent(out):: etam,etap     
+        real(kind=8),intent(in) :: ep0(6),ep1(6),l0,l1,etamin,etamax
+        aster_logical, intent(out)    :: vide
+        real(kind=8),intent(out):: etam,etap
         end subroutine lcesbo
         end interface
 
         character(len=8),intent(in) :: typmod(*)
         integer(kind=8),intent(in)      :: neps, mat
         real(kind=8),intent(in) :: tau, epsm(neps), epsd(neps), epsp(neps), etamin, etamax,vim(3)
-        real(kind=8),intent(out):: copilo(2,*)
+        real(kind=8):: copilo(2,*)
     end subroutine piesgv
-end interface 
+end interface

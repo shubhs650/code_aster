@@ -1,0 +1,21 @@
+ARG baseimage="debian:12"
+FROM ${baseimage}
+
+ARG variant
+ENV DEVTOOLS_COMPUTER_ID=${variant}
+ARG PKGINFO
+ARG BRANCH
+
+USER root
+ENV workdir=/wrk
+WORKDIR ${workdir}
+
+COPY . ${workdir}/src
+RUN chmod u+x ${workdir}/src/containers/build.sh && ${workdir}/src/containers/build.sh
+
+ENV workdir=
+
+USER user
+WORKDIR /home/user
+
+ENTRYPOINT ["/opt/codeaster/bin/run_aster"]

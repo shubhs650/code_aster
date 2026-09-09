@@ -15,49 +15,64 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine w175ca(modele, carele, chfer1, chefge, chfer2)
+!
+subroutine w175ca(model, caraElem, chfer1, chefge, chfer2)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
+!
 #include "asterfort/calcul.h"
 #include "asterfort/exlim3.h"
-#include "asterfort/mecara.h"
-    character(len=8) :: modele, carele
-    character(len=19) :: chfer1, chfer2, chefge
+#include "asterfort/setStructFields.h"
 !
-! ----------------------------------------------------------------------
-!     CALCUL DE L'OPTION FERRAILLAGE
+    character(len=8), intent(in) :: model, caraElem
+    character(len=19), intent(in) :: chfer1, chfer2, chefge
 !
-! IN  MODELE  : NOM DU MODELE
-! IN  CARELE  : CARACTERISTIQUES COQUES
-! IN  CHFER1  : CHAMP DE FER1_R
-! IN  CHEFGE  : CHAMP DE EFGE_ELNO
-! OUT CHFER2  : RESULTAT DU CALCUL DE FERRAILLAGE
+! --------------------------------------------------------------------------------------------------
 !
-    character(len=8) :: lpain(5), lpaout(2)
-    character(len=16) :: option
-    character(len=19) :: chcara(18)
-    character(len=19) :: lchin(15), lchout(2), ligrel
+!  CALC_FERRAILLAGE
 !
-    call exlim3('AFFE', 'G', modele, ligrel)
-    option = 'FERR_ELEM'
+! --------------------------------------------------------------------------------------------------
 !
-    call mecara(carele, chcara)
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    character(len=16), parameter:: option = 'FERR_ELEM'
+    character(len=19) :: ligrel
 !
-    lpain(1) = 'PCACOQU'
-    lchin(1) = chcara(7)
-    lpain(2) = 'PFERRA1'
-    lchin(2) = chfer1
-    lpain(3) = 'PEFFORR'
-    lchin(3) = chefge
-    lpain(4) = 'PCAGEPO'
-    lchin(4) = chcara(5)
+! --------------------------------------------------------------------------------------------------
 !
-!
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
+
+    call exlim3('AFFE', 'G', model, ligrel)
+
+! - Set input fields
+    nbFieldIn = 1
+    lpain(nbFieldIn) = 'PFERRA1'
+    lchin(nbFieldIn) = chfer1
+    nbFieldIn = nbFieldIn+1
+    lpain(nbFieldIn) = 'PEFFORR'
+    lchin(nbFieldIn) = chefge
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+
+! - Add fields for structural elements
+    call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Set output field
     lpaout(1) = 'PFERRA2'
     lchout(1) = chfer2
-!
-    call calcul('S', option, ligrel, 4, lchin, &
-                lpain, 1, lchout, lpaout, 'G', &
-                'OUI')
+
+! - Compute
+    call calcul('S', option, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'G', 'OUI')
 !
 end subroutine

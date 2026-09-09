@@ -122,9 +122,13 @@ subroutine compMecaChckStrain(iComp, &
         call utmess('F', 'COMPOR1_44', nk=2, valk=[defoComp, relaComp])
     end if
 
-! - Only mechanical strains with MFront
-    if (lMFront .and. lTotalStrain .and. relaComp .ne. "META_LEMA_ANI") then
-        call utmess('F', 'MGIS1_1')
+! - Only mechanical strains with MFront, except META_LEMA_ANI
+    if (lMFront .and. lTotalStrain .and. relaComp .ne. 'CZM_MFRONT') then
+        if (relaComp .eq. "META_LEMA_ANI") then
+            call utmess('A', 'MGIS1_3')
+        else
+            call utmess('F', 'MGIS1_1')
+        end if
     end if
 
 ! - Loop on elements
@@ -161,7 +165,7 @@ subroutine compMecaChckStrain(iComp, &
             lSolidShell = lteatt('MODELI', 'SSH', typel=elemTypeName)
 
 ! --------- Specific checks: alarm (outside loop on cells)
-            if (l_dkt .and. defoComp .eq. 'PETIT_REAC') then
+            if ((l_dkt .or. l_coq3d) .and. defoComp .eq. 'PETIT_REAC') then
                 lPetitReac = ASTER_TRUE
             end if
 
@@ -279,7 +283,12 @@ subroutine compMecaChckStrain(iComp, &
     end do
 !
     if (lPetitReac) then
-        call utmess('A', 'COMPOR1_50')
+        if (l_dkt) then
+            call utmess('F', 'COMPOR1_50')
+        else
+            call utmess('F', 'COMPOR1_62')
+        end if
+
     end if
     if (lGrotGdep) then
         call utmess('A', 'COMPOR1_47')

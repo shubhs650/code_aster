@@ -69,11 +69,11 @@ subroutine te0461(option, nomte)
     type(HHO_Quadrature) :: hhoQuadFace
     type(HHO_basis_face) :: hhoBasisFace
     real(kind=8), dimension(MSIZE_FACE_SCAL) :: rhs, temp_F_curr
-    real(kind=8) :: CoeffQP_curr(MAX_QP_FACE)
-    real(kind=8) :: ParaQP_curr(MAX_QP_FACE)
-    real(kind=8) :: NeumValuesQP(MAX_QP_FACE)
+    real(kind=8) :: CoeffQP_curr(MSIZE_QP_FACE)
+    real(kind=8) :: ParaQP_curr(MSIZE_QP_FACE)
+    real(kind=8) :: NeumValuesQP(MSIZE_QP_FACE)
     real(kind=8) :: time_curr, theta, temp_eval_curr, tz0
-    real(kind=8) :: sigmEner(MAX_QP_FACE), epsil(MAX_QP_FACE), rbid
+    real(kind=8) :: sigmEner(MSIZE_QP_FACE), epsil(MSIZE_QP_FACE), rbid
     integer(kind=8) :: fbs, celldim, ipg, nbpara, npg
     integer(kind=8) :: j_time, j_coefh, j_para
 !
@@ -91,7 +91,7 @@ subroutine te0461(option, nomte)
 !
     call hhoTherFaceDofs(hhoFace, hhoData, fbs)
 !
-    ASSERT(hhoQuadFace%nbQuadPoints <= MAX_QP_FACE)
+    ASSERT(hhoQuadFace%nbQuadPoints <= MSIZE_QP_FACE)
 !
     celldim = hhoFace%ndim+1
     CoeffQP_curr = 0.d0

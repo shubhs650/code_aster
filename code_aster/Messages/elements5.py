@@ -132,11 +132,6 @@ Un seul noeud doit constituer le groupe de noeuds %(k1)s. On n'utilisera que le 
  Épaisseur dans AFFE_CARA_ELEM: %(r2)f
 """
     ),
-    48: _(
-        """
-    Il n'est pas possible d'utiliser ANGL_AXE et ORIG_AXE de AFFE_CARA_ELEM pour les modélisations XXX_JHMS
-"""
-    ),
     51: _(
         """
   CHAMP :  %(k1)s  non traité sous le type COQUE_GENE. Les champs traités sont

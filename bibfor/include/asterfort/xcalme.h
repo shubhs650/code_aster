@@ -16,11 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine xcalme(ds_thm,&
-                      option, ndim, dimenr,&
-                      dimcon, addeme, adcome, congep,&
-                      dsde, deps, angl_naut)
+interface
+    subroutine xcalme(ds_thm, &
+                      option, ndim, dimenr, &
+                      dimcon, addeme, adcome, congep, &
+                      dsde, deps)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         integer(kind=8) :: dimcon
@@ -32,6 +32,5 @@ interface
         real(kind=8) :: congep(dimcon)
         real(kind=8) :: dsde(dimcon, dimenr)
         real(kind=8) :: deps(6)
-        real(kind=8), intent(in) :: angl_naut(3)
     end subroutine xcalme
-end interface 
+end interface

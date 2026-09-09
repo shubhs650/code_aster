@@ -113,7 +113,7 @@ subroutine cglect(resu, modele, ndim, option, &
 !
 !     LECTURE DE LA DESCRIPTION DU FOND DE FISSURE
 !     ET RECUPERATION DES OBJETS FONOEU, CHFOND, BASFON + LNOFF
-    call cgleff(typfis, nomfis, fonoeu, chfond, basfon, &
+    call cgleff(typfis, nomfis, ndim, fonoeu, chfond, basfon, &
                 taillr, conf, lnoff)
 !
 !     VERIFICATION DES DONNEES RELATIVES AU LISSAGE

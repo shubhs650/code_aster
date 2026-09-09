@@ -21,10 +21,11 @@ subroutine gapGetParamCoor(elem_code, para_coor)
     implicit none
 !
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 #include "asterfort/assert.h"
 !
     character(len=8), intent(in) :: elem_code
-    real(kind=8), intent(out) :: para_coor(2, 9)
+    real(kind=8), intent(out) :: para_coor(2, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !

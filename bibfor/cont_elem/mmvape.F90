@@ -31,11 +31,12 @@ subroutine mmvape(phase, leltf, l_pena_cont, l_pena_fric, &
 #include "asterf_types.h"
 #include "asterfort/mmmvcc.h"
 #include "asterfort/mmmvff.h"
+#include "MeshTypes_type.h"
 !
     character(len=4), intent(in) :: phase
     aster_logical, intent(in) :: leltf, l_pena_cont, l_pena_fric
     integer(kind=8), intent(in) :: ndim, nnl, nbcps
-    real(kind=8), intent(in) :: ffl(9)
+    real(kind=8), intent(in) :: ffl(MT_NNOMAX2D)
     real(kind=8), intent(in) :: coefac, coefaf, coefff
     real(kind=8), intent(in) :: wpg, jacobi, jeu, lambda
     real(kind=8), intent(in) :: tau1(3), tau2(3), mprojt(3, 3)

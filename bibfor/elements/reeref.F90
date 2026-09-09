@@ -25,6 +25,7 @@ subroutine reeref(elrefp, nnop, geom, xg, ndim, xe, ff, dfdi)
 #include "asterfort/elrfvf.h"
 #include "asterfort/invjax.h"
 #include "asterfort/reereg.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: nnop
@@ -56,7 +57,7 @@ subroutine reeref(elrefp, nnop, geom, xg, ndim, xe, ff, dfdi)
 ! OUT DFDI   : DÉRIVÉES DES FONCTIONS DE FORMES EN XE
 !
     integer(kind=8) :: nbnomx
-    parameter(nbnomx=27)
+    parameter(nbnomx=MT_NNOMAX3D)
 !
     integer(kind=8) :: i, k, n
     integer(kind=8) :: nno, nderiv, iret

@@ -16,19 +16,18 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-interface 
-    subroutine thmMecaElas(ds_thm, lMatr, lSigm, angl_naut, dtemp,&
-                           adcome, dimcon,&
-                           deps  , congep, dsdeme, ther_meca)
+interface
+    subroutine thmMecaElas(ds_thm, lMatr, lSigm, dtemp, &
+                           adcome, dimcon, &
+                           deps, congep, dsdeme, ther_meca)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
         aster_logical, intent(in) :: lMatr, lSigm
         real(kind=8), intent(in) :: dtemp
         integer(kind=8), intent(in) :: dimcon, adcome
-        real(kind=8), intent(in) :: angl_naut(3)
         real(kind=8), intent(in) :: deps(6)
         real(kind=8), intent(inout) :: congep(dimcon)
         real(kind=8), intent(inout) :: dsdeme(6, 6)
         real(kind=8), intent(out) :: ther_meca(6)
     end subroutine thmMecaElas
-end interface 
+end interface

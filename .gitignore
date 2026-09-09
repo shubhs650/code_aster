@@ -16,11 +16,14 @@ waf_*
 **/fort.*
 glob.*
 vola.*
+*.env
 
 .hg*
 .jenkins*
 .vscode/*
 devtools
+
+code_aster/pkginfo.py
 
 # pixi/uv environments
 .pixi

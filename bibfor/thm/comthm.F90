@@ -18,10 +18,8 @@
 ! aslint: disable=W1504, W1306
 !
 subroutine comthm(ds_thm, &
-                  lMatr, lSigm, &
-                  lVari, lMatrPred, &
-                  option, j_mater, &
-                  type_elem, angl_naut, &
+                  lMatr, lSigm, lVari, lMatrPred, &
+                  option, typmod, &
                   ndim, nbvari, &
                   dimdef, dimcon, &
                   adcome, adcote, adcp11, adcp12, adcp21, adcp22, adco2nd, &
@@ -34,41 +32,40 @@ subroutine comthm(ds_thm, &
                   time_prev, time_curr, &
                   dsde, gravity, retcom)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/calc2nd.h"
 #include "asterfort/calcco.h"
 #include "asterfort/calcfh.h"
 #include "asterfort/calcft.h"
-#include "asterfort/thmSelectMeca.h"
 #include "asterfort/calcva.h"
+#include "asterfort/tebiot.h"
+#include "asterfort/THM_type.h"
+#include "asterfort/thmEvalConductivity.h"
+#include "asterfort/thmEvalGravity.h"
+#include "asterfort/thmEvalSatuFinal.h"
 #include "asterfort/thmGetParaBiot.h"
 #include "asterfort/thmGetParaElas.h"
-#include "asterfort/thmGetParaTher.h"
 #include "asterfort/thmGetParaHydr.h"
-#include "asterfort/thmMatrHooke.h"
-#include "asterfort/tebiot.h"
-#include "asterfort/thmEvalSatuFinal.h"
+#include "asterfort/thmGetParaTher.h"
 #include "asterfort/thmGetPermeabilityTensor.h"
-#include "asterfort/thmEvalGravity.h"
-#include "asterfort/thmEvalConductivity.h"
-#include "asterfort/THM_type.h"
+#include "asterfort/thmMatrHooke.h"
+#include "asterfort/thmSelectMeca.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
     aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
     character(len=16), intent(in) :: option
-    integer(kind=8), intent(in) :: j_mater
-    character(len=8), intent(in) :: type_elem(2)
-    real(kind=8), intent(in) :: angl_naut(3)
+    character(len=8), intent(in) :: typmod(2)
     integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: adcome, adcote, adcp11, adcp12, adcp21, adcp22, adco2nd
     integer(kind=8), intent(in) :: addeme, addete, addep1, addep2, adde2nd
     integer(kind=8), intent(in) :: kpi, npg
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: defgem(1:dimdef), defgep(1:dimdef)
     real(kind=8), intent(in) :: congem(1:dimcon)
     real(kind=8), intent(inout) :: congep(1:dimcon)
@@ -89,9 +86,7 @@ subroutine comthm(ds_thm, &
 !
 ! IO  ds_thm           : datastructure for THM
 ! In  option           : name of option- to compute
-! In  j_mater          : coded material address
-! In  type_elem        : type of modelization (TYPMOD2)
-! In  angl_naut        : nautical angles
+! In  typmod           : type of modelization (TYPMOD2)
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
 ! In  dimdef           : dimension of generalized strains vector
@@ -125,63 +120,54 @@ subroutine comthm(ds_thm, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: p1, dp1, grad_p1(3), p2, dp2, grad_p2(3), temp, dtemp, grad_temp(3)
+    real(kind=8) :: p1, dp1, gradP1(3), p2, dp2, gradP2(3), temp, dtemp, gradTemp(3)
     real(kind=8) :: phi, pvp, pad, h11, h12, rho11, epsv, deps(6), depsv, nl
     real(kind=8) :: tbiot(6), satur, dsatur
     real(kind=8) :: tperm(ndim, ndim)
     real(kind=8) :: lambp, dlambp, lambs, dlambs
     real(kind=8) :: tlambt(ndim, ndim), tlamct(ndim, ndim), tdlamt(ndim, ndim)
     integer(kind=8) :: i
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
-
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
     retcom = 0
-!
+
 ! - Update unknowns
-!
     call calcva(ds_thm, ndim, &
                 defgem, defgep, &
                 addeme, addep1, addep2, addete, &
                 depsv, epsv, deps, &
-                temp, dtemp, grad_temp, &
-                p1, dp1, grad_p1, &
-                p2, dp2, grad_p2, &
+                temp, dtemp, gradTemp, &
+                p1, dp1, gradP1, &
+                p2, dp2, gradP2, &
                 retcom)
-
     if (retcom .ne. 0) then
         goto 99
     end if
-!
+
 ! - Get hydraulic parameters
-!
-    call thmGetParaHydr(j_mater, ds_thm)
-!
+    call thmGetParaHydr(ds_thm)
+
 ! - Get Biot parameters (for porosity evolution)
-!
-    call thmGetParaBiot(j_mater, ds_thm)
-!
+    call thmGetParaBiot(ds_thm)
+
 ! - Compute Biot tensor
-!
-    call tebiot(ds_thm, angl_naut, tbiot)
-!
+    call tebiot(ds_thm, tbiot)
+
 ! - Get elastic parameters
-!
     if (ds_thm%ds_elem%l_dof_meca) then
-        call thmGetParaElas(j_mater, kpi, temp, ndim, ds_thm)
-        call thmMatrHooke(ds_thm, angl_naut)
+        call thmGetParaElas(temp, ndim, ds_thm)
+        call thmMatrHooke(ds_thm)
     end if
-!
+
 ! - Get thermic parameters
-!
-    call thmGetParaTher(j_mater, kpi, temp, ds_thm)
-!
+    call thmGetParaTher(temp, ds_thm)
+
 ! - Compute generalized stresses and matrix for coupled quantities
-!
     call calcco(ds_thm, &
-                lMatr, lSigm, lVari, &
-                lMatrPred, angl_naut, &
-                j_mater, &
+                lMatr, lSigm, lVari, lMatrPred, &
                 ndim, nbvari, &
                 dimdef, dimcon, &
                 adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
@@ -195,20 +181,15 @@ subroutine comthm(ds_thm, &
                 congem, congep, &
                 vintm, vintp, dsde, &
                 retcom)
-
     if (retcom .ne. 0) then
         goto 99
     end if
-!
+
 ! - Main select subroutine to integrate mechanical behaviour
-!
     if (ds_thm%ds_elem%l_dof_meca .and. kpi .le. npg) then
         call thmSelectMeca(ds_thm, &
-                           p1, dp1, &
-                           p2, dp2, &
-                           satur, tbiot, nl, &
-                           option, j_mater, ndim, type_elem, angl_naut, &
-                           carcri, &
+                           nl, &
+                           option, ndim, typmod, carcri, &
                            time_prev, time_curr, dtemp, &
                            addeme, addete, adcome, addep1, addep2, &
                            dimdef, dimcon, &
@@ -226,40 +207,37 @@ subroutine comthm(ds_thm, &
             end do
         end if
     end if
-!
+
 ! - Evaluation of final saturation
-!
-    call thmEvalSatuFinal(ds_thm, j_mater, p1, temp, &
+    call thmEvalSatuFinal(ds_thm, &
+                          p1, temp, &
                           satur, dsatur, retcom)
-!
+
 ! - Evaluate thermal conductivity
-!
     call thmEvalConductivity(ds_thm, &
-                             angl_naut, ndim, j_mater, &
+                             ndim, &
                              satur, phi, &
                              lambs, dlambs, lambp, dlambp, &
                              tlambt, tlamct, tdlamt)
-!
+
 ! - Get permeability tensor
-!
-    call thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, vintp(1), &
+    call thmGetPermeabilityTensor(ds_thm, &
+                                  ndim, phi, vintp(1), &
                                   tperm)
-!
+
 ! - Compute gravity
-!
-    call thmEvalGravity(j_mater, time_curr, gravity)
-!
+    call thmEvalGravity(ds_thm, time_curr, gravity)
+
 ! - Compute flux and stress for hydraulic
-!
     if (ds_thm%ds_elem%l_dof_pre1) then
         call calcfh(ds_thm, &
-                    lMatr, lSigm, ndim, j_mater, &
+                    lMatr, lSigm, ndim, materPara%jvMaterCode, &
                     dimdef, dimcon, &
                     addep1, addep2, &
                     adcp11, adcp12, adcp21, adcp22, &
                     addeme, addete, &
                     temp, p1, p2, pvp, pad, &
-                    grad_temp, grad_p1, grad_p2, &
+                    gradTemp, gradP1, gradP2, &
                     rho11, h11, h12, &
                     satur, dsatur, gravity, tperm, &
                     congep, dsde)
@@ -267,16 +245,15 @@ subroutine comthm(ds_thm, &
             goto 99
         end if
     end if
-!
+
 ! - Compute flux and stress for thermic
-!
     if (ds_thm%ds_elem%l_dof_ther) then
         call calcft(ds_thm, &
-                    lMatr, lSigm, angl_naut, &
+                    lMatr, lSigm, &
                     ndim, dimdef, dimcon, &
                     adcote, &
                     addeme, addete, addep1, addep2, &
-                    temp, grad_temp, &
+                    temp, gradTemp, &
                     tbiot, &
                     phi, rho11, satur, dsatur, &
                     pvp, h11, h12, &
@@ -284,11 +261,10 @@ subroutine comthm(ds_thm, &
                     tlambt, tlamct, tdlamt, &
                     congep, dsde)
     end if
-!
+
 ! - Compute second gradient
-!
     if (ds_thm%ds_elem%l_dof_2nd) then
-        call calc2nd(ds_thm, j_mater, &
+        call calc2nd(ds_thm, materPara%jvMaterCode, &
                      lMatr, lSigm, &
                      ndim, dimdef, dimcon, &
                      adde2nd, adco2nd, &

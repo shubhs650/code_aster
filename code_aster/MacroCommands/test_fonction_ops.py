@@ -348,7 +348,7 @@ def test_fonction_ops(self, **args):
     if VALEUR is not None:
         # Boucle sur les VALEURS
         for val in VALEUR:
-            dres = val.cree_dict_valeurs(val.mc_liste)
+            dres = val
 
             # Recherche des mots-cles simples
             ssigne = dres["VALE_ABS"]
@@ -606,7 +606,7 @@ def test_fonction_ops(self, **args):
         resu_test_attr = " OK "
         # Boucle sur le mot-cle ATTRIBUT
         for attr in ATTRIBUT:
-            dres = attr.cree_dict_valeurs(attr.mc_liste)
+            dres = attr
             # Lecture des mots-cles simples
             ref = dres["REFERENCE"]
             ver = None

@@ -151,7 +151,7 @@ MODES = CALC_MODES(
 
 
 #
-MODES = NORM_MODE(reuse=MODES, MODE=MODES, NORME="TRAN")
+MODES = NORM_MODE(reuse=MODES, MODE=MODES, NORME="TRAN", MODE_SIGNE=_F(GROUP_NO="P2", NOM_CMP="DX"))
 
 #
 MODES = CALC_CHAMP(reuse=MODES, RESULTAT=MODES, CONTRAINTE=("SIEF_ELGA", "EFGE_ELNO"))
@@ -1208,6 +1208,215 @@ TEST_RESU(
             NOM_CMP="DX",
             VALE_CALC=7.54862877e02,
             VALE_REFE=7.5486277753660147e02,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+# Calcul no. 10 : COMB_MODE=CQC_SIGNE, signe selon mode 1
+CQCsigne_10 = COMB_SISM_MODAL(
+    MODE_MECA=MODES,
+    AMOR_REDUIT=0.05,
+    TYPE_ANALYSE="MULT_APPUI",
+    APPUIS=(_F(NOM="A_1", GROUP_NO=("P1")), _F(NOM="A_4", GROUP_NO=("P4"))),
+    SPECTRE=(
+        _F(NOM_APPUI="A_1", LIST_AXE=("X"), SPEC_OSCI=SPEC1, ECHELLE=1.0, CORR_FREQ="NON"),
+        _F(NOM_APPUI="A_4", LIST_AXE=("X"), SPEC_OSCI=SPEC2, ECHELLE=1.0, CORR_FREQ="NON"),
+    ),
+    GROUP_APPUI_CORRELE=(_F(LIST_APPUI=("A_1"), NOM="GA_1"), _F(LIST_APPUI=("A_4"), NOM="GA_4")),
+    COMB_MODE=_F(TYPE="CQC_SIGNE", NUME_MODE_X=1),
+    OPTION=("DEPL", "REAC_NODA"),
+    TYPE_RESU=_F(TYPE="VALE_TOTA"),
+)
+
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_10,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P2",
+            NOM_CMP="DX",
+            VALE_CALC=5.65049549e-03,
+            VALE_REFE=5.6504949848205487e-03,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_10,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P3",
+            NOM_CMP="DX",
+            VALE_CALC=5.65210016e-03,
+            VALE_REFE=5.6520996375382018e-03,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_10,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P1",
+            NOM_CMP="DX",
+            VALE_CALC=-5.65049549e02,
+            VALE_REFE=-5.65049549e02,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_10,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P4",
+            NOM_CMP="DX",
+            VALE_CALC=-5.65210016e02,
+            VALE_REFE=-5.65210016e02,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+# Calcul no. 11 : COMB_MODE=CQC_SIGNE, signe selon mode 2
+CQCsigne_11 = COMB_SISM_MODAL(
+    MODE_MECA=MODES,
+    AMOR_REDUIT=0.05,
+    TYPE_ANALYSE="MULT_APPUI",
+    APPUIS=(_F(NOM="A_1", GROUP_NO=("P1")), _F(NOM="A_4", GROUP_NO=("P4"))),
+    SPECTRE=(
+        _F(NOM_APPUI="A_1", LIST_AXE=("X"), SPEC_OSCI=SPEC1, ECHELLE=1.0, CORR_FREQ="NON"),
+        _F(NOM_APPUI="A_4", LIST_AXE=("X"), SPEC_OSCI=SPEC2, ECHELLE=1.0, CORR_FREQ="NON"),
+    ),
+    GROUP_APPUI_CORRELE=(_F(LIST_APPUI=("A_1"), NOM="GA_1"), _F(LIST_APPUI=("A_4"), NOM="GA_4")),
+    COMB_MODE=_F(TYPE="CQC_SIGNE", NUME_MODE_X=2),
+    OPTION=("DEPL", "REAC_NODA"),
+    TYPE_RESU=_F(TYPE="VALE_TOTA"),
+)
+
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_11,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P2",
+            NOM_CMP="DX",
+            VALE_CALC=5.65049549e-03,
+            VALE_REFE=5.6504949848205487e-03,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_11,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P3",
+            NOM_CMP="DX",
+            VALE_CALC=-5.65210016e-03,
+            VALE_REFE=-5.6520996375382018e-03,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_11,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P1",
+            NOM_CMP="DX",
+            VALE_CALC=-5.65049549e02,
+            VALE_REFE=-5.65049549e02,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_11,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P4",
+            NOM_CMP="DX",
+            VALE_CALC=5.65210016e02,
+            VALE_REFE=5.65210016e02,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+
+# Calcul no. 12 : COMB_MODE=CQC_SIGNE, mode 2 retenu, signe selon mode 2
+CQCsigne_12 = COMB_SISM_MODAL(
+    MODE_MECA=MODES,
+    AMOR_REDUIT=0.05,
+    NUME_MODE=2,
+    TYPE_ANALYSE="MULT_APPUI",
+    APPUIS=(_F(NOM="A_1", GROUP_NO=("P1")), _F(NOM="A_4", GROUP_NO=("P4"))),
+    SPECTRE=(
+        _F(NOM_APPUI="A_1", LIST_AXE=("X"), SPEC_OSCI=SPEC1, ECHELLE=1.0, CORR_FREQ="NON"),
+        _F(NOM_APPUI="A_4", LIST_AXE=("X"), SPEC_OSCI=SPEC2, ECHELLE=1.0, CORR_FREQ="NON"),
+    ),
+    GROUP_APPUI_CORRELE=(_F(LIST_APPUI=("A_1"), NOM="GA_1"), _F(LIST_APPUI=("A_4"), NOM="GA_4")),
+    COMB_MODE=_F(TYPE="CQC_SIGNE", NUME_MODE_X=2),
+    OPTION=("DEPL", "REAC_NODA"),
+    TYPE_RESU=_F(TYPE="VALE_TOTA"),
+)
+
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_12,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P2",
+            NOM_CMP="DX",
+            VALE_CALC=1.34758095e-03,
+            VALE_REFE=1.347580952434e-03,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_12,
+            NOM_CHAM="DEPL",
+            GROUP_NO="P3",
+            NOM_CMP="DX",
+            VALE_CALC=-1.34758095e-03,
+            VALE_REFE=-1.347580952434e-03,
+            NOM_CAS="TOTA",
+        ),
+    )
+)
+
+#
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_12,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P1",
+            NOM_CMP="DX",
+            VALE_CALC=-1.34758095e02,
+            VALE_REFE=-1.347580952434e02,
+            NOM_CAS="TOTA",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            RESULTAT=CQCsigne_12,
+            NOM_CHAM="REAC_NODA",
+            GROUP_NO="P4",
+            NOM_CMP="DX",
+            VALE_CALC=1.34758095e02,
+            VALE_REFE=1.347580952434e02,
             NOM_CAS="TOTA",
         ),
     )

@@ -18,64 +18,72 @@
 
 subroutine te0203(option, nomte)
 !
-!
+    use Behaviour_type
+    use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
+
+#include "asterf_types.h"
 #include "jeveux.h"
+#include "asterc/r8vide.h"
+#include "asterfort/elrefe_info.h"
 #include "asterfort/jevech.h"
-#include "asterfort/lteatt.h"
-#include "asterfort/pipefi.h"
+#include "asterfort/te0203_implement.h"
+#include "asterfort/teattr.h"
 #include "asterfort/tecach.h"
-#include "asterfort/Behaviour_type.h"
 !
     character(len=16) :: nomte, option
 !
-!-----------------------------------------------------------------------
-!
+! --------------------------------------------------------------------------------------------------
 !     BUT: PILOTAGE POUR LES ELEMENTS DE JOINT
 !
 !     OPTION : PILO_PRED_ELAS
-!
-!-----------------------------------------------------------------------
-!
-!
-!
-    integer(kind=8) :: igeom, imater, ideplm, ivarim, npg, jtab(7), iret, lgpg
-    integer(kind=8) :: iddepl, idepl0, idepl1, ictau, icopil
-    character(len=16), pointer :: compor(:) => null()
+! --------------------------------------------------------------------------------------------------
+    character(len=4), parameter :: fami = 'RIGI'
+! --------------------------------------------------------------------------------------------------
     character(len=8) :: typmod(2)
-!
-!    PARAMETRES DE L'ELEMENT FINI
-    npg = 2
-!
-! - PARAMETRES EN ENTREE
-    call jevech('PGEOMER', 'L', igeom)
-    call jevech('PMATERC', 'L', imater)
+    integer(kind=8) :: jv_geom, jv_materc, ideplm, ivarim, npg, jtab(7), iret, nno, ndim, lgpg
+    integer(kind=8) :: iddepl, idepl0, idepl1, ictau, icopil, jv_carcri, jv_bornes, jv_contm
+    character(len=16), pointer :: compor(:) => null()
+    type(Material_Para) :: materPara
+    type(Behaviour_Integ) :: BEHInteg
+! --------------------------------------------------------------------------------------------------
+
+    ! Finite element characteristics
+    call teattr('S', 'TYPMOD', typmod(1))
+    call teattr('S', 'TYPMOD2', typmod(2))
+    call elrefe_info(fami=fami, npg=npg, ndim=ndim, nno=nno)
+
+    ! Parameters
+    call jevech('PGEOMER', 'L', jv_geom)
+    call jevech('PMATERC', 'L', jv_materc)
+    call jevech('PCARCRI', 'L', jv_carcri)
     call jevech('PDEPLMR', 'L', ideplm)
+    call jevech('PCONTMR', 'L', jv_contm)
+    call jevech('PBORNPI', 'L', jv_bornes)
     call jevech('PVARIMR', 'L', ivarim)
     call jevech('PDDEPLR', 'L', iddepl)
     call jevech('PDEPL0R', 'L', idepl0)
     call jevech('PDEPL1R', 'L', idepl1)
     call jevech('PCDTAU', 'L', ictau)
     call jevech('PCOMPOR', 'L', vk16=compor)
-!
-    if (lteatt('AXIS', 'OUI')) then
-        typmod(1) = 'AXIS'
-    else
-        typmod(1) = 'PLAN'
-    end if
-    typmod(2) = 'ELEMJOIN'
-!
-! RECUPERATION DU NOMBRE DE VARIABLES INTERNES PAR POINTS DE GAUSS :
-    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, &
-                itab=jtab)
-    lgpg = max(jtab(6), 1)*jtab(7)
-!
-! PARAMETRE EN SORTIE
-!
     call jevech('PCOPILO', 'E', icopil)
-!
-    call pipefi(npg, lgpg, zi(imater), zr(igeom), zr(ivarim), &
-                zr(iddepl), zr(ideplm), zr(idepl0), zr(idepl1), zr(ictau), &
-                typmod, compor(RELA_NAME), zr(icopil))
-!
+
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jv_materc), materPara)
+    call initLCSNone(materPara)
+    call behaviourSetParaCell(typmod, option, compor, zr(jv_carcri), r8vide(), r8vide(), &
+                              materPara, BEHInteg)
+
+    ! recuperation du nombre de variables internes par points de gauss :
+    call tecach('OOO', 'PVARIMR', 'L', iret, nval=7, itab=jtab)
+    lgpg = max(jtab(6), 1)*jtab(7)
+
+    ! Compute path-following coefficients
+    call te0203_implement(BEHInteg, typmod, compor, ndim, nno, npg, zr(jv_geom), &
+                          zr(ideplm), zr(iddepl), zr(idepl0), zr(idepl1), &
+                          lgpg, zr(jv_contm), zr(ivarim), zr(jv_bornes+1), zr(jv_bornes), &
+                          zr(ictau), zr(icopil))
+
 end subroutine

@@ -18,12 +18,16 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine poslog(lCorr, lMatr, lSigm, lVari,&
-                      tlogPrev, tlogCurr, fPrev,&
-                      lgpg, vip, ndim, fCurr, kpg,&
-                      dtde, sigm, cplan, fami, mate,&
-                      instp, angmas, gn, lamb, logl,&
-                      sigmCurr, dsidep, pk2Prev, pk2Curr, codret)
+    subroutine poslog(BEHInteg, &
+                      lCorr, lMatr, lSigm, lVari, &
+                      tlogPrev, tlogCurr, fPrev, &
+                      lgpg, vip, ndim, &
+                      fCurr, dtde, sigm, cplan, &
+                      instp, gn, &
+                      lamb, logl, sigmCurr, dsidep, pk2Prev, &
+                      pk2Curr, codret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHinteg
         aster_logical, intent(in) :: lCorr, lMatr, lSigm, lVari
         aster_logical, intent(in) :: cplan
         real(kind=8), intent(in) :: tlogPrev(6)
@@ -33,13 +37,9 @@ interface
         integer(kind=8), intent(in) :: ndim
         integer(kind=8), intent(in) :: lgpg
         real(kind=8), intent(out) :: vip(lgpg)
-        integer(kind=8), intent(in) :: kpg
-        real(kind=8), intent(in) :: dtde(6,6)
+        real(kind=8), intent(in) :: dtde(6, 6)
         real(kind=8), intent(in) :: sigm(2*ndim)
-        character(len=*), intent(in) :: fami
-        integer(kind=8), intent(in) :: mate
         real(kind=8), intent(in) :: instp
-        real(kind=8), intent(in) :: angmas(*)
         real(kind=8), intent(in) :: gn(3, 3)
         real(kind=8), intent(in) :: lamb(3)
         real(kind=8), intent(in) :: logl(3)

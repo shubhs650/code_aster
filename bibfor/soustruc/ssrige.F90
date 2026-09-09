@@ -112,7 +112,8 @@ subroutine ssrige(macrElem)
     listMatrElem(1) = matrElem
 
 ! - Create numbering from elementary matrix
-    call numddl(numeDof, renumRCMK, 'GG', nbMatrElem, listMatrElem)
+    call numddl(numeDof, renumRCMK, 'GG', nbMatrElem, listMatrElem, &
+                lMacrElemZ_=ASTER_TRUE)
     AS_DEALLOCATE(vk24=listMatrElem)
 !
 !   -- ON MET LES DDLS INTERNES AVANT LES EXTERNES

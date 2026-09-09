@@ -102,7 +102,7 @@ E1NEUTK = LocatedComponents(phys=PHY.NEUT_K8, type="ELEM", components=("Z1",))
 
 
 EGNEUT_R = LocatedComponents(phys=PHY.NEUT_R, type="ELGA", location="XFEM", components=("X[30]",))
-
+EGNEUT_I = LocatedComponents(phys=PHY.NEUT_I, type="ELGA", location="XFEM", components=("X[30]",))
 
 EMNEUT_R = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X[30]",))
 
@@ -329,7 +329,7 @@ class MEDPTR3_XH1(Element):
             te=541,
             para_in=(
                 (OP.CHAR_MECA_TEMP_R.PBASLOR, LC.N6NEUT_R),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.CHAR_MECA_TEMP_R.PCNSETO, LC.E72NEUI),
                 (OP.CHAR_MECA_TEMP_R.PCOMPOR, LC.CCOMPOR),
                 (OP.CHAR_MECA_TEMP_R.PFISNO, LC.FISNO_I),
@@ -422,7 +422,7 @@ class MEDPTR3_XH1(Element):
             te=539,
             para_in=(
                 (OP.FULL_MECA.PBASLOR, LC.N6NEUT_R),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCNSETO, LC.E72NEUI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
@@ -489,7 +489,7 @@ class MEDPTR3_XH1(Element):
             te=539,
             para_in=(
                 (OP.RAPH_MECA.PBASLOR, LC.N6NEUT_R),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCNSETO, LC.E72NEUI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
@@ -544,7 +544,7 @@ class MEDPTR3_XH1(Element):
             te=539,
             para_in=(
                 (OP.RIGI_MECA_TANG.PBASLOR, LC.N6NEUT_R),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCNSETO, LC.E72NEUI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
@@ -582,7 +582,7 @@ class MEDPTR3_XH1(Element):
             te=261,
             para_in=(
                 (OP.SIEF_ELGA.PBASLOR, LC.N6NEUT_R),
-                (SP.PCAMASS, LC.CCAMA2D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (OP.SIEF_ELGA.PCNSETO, LC.E72NEUI),
                 (OP.SIEF_ELGA.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLAR, DDL_MECA),
@@ -656,7 +656,16 @@ class MEDPTR3_XH1(Element):
                 (OP.TOPOSE.PPMILTO, LC.E22NEUTR),
             ),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM2D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
@@ -664,13 +673,22 @@ class MEDPTR3_XH1(Element):
                 (OP.TOU_INI_ELGA.PDOMMAG, LC.EDOMGGA),
                 (OP.TOU_INI_ELGA.PGEOM_R, EGGEOM_R),
                 (OP.TOU_INI_ELGA.PINST_R, LC.EGINST_R),
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
+                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
+                (OP.TOU_INI_ELGA.PNEUT_I, EGNEUT_I),
             ),
         ),
-        OP.TOU_INI_ELNO(te=99, para_out=((OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),)),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (OP.TOU_INI_ELNO.PGEOM_R, NGEOMER),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
         OP.XFEM_XPG(
             te=46,
             para_in=(

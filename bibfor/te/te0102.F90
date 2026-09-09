@@ -17,7 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0102(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/codent.h"
 #include "asterfort/cq3d2d.h"
@@ -40,10 +44,9 @@ subroutine te0102(option, nomte)
 ! ......................................................................
 !
 !-----------------------------------------------------------------------
-    integer(kind=8) :: i, icacoq, ind, j, jgano, nbddl, nbres
+    integer(kind=8) :: i, ind, j, jgano, nbddl, nbres
     integer(kind=8) :: nbv, nbvar, ndimax
     real(kind=8) :: rocp, un, undemi
-!-----------------------------------------------------------------------
     parameter(ndimax=27)
     parameter(nbres=6)
     parameter(nbvar=2)
@@ -59,11 +62,14 @@ subroutine te0102(option, nomte)
     real(kind=8) :: mun, zero, deux, quatre
     real(kind=8) :: quinze, seize, cour, cosa, sina, r
     real(kind=8) :: valpar(nbvar), tempe, instan
-    real(kind=8) :: masse(ndimax, ndimax)
+    real(kind=8) :: masse(ndimax, ndimax), thickness
     integer(kind=8) :: nno, kp, npg2, gi, pi, gj, pj, k, imattt
     integer(kind=8) :: ipoids, ivf, idfde, igeom, kpg, spt
     integer(kind=8) :: imate, itemps, nnos, ndim
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
     if (nomte .ne. 'THCPSE3 ' .and. nomte .ne. 'THCASE3 ') then
         call elrefe_info(fami='MASS', ndim=ndim, nno=nno, nnos=nnos, npg=npg2, &
@@ -116,13 +122,16 @@ subroutine te0102(option, nomte)
 ! --- RECUPERATION DU MATERIAU :
 !     ------------------------
     call jevech('PMATERC', 'L', imate)
-!
-! --- RECUPERATION DE L'EPAISSEUR DE LA COQUE :
-!     ---------------------------------------
-    call jevech('PCACOQU', 'L', icacoq)
-!
-! --- RECUPERATION DE L'INSTANT DU CALCUL :
-!     ------------------------------------------------------
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+    thickness = plateCara%thick
+
+! --- RECUPERATION DE L'INSTANT DU CALCUL
     call jevech('PINSTR', 'L', itemps)
     valpar(1) = zr(itemps)
 !
@@ -184,7 +193,7 @@ subroutine te0102(option, nomte)
 !
 ! ---   DEMI-EPAISSEUR  :
 !       --------------
-        h = undemi*zr(icacoq)
+        h = undemi*thickness
 !
 ! ---   TENSEUR DE CAPACITE THERMIQUE :
 !       -----------------------------

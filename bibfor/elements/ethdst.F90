@@ -16,12 +16,14 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine ethdst(fami, nno, ndim, nbsig, npg, &
+subroutine ethdst(materPara, &
+                  nno, ndim, nbsig, npg, &
                   jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
-                  nodeCoor, time, anglNaut, jvMaterCode, &
+                  nodeCoor, time, &
                   enerTherTher)
 !
     use BehaviourStrain_type
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
@@ -31,14 +33,14 @@ subroutine ethdst(fami, nno, ndim, nbsig, npg, &
 #include "asterfort/epthmc.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/sigtmc.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
 !
-    character(len=*), intent(in) :: fami
+    type(Material_Para), intent(inout) :: materPara
     integer(kind=8), intent(in) :: nno, ndim, nbsig, npg
     integer(kind=8), intent(in) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     real(kind=8), intent(in) :: nodeCoor(ndim*nno)
-    real(kind=8), intent(in) :: time, anglNaut(3)
-    integer(kind=8), intent(in) :: jvMaterCode
+    real(kind=8), intent(in) :: time
     real(kind=8), intent(out) :: enerTherTher
 
 ! --------------------------------------------------------------------------------------------------
@@ -50,7 +52,7 @@ subroutine ethdst(fami, nno, ndim, nbsig, npg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
+! IO  materPara        : parameters of material
 ! In  nno              : number of nodes
 ! In  ndim             : dimension of space
 ! In  nbsig            : number of stress tensor components
@@ -60,8 +62,6 @@ subroutine ethdst(fami, nno, ndim, nbsig, npg, &
 ! In  jvDBaseFunc      : adresse to derivative of shape functions
 ! In  nodeCoor         : coordinates of nodes
 ! In  time             : given time
-! In  anglNaut         : nautical angles (for non-isotropic materials)
-! In  jvMaterCode      : coded material address
 ! Out enerTherTher     : SOMME(EPSTH_T*D*EPSTH)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ subroutine ethdst(fami, nno, ndim, nbsig, npg, &
     integer(kind=8) :: ino, isig, kpg, nbEpsi
     real(kind=8) :: epsiTher(162), sigmTher(162)
     real(kind=8) :: rayon
-    real(kind=8) :: enerTherKpg, dfdx(27), dfdy(27), dfdz(27)
+    real(kind=8) :: enerTherKpg, dfdx(MT_NNOMAX3D), dfdy(MT_NNOMAX3D), dfdz(MT_NNOMAX3D)
     real(kind=8) :: jacobKpg
 !
 ! --------------------------------------------------------------------------------------------------
@@ -80,13 +80,13 @@ subroutine ethdst(fami, nno, ndim, nbsig, npg, &
     enerTherTher = 0.d0
 
 ! - Calcul des déformations thermiques
-    call epthmc(fami, nbEpsi, npg, ndim, &
-                time, anglNaut, jvMaterCode, &
+    call epthmc(materPara, time, &
+                nbEpsi, npg, ndim, &
                 VARC_STRAIN_TEMP, epsiTher)
 
 ! - Calcul des contraintes thermiques
-    call sigtmc(fami, nbsig, npg, ndim, &
-                time, jvMaterCode, anglNaut, &
+    call sigtmc(materPara, time, &
+                nbsig, npg, ndim, &
                 VARC_STRAIN_TEMP, sigmTher)
 
 ! - Loop on Gauss points

@@ -15,13 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,W0104,C1505
+! aslint: disable=W1504,W0104,C1505,W1306
 
-subroutine lc0076(BEHinteg, &
+subroutine lc0076(BEHInteg, &
                   fami, kpg, ksp, ndim, imate, &
                   compor, carcri, instam, instap, neps, epsm, &
-                  deps, nsig, sigm, nvi, vim, option, angmas, &
-                  sigp, vip, typmod, icomp, ndsde, &
+                  deps, nsig, sigm, nvi, vim, option, &
+                  sigp, vip, typmod, ndsde, &
                   dsidep, codret)
 
     use Behaviour_type
@@ -32,14 +32,14 @@ subroutine lc0076(BEHinteg, &
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 ! --------------------------------------------------------------------------------------------------
-    type(Behaviour_Integ)        :: BEHinteg
+    type(Behaviour_Integ)        :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: instam
     real(kind=8), intent(in) :: instap
     integer(kind=8), intent(in) :: neps
@@ -49,29 +49,24 @@ subroutine lc0076(BEHinteg, &
     real(kind=8), intent(in) :: sigm(nsig)
     integer(kind=8), intent(in) :: nvi
     real(kind=8), intent(in) :: vim(nvi)
-    character(len=16), intent(in) :: option
-    real(kind=8), intent(in) :: angmas(*)
     real(kind=8)                 :: sigp(nsig)
     real(kind=8)                 :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
-    integer(kind=8), intent(in) :: icomp
     integer(kind=8), intent(in) :: ndsde
-    real(kind=8)        :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
-                                  merge(neps, 6, nsig*neps .eq. ndsde))
+    real(kind=8) :: dsidep(merge(nsig, 6, nsig*neps .eq. ndsde), &
+                           merge(neps, 6, nsig*neps .eq. ndsde))
     integer(kind=8), intent(out):: codret
 ! --------------------------------------------------------------------------------------------------
 !   RELATIONS VMIS_ISOT_NL ET VISC_ISOT_NL
 ! --------------------------------------------------------------------------------------------------
-    aster_logical         :: lMatr, lSigm, lVari
-    integer(kind=8)               :: ndimsi
-    real(kind=8)          :: sig(2*ndim), dsde(2*ndim, 2*ndim), vi(nvi), eps(2*ndim)
+    aster_logical :: lMatr, lSigm, lVari
+    integer(kind=8) :: ndimsi
+    real(kind=8) :: vi(nvi)
+    real(kind=8) :: sig(BEHInteg%behavPara%ndimsi), eps(BEHInteg%behavPara%ndimsi)
+    real(kind=8) :: dsde(BEHInteg%behavPara%ndimsi, BEHInteg%behavPara%ndimsi)
     type(CONSTITUTIVE_LAW):: cl
 ! --------------------------------------------------------------------------------------------------
-
-    ASSERT(nsig .ge. 2*ndim)
-    ASSERT(neps .ge. 2*ndim)
-
-    ndimsi = 2*ndim
+    ndimsi = BEHInteg%behavPara%ndimsi
     sig = 0
     vi = 0
     dsde = 0

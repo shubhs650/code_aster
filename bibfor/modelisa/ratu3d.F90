@@ -15,11 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
-                  ligrel, mod, cara, numddl, &
+!
+subroutine ratu3d(iprno, lonlis, klisno, noepou, mesh, &
+                  ligrel, model, caraElem, numddl, &
                   lisrel, coorig, sectio)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/afretu.h"
 #include "asterfort/assvec.h"
@@ -36,41 +39,67 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
 #include "asterfort/reajre.h"
 #include "asterfort/as_deallocate.h"
 #include "asterfort/as_allocate.h"
+!
     integer(kind=8) :: lonlis, iprno(*)
-    character(len=8) :: klisno(lonlis), noepou, noma, cara, mod
+    character(len=8) :: klisno(lonlis), noepou, mesh, caraElem, model
     character(len=14) :: numddl
     character(len=19) :: ligrel, lisrel
     real(kind=8) :: coorig(3), rayon
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     RACCORD 3D_TUYAU PAR DES RELATIONS LINEAIRES
 !     ECRITURE DES RELATIONS SUR LES DDLS DE FOURIER
 !
-    integer(kind=8) :: nbcmp, nbmode
-    parameter(nbmode=3, nbcmp=6*(nbmode-1))
-    character(len=8) :: nocmp(nbcmp), lpain(5), lpaout(6), nomddl(4)
-    character(len=24) :: lchin(5), lchout(6), valech
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOutMax = 6
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOutMax)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOutMax)
+!
+    integer(kind=8) :: nbFieldIn, nbFieldOut
+    integer(kind=8), parameter :: nbmode = 3, nbcmp = 6*(nbmode-1)
+    character(len=8) :: nocmp(nbcmp), nomddl(4)
+    character(len=24) :: valech
     real(kind=8) :: coef(4), eg1(3), eg2(3), eg3(3), sectio
     integer(kind=8) :: imod, info, ifm
     integer(kind=8) :: nbcoef, idec
     real(kind=8), pointer :: rayon_raccord(:) => null()
+    character(len=24), parameter :: numeModeField = '&&RATU3D.NUME_MODE'
+    character(len=24), parameter :: mapPipeAxis = '&&RATU3D.CAXE_TUY'
+!
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
     call infniv(ifm, info)
+
+! - Initialisations
+    lchin = ' '
+    lpain = ' '
+    lchout = ' '
+    lpaout = ' '
 !
 !
 !     APPEL DE L OPTION CARA_SECT_POU3R AFIN DE CALCULER LE RAYON
 !     MOYEN DE LA SECTION ANNULAIRE DE LA PARTIE 3D
 !     L APPEL A MESOMM DONNE L INTEGRALE SURFACIQUE DU RAYON
-!
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
-    lchin(1) = noma//'.COORDO'
+    lchin(1) = mesh//'.COORDO'
     lpain(2) = 'PORIGIN'
     lchin(2) = '&&RAPO3D.CAORIGE'
+    nbFieldIn = 2
+
+! - Add output field
     lpaout(1) = 'PRAYONM'
     lchout(1) = '&&RATU3D.PRAYO'
-!
-    call calcul('S', 'CARA_SECT_POU3R', ligrel, 2, lchin, &
-                lpain, 1, lchout, lpaout, 'V', &
-                'OUI')
+    nbFieldOut = 1
+
+    call calcul('S', 'CARA_SECT_POU3R', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
 !
     AS_ALLOCATE(vr=rayon_raccord, size=1)
     call mesomm(lchout(1), 1, vr=rayon_raccord)
@@ -79,7 +108,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
 !
 !     CREATION D'UNE CARTE CONTENANT LE POINT P ORIGINE DE PHI
 !
-    call raorfi(noma, ligrel, noepou, cara, coorig, &
+    call raorfi(mesh, ligrel, noepou, caraElem, coorig, &
                 eg1, eg2, eg3, '&&RATU3D', rayon)
 !
 ! --- DETERMINATION DE 3 LISTES  DE VECTEURS PAR ELEMENT PRENANT
@@ -96,17 +125,23 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
 !
 ! --- OU P EST LA MATRICE DE PASSAGE DU REPERE GLOBAL AU REPERE
 ! --- (E1,E2,E3) DEFINI SUR LE BORD ORIENTE DE LA SURFACE
-!     ------------------------------
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
-    lchin(1) = noma//'.COORDO'
+    lchin(1) = mesh//'.COORDO'
     lpain(2) = 'PORIGIN'
     lchin(2) = '&&RAPO3D.CAORIGE'
-    lpain(3) = 'PCAORIE'
-    lchin(3) = '&&RATU3D.CAXE_TUY'
-    lpain(4) = 'PORIGFI'
-    lchin(4) = '&&RATU3D.CAORIFI'
-    lpain(5) = 'PNUMMOD'
-    lchin(5) = '&&RATU3D.NUME_MODE'
+    lpain(3) = 'PORIGFI'
+    lchin(3) = '&&RATU3D.CAORIFI'
+    lpain(4) = 'PNUMMOD'
+    lchin(4) = numeModeField(1:19)
+    nbFieldIn = 4
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem, caorienZ_=mapPipeAxis)
+
+! - Add output fields
     lpaout(1) = 'PVECTU1'
     lchout(1) = '&&RATU3D.COSF_UM'
     lpaout(2) = 'PVECTU2'
@@ -119,19 +154,22 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
     lchout(5) = '&&RATU3D.SINF_VM'
     lpaout(6) = 'PVECTU6'
     lchout(6) = '&&RATU3D.SINF_WM'
-!
-! --- CREATION DES .RERR DES VECTEURS EN SORTIE DE CALCUL
-!
-    call vemare('V', '&&RATU3D', mod)
+    nbFieldOut = 6
+
+! - CREATION DES .RERR DES VECTEURS EN SORTIE DE CALCUL
+    call vemare('V', '&&RATU3D', model)
 !
 !     RELATIONS ENTRE LES NOEUDS DE SURFACE ET LE NOEUD POUTRE DDL WO
 !
     imod = 0
-    call mecact('V', lchin(5), 'LIGREL', ligrel, 'NUMMOD', &
+    call mecact('V', numeModeField, 'LIGREL', ligrel, 'NUMMOD', &
                 ncmp=1, nomcmp='NUM', si=imod)
-    call calcul('S', 'CARA_SECT_POUT5', ligrel, 5, lchin, &
-                lpain, 6, lchout, lpaout, 'V', &
-                'OUI')
+
+    call calcul('S', 'CARA_SECT_POUT5', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
+
     call jedetr('&&RATU3D           .RELR')
     call reajre('&&RATU3D', lchout(3), 'V')
     call assvec('V', 'CH_DEPL_3', 1, '&&RATU3D           .RELR', [1.d0], numddl)
@@ -140,7 +178,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
     idec = 0
     nomddl(1) = 'WO'
     coef(1) = -1.d0*sectio
-    call afretu(iprno, lonlis, klisno, noepou, noma, &
+    call afretu(iprno, lonlis, klisno, noepou, mesh, &
                 valech, nbcoef, idec, coef, nomddl, &
                 lisrel)
 !
@@ -164,11 +202,13 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
     if (info .eq. 2) then
         write (ifm, *) 'RELATIONS SUR LE MODE ', imod
     end if
-    call mecact('V', lchin(5), 'LIGREL', ligrel, 'NUMMOD', &
+    call mecact('V', numeModeField, 'LIGREL', ligrel, 'NUMMOD', &
                 ncmp=1, nomcmp='NUM', si=imod)
-    call calcul('S', 'CARA_SECT_POUT5', ligrel, 5, lchin, &
-                lpain, 6, lchout, lpaout, 'V', &
-                'OUI')
+    call calcul('S', 'CARA_SECT_POUT5', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'OUI')
+
 !
 !     RELATIONS ENTRE LES NOEUDS DE SURFACE ET LE NOEUD POUTRE DDL WIM
 !     OU SI IMOD=1 LE DDL DZ DANS REPERE LOCAL DU TUYAU ET WI1
@@ -190,7 +230,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
     coef(3) = eg3(3)*sectio/2.d0
     coef(4) = -sectio/2.d0
 
-    call afretu(iprno, lonlis, klisno, noepou, noma, &
+    call afretu(iprno, lonlis, klisno, noepou, mesh, &
                 valech, nbcoef, idec, coef, nomddl, &
                 lisrel)
 !
@@ -213,7 +253,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
     coef(3) = eg2(3)*sectio/2.d0
     coef(4) = -sectio/2.d0
 !
-    call afretu(iprno, lonlis, klisno, noepou, noma, &
+    call afretu(iprno, lonlis, klisno, noepou, mesh, &
                 valech, nbcoef, idec, coef, nomddl, &
                 lisrel)
 !
@@ -221,11 +261,13 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         if (info .eq. 2) then
             write (ifm, *) 'RELATIONS SUR LE MODE ', imod
         end if
-        call mecact('V', lchin(5), 'LIGREL', ligrel, 'NUMMOD', &
+        call mecact('V', numeModeField, 'LIGREL', ligrel, 'NUMMOD', &
                     ncmp=1, nomcmp='NUM', si=imod)
-        call calcul('S', 'CARA_SECT_POUT5', ligrel, 5, lchin, &
-                    lpain, 6, lchout, lpaout, 'V', &
-                    'OUI')
+
+        call calcul('S', 'CARA_SECT_POUT5', ligrel, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
+                    'V', 'OUI')
 !
 !     RELATIONS ENTRE LES NOEUDS DE SURFACE ET LE NOEUD POUTRE DDL UIM
 !
@@ -238,7 +280,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nbcoef = 1
         nomddl(1) = nocmp(6*(imod-2)+1)
         coef(1) = -sectio/2.d0
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !
@@ -253,7 +295,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nbcoef = 1
         nomddl(1) = nocmp(6*(imod-2)+4)
         coef(1) = -sectio/2.d0
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !
@@ -268,7 +310,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nbcoef = 1
         nomddl(1) = nocmp(6*(imod-2)+5)
         coef(1) = -sectio/2.d0
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !
@@ -283,7 +325,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nbcoef = 1
         nomddl(1) = nocmp(6*(imod-2)+2)
         coef(1) = -sectio/2.d0
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !
@@ -302,7 +344,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nomddl(1) = nocmp(6*(imod-2)+3)
         coef(1) = -sectio/2.d0
 !
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !         ENDIF
@@ -321,7 +363,7 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
         nomddl(1) = nocmp(6*(imod-2)+6)
         coef(1) = -sectio/2.d0
 !
-        call afretu(iprno, lonlis, klisno, noepou, noma, &
+        call afretu(iprno, lonlis, klisno, noepou, mesh, &
                     valech, nbcoef, idec, coef, nomddl, &
                     lisrel)
 !
@@ -332,9 +374,9 @@ subroutine ratu3d(iprno, lonlis, klisno, noepou, noma, &
 ! --- DESTRUCTION DES OBJETS DE TRAVAIL
 !
     AS_DEALLOCATE(vr=rayon_raccord)
-    call detrsd('CHAMP_GD', '&&RATU3D.CAXE_TUY')
+    call detrsd('CHAMP_GD', mapPipeAxis)
     call detrsd('CHAMP_GD', '&&RATU3D.CAORIFI')
-    call detrsd('CARTE', '&&RATU3D.NUME_MODE')
+    call detrsd('CARTE', numeModeField)
     call detrsd('CHAMP_GD', '&&RATU3D.PRAYO')
     call detrsd('RESUELEM', '&&RATU3D.COSF_UM')
     call detrsd('RESUELEM', '&&RATU3D.COSF_VM')

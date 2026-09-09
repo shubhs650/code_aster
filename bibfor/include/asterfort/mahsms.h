@@ -15,24 +15,21 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine mahsms(ind1, nb1, xi, ksi3s2, intsr,&
-                      xr, epais, vectn, vectg, vectt,&
+    subroutine mahsms(plateOrie, &
+                      ind1, nb1, &
+                      nodeCoor, ksi3s2, intsr, &
+                      desr, epais, &
+                      vectBaseKpg, vectTangKpg, &
                       hsfm, hss)
-        integer(kind=8) :: ind1
-        integer(kind=8) :: nb1
-        real(kind=8) :: xi(3, *)
-        real(kind=8) :: ksi3s2
-        integer(kind=8) :: intsr
-        real(kind=8) :: xr(*)
-        real(kind=8) :: epais
-        real(kind=8) :: vectn(9, 3)
-        real(kind=8) :: vectg(2, 3)
-        real(kind=8) :: vectt(3, 3)
-        real(kind=8) :: hsfm(3, 9)
-        real(kind=8) :: hss(2, 9)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: ind1, nb1
+        real(kind=8), intent(in) :: nodeCoor(3, *), ksi3s2
+        integer(kind=8), intent(in) :: intsr
+        real(kind=8), intent(in) :: desr(*), epais
+        real(kind=8), intent(out) :: vectBaseKpg(3, 3), vectTangKpg(2, 3)
+        real(kind=8), intent(out) :: hsfm(3, 9), hss(2, 9)
     end subroutine mahsms
 end interface

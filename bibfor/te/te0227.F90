@@ -18,86 +18,87 @@
 !
 subroutine te0227(option, nomte)
 !
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
 !
-#include "jeveux.h"
 #include "asterc/r8depi.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/elrefe_info.h"
-#include "asterfort/jevech.h"
 #include "asterfort/getDensity.h"
+#include "asterfort/jevech.h"
+#include "jeveux.h"
 !
     character(len=16) :: option, nomte
 !
 ! --------------------------------------------------------------------------------------------------
 !
-!    - FONCTION REALISEE:  CALCUL DES MATRICES ELEMENTAIRES
-!                          COQUE 1D
-!                          OPTION : 'MASS_INER       '
-!                          ELEMENT: MECXSE3
+! Elementary computation
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
+! Elements: COQUE_AXIS
+! Option: MASS_INER
 !
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: dfdx(3), r, rm, poids, cour, nx, ny, yg
     real(kind=8) :: rho, x(3), y(3), xxi, xyi, yyi
     real(kind=8) :: matine(6), volume, depi
-    integer(kind=8) :: nno, ipoids, ivf, idfdk, igeom, imate, icaco
-    integer(kind=8) :: kp, npg, i, j, k, lcastr
+    integer(kind=8) :: nno, ipoids, ivf, idfdk, jvGeom, jvMaterc
+    integer(kind=8) :: kpg, npg, i, j, lcastr
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
 ! --------------------------------------------------------------------------------------------------
 !
     depi = r8depi()
-!
     call elrefe_info(fami='RIGI', nno=nno, &
                      npg=npg, jpoids=ipoids, jvf=ivf, jdfde=idfdk)
-!
-!
-    call jevech('PGEOMER', 'L', igeom)
-    do i = 1, nno
-        x(i) = zr(igeom-2+2*i)
-        y(i) = zr(igeom-1+2*i)
-    end do
-!
-    call jevech('PMATERC', 'L', imate)
-    call jevech('PCACOQU', 'L', icaco)
 
-    call getDensity(zi(imate), rho)
-    rm = rho*zr(icaco)
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+! - Geometry
+    call jevech('PGEOMER', 'L', jvGeom)
+    do i = 1, nno
+        x(i) = zr(jvGeom-2+2*i)
+        y(i) = zr(jvGeom-1+2*i)
+    end do
+
+! - Get density
+    call jevech('PMATERC', 'L', jvMaterc)
+    call getDensity(zi(jvMaterc), rho)
+    rm = rho*plateCara%thick
 !
     call jevech('PMASSINE', 'E', lcastr)
 !
     volume = 0.d0
     matine = 0.d0
-!
-!     --- BOUCLE SUR LES POINTS DE GAUSS ---
-!
-    do kp = 1, npg
-        k = (kp-1)*nno
-        call dfdm1d(nno, zr(ipoids+kp-1), zr(idfdk+k), zr(igeom), dfdx, &
+
+    do kpg = 1, npg
+        call dfdm1d(nno, zr(ipoids+kpg-1), zr(idfdk+(kpg-1)*nno), zr(jvGeom), dfdx, &
                     cour, poids, nx, ny)
         r = 0.d0
         do i = 1, nno
-            r = r+zr(igeom+2*(i-1))*zr(ivf+k+i-1)
+            r = r+zr(jvGeom+2*(i-1))*zr(ivf+(kpg-1)*nno+i-1)
         end do
         poids = poids*r
         volume = volume+poids
 !
         do i = 1, nno
 !           --- CDG ---
-            zr(lcastr+1) = zr(lcastr+1)+poids*x(i)*zr(ivf+k+i-1)
-            zr(lcastr+2) = zr(lcastr+2)+poids*y(i)*zr(ivf+k+i-1)
+            zr(lcastr+1) = zr(lcastr+1)+poids*x(i)*zr(ivf+(kpg-1)*nno+i-1)
+            zr(lcastr+2) = zr(lcastr+2)+poids*y(i)*zr(ivf+(kpg-1)*nno+i-1)
 !           --- INERTIE ---
             xxi = 0.d0
             xyi = 0.d0
             yyi = 0.d0
             do j = 1, nno
-                xxi = xxi+x(i)*zr(ivf+k+i-1)*x(j)*zr(ivf+k+j-1)
-                xyi = xyi+x(i)*zr(ivf+k+i-1)*y(j)*zr(ivf+k+j-1)
-                yyi = yyi+y(i)*zr(ivf+k+i-1)*y(j)*zr(ivf+k+j-1)
+                xxi = xxi+x(i)*zr(ivf+(kpg-1)*nno+i-1)*x(j)*zr(ivf+(kpg-1)*nno+j-1)
+                xyi = xyi+x(i)*zr(ivf+(kpg-1)*nno+i-1)*y(j)*zr(ivf+(kpg-1)*nno+j-1)
+                yyi = yyi+y(i)*zr(ivf+(kpg-1)*nno+i-1)*y(j)*zr(ivf+(kpg-1)*nno+j-1)
             end do
             matine(1) = matine(1)+poids*yyi
             matine(2) = matine(2)+poids*xyi

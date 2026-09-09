@@ -15,26 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
 #include "asterf_types.h"
 !
 interface
     subroutine pmsta1(sigmPrev, sigmCurr, epsiIncr, &
                       nbVari, nbVariTabl, &
                       vim, vip, &
-                      tablNbParaMaxi, tablNbPara, tablType, &
+                      tablNbPara, tablType, &
                       tablParaName, tablParaType, tablVale, &
                       lLoadGrad, variName, sddisc, &
                       liccvg, lIterNewtMaxi, conver, newtLoopAction)
         real(kind=8), intent(in) :: sigmPrev(6), sigmCurr(6), epsiIncr(9)
         integer(kind=8), intent(in)  :: nbVari, nbVariTabl
         real(kind=8), intent(in) :: vim(nbVari), vip(nbVari)
-        integer(kind=8), intent(in) :: tablNbParaMaxi
         integer(kind=8), intent(in) :: tablNbPara, tablType
-        character(len=16), intent(in) :: tablParaName(tablNbParaMaxi), tablParaType(tablNbParaMaxi)
-        real(kind=8), intent(inout) :: tablVale(tablNbParaMaxi)
+        character(len=16), dimension(:), intent(in) :: tablParaName
+        character(len=8), dimension(:), intent(in) :: tablParaType
+        real(kind=8), dimension(:), intent(inout) :: tablVale
         aster_logical, intent(in) :: lLoadGrad
         character(len=8), intent(in) :: variName(nbVari)
         character(len=19), intent(in) :: sddisc

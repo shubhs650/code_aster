@@ -20,6 +20,8 @@ subroutine te0529(option, nomte)
 !
     use BehaviourStrain_module
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -27,7 +29,6 @@ subroutine te0529(option, nomte)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/epstmc.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/tecach.h"
 #include "jeveux.h"
@@ -55,14 +56,14 @@ subroutine te0529(option, nomte)
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1, nbEpsi = 6
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     integer(kind=8) :: ndim, nno, npg, kpg, iEpsi, iret
-    integer(kind=8) :: jvGeom, jvTime, jvEpsi, jvMater
-    real(kind=8) :: time, anglNaut(3)
+    integer(kind=8) :: jvGeom, jvTime, jvEpsi, jvMaterc
+    real(kind=8) :: time
     real(kind=8) :: epsiVarc(162)
     real(kind=8) :: epsiSech(nbEpsi), epsiTher(nbEpsi), epsiHydr(nbEpsi), epsiPtot(nbEpsi)
-    !    real(kind=8) :: epsiEpsa(nbEpsi)
     type(All_Varc_Strain) :: allVarcStrain
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -75,11 +76,14 @@ subroutine te0529(option, nomte)
 ! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)
 
-! - Material parameters
-    call tecach('NNO', 'PMATERC', 'L', iret, iad=jvMater)
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
 
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! - Initializations of material parameters on current cell
+    call initParaCell(fami, zi(jvMaterc), materPara)
+
+! - Set local coordinate system from user
+    call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! - Get current time
     call tecach('NNO', 'PINSTR', 'L', iret, iad=jvTime)
@@ -91,34 +95,34 @@ subroutine te0529(option, nomte)
 
 ! - Compute
     do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
 
 ! ----- Compute inelastic strains
-        call epstmc(fami, '+', kpg, ksp, ndim, &
-                    time, anglNaut, zi(jvMater), &
+        call epstmc(materPara, "+", time, ndim, &
                     VARC_STRAIN_ALL, allVarcStrain)
 
 ! ----- Get TEMP strains
-        call getVarcStrain('+', VARC_STRAIN_TEMP, allVarcStrain, 6, epsiTher)
+        call getVarcStrain('+', VARC_STRAIN_TEMP, allVarcStrain, epsiTher)
 
 ! ----- Get SECH strains
-        call getVarcStrain('+', VARC_STRAIN_SECH, allVarcStrain, 6, epsiSech)
+        call getVarcStrain('+', VARC_STRAIN_SECH, allVarcStrain, epsiSech)
 
 ! ----- Get HYDR strains
-        call getVarcStrain('+', VARC_STRAIN_HYDR, allVarcStrain, 6, epsiHydr)
+        call getVarcStrain('+', VARC_STRAIN_HYDR, allVarcStrain, epsiHydr)
 
 ! ----- Get PTOT strains
-        call getVarcStrain('+', VARC_STRAIN_PTOT, allVarcStrain, 6, epsiPtot)
+        call getVarcStrain('+', VARC_STRAIN_PTOT, allVarcStrain, epsiPtot)
 
-! ----- Get PTOT strains
-        ! call getVarcStrain('+', VARC_STRAIN_EPSA, allVarcStrain, 6, epsiEpsa)
-
+! ----- Get EPSA strains
+        ! call getVarcStrain('+', VARC_STRAIN_EPSA, allVarcStrain, epsiEpsa)
         epsiVarc(1+nbEpsi*(kpg-1)) = epsiTher(1)
         epsiVarc(2+nbEpsi*(kpg-1)) = epsiTher(2)
         epsiVarc(3+nbEpsi*(kpg-1)) = epsiTher(3)
         epsiVarc(4+nbEpsi*(kpg-1)) = epsiSech(1)
         epsiVarc(5+nbEpsi*(kpg-1)) = epsiHydr(1)
         epsiVarc(6+nbEpsi*(kpg-1)) = epsiPtot(1)
-!
+
     end do
 
 ! - Set output
@@ -128,6 +132,5 @@ subroutine te0529(option, nomte)
             zr(jvEpsi+nbEpsi*(kpg-1)+iEpsi-1) = epsiVarc(nbEpsi*(kpg-1)+iEpsi)
         end do
     end do
-!
 !
 end subroutine

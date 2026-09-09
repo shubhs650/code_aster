@@ -23,69 +23,78 @@ subroutine te0246(option, nomte)
     use FE_basis_module
     use FE_mass_module
     use FE_eval_module
-!
+    use coorSyst_module, only: hasOrieField
     implicit none
+!
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/jevech.h"
 #include "asterfort/ntfcma.h"
 #include "asterfort/rccoma.h"
 #include "asterfort/rcfode.h"
+#include "asterfort/utmess.h"
 #include "asterfort/writeMatrix.h"
 #include "FE_module.h"
 #include "jeveux.h"
 !
-    character(len=16) :: option, nomte
-! ......................................................................
-!    - FONCTION REALISEE:  CALCUL DES MATRICES ELEMENTAIRES
-!                          OPTION : 'MASS_THER' ET 'MASS_THER_TANG'
+    character(len=16), intent(in) :: option, nomte
 !
-!    - ARGUMENTS:
-!        DONNEES:      OPTION       -->  OPTION DE CALCUL
-!                      NOMTE        -->  NOM DU TYPE ELEMENT
-! ......................................................................
+! --------------------------------------------------------------------------------------------------
+!
+! Elementary computation
+!
+! Elements: THER_*
+!
+! Options: MASS_THER_TANG
+!
+! --------------------------------------------------------------------------------------------------
+!
+! In  option           : name of option to compute
+! In  nomte            : type of finite element
+!
+! --------------------------------------------------------------------------------------------------
 !
     type(FE_Cell) :: FECell
     type(FE_Quadrature) :: FEQuadCell
     type(FE_basis) :: FEBasis
 !
-    integer(kind=8) :: icodre(1)
-    character(len=16) :: phenom, rela_name
+    integer(kind=8) :: propCode(1)
+    character(len=16) :: therKeyword, relaName
     real(kind=8) :: valQP(MAX_QP), tpgi, r8bid
-    real(kind=8) :: mass(MAX_BS, MAX_BS)
-    integer(kind=8) :: kp, imate
+    real(kind=8) :: mass(MAX_BS_CG, MAX_BS_CG)
+    integer(kind=8) :: kpg, jvMaterc
     integer(kind=8) :: ifon(6)
     aster_logical :: aniso
     character(len=16), pointer :: compor(:) => null()
-    real(kind=8), pointer :: tempi(:) => null()
+    real(kind=8), pointer :: temper(:) => null()
 !
-!-----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     call FECell%init()
     call FEQuadCell%initCell(FECell, "MASS")
     call FEBasis%initCell(FECell)
 !
     call jevech('PCOMPOR', 'L', vk16=compor)
-    rela_name = compor(RELA_NAME)
-    if (rela_name(1:5) .eq. 'THER_') then
-        call jevech('PTEMPEI', 'L', vr=tempi)
-        call jevech('PMATERC', 'L', imate)
+    relaName = compor(RELA_NAME)
+    if (relaName(1:5) .eq. 'THER_') then
+        call jevech('PTEMPEI', 'L', vr=temper)
+        call jevech('PMATERC', 'L', jvMaterc)
 !
-        call rccoma(zi(imate), 'THER', 1, phenom, icodre(1))
+        call rccoma(zi(jvMaterc), 'THER', 1, therKeyword, propCode(1))
         aniso = ASTER_FALSE
-        if (phenom(1:12) .eq. 'THER_NL_ORTH') then
+        if (therKeyword(1:12) .eq. 'THER_NL_ORTH') then
             aniso = ASTER_TRUE
         end if
-        call ntfcma(rela_name, zi(imate), aniso, ifon)
+        call ntfcma(relaName, zi(jvMaterc), aniso, ifon)
     end if
 !
     valQP = 0.0
-    do kp = 1, FEQuadCell%nbQuadPoints
-        if (rela_name(1:5) .eq. 'THER_') then
-            tpgi = FEEvalFuncRScal(FEBasis, tempi, FEQuadCell%points_param(1:3, kp))
-            call rcfode(ifon(1), tpgi, r8bid, valQP(kp))
-        else if (rela_name(1:5) .eq. 'SECH_') then
-            valQP(kp) = 1.d0
+    do kpg = 1, FEQuadCell%nbQuadPoints
+        if (relaName(1:5) .eq. 'THER_') then
+            tpgi = FEEvalFuncRScal(FEBasis, temper, FEQuadCell%points_param(1:3, kpg))
+            call rcfode(ifon(1), tpgi, r8bid, valQP(kpg))
+        else if (relaName(1:5) .eq. 'SECH_') then
+            valQP(kpg) = 1.d0
         else
             ASSERT(ASTER_FALSE)
         end if

@@ -26,22 +26,17 @@ subroutine diisotrope_uni(for_discret, iret, ipi, jmat, ivarim, icontm, klv, rai
 #include "jeveux.h"
 #include "asterc/r8miem.h"
 #include "asterfort/assert.h"
-#include "asterfort/diraidklv.h"
 #include "asterfort/diklvraid.h"
-#include "asterfort/infdis.h"
 #include "asterfort/jevech.h"
 #include "asterfort/pmavec.h"
 #include "asterfort/rcvala.h"
 #include "asterfort/rk5adp.h"
-#include "asterfort/tecael.h"
 #include "asterfort/ut2mlg.h"
 #include "asterfort/ut2vlg.h"
-#include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvlg.h"
 #include "asterfort/vecma.h"
 #include "asterfort/disc_isotr.h"
-#include "blas/dcopy.h"
 
     type(te0047_dscr), intent(in)    :: for_discret
     integer(kind=8), intent(inout) :: iret
@@ -129,8 +124,8 @@ subroutine diisotrope_uni(for_discret, iret, ipi, jmat, ivarim, icontm, klv, rai
             if (abs(zr(ivarim-1+16)) .gt. r8miem()) then
                 raide(2) = zr(ivarim-1+16)
             end if
-            if (abs(zr(ivarim-1+16)) .gt. r8miem()) then
-                raide(3) = zr(ivarim-1+16)
+            if (abs(zr(ivarim-1+17)) .gt. r8miem()) then
+                raide(3) = zr(ivarim-1+17)
             end if
         end if
         resu(1) = zr(icontm)

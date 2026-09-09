@@ -18,7 +18,7 @@
 # along with Code_Aster.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..Objects import Model, PrestressingCable, Result, Mesh, Table, PrestressingCable
+from ..Objects import Mesh, Model, PrestressingCable, Result, Table, TimesList
 from ..Supervis import ExecuteCommand
 
 
@@ -72,6 +72,8 @@ class Copier(ExecuteCommand):
 
         if isinstance(other, (Result, Mesh, PrestressingCable, Table)):
             self._result.build()
+        if isinstance(other, TimesList):
+            self._result.stepper = other.stepper.copy()
 
     def add_dependencies(self, keywords):
         """Do not keep any references to original objects.

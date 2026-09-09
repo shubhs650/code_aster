@@ -15,47 +15,51 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W1306, W1504
 !
-
-subroutine nmsfin(fami, option, typmod, ndim, nno, &
-                  npg, nddl, iw, vff, idff, &
-                  geomi, compor, &
-                  mate, lgpg, carcri, angmas, instm, &
-                  instp, ddlm, ddld, siefm, &
-                  vim, siefp, vip, fint, matr, &
-                  lMatr, lVect, lSigm, lVari, &
+subroutine nmsfin(BEHInteg, &
+                  option, typmod, &
+                  compor, carcri, &
+                  ndim, nno, npg, nddl, &
+                  iw, vff, idff, &
+                  geomi, ddlm, ddld, &
+                  instm, instp, &
+                  lgpg, siefm, vim, &
+                  siefp, vip, &
+                  fint, matr, &
+                  lMatr, lVect, lSigm, &
                   codret)
 !
     use Behaviour_type
     use Behaviour_module
     use bloc_fe_module, only: prod_bd, prod_sb, prod_bkb, add_fint, add_matr
-
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
-#include "asterfort/teattr.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/codere.h"
 #include "asterfort/dfdmip.h"
-#include "asterfort/nmcomp.h"
 #include "asterfort/nmbeps.h"
+#include "asterfort/nmcomp.h"
 #include "asterfort/rcvalb.h"
-#include "asterfort/Behaviour_type.h"
-
-    character(len=8), intent(in)    :: typmod(2)
-    character(len=*), intent(in)    :: fami
-    character(len=16), intent(in)   :: option, compor(COMPOR_SIZE)
-    integer(kind=8), intent(in)             :: ndim, nno, npg, nddl, lgpg
-    integer(kind=8), intent(in)             :: mate, iw, idff
-    real(kind=8), intent(in)        :: geomi(ndim, nno), carcri(CARCRI_SIZE), instm, instp
-    real(kind=8), intent(in)        :: vff(nno, npg)
-    real(kind=8), intent(in)        :: angmas(3), ddlm(nddl), ddld(nddl), siefm(4*ndim, npg)
-    real(kind=8), intent(in)        :: vim(lgpg, npg)
-    real(kind=8), intent(out)       :: fint(nddl), matr(nddl, nddl)
-    real(kind=8), intent(out)       :: siefp(4*ndim, npg), vip(lgpg, npg)
-    aster_logical, intent(in)       :: lMatr, lVect, lSigm, lVari
-    integer(kind=8), intent(out)            :: codret
+#include "asterfort/teattr.h"
+!
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    character(len=16), intent(in) :: option
+    integer(kind=8), intent(in) :: ndim, nno, npg, nddl, lgpg
+    integer(kind=8), intent(in) :: iw, idff
+    real(kind=8), intent(in) :: geomi(ndim, nno), instm, instp
+    real(kind=8), intent(in) :: vff(nno, npg)
+    real(kind=8), intent(in) :: ddlm(nddl), ddld(nddl), siefm(4*ndim, npg)
+    real(kind=8), intent(in) :: vim(lgpg, npg)
+    real(kind=8), intent(out) :: fint(nddl), matr(nddl, nddl)
+    real(kind=8), intent(out) :: siefp(4*ndim, npg), vip(lgpg, npg)
+    aster_logical, intent(in) :: lMatr, lVect, lSigm
+    integer(kind=8), intent(out) :: codret
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -63,7 +67,6 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! IN  FAMI    : FAMILLE DE POINTS DE GAUSS
 ! IN  OPTION  : OPTION DE CALCUL
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  NDIM    : DIMENSION DE L'ESPACE
@@ -75,10 +78,8 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
 ! IN  IDFF    : PTR. DERIVEE DES FONCTIONS DE FORME DE DEPLACEMENT ELEMENT DE REF.
 ! IN  GEOMI   : COORDONNEES DES NOEUDS (CONFIGURATION INITIALE)
 ! IN  COMPOR  : COMPORTEMENT
-! IN  MATE    : MATERIAU CODE
 ! IN  LGPG    : DIMENSION DU VECTEUR DES VAR. INTERNES POUR 1 PT GAUSS
 ! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
-! IN  ANGMAS  : LES TROIS ANGLES DU MOT_CLEF MASSIF (AFFE_CARA_ELEM)
 ! IN  INSTM   : VALEUR DE L'INSTANT T-
 ! IN  INSTP   : VALEUR DE L'INSTANT T+
 ! IN  DDLM    : DDL AU PAS T-
@@ -95,6 +96,7 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
     real(kind=8), parameter:: rac2 = sqrt(2.d0)
     real(kind=8), dimension(6), parameter  :: vrac2 = (/1.d0, 1.d0, 1.d0, &
@@ -106,43 +108,28 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
                                                  0.d0, 0.d0, 0.d0, 1.d0, 0.d0, 0.d0, &
                                                  0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0, &
                                                  0.d0, 0.d0, 0.d0, 0.d0, 0.d0, 1.d0/), (/6, 6/))
-
-! ----------------------------------------------------------------------
-    aster_logical :: axi, resi
+    aster_logical :: axi
     character(len=16) :: formulation
-    integer(kind=8)       :: g, n, i, j
-    integer(kind=8)       :: xu(ndim, nno), xe(2*ndim, nno)
-    integer(kind=8)       :: cod(npg)
-    integer(kind=8)       :: ndu, nde, neu, nee
-    real(kind=8)  :: r, dff(nno, ndim), poids, dff1(nno, ndim)
+    integer(kind=8) :: kpg, n, i, j
+    integer(kind=8) :: xu(ndim, nno), xe(2*ndim, nno)
+    integer(kind=8) :: cod(npg)
+    integer(kind=8) :: ndu, nde, neu, nee
+    real(kind=8)  :: r, dff(nno, ndim), poids
     real(kind=8)  :: dum(ndim, nno), dup(ndim, nno)
     real(kind=8)  :: dem(2*ndim, nno), dep(2*ndim, nno)
     real(kind=8)  :: bu(2*ndim, ndim, nno), be(2*ndim, 2*ndim, nno)
     real(kind=8)  :: b_dev(2*ndim, ndim, nno), b_vol(2*ndim, ndim, nno)
     real(kind=8)  :: b(2*ndim, ndim, nno), bbar_vol(2*ndim, ndim, nno)
-    real(kind=8)  :: epum(2*ndim), epup(2*ndim), epup_verif(2*ndim)
+    real(kind=8)  :: epum(2*ndim), epup(2*ndim)
     real(kind=8)  :: epem(2*ndim), epep(2*ndim)
     real(kind=8)  :: siefup(2*ndim), siefep(2*ndim)
     real(kind=8)  :: epsim(6), epsip(6), tau(1), coeff_trace
     real(kind=8)  :: siefcm(6), siefcp(6), dsdepsi(6, 6)
     real(kind=8)  :: kefee(2*ndim, 2*ndim), kefeu(2*ndim, 2*ndim)
     real(kind=8)  :: kefue(2*ndim, 2*ndim), kefuu(2*ndim, 2*ndim)
-    type(Behaviour_Integ) :: BEHinteg
+
 ! --------------------------------------------------------------------------------------------------
 !
-
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instm, instp, &
-                              fami, mate, &
-                              BEHinteg)
-
-! --- INITIALISATION ---
-
     axi = typmod(1) .eq. 'AXIS'
     call teattr('S', 'FORMULATION', formulation)
     coeff_trace = 1.d0/ndim
@@ -172,11 +159,11 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
     ! Formulation STA_INCO : calcul de Bbar_vol
     if (formulation .eq. "STA_INCO") then
         bbar_vol = 0.d0
-        do g = 1, npg
+        do kpg = 1, npg
             b_vol = 0.0d0
             b = 0.d0
             ! Calcul des derivees des fonctions de forme P1, du rayon r et des poids
-            call dfdmip(ndim, nno, axi, geomi, g, iw, vff(1, g), idff, r, poids, dff)
+            call dfdmip(ndim, nno, axi, geomi, kpg, iw, vff(1, kpg), idff, r, poids, dff)
             ! Calcul de la partie volumique de B
             forall (i=1:ndim, j=1:ndim) b_vol(i, j, :) = coeff_trace*dff(:, j)
             ! Calcul de Bbar_vol
@@ -184,21 +171,29 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
         end do
     end if
 
-    gauss: do g = 1, npg
+    gauss: do kpg = 1, npg
+! ----- Set main parameters for behaviour (on point)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
-        ! Lecture du paramètre TAU_EPSI
+! ----- Lecture du paramètre TAU_EPSI
         tau = 0.d0
-        call rcvalb(fami, g, ksp, '+', mate, ' ', 'NON_LOCAL', 0, ' ', [0.d0], &
-                    1, 'TAU_EPSI', tau(1), cod(g), 1)
+        call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                    BEHInteg%materPara%schemePara%kpg, &
+                    BEHInteg%materPara%schemePara%ksp, &
+                    '+', &
+                    BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'NON_LOCAL', &
+                    0, ' ', [0.d0], &
+                    1, 'TAU_EPSI', tau(1), cod(kpg), 1)
         ! -----------------------!
         !  ELEMENTS CINEMATIQUES !
         ! -----------------------!
         ! Calcul des derivees des fonctions de forme P1, du rayon r et des poids
-        call dfdmip(ndim, nno, axi, geomi, g, iw, vff(1, g), idff, r, poids, dff)
+        call dfdmip(ndim, nno, axi, geomi, kpg, iw, vff(1, kpg), idff, r, poids, dff)
         bu = 0.d0
         ! Formulation STA : calcul de la matrice Bu = B
         if (formulation .eq. "STA") then
-            call nmbeps(axi, r, vff(:, g), dff, bu)
+            call nmbeps(axi, r, vff(:, kpg), dff, bu)
 
             ! Formulation STA_INCO : calcul de la matrice Bu = B_dev + Bbar_vol
         else if (formulation .eq. "STA_INCO") then
@@ -206,7 +201,7 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
             b_vol = 0.d0
             b_dev = 0.d0
             ! Calcul de la matrice B
-            call nmbeps(axi, r, vff(:, g), dff, b)
+            call nmbeps(axi, r, vff(:, kpg), dff, b)
             ! Calcul de la partie volumique de B
             forall (i=1:ndim, j=1:ndim) b_vol(i, j, :) = coeff_trace*dff(:, j)
             ! Calcul de la partie déviatorique de B
@@ -224,17 +219,17 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
         ! Calcul de la matrice N et de la déformation N.E en t- et t+
         be = 0.d0
         if (ndim .eq. 2) then
-            be(1, 1, :) = vff(:, g)
-            be(2, 2, :) = vff(:, g)
-            be(3, 3, :) = vff(:, g)
-            be(4, 4, :) = rac2*vff(:, g)
+            be(1, 1, :) = vff(:, kpg)
+            be(2, 2, :) = vff(:, kpg)
+            be(3, 3, :) = vff(:, kpg)
+            be(4, 4, :) = rac2*vff(:, kpg)
         else if (ndim .eq. 3) then
-            be(1, 1, :) = vff(:, g)
-            be(2, 2, :) = vff(:, g)
-            be(3, 3, :) = vff(:, g)
-            be(4, 4, :) = rac2*vff(:, g)
-            be(5, 5, :) = rac2*vff(:, g)
-            be(6, 6, :) = rac2*vff(:, g)
+            be(1, 1, :) = vff(:, kpg)
+            be(2, 2, :) = vff(:, kpg)
+            be(3, 3, :) = vff(:, kpg)
+            be(4, 4, :) = rac2*vff(:, kpg)
+            be(5, 5, :) = rac2*vff(:, kpg)
+            be(6, 6, :) = rac2*vff(:, kpg)
         end if
         epem = prod_bd(be, dem)
         epep = prod_bd(be, dep)
@@ -249,21 +244,21 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
         !   LOI DE COMPORTEMENT  !
         ! -----------------------!
 
-! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(g, ksp, BEHinteg)
-
 ! ----- Integrator
         siefcm = 0.d0
-        siefcm(1:2*ndim) = siefm(1:2*ndim, g)*vrac2(1:2*ndim)
+        siefcm(1:2*ndim) = siefm(1:2*ndim, kpg)*vrac2(1:2*ndim)
         siefcp = 0.d0
-
-        call nmcomp(BEHinteg, &
-                    fami, g, ksp, ndim, typmod, &
-                    mate, compor, carcri, instm, instp, &
-                    6, epsim, epsip-epsim, 6, siefcm, &
-                    vim(1, g), option, angmas, &
-                    siefcp, vip(1, g), 36, dsdepsi, cod(g))
-        if (cod(g) .eq. 1) goto 999
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instm, instp, &
+                    compor, carcri, multComp, &
+                    6, epsim, epsip-epsim, &
+                    6, siefcm, &
+                    vim(1, kpg), &
+                    siefcp, vip(1, kpg), &
+                    36, dsdepsi, &
+                    cod(kpg))
+        if (cod(kpg) .eq. 1) goto 999
 
         ! ----------------------------------------!
         !   FORCES INTERIEURES ET CONTRAINTES EF  !
@@ -279,8 +274,8 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
         end if
 
         if (lSigm) then
-            siefp(1:2*ndim, g) = siefup(1:2*ndim)/vrac2(1:2*ndim)
-            siefp(2*ndim+1:4*ndim, g) = siefep
+            siefp(1:2*ndim, kpg) = siefup(1:2*ndim)/vrac2(1:2*ndim)
+            siefp(2*ndim+1:4*ndim, kpg) = siefep
         end if
 
         ! -----------------------!
@@ -307,6 +302,8 @@ subroutine nmsfin(fami, option, typmod, ndim, nno, &
 
 ! - SYNTHESE DES CODES RETOURS
 999 continue
-    if (lSigm) call codere(cod, npg, codret)
+    if (lSigm) then
+        call codere(cod, npg, codret)
+    end if
 
 end subroutine

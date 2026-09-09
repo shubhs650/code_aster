@@ -25,6 +25,8 @@
 module BehaviourStrain_module
 ! ==================================================================================================
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     use calcul_module, only: ca_nbcvrc_
 ! ==================================================================================================
     implicit none
@@ -60,21 +62,18 @@ contains
 !
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
 ! In  lTHM             : flag for THM
-! In  fami             : Gauss family for integration point rule
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
+! IO  materPara        : parameters of material
 ! IO  allVarcStrain    : all external state variables for anelastic strains
 ! In  indxVarcStrain   : index of external state variable
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine strainDetectVarc(poum, lTHM, fami, kpg, ksp, &
+    subroutine strainDetectVarc(poum, lTHM, materPara, &
                                 allVarcStrain, indxVarcStrain_)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=*), intent(in) :: poum
         aster_logical, intent(in) :: lTHM
-        character(len=*), intent(in) ::  fami
-        integer(kind=8), intent(in) :: kpg, ksp
+        type(Material_Para), intent(in) :: materPara
         type(All_Varc_Strain), intent(inout) :: allVarcStrain
         integer(kind=8), optional, intent(in) :: indxVarcStrain_
 ! ----- Local
@@ -91,12 +90,12 @@ contains
             end if
             if (indxVarcStrain .eq. VARC_STRAIN_ALL) then
                 do iVarcStrain = 1, VARC_STRAIN_NBMAXI
-                    call detectVarc(poum, fami, kpg, ksp, &
+                    call detectVarc(poum, materPara%schemePara, &
                                     iVarcStrain, allVarcStrain%list(iVarcStrain))
                 end do
             else
                 ASSERT(indxVarcStrain .le. VARC_STRAIN_NBMAXI)
-                call detectVarc(poum, fami, kpg, ksp, &
+                call detectVarc(poum, materPara%schemePara, &
                                 indxVarcStrain, allVarcStrain%list(indxVarcStrain))
             end if
         end if
@@ -110,21 +109,19 @@ contains
 ! Detect external state variables
 !
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  fami             : Gauss family for integration point rule
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
+! In  schemePara       : parameters of integration scheme
 ! In  indxVarcStrain   : index of external state variable
 ! IO  varcStrain       : external state variable for anelastic strains
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine detectVarc(poum, fami, kpg, ksp, &
+    subroutine detectVarc(poum, schemePara, &
                           indxVarcStrain, varcStrain)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=*), intent(in) :: poum, fami
-        integer(kind=8), intent(in) :: kpg, ksp, indxVarcStrain
+        character(len=*), intent(in) :: poum
+        type(Scheme_Para), intent(in) :: schemePara
+        integer(kind=8), intent(in) :: indxVarcStrain
         type(Varc_Strain), intent(inout) :: varcStrain
-
 ! ----- Local
         integer(kind=8) :: iVarcStrainCmp, strainNbCmp
         integer(kind=8) :: iretPrev, iretCurr, iretRefe
@@ -152,12 +149,14 @@ contains
             varcCurr = r8nnem()
             iretPrev = 1
             if (poum .eq. '-' .or. poum .eq. 'T') then
-                call rcvarc(' ', varcName, '-', fami, kpg, ksp, &
+                call rcvarc(' ', varcName, '-', &
+                            schemePara%fami, schemePara%kpg, schemePara%ksp, &
                             varcPrev, iretPrev)
             end if
             iretCurr = 1
             if (poum .eq. '+' .or. poum .eq. 'T') then
-                call rcvarc(' ', varcName, '+', fami, kpg, ksp, &
+                call rcvarc(' ', varcName, '+', &
+                            schemePara%fami, schemePara%kpg, schemePara%ksp, &
                             varcCurr, iretCurr)
             end if
             if (poum .eq. '-') then
@@ -187,8 +186,9 @@ contains
             varcRefe = r8nnem()
             iretRefe = 1
             if (varcStrainHasRefe(indxVarcStrain)) then
-                call rcvarc(' ', varcName, 'REF', fami, kpg, &
-                            ksp, varcRefe, iretRefe)
+                call rcvarc(' ', varcName, 'REF', &
+                            schemePara%fami, schemePara%kpg, schemePara%ksp, &
+                            varcRefe, iretRefe)
                 if (exist .and. iretRefe .eq. 1) then
                     call utmess("F", "COMPOR7_8")
                 end if
@@ -204,29 +204,16 @@ contains
 !
 ! Compute anelastic strains from external state variables
 !
-! In  fami             : Gauss family for integration point rule
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  jvMaterCode      : adress for material parameters
-! In  lMetaLemaAni     : flag for special behaviour META_LEMA_ANI
-! In  elasID           : type of elasticity
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! IO  allVarcStrain    : all external state variables for anelastic strains
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compVarcStrain(fami, poum, kpg, ksp, &
-                              jvMaterCode, lMetaLemaAni, &
-                              elasID, elasKeyword, &
-                              allVarcStrain)
+    subroutine compVarcStrain(poum, materPara, allVarcStrain)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp
-        integer(kind=8), intent(in) :: jvMaterCode
-        aster_logical, intent(in) :: lMetaLemaAni
-        integer(kind=8), intent(in) :: elasID
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         type(All_Varc_Strain), intent(inout) :: allVarcStrain
 ! ----- Local
         integer(kind=8) :: indxVarcStrain
@@ -236,9 +223,7 @@ contains
 ! ----- For temperature
         indxVarcStrain = VARC_STRAIN_TEMP
         if (allVarcStrain%list(indxVarcStrain)%exist) then
-            call compTherStrainField(fami, poum, kpg, ksp, &
-                                     jvMaterCode, lMetaLemaAni, &
-                                     elasID, elasKeyword, &
+            call compTherStrainField(poum, materPara, &
                                      allVarcStrain%list(indxVarcStrain))
             allVarcStrain%hasInelasticStrains = ASTER_TRUE
         end if
@@ -246,8 +231,7 @@ contains
 ! ----- For drying
         indxVarcStrain = VARC_STRAIN_SECH
         if (allVarcStrain%list(indxVarcStrain)%exist) then
-            call compSechStrainField(fami, poum, kpg, ksp, &
-                                     jvMaterCode, elasKeyword, &
+            call compSechStrainField(poum, materPara, &
                                      allVarcStrain%list(indxVarcStrain))
             allVarcStrain%hasInelasticStrains = ASTER_TRUE
         end if
@@ -255,8 +239,7 @@ contains
 ! ----- For hydration
         indxVarcStrain = VARC_STRAIN_HYDR
         if (allVarcStrain%list(indxVarcStrain)%exist) then
-            call compHydrStrainField(fami, poum, kpg, ksp, &
-                                     jvMaterCode, elasKeyword, &
+            call compHydrStrainField(poum, materPara, &
                                      allVarcStrain%list(indxVarcStrain))
             allVarcStrain%hasInelasticStrains = ASTER_TRUE
         end if
@@ -264,9 +247,7 @@ contains
 ! ----- For pressure
         indxVarcStrain = VARC_STRAIN_PTOT
         if (allVarcStrain%list(indxVarcStrain)%exist) then
-            call compPtotStrainField(fami, poum, kpg, ksp, &
-                                     jvMaterCode, &
-                                     elasID, elasKeyword, &
+            call compPtotStrainField(poum, materPara, &
                                      allVarcStrain%list(indxVarcStrain))
             allVarcStrain%hasInelasticStrains = ASTER_TRUE
         end if
@@ -289,18 +270,16 @@ contains
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
 ! In  indxVarcStrain   : index of external state variable
 ! In  allVarcStrain    : all external state variables for anelastic strains
-! In  nbEpsi           : number of components for inelastic strains
 ! Out epsiVarc         : anelastic strains from all external state variables
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine getVarcStrain(poum, indxVarcStrain, allVarcStrain, nbEpsi, epsiVarc)
+    subroutine getVarcStrain(poum, indxVarcStrain, allVarcStrain, epsiVarc)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
         character(len=*), intent(in) :: poum
         integer(kind=8), intent(in) :: indxVarcStrain
         type(All_Varc_Strain), intent(in) :: allVarcStrain
-        integer(kind=8), intent(in) :: nbEpsi
-        real(kind=8), intent(out) :: epsiVarc(nbEpsi)
+        real(kind=8), intent(out) :: epsiVarc(6)
 ! ----- Local
         integer(kind=8) :: iVarcStrain
 !   ------------------------------------------------------------------------------------------------
@@ -349,14 +328,8 @@ contains
 !
 ! Compute anelastic strains from thermal variable
 !
-! In  fami             : Gauss family for integration point rule
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  jvMaterCode      : adress for material parameters
-! In  lMetaLemaAni     : flag for special behaviour META_LEMA_ANI
-! In  elasID           : type of elasticity
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! In  tempRefe         : reference temperature
 ! In  temp             : temperature
 ! Out epsthIsot        : thermal strain (isotropic case)
@@ -364,18 +337,13 @@ contains
 ! Out epsthMeta        : thermal strain (metallurgical case)
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compTherStrain(fami, kpg, ksp, poum, &
-                              jvMaterCode, lMetaLemaAni, &
-                              elasID, elasKeyword, &
+    subroutine compTherStrain(poum, materPara, &
                               tempRefe, temp, &
                               epsthIsot, epsthAnis, epsthMeta)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp, jvMaterCode
-        aster_logical, intent(in) :: lMetaLemaAni
-        integer(kind=8), intent(in) :: elasID
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         real(kind=8), intent(in) :: tempRefe, temp
         real(kind=8), intent(out) :: epsthIsot, epsthAnis(3), epsthMeta
 ! ----- Local
@@ -392,8 +360,9 @@ contains
         epsthMeta = 0.d0
 
 ! ----- Get elastic parameters for thermic dilatation
-        call get_elasth_para(fami, jvMaterCode, poum, kpg, ksp, &
-                             elasID, elasKeyword, &
+        call get_elasth_para(materPara%schemePara%fami, materPara%jvMaterCode, &
+                             poum, materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                             materPara%elasID, materPara%elasKeyword, &
                              alpha=alpha, &
                              alpha_l=alphaL, &
                              alpha_t=alphaT, &
@@ -404,22 +373,25 @@ contains
         nbPhases = 0
         zCold = 0.d0
         zHot = 0.d0
-        if (elasKeyword .eq. 'ELAS_META') then
+        if (materPara%elasKeyword .eq. 'ELAS_META') then
             call metaGetType(metaType, nbPhases)
             if (nbPhases .ne. 0) then
-                call metaGetPhase(fami, poum, kpg, ksp, metaType, nbPhases, &
+                call metaGetPhase(materPara%schemePara%fami, poum, &
+                                  materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                                  metaType, nbPhases, &
                                   zcold_=zCold, zhot_=zHot)
             end if
         end if
 
 ! ----- Compute thermic strain
-        if (elasID .eq. ELAS_ISOT) then
-            if (elasKeyword .eq. 'ELAS_META') then
-                if (.not. lMetaLemaAni) then
+        if (materPara%elasID .eq. ELAS_ISOT) then
+            if (materPara%elasKeyword .eq. 'ELAS_META') then
+                if (.not. materPara%lMetaLemaAni) then
                     epsthMetaHot = zHot*alpha(1)*(temp-tempRefe)
                     epsthMetaCold = zCold*alpha(2)*(temp-tempRefe)
-                    call get_elasth_para(fami, jvMaterCode, '+', kpg, ksp, &
-                                         elasID, elasKeyword, &
+                    call get_elasth_para(materPara%schemePara%fami, materPara%jvMaterCode, &
+                                         "+", materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                                         materPara%elasID, materPara%elasKeyword, &
                                          z_h_r_=z_h_r, deps_ch_tref_=deps_ch_tref)
                     epsthMetaHot = epsthMetaHot+(1-z_h_r)*deps_ch_tref*zHot
                     epsthMetaCold = epsthMetaCold+z_h_r*deps_ch_tref*zCold
@@ -430,12 +402,12 @@ contains
                 epsthIsot = alpha(1)*(temp-tempRefe)
             end if
 
-        elseif (elasID .eq. ELAS_ORTH) then
+        elseif (materPara%elasID .eq. ELAS_ORTH) then
             epsthAnis(1) = alphaL*(temp-tempRefe)
             epsthAnis(2) = alphaT*(temp-tempRefe)
             epsthAnis(3) = alphaN*(temp-tempRefe)
 
-        elseif (elasID .eq. ELAS_ISTR) then
+        elseif (materPara%elasID .eq. ELAS_ISTR) then
             epsthAnis(1) = alphaL*(temp-tempRefe)
             epsthAnis(2) = alphaN*(temp-tempRefe)
 
@@ -451,29 +423,16 @@ contains
 !
 ! Prepare external state variable TEMP for strain
 !
-! In  fami             : Gauss family for integration point rule
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  jvMaterCode      : adress for material parameters
-! In  lMetaLemaAni     : flag for special behaviour META_LEMA_ANI
-! In  elasID           : type of elasticity
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! IO  varcStrainTher   : external state variables parameters for temperature
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compTherStrainField(fami, poum, kpg, ksp, &
-                                   jvMaterCode, lMetaLemaAni, &
-                                   elasID, elasKeyword, &
-                                   varcStrainTher)
+    subroutine compTherStrainField(poum, materPara, varcStrainTher)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters.
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp
-        integer(kind=8), intent(in) :: jvMaterCode
-        aster_logical, intent(in) :: lMetaLemaAni
-        integer(kind=8), intent(in) :: elasID
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         type(Varc_Strain), intent(inout) :: varcStrainTher
 ! ----- Local
         aster_logical :: lElasIsMeta
@@ -485,7 +444,7 @@ contains
         varcStrainTher%fieldPrev = 0.d0
         varcStrainTher%fieldCurr = 0.d0
         varcStrainTher%fieldIncr = 0.d0
-        lElasIsMeta = (elasKeyword == 'ELAS_META')
+        lElasIsMeta = (materPara%elasKeyword == 'ELAS_META')
 
 ! ----- Get external state variable
         tempRefe = varcStrainTher%varcRefe
@@ -500,23 +459,19 @@ contains
         epsthAnisCurr = r8nnem()
         epsthMetaCurr = r8nnem()
         if (poum .eq. '-' .or. poum .eq. 'T') then
-            call compTherStrain(fami, kpg, ksp, '-', &
-                                jvMaterCode, lMetaLemaAni, &
-                                elasID, elasKeyword, &
+            call compTherStrain('-', materPara, &
                                 tempRefe, tempPrev, &
                                 epsthIsotPrev, epsthAnisPrev, epsthMetaPrev)
         end if
         if (poum .eq. '+' .or. poum .eq. 'T') then
-            call compTherStrain(fami, kpg, ksp, '+', &
-                                jvMaterCode, lMetaLemaAni, &
-                                elasID, elasKeyword, &
+            call compTherStrain('+', materPara, &
                                 tempRefe, tempCurr, &
                                 epsthIsotCurr, epsthAnisCurr, epsthMetaCurr)
         end if
 
 ! ----- Compute thermal strain fields
         if (lElasIsMeta) then
-            ASSERT(elasID .eq. ELAS_ISOT)
+            ASSERT(materPara%elasID .eq. ELAS_ISOT)
             varcStrainTher%fieldPrev(1:3) = epsthMetaPrev
             varcStrainTher%fieldCurr(1:3) = epsthMetaCurr
             if (poum .eq. 'T') then
@@ -524,14 +479,14 @@ contains
             end if
 
         else
-            if (elasID == ELAS_ISOT) then
+            if (materPara%elasID == ELAS_ISOT) then
                 varcStrainTher%fieldPrev(1:3) = epsthIsotPrev
                 varcStrainTher%fieldCurr(1:3) = epsthIsotCurr
                 if (poum .eq. 'T') then
                     varcStrainTher%fieldIncr(1:3) = epsthIsotCurr-epsthIsotPrev
                 end if
 
-            elseif (elasID == ELAS_ORTH) then
+            elseif (materPara%elasID == ELAS_ORTH) then
                 varcStrainTher%fieldPrev(1:3) = &
                     epsthAnisPrev(1:3)
                 varcStrainTher%fieldCurr(1:3) = &
@@ -541,7 +496,7 @@ contains
                         epsthAnisCurr(1:3)-epsthAnisPrev(1:3)
                 end if
 
-            elseif (elasID == ELAS_ISTR) then
+            elseif (materPara%elasID == ELAS_ISTR) then
                 varcStrainTher%fieldPrev(1) = epsthAnisPrev(1)
                 varcStrainTher%fieldCurr(1) = epsthAnisCurr(1)
                 varcStrainTher%fieldPrev(2) = epsthAnisPrev(1)
@@ -565,24 +520,16 @@ contains
 !
 ! Prepare external state variable SECH for strain
 !
-! In  fami             : Gauss family for integration point rule
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  jvMaterCode      : adress for material parameters
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! IO  varcStrainSech   : external state variables parameters for drying
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compSechStrainField(fami, poum, kpg, ksp, &
-                                   jvMaterCode, elasKeyword, &
-                                   varcStrainSech)
+    subroutine compSechStrainField(poum, materPara, varcStrainSech)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters.
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp
-        integer(kind=8), intent(in) :: jvMaterCode
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         type(Varc_Strain), intent(inout) :: varcStrainSech
 ! ----- Local
         integer(kind=8), parameter :: nbProp = 1
@@ -606,16 +553,18 @@ contains
         kdessm = r8nnem()
         kdessp = r8nnem()
         if (poum .eq. '-' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '-', jvMaterCode, ' ', elasKeyword, &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '-', materPara%jvMaterCode, ' ', materPara%elasKeyword, &
                         0, ' ', [0.d0], &
                         nbProp, propName, propVale, &
                         codret, 1)
             kdessm = propVale(1)
         end if
         if (poum .eq. '+' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '+', jvMaterCode, ' ', elasKeyword, &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '+', materPara%jvMaterCode, ' ', materPara%elasKeyword, &
                         0, ' ', [0.d0], &
                         nbProp, propName, propVale, &
                         codret, 1)
@@ -638,24 +587,16 @@ contains
 !
 ! Prepare external state variable HYDR for strain
 !
-! In  fami             : Gauss family for integration point rule
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  jvMaterCode      : adress for material parameters
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! IO  varcStrainHydr   : external state variables parameters for hydratation
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compHydrStrainField(fami, poum, kpg, ksp, &
-                                   jvMaterCode, elasKeyword, &
-                                   varcStrainHydr)
+    subroutine compHydrStrainField(poum, materPara, varcStrainHydr)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters.
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp
-        integer(kind=8), intent(in) :: jvMaterCode
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         type(Varc_Strain), intent(inout) :: varcStrainHydr
 ! ----- Local
         integer(kind=8), parameter :: nbProp = 1
@@ -678,16 +619,18 @@ contains
         bendom = r8nnem()
         bendop = r8nnem()
         if (poum .eq. '-' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '-', jvMaterCode, ' ', elasKeyword, &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '-', materPara%jvMaterCode, ' ', materPara%elasKeyword, &
                         0, ' ', [0.d0], &
                         nbProp, propName, propVale, &
                         codret, 1)
             bendom = propVale(1)
         end if
         if (poum .eq. '+' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '+', jvMaterCode, ' ', elasKeyword, &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '+', materPara%jvMaterCode, ' ', materPara%elasKeyword, &
                         0, ' ', [0.d0], &
                         nbProp, propName, propVale, &
                         codret, 1)
@@ -709,27 +652,16 @@ contains
 !
 ! Prepare external state variable PTOT for strain
 !
-! In  fami             : Gauss family for integration point rule
 ! In  poum             : '-'  '+' or 'T' (previous, current and both)
-! In  kpg              : current point gauss
-! In  ksp              : current "sous-point" gauss
-! In  jvMaterCode      : adress for material parameters
-! In  elasID           : type of elasticity
-! In  elasKeyword      : factor keyword for type of elasticity parameters
+! In  materPara        : parameters of material
 ! IO  varcStrainPtot   : external state variables parameters for PTOT
 !
 ! --------------------------------------------------------------------------------------------------
-    subroutine compPtotStrainField(fami, poum, kpg, ksp, &
-                                   jvMaterCode, &
-                                   elasID, elasKeyword, &
-                                   varcStrainPtot)
+    subroutine compPtotStrainField(poum, materPara, varcStrainPtot)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters.
-        character(len=*), intent(in) :: fami, poum
-        integer(kind=8), intent(in) :: kpg, ksp
-        integer(kind=8), intent(in) :: jvMaterCode
-        integer(kind=8), intent(in) :: elasID
-        character(len=16), intent(in) :: elasKeyword
+        character(len=*), intent(in) :: poum
+        type(Material_Para), intent(in) :: materPara
         type(Varc_Strain), intent(inout) :: varcStrainPtot
 ! ----- Local
         integer(kind=8), parameter :: nbParaBiot = 1
@@ -753,8 +685,9 @@ contains
         biotm = r8nnem()
         biotp = r8nnem()
         if (poum .eq. '-' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '-', jvMaterCode, ' ', 'THM_DIFFU', &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '-', materPara%jvMaterCode, ' ', 'THM_DIFFU', &
                         0, ' ', [0.d0], &
                         nbParaBiot, paraNameBiot, paraValeBiot, &
                         codretBiot, 1)
@@ -764,8 +697,9 @@ contains
             biotm = paraValeBiot(1)
         end if
         if (poum .eq. '+' .or. poum .eq. 'T') then
-            call rcvalb(fami, kpg, ksp, &
-                        '+', jvMaterCode, ' ', 'THM_DIFFU', &
+            call rcvalb(materPara%schemePara%fami, &
+                        materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                        '+', materPara%jvMaterCode, ' ', 'THM_DIFFU', &
                         0, ' ', [0.d0], &
                         nbParaBiot, paraNameBiot, paraValeBiot, &
                         codretBiot, 1)
@@ -776,20 +710,24 @@ contains
         end if
 
 ! ----- Get elastic parameters
-        if (elasID .ne. ELAS_ISOT) then
+        if (materPara%elasID .ne. ELAS_ISOT) then
             call utmess("F", "COMPOR7_1")
         end if
         troikm = r8nnem()
         troikp = r8nnem()
         if (poum .eq. '-' .or. poum .eq. 'T') then
-            call get_elas_para(fami, jvMaterCode, '-', kpg, ksp, &
-                               elasID, elasKeyword, &
+            call get_elas_para(materPara%schemePara%fami, &
+                               materPara%jvMaterCode, '-', &
+                               materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                               materPara%elasID, materPara%elasKeyword, &
                                e_=em, nu_=num)
             troikm = em/(1.d0-2.d0*num)
         end if
         if (poum .eq. '+' .or. poum .eq. 'T') then
-            call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, &
-                               elasID, elasKeyword, &
+            call get_elas_para(materPara%schemePara%fami, &
+                               materPara%jvMaterCode, '+', &
+                               materPara%schemePara%kpg, materPara%schemePara%ksp, &
+                               materPara%elasID, materPara%elasKeyword, &
                                e_=ep, nu_=nup)
             troikp = ep/(1.d0-2.d0*nup)
         end if
@@ -852,7 +790,7 @@ contains
 !
 ! Get type of strain from option
 !
-! In  option            : option to compute
+! In  option           : option to compute
 ! Out strainType       : type of strain (small, Green, log, etc.)
 ! Out lStrainMeca      : flag to compute mechanical strains
 !

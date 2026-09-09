@@ -37,6 +37,7 @@ from ..Utilities import (
     localization,
     version_info,
 )
+from ..Utilities import medcoupling as medc
 
 
 def _print_alarm():
@@ -71,7 +72,11 @@ def _print_header():
     )
     UTMESS("I", "SUPERVIS2_9", valk=valk)
     pyvers = "%s.%s.%s" % tuple(sys.version_info[:3])
-    UTMESS("I", "SUPERVIS2_10", valk=(pyvers, numpy.__version__))
+    try:
+        medc_vers = medc.MEDCouplingVersionStr()
+    except:
+        medc_vers = "no available"
+    UTMESS("I", "SUPERVIS2_10", valk=(pyvers, numpy.__version__, medc_vers))
     # avertissement si la version a plus de 15 mois
     if config["ASTER_NO_EXPIR"] == 0:
         try:

@@ -19,6 +19,8 @@
 subroutine te0576(option, nomte)
 !
     use Behaviour_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -29,7 +31,6 @@ subroutine te0576(option, nomte)
 #include "asterfort/elrefe_info.h"
 #include "asterfort/enelpg.h"
 #include "asterfort/eps1mc.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/nmgeom.h"
@@ -37,6 +38,7 @@ subroutine te0576(option, nomte)
 #include "asterfort/utmess.h"
 #include "jeveux.h"
 #include "MeshTypes_type.h"
+#include "FE_module.h"
 !
     character(len=16), intent(in) :: option, nomte
 !
@@ -50,14 +52,15 @@ subroutine te0576(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
+    integer(kind=8), parameter :: ksp = 1
     integer(kind=8), parameter :: mxcmel = 162, nbSigx = 6, nbEpsi = 6
     real(kind=8) :: epsiCurr(mxcmel), epsiPrev(mxcmel)
     real(kind=8), parameter :: zero = 0.d0, undemi = 0.5d0, deux = 2.d0
     real(kind=8), parameter :: nharm = 0.d0
     aster_logical, parameter :: axi = ASTER_FALSE
     integer(kind=8) :: jvDispCurr, jvDispPrev, jvVari
-    integer(kind=8) :: jvSigmCurr, jvSigmPrev, jvGeom, jvMater, jvTime
+    integer(kind=8) :: jvSigmCurr, jvSigmPrev, jvGeom, jvMaterc, jvTime
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     integer(kind=8) :: nbsig, ndim, nno, npg, nbvari
     integer(kind=8) :: idenem, idener
@@ -65,14 +68,15 @@ subroutine te0576(option, nomte)
     integer(kind=8) :: jtab(7), iret
     integer(kind=8) :: kpg, isigm, iEpsi
     real(kind=8) :: epsiKpgCurr(nbEpsi), epsiKpgPrev(nbEpsi), epsiKpgDelta(nbEpsi)
-    real(kind=8) :: anglNaut(3), time
+    real(kind=8) :: time
     real(kind=8) :: enerKpg(MT_NNOMAX), r
     real(kind=8) :: f(3, 3)
     real(kind=8) :: sigmKpgPrev(nbSigx), sigmKpgCurr(nbSigx)
     real(kind=8) :: integ1, integ2, integ
-    real(kind=8) :: epsiDumm(6), dfdbid(27*3)
+    real(kind=8) :: epsiDumm(6), dfdbid(MAX_BV_CG)
     character(len=16) :: relaName, defoComp
     aster_logical :: largeStrain
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -91,10 +95,13 @@ subroutine te0576(option, nomte)
 
     if (option(1:4) .eq. 'ENEL') then
 ! ----- Material parameters
-        call jevech('PMATERC', 'L', jvMater)
+        call jevech('PMATERC', 'L', jvMaterc)
 
-! ----- Orthotropic parameters
-        call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! ----- Initializations of material parameters on current cell
+        call initParaCell(fami, zi(jvMaterc), materPara)
+
+! ----- Set local coordinate system from user
+        call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
 
 ! ----- Current displacements
         call jevech('PDEPLAR', 'L', jvDispCurr)
@@ -167,6 +174,9 @@ subroutine te0576(option, nomte)
         epsiKpgCurr = 0.d0
 
         if (option(1:4) .eq. 'ENEL') then
+! --------- Initializations of material parameters on current integration point
+            call initParaPoin(kpg, ksp, materPara)
+
 ! --------- TENSEUR DES CONTRAINTES AU POINT D'INTEGRATION COURANT :
             sigmKpgCurr = 0.d0
             do iSigm = 1, nbsig
@@ -181,7 +191,7 @@ subroutine te0576(option, nomte)
                         r)
 
 ! --------- CALCUL DE L'ENERGIE DE DEFORMATION ELASTIQUE
-            call enelpg(fami, zi(jvMater), time, kpg, anglNaut, &
+            call enelpg(materPara, time, &
                         relaName, defoComp, &
                         f, sigmKpgCurr, &
                         nbvari, zr(jvVari+(kpg-1)*nbvari), &

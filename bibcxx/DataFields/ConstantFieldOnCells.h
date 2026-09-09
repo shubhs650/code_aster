@@ -223,13 +223,15 @@ class ConstantFieldOnCells : public DataField {
      * @brief Pointeur intelligent vers un ConstantFieldOnCells
      */
     typedef std::shared_ptr< ConstantFieldOnCells > ConstantFieldOnBaseMeshPtr;
+    typedef std::shared_ptr< ConstantFieldOnCells< ValueType > > ConstantFieldOnCellsValueTypePtr;
 
     /**
      * @brief Constructeur
      * @param name Nom Jeveux de la carte
      * @param mesh Maillage
      */
-    ConstantFieldOnCells( const std::string &name, const BaseMeshPtr &mesh )
+    ConstantFieldOnCells( const std::string &name, const BaseMeshPtr &mesh,
+                          const FiniteElementDescriptorPtr fed = nullptr )
         : DataField( name, "CARTE" ),
           _meshName( JeveuxVectorChar8( getName() + ".NOMA" ) ),
           _descriptor( JeveuxVectorLong( getName() + ".DESC" ) ),
@@ -237,7 +239,7 @@ class ConstantFieldOnCells : public DataField {
           _listOfMeshCells( JeveuxCollectionLong( getName() + ".LIMA" ) ),
           _values( JeveuxVector< ValueType >( getName() + ".VALE" ) ),
           _mesh( mesh ),
-          _FEDesc( FiniteElementDescriptorPtr() ),
+          _FEDesc( fed ),
           _componentNames( getName() + ".NCMP" ),
           _valuesTmp( getName() + ".VALV" ) {};
 
@@ -247,9 +249,7 @@ class ConstantFieldOnCells : public DataField {
      * @param ligrel Ligrel support
      */
     ConstantFieldOnCells( std::string name, const FiniteElementDescriptorPtr &ligrel )
-        : ConstantFieldOnCells( name, ligrel->getMesh() ) {
-        _FEDesc = ligrel;
-    };
+        : ConstantFieldOnCells( name, ligrel->getMesh(), ligrel ) {};
 
     /**
      * @brief Constructeur
@@ -273,7 +273,7 @@ class ConstantFieldOnCells : public DataField {
      * @param name Nom Jeveux de la carte
      */
     ConstantFieldOnCells( const std::string &name, const ConstantFieldOnCells &toCopy )
-        : ConstantFieldOnCells( name, toCopy.getMesh() ) {
+        : ConstantFieldOnCells( name, toCopy.getMesh(), toCopy._FEDesc ) {
         *( _meshName ) = *( toCopy._meshName );
         *( _descriptor ) = *( toCopy._descriptor );
         *( _values ) = *( toCopy._values );
@@ -281,12 +281,20 @@ class ConstantFieldOnCells : public DataField {
         *( _listOfMeshCells ) = *( toCopy._listOfMeshCells );
         *( _componentNames ) = *( toCopy._componentNames );
         *( _valuesTmp ) = *( toCopy._valuesTmp );
-        _FEDesc = toCopy._FEDesc;
 
         updateValuePointers();
     };
 
-    typedef std::shared_ptr< ConstantFieldOnCells< ValueType > > ConstantFieldOnCellsValueTypePtr;
+    /** @brief restricted constructor (Set) and method (Get) to support pickling */
+    ConstantFieldOnCells( const py::tuple &tup )
+        : ConstantFieldOnCells( tup[0].cast< std::string >(), tup[1].cast< BaseMeshPtr >(),
+                                tup[2].cast< FiniteElementDescriptorPtr >() ) {
+        this->updateValuePointers();
+    };
+
+    py::tuple _getState() const {
+        return py::make_tuple( getName(), getMesh(), getFiniteElementDescriptor() );
+    };
 
     /**
      * @brief Destructeur
@@ -344,6 +352,11 @@ class ConstantFieldOnCells : public DataField {
      * @brief Get mesh
      */
     BaseMeshPtr getMesh() const { return _mesh; };
+
+    /**
+     * @brief Get descriptor
+     */
+    FiniteElementDescriptorPtr getFiniteElementDescriptor() const { return _FEDesc; };
 
     /**
      * @brief Get values of a zone

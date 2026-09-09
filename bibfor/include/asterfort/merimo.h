@@ -18,23 +18,23 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine merimo(base           ,&
-                      l_xfem         , l_macr_elem, &
-                      model          , cara_elem  , iter_newt,&
-                      ds_constitutive, ds_material, ds_system,&
-                      hval_incr      , hval_algo  , &
-                      optioz         , ldccvg     , sddynz_)
+    subroutine merimo(jvBase, &
+                      lXFEM, lMacrElem, &
+                      model, caraElem, iterNewt, &
+                      ds_constitutive, ds_material, ds_system, &
+                      hval_incr, hval_algo, &
+                      optionZ, ldccvg, sddynaZ)
         use NonLin_Datastructure_type
-        character(len=1), intent(in) :: base
-        aster_logical, intent(in) :: l_xfem, l_macr_elem
-        character(len=24), intent(in) :: model, cara_elem
-        integer(kind=8), intent(in) :: iter_newt
+        character(len=1), intent(in) :: jvBase
+        aster_logical, intent(in) :: lXFEM, lMacrElem
+        character(len=24), intent(in) :: model, caraElem
+        integer(kind=8), intent(in) :: iterNewt
         type(NL_DS_Constitutive), intent(in) :: ds_constitutive
         type(NL_DS_Material), intent(in) :: ds_material
         type(NL_DS_System), intent(in) :: ds_system
         character(len=19), intent(in) :: hval_incr(*), hval_algo(*)
-        character(len=*), intent(in) :: optioz
+        character(len=*), intent(in) :: optionZ
         integer(kind=8), intent(out) :: ldccvg
-        character(len=*), optional, intent(in) :: sddynz_
+        character(len=*), optional, intent(in) :: sddynaZ
     end subroutine merimo
 end interface

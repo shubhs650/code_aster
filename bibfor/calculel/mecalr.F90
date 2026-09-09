@@ -15,25 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
-                  resuc1, nbordr, modele, mate, cara, &
-                  nchar)
+!
+subroutine mecalr(newcal, tysd, jvListStore, loadNameJv, resultIn, &
+                  resultOut, nbStore, model, materField, caraElem, &
+                  nbLoad)
+!
+    use result_module, only: rsCopyPara
     implicit none
-! ----------------------------------------------------------------------
-! IN  NEWCAL : TRUE POUR UN NOUVEAU CONCEPT RESULTAT, FALSE SINON
-! IN  TYSD   : TYPE DU CONCEPT ATTACHE A RESUCO
-! IN  KNUM   : NOM D'OBJET DES NUMEROS D'ORDRE
-! IN  KCHA   : NOM JEVEUX OU SONT STOCKEES LES CHARGES
-! IN  RESUCO : NOM DE CONCEPT RESULTAT
-! IN  RESUC1 : NOM DE CONCEPT DE LA COMMANDE CALC_ERREUR
-! IN  CONCEP : TYPE DU CONCEPT ATTACHE A RESUC1
-! IN  NBORDR : NOMBRE DE NUMEROS D'ORDRE
-! IN  MODELE : NOM DU MODELE
-! IN  MATE   : NOM DU CHAMP MATERIAU
-! IN  CARA   : NOM DU CHAMP DES CARACTERISTIQUES ELEMENTAIRES
-! IN  NCHAR  : NOMBRE DE CHARGES
-! ----------------------------------------------------------------------
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
@@ -59,7 +47,6 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/meca01.h"
-#include "asterfort/mecara.h"
 #include "asterfort/mecham.h"
 #include "asterfort/medom1.h"
 #include "asterfort/modopt.h"
@@ -79,48 +66,49 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 #include "asterfort/wkvect.h"
 #include "jeveux.h"
 !
-    integer(kind=8) :: nbordr, nchar
-    character(len=8) :: resuco, resuc1, modele, cara
+    integer(kind=8) :: nbStore, nbLoad
+    character(len=8) :: resultIn, resultOut, model, caraElem
     character(len=16) :: tysd
-    character(len=19) :: knum, kcha
-    character(len=24) :: mate
+    character(len=19) :: jvListStore, loadNameJv
+    character(len=24) :: materField
     aster_logical :: newcal
 !
+! --------------------------------------------------------------------------------------------------
 !
-!     --- VARIABLES LOCALES ---
+! IN  NEWCAL : TRUE POUR UN NOUVEAU CONCEPT RESULTAT, FALSE SINON
+! IN  TYSD   : TYPE DU CONCEPT ATTACHE A RESUCO
+! IN  KNUM   : NOM D'OBJET DES NUMEROS D'ORDRE
+! IN  KCHA   : NOM JEVEUX OU SONT STOCKEES LES CHARGES
+! IN  RESUCO : NOM DE CONCEPT RESULTAT
+! IN  RESUC1 : NOM DE CONCEPT DE LA COMMANDE CALC_ERREUR
+! IN  CONCEP : TYPE DU CONCEPT ATTACHE A RESUC1
+! IN  NBORDR : NOMBRE DE NUMEROS D'ORDRE
+! IN  MODELE : NOM DU MODELE
+! IN  MATE   : NOM DU CHAMP MATERIAU
+! IN  CARA   : NOM DU CHAMP DES CARACTERISTIQUES ELEMENTAIRES
+! IN  NCHAR  : NOMBRE DE CHARGES
 !
-    character(len=6) :: nompro
-    parameter(nompro='MECALR')
+! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: numeHarm = 0
     integer(kind=8) :: ifm, niv
-    integer(kind=8) :: nuord
-    integer(kind=8) :: iordr, jordr
-    integer(kind=8) :: iret, iret1, iret2, iret3, iret4, iret5, ireter
-    integer(kind=8) :: nh, nbopt
-    integer(kind=8) :: iadou, iadin
-    integer(kind=8) :: iaux, j, ibid
-    integer(kind=8) :: iopt
-    integer(kind=8) :: n1, n2
-    integer(kind=8) :: jpa, jopt, jcha
-    integer(kind=8) :: nbac, nbpa, nbpara
+    integer(kind=8) :: numeStore0, numeStore
+    integer(kind=8) :: iret, iret1, iret2, iret3, iret4, iret5, ireter, nbRet
+    integer(kind=8) :: nbOption
+    integer(kind=8) :: iStore, ibid, iOption
+    integer(kind=8) :: jcha
     integer(kind=8) :: jcoor, ltymo
     integer(kind=8) :: nnoem, nelem, ndim, nncp
-!
-    character(len=4) :: type
-    character(len=8) :: k8b, noma
-    character(len=8) :: carele
+    character(len=8) :: mesh
     character(len=19) :: pfchno
     character(len=16) :: option, types
-    character(len=19) :: leres1
+    character(len=19) :: jvResultOut
     character(len=19) :: cherrs, chenes, chsins, chsinn
-    character(len=24) :: cheneg, chsing, cherr1, cherr2, cherr3, cherr4, mateco
-    character(len=24) :: chamgd, chsig, chsign
-    character(len=24) :: chgeom, chcara(18)
-    character(len=24) :: chharm, chelem
+    character(len=24) :: cheneg, chsing, cherr1, cherr2, cherr3, cherr4, materCode
+    character(len=24) :: chamgd, chsig, chsign, chgeom, chharm, chelem
     character(len=24) :: ligrel
-    character(len=24) :: nompar
-    character(len=24) :: lesopt
-    character(len=24) :: ligrmo
+    character(len=24), parameter :: listOptionJv = '&&MECALR.LES_OPTION'
+    character(len=24) :: modelLigrel
     character(len=19) :: chvarc
 !
     real(kind=8) :: prec
@@ -128,123 +116,82 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !
     character(len=24) :: valkm(2)
     integer(kind=8), pointer :: typmail(:) => null()
-    integer(kind=8), pointer :: dime(:) => null()
+    integer(kind=8), pointer :: meshDime(:) => null()
+    integer(kind=8), pointer :: listStore(:) => null()
+    character(len=16), pointer :: listOption(:) => null()
 !
+! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
     call jerecu('V')
+    call infmaj()
+    call infniv(ifm, niv)
 
-    lesopt = '&&'//nompro//'.LES_OPTION'
-    nh = 0
+! - Initializations
     chamgd = " "
     chgeom = " "
     chharm = " "
     chsig = " "
     chelem = " "
-    chvarc = '&&'//nompro//'.CHVARC'
-!
-    call infmaj()
-    call infniv(ifm, niv)
-    carele = ' '
-    call getvid(' ', 'CARA_ELEM', scal=carele, nbret=n1)
-!
-    call getvtx(' ', 'OPTION', nbval=0, nbret=n2)
-    nbopt = -n2
-    call wkvect(lesopt, 'V V K16', nbopt, jopt)
-    call getvtx(' ', 'OPTION', nbval=nbopt, vect=zk16(jopt), nbret=n2)
-    call modopt(resuco, modele, lesopt, nbopt)
-    call jeveuo(lesopt, 'L', jopt)
-!
+    chvarc = '&&MECALR.CHVARC'
+    jvResultOut = resultOut
+
+! - Create list of options to compute
+    call getvtx(' ', 'OPTION', nbval=0, nbret=nbRet)
+    nbOption = -nbRet
+    call wkvect(listOptionJv, 'V V K16', nbOption, vk16=listOption)
+    call getvtx(' ', 'OPTION', nbval=nbOption, vect=listOption, nbret=nbRet)
+    call modopt(resultIn, model, listOptionJv, nbOption)
+    call jeveuo(listOptionJv, 'L', vk16=listOption)
+
 !     ON RECUPERE LE TYPE DE MODE: DYNAMIQUE OU STATIQUE
     if (tysd .eq. 'MODE_MECA') then
-        call rsadpa(resuco, 'L', 1, 'TYPE_MODE', 1, &
-                    0, sjv=ltymo, styp=k8b)
+        call rsadpa(resultIn, 'L', 1, 'TYPE_MODE', 1, 0, sjv=ltymo)
     end if
-!
-    call jeveuo(knum, 'L', jordr)
-    nuord = zi(jordr)
-    call jeveuo(kcha//'.LCHA', 'L', jcha)
+
+! - Access to loads
+    call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
+
+! - Access to storage
+    call jeveuo(jvListStore, 'L', vi=listStore)
+    numeStore0 = listStore(1)
+
+! - Create new datastructure
     if (newcal) then
-        call rscrsd('G', resuc1, tysd, nbordr)
+        call rscrsd('G', resultOut, tysd, nbStore)
         call titre()
     end if
-    call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-    call jenonu(jexnom(resuco//'           .NOVA', 'INST'), iret)
-    call exlima(' ', 0, 'V', modele, ligrel)
-!
-    call dismoi('NOM_MAILLA', modele, 'MODELE', repk=noma)
-!
-! -- GRANDEURS CARACTERISTIQUES DE L'ETUDE
-!
-    call cetule(modele, tbgrca, iret)
-!=======================================================================
-!
-!
-    leres1 = resuc1
-!
-!    ------------------------------------------------------------------
-!    -- RECOPIE DES PARAMETRES DANS LA NOUVELLE SD RESULTAT
-!    ------------------------------------------------------------------
-!
+
+! - Copy parameters
     if (newcal) then
-        nompar = '&&'//nompro//'.NOMS_PARA '
-        call rsnopa(resuco, 2, nompar, nbac, nbpa)
-        nbpara = nbac+nbpa
-        call jeveuo(nompar, 'L', jpa)
-        do iaux = 1, nbordr
-            iordr = zi(jordr+iaux-1)
-            do j = 1, nbpara
-                call rsadpa(resuco, 'L', 1, zk16(jpa+j-1), iordr, &
-                            1, sjv=iadin, styp=type, istop=0)
-                call rsadpa(leres1, 'E', 1, zk16(jpa+j-1), iordr, &
-                            1, sjv=iadou, styp=type)
-                if (type(1:1) .eq. 'I') then
-                    zi(iadou) = zi(iadin)
-                else if (type(1:1) .eq. 'R') then
-                    zr(iadou) = zr(iadin)
-                else if (type(1:1) .eq. 'C') then
-                    zc(iadou) = zc(iadin)
-                else if (type(1:3) .eq. 'K80') then
-                    zk80(iadou) = zk80(iadin)
-                else if (type(1:3) .eq. 'K32') then
-                    zk32(iadou) = zk32(iadin)
-                else if (type(1:3) .eq. 'K24') then
-                    zk24(iadou) = zk24(iadin)
-                else if (type(1:3) .eq. 'K16') then
-                    zk16(iadou) = zk16(iadin)
-                else if (type(1:2) .eq. 'K8') then
-                    zk8(iadou) = zk8(iadin)
-                end if
-            end do
-        end do
+        call rsCopyPara(resultIn, jvResultOut, nbStore, listStore)
     end if
 !
-!    ------------------------------------------------------------------
-!    -- FIN RECOPIE DES PARAMETRES DANS LA NOUVELLE SD RESULTAT
-!    ------------------------------------------------------------------
-!
-!
-!
-!============ DEBUT DE LA BOUCLE SUR LES OPTIONS A CALCULER ============
-    do iopt = 1, nbopt
-        option = zk16(jopt+iopt-1)
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
+    call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
+    call exlima(' ', 0, 'V', model, ligrel)
+
+! - GRANDEURS CARACTERISTIQUES DE L'ETUDE
+    call cetule(model, tbgrca, iret)
+
+! - Process options
+    do iOption = 1, nbOption
+        option = listOption(iOption)
         if (option .eq. ' ') goto 660
-!
-        call jeveuo(knum, 'L', jordr)
-!
+
         if (callCalcul(option)) then
-            call calcop(option, lesopt, resuco, resuc1, knum, &
-                        nbordr, tysd, iret)
+            call calcop(option, listOptionJv, resultIn, resultOut, jvListStore, &
+                        nbStore, tysd, iret)
             if (iret .eq. 0) goto 660
         end if
 
-        nuord = zi(jordr)
-        call medom1(modele, mate, mateco, cara, kcha, nchar, &
-                    resuco, nuord)
-        call jeveuo(kcha//'.LCHA', 'L', jcha)
+! ----- Get parameters
+        call medom1(model, materField, materCode, caraElem, loadNameJv, nbLoad, &
+                    resultIn, numeStore0)
+        call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
 !
-        call mecham(option, modele, cara, nh, chgeom, &
-                    chcara, chharm, iret)
+        call mecham(option, model, numeHarm, &
+                    chgeom, chharm, iret)
         if (iret .ne. 0) goto 690
 !
 !    ------------------------------------------------------------------
@@ -253,18 +200,18 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
         if (option .eq. 'SIZ1_NOEU' .or. option .eq. 'SIZ2_NOEU') then
 !
 !
-            do iaux = 1, nbordr
+            do iStore = 1, nbStore
                 call jemarq()
                 call jerecu('V')
-                iordr = zi(jordr+iaux-1)
-                call medom1(modele, mate, mateco, cara, kcha, nchar, &
-                            resuco, iordr)
-                call jeveuo(kcha//'.LCHA', 'L', jcha)
-                call mecara(cara, chcara)
-                call rsexc2(1, 1, resuco, 'DEPL', iordr, &
+                numeStore = listStore(iStore)
+
+                call medom1(model, materField, materCode, caraElem, loadNameJv, nbLoad, &
+                            resultIn, numeStore)
+                call jeveuo(loadNameJv//'.LCHA', 'L', jcha)
+                call rsexc2(1, 1, resultIn, 'DEPL', numeStore, &
                             chamgd, option, iret)
                 if (iret .gt. 0) goto 150
-                call rsexc2(1, 1, resuco, 'SIEF_ELGA', iordr, &
+                call rsexc2(1, 1, resultIn, 'SIEF_ELGA', numeStore, &
                             chsig, option, iret)
                 if (iret .gt. 0) then
                     call utmess('A', 'CALCULEL3_7', sk=option)
@@ -272,14 +219,14 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
                     goto 660
 !
                 end if
-                call rsexc1(leres1, option, iordr, chsign)
+                call rsexc1(jvResultOut, option, numeStore, chsign)
                 if (option .eq. 'SIZ1_NOEU') then
-                    call sinoz1(modele, chsig, chsign)
+                    call sinoz1(model, chsig, chsign)
                 else if (option .eq. 'SIZ2_NOEU') then
                     call dismoi('NUME_EQUA', chamgd, 'CHAM_NO', repk=pfchno)
-                    call sinoz2(modele, pfchno, chsig, chsign)
+                    call sinoz2(model, pfchno, chsig, chsign)
                 end if
-                call rsnoch(leres1, option, iordr)
+                call rsnoch(jvResultOut, option, numeStore)
 150             continue
                 call jedema()
             end do
@@ -287,18 +234,15 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !    ------------------------------------------------------------------
 !    -- OPTIONS DES INDICATEURS D'ERREURS
 !    ------------------------------------------------------------------
-        elseif (option .eq. 'ERZ1_ELEM' .or.&
- &          option .eq. 'ERZ2_ELEM' .or.&
- &          option .eq. 'ERME_ELEM' .or. option .eq. 'ERME_ELNO' .or.&
- &          option .eq. 'QIRE_ELEM' .or.&
- &          option .eq. 'QIRE_ELNO' .or.&
- &          option .eq. 'QIZ1_ELEM' .or.&
- &          option .eq. 'QIZ2_ELEM') then
+        elseif (option .eq. 'ERZ1_ELEM' .or. option .eq. 'ERZ2_ELEM' .or. &
+                option .eq. 'ERME_ELEM' .or. option .eq. 'ERME_ELNO' .or. &
+                option .eq. 'QIRE_ELEM' .or. option .eq. 'QIRE_ELNO' .or. &
+                option .eq. 'QIZ1_ELEM' .or. option .eq. 'QIZ2_ELEM') then
 !
-            call meca01(option, nbordr, jordr, nchar, jcha, &
-                        kcha, tbgrca, resuco, resuc1, &
-                        leres1, noma, modele, ligrmo, mate, &
-                        cara, chvarc, iret)
+            call meca01(option, nbStore, listStore, nbLoad, jcha, &
+                        loadNameJv, tbgrca, resultIn, resultOut, &
+                        jvResultOut, mesh, model, modelLigrel, materField, &
+                        caraElem, chvarc, iret)
 !
             if (iret .eq. 1) then
                 goto 690
@@ -335,15 +279,15 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !  JCOOR : ADRESSE DES COORDONNEES
 !  JTYPE : ADRESSE DU TYPE D ELEMENTS FINIS
 !
-            call dismoi('NOM_MAILLA', modele, 'MODELE', repk=noma)
+            call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
 !
-            call jeveuo(noma//'.DIME', 'L', vi=dime)
-            call jeveuo(noma//'.COORDO    .VALE', 'L', jcoor)
-            call jeveuo(noma//'.TYPMAIL', 'L', vi=typmail)
+            call jeveuo(mesh//'.DIME', 'L', vi=meshDime)
+            call jeveuo(mesh//'.COORDO    .VALE', 'L', jcoor)
+            call jeveuo(mesh//'.TYPMAIL', 'L', vi=typmail)
 !
-            nnoem = dime(1)
-            nelem = dime(3)
-            ndim = dime(6)
+            nnoem = meshDime(1)
+            nelem = meshDime(3)
+            ndim = meshDime(6)
 !
 ! 2 - CREATION D OBJETS TEMPORAIRES UTILES POUR LA SUITE
 ! '&&SINGUM.DIME' (DIM=3) CONTIENT
@@ -364,22 +308,21 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !                 EF UTILE = EF SURF EN 2D ET VOL EN 3D
 !   CONNECTIVITE INVERSE NOEUD N
 !
-            call singum(noma, ndim, nnoem, nelem, typmail, &
+            call singum(mesh, ndim, nnoem, nelem, typmail, &
                         zr(jcoor))
 !
 ! 3 - BOUCLE SUR LES INSTANTS DEMANDES
 !
-            do iaux = 1, nbordr
+            do iStore = 1, nbStore
                 call jemarq()
-                iordr = zi(jordr+iaux-1)
+                numeStore = listStore(iStore)
 !
                 if (ireter .gt. 0) then
-                    call rsexch(' ', resuco, types, iordr, cherr4, &
-                                iret5)
+                    call rsexch(' ', resultIn, types, numeStore, cherr4, iret5)
 !
                     if (iret5 .gt. 0) then
                         valkm(1) = types
-                        valkm(2) = resuco
+                        valkm(2) = resultIn
                         call utmess('A', 'CALCULEL3_26', nk=2, valk=valkm)
                         iret = 1
                     end if
@@ -392,11 +335,11 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
                 else
 !
                     iret5 = 1
-                    call rsexch(' ', resuco, 'ERME_ELEM', iordr, cherr1, &
+                    call rsexch(' ', resultIn, 'ERME_ELEM', numeStore, cherr1, &
                                 iret1)
-                    call rsexch(' ', resuco, 'ERZ1_ELEM', iordr, cherr2, &
+                    call rsexch(' ', resultIn, 'ERZ1_ELEM', numeStore, cherr2, &
                                 iret2)
-                    call rsexch(' ', resuco, 'ERZ2_ELEM', iordr, cherr3, &
+                    call rsexch(' ', resultIn, 'ERZ2_ELEM', numeStore, cherr3, &
                                 iret3)
 !
                     if (iret1 .gt. 0 .and. iret2 .gt. 0 .and. iret3 .gt. 0) then
@@ -407,10 +350,10 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
                 end if
 !
                 if (tysd .eq. 'EVOL_NOLI') then
-                    call rsexch(' ', resuco, 'ETOT_ELEM', iordr, cheneg, &
+                    call rsexch(' ', resultIn, 'ETOT_ELEM', numeStore, cheneg, &
                                 iret4)
                 else
-                    call rsexch(' ', resuco, 'EPOT_ELEM', iordr, cheneg, &
+                    call rsexch(' ', resultIn, 'EPOT_ELEM', numeStore, cheneg, &
                                 iret4)
                 end if
                 if (iret4 .gt. 0) then
@@ -424,7 +367,7 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
                 end if
 ! 3.2 - TRANSFORMATION DE CES DEUX CARTES EN CHAM_ELEM_S
 !
-                cherrs = '&&'//nompro//'.ERRE'
+                cherrs = '&&MECALR.ERRE'
 !
                 if (iret5 .eq. 0) then
                     call celces(cherr4(1:19), 'V', cherrs)
@@ -444,7 +387,7 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
                     ASSERT(.false.)
                 end if
 !
-                chenes = '&&'//nompro//'.ENER'
+                chenes = '&&MECALR.ENER'
                 call celces(cheneg(1:19), 'V', chenes)
 !
 ! 3.3 - ROUTINE PRINCIPALE QUI CALCULE DANS CHAQUE EF :
@@ -454,13 +397,13 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !       => CE RESULAT EST STOCKE DANS CHELEM (CHAM_ELEM)
 !       CES DEUX COMPOSANTES SONT CONSTANTES PAR ELEMENT
 !
-                call rsexc1(leres1, option, iordr, chelem)
+                call rsexc1(jvResultOut, option, numeStore, chelem)
 !
-                call singue(cherrs, chenes, noma, ndim, nnoem, &
-                            nelem, zr(jcoor), prec, ligrmo, chelem, &
+                call singue(cherrs, chenes, mesh, ndim, nnoem, &
+                            nelem, zr(jcoor), prec, modelLigrel, chelem, &
                             types)
 !
-                call rsnoch(leres1, option, iordr)
+                call rsnoch(jvResultOut, option, numeStore)
 !
 ! 3.4 - DESTRUCTION DES CHAM_ELEM_S
 !
@@ -481,36 +424,36 @@ subroutine mecalr(newcal, tysd, knum, kcha, resuco, &
 !    -- OPTION "SING_ELNO"
 !    ------------------------------------------------------------------
         else if (option .eq. 'SING_ELNO') then
-            do iaux = 1, nbordr
+            do iStore = 1, nbStore
                 call jemarq()
-                iordr = zi(jordr+iaux-1)
+                numeStore = listStore(iStore)
 !
 ! 1 - RECUPERATION DE LA CARTE DE SINGULARITE
 !
-                call rsexc2(1, 1, resuco, 'SING_ELEM', iordr, &
+                call rsexc2(1, 1, resultIn, 'SING_ELEM', numeStore, &
                             chsing, option, iret1)
 !
                 if (iret1 .gt. 0) goto 270
 !
 ! 2 - TRANSFORMATION DE CE CHAMP EN CHAM_ELEM_S
 !
-                chsins = '&&'//nompro//'.SING'
+                chsins = '&&MECALR.SING'
                 call celces(chsing(1:19), 'V', chsins)
 !
 ! 3 - TRANSFOMATION DU CHAMP CHSINS ELEM EN ELNO
 !
-                chsinn = '&&'//nompro//'.SINN'
+                chsinn = '&&MECALR.SINN'
                 call cesces(chsins, 'ELNO', ' ', ' ', ' ', &
                             'V', chsinn)
 !
 ! 4 - STOCKAGE
 !
-                call rsexc1(leres1, option, iordr, chelem)
+                call rsexc1(jvResultOut, option, numeStore, chelem)
 !
-                call cescel(chsinn, ligrmo(1:19), 'SING_ELNO', 'PSINGNO', 'NON', &
+                call cescel(chsinn, modelLigrel(1:19), 'SING_ELNO', 'PSINGNO', 'NON', &
                             nncp, 'G', chelem(1:19), 'F', ibid)
 !
-                call rsnoch(leres1, option, iordr)
+                call rsnoch(jvResultOut, option, numeStore)
 !
 ! 5 - DESTRUCTION DES CHAM_ELEM_S
 !

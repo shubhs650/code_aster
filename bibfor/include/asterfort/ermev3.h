@@ -19,6 +19,7 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine ermev3(nno, ipg, ivf, isig, nbcmp,&
                       dfdx, dfdy, dfdz, dsx, dsy,&
                       dsz, norme)
@@ -27,9 +28,9 @@ interface
         integer(kind=8) :: ivf
         integer(kind=8) :: isig
         integer(kind=8) :: nbcmp
-        real(kind=8) :: dfdx(27)
-        real(kind=8) :: dfdy(27)
-        real(kind=8) :: dfdz(27)
+        real(kind=8) :: dfdx(MT_NNOMAX3D)
+        real(kind=8) :: dfdy(MT_NNOMAX3D)
+        real(kind=8) :: dfdz(MT_NNOMAX3D)
         real(kind=8) :: dsx
         real(kind=8) :: dsy
         real(kind=8) :: dsz

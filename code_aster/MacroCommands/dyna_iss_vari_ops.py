@@ -65,14 +65,14 @@ class DynaISSParameters:
         cohekeys = kwargs.get("MATR_COHE")[0]
         genekeys = kwargs.get("MATR_GENE")[0]
         interfkeys = kwargs.get("INTERF")[0]
-        self.cohe_keys = cohekeys.cree_dict_valeurs(cohekeys.mc_liste)
-        self.mat_gene_keys = genekeys.cree_dict_valeurs(genekeys.mc_liste)
-        self.interf_keys = interfkeys.cree_dict_valeurs(interfkeys.mc_liste)
+        self.cohe_keys = cohekeys
+        self.mat_gene_keys = genekeys
+        self.interf_keys = interfkeys
         self.cas = "SPEC"
         if kwargs.get("EXCIT_SOL"):
             self.cas = "TRANS"
             excit_sol = kwargs["EXCIT_SOL"][0]
-            self.excit_sol_keys = excit_sol.cree_dict_valeurs(excit_sol.mc_liste)
+            self.excit_sol_keys = excit_sol
             others.remove("EXCIT_SOL")
         others.remove("MATR_GENE")
         others.remove("MATR_COHE")

@@ -17,11 +17,11 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine mecham(optionZ, modelZ, cara, nh, chgeoz,&
-                      chcara, chharz, iret)
-        integer(kind=8) :: iret, nh
+    subroutine mecham(optionZ, modelZ, numeHarm, &
+                      chgeomZ, chharmZ, iret)
         character(len=*), intent(in) :: optionZ, modelZ
-        character(len=*) :: cara
-        character(len=*) :: chgeoz, chcara(*), chharz
+        integer(kind=8), intent(in) :: numeHarm
+        character(len=*), intent(out) :: chgeomZ, chharmZ
+        integer(kind=8), intent(out) :: iret
     end subroutine mecham
 end interface

@@ -17,39 +17,46 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504
 !
-subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
+subroutine xxnmpl(BEHInteg, &
+                  option, typmod, &
+                  compor, carcri, &
+                  elrefp, elrese, ndim, coorse, jvGeom, &
                   he, nfh, ddlc, ddlm, nfe, &
                   instam, instap, ideplp, sigm, vip, &
-                  basloc, nnop, npg, typmod, option, &
-                  imate, compor, lgpg, carcri, idepl, &
+                  basloc, nnop, npg, &
+                  lgpg, idepl, &
                   lsn, lst, idecpg, sig, vi, &
                   matuu, ivectu, codret, nfiss, heavn, jstno, &
                   lMatr, lVect, lSigm)
 !
     use Behaviour_type
     use Behaviour_module
-!
     implicit none
 !
 #include "asterf_types.h"
-#include "jeveux.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/dfdm2d.h"
 #include "asterfort/dfdm3d.h"
 #include "asterfort/elrefe_info.h"
+#include "asterfort/iimatu.h"
 #include "asterfort/indent.h"
 #include "asterfort/nmcomp.h"
 #include "asterfort/reeref.h"
-#include "asterfort/xcinem.h"
-#include "asterfort/xcalc_heav.h"
 #include "asterfort/xcalc_code.h"
+#include "asterfort/xcalc_heav.h"
 #include "asterfort/xcalfev_wrap.h"
+#include "asterfort/xcinem.h"
 #include "asterfort/xkamat.h"
-#include "asterfort/iimatu.h"
 #include "asterfort/xnbddl.h"
-#include "asterfort/Behaviour_type.h"
+#include "jeveux.h"
+#include "MeshTypes_type.h"
 !
-    integer(kind=8) :: ndim, igeom, imate, lgpg, codret, nnop, npg
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    integer(kind=8) :: ndim, jvGeom, lgpg, codret, nnop, npg
     integer(kind=8) :: nfh, ddlc, ddlm, nfe, idepl, ivectu, ideplp
     integer(kind=8) :: nfiss, heavn(nnop, 5), idecpg
     integer(kind=8) :: jstno
@@ -58,9 +65,6 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
     real(kind=8) :: lsn(nnop), lst(nnop), coorse(*)
     real(kind=8) :: vi(lgpg, npg), vip(lgpg, npg), sig(2*ndim, npg), matuu(*)
     real(kind=8) :: instam, instap, sigm(2*ndim, npg), sign(6)
-    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
-    character(len=8), intent(in)  :: typmod(2)
-    character(len=16), intent(in)  :: compor(COMPOR_SIZE), option
     aster_logical, intent(in) :: lMatr, lVect, lSigm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -82,17 +86,11 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
 ! IN  BASLOC  : BASE LOCALE AU FOND DE FISSURE AUX NOEUDS
 ! IN  NNOP    : NOMBRE DE NOEUDS DE L'ELEMENT PARENT
 ! IN  NPG     : NOMBRE DE POINTS DE GAUSS DU SOUS-ÉLÉMENT
-! IN  TYPMOD  : TYPE DE MODELISATION
-! IN  OPTION  : OPTION DE CALCUL
-! IN  IMATE   : MATERIAU CODE
-! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : "LONGUEUR" DES VARIABLES INTERNES POUR 1 POINT DE GAUSS
 !               CETTE LONGUEUR EST UN MAJORANT DU NBRE REEL DE VAR. INT.
-! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
 ! IN  IDEPL   : ADRESSE DU DEPLACEMENT A PARTIR DE LA CONF DE REF
 ! IN  LSN     : VALEUR DE LA LEVEL SET NORMALE AUX NOEUDS PARENTS
 ! IN  LST     : VALEUR DE LA LEVEL SET TANGENTE AUX NOEUDS PARENTS
-!
 ! OUT SIG     : CONTRAINTES DE CAUCHY (RAPH_MECA ET FULL_MECA)
 ! OUT VI      : VARIABLES INTERNES    (RAPH_MECA ET FULL_MECA)
 ! OUT MATUU   : MATRICE DE RIGIDITE PROFIL (RIGI_MECA_TANG ET FULL_MECA)
@@ -100,8 +98,8 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = "XFEM"
     integer(kind=8) :: i, ig, j, j1, kkd, kl, kpg, l, m, n, nn, mn
     integer(kind=8) :: ddls, ddld, cpt, idfde, ipoids, ivf, dec(nnop)
     integer(kind=8) :: ndimb, nno, nnops, npgbis, hea_se
@@ -113,26 +111,13 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
     real(kind=8) :: rbid33(3, 3)
     real(kind=8) :: dfdi(nnop, ndim)
     real(kind=8) :: def(6, nnop, ndim*(1+nfh+nfe*ndim)), r
-    real(kind=8) :: fk(27, 3, 3), dkdgl(27, 3, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX, 3, 3), dkdgl(MT_NNOMAX, 3, 3, 3), ka, mu
     aster_logical :: axi, cplan
-    type(Behaviour_Integ) :: BEHinteg
-    real(kind=8) :: angmas(3)
     real(kind=8), parameter :: rac2 = 1.4142135623731d0
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    angmas = 0.d0
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instam, instap, &
-                              fami, imate, &
-                              BEHinteg)
-!
 !     ATTENTION, EN 3D, ZR(IDEPL) ET ZR(VECTU) SONT DIMENSIONNÉS DE
 !     TELLE SORTE QU'ILS NE PRENNENT PAS EN COMPTE LES DDL SUR LES
 !     NOEUDS MILIEU
@@ -155,7 +140,7 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
 ! - Prepare external state variables
     call behaviourPrepESVAGeom(nno, npg, ndim, &
                                ipoids, ivf, idfde, &
-                               zr(igeom), BEHinteg)
+                               zr(jvGeom), BEHInteg)
 
 ! - DECALAGES CALCULES EN AMONT: PERF
     do n = 1, nnop
@@ -179,20 +164,20 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
 !
 !       COORDONNÉES DU POINT DE GAUSS DANS L'ÉLÉMENT DE RÉF PARENT : XE
 !       CALCUL DE FF ET DFDI
-        call reeref(elrefp, nnop, zr(igeom), xg, ndim, &
+        call reeref(elrefp, nnop, zr(jvGeom), xg, ndim, &
                     xe, ff, dfdi=dfdi)
 !
 !       FONCTION D'ENRICHISSEMENT AU POINT DE GAUSS ET LEURS DÉRIVÉES
         if (singu .gt. 0) then
-            call xkamat(imate, ndim, axi, ka, mu)
+            call xkamat(BEHInteg%materPara%jvMaterCode, ndim, axi, ka, mu)
             call xcalfev_wrap(ndim, nnop, basloc, zi(jstno), he(1), &
-                              lsn, lst, zr(igeom), ka, mu, ff, fk, dfdi, dkdgl)
+                              lsn, lst, zr(jvGeom), ka, mu, ff, fk, dfdi, dkdgl)
         end if
 ! -     CALCUL DE LA DISTANCE A L'AXE (AXISYMETRIQUE)
         if (axi) then
             r = 0.d0
             do n = 1, nnop
-                r = r+ff(n)*zr(igeom-1+2*(n-1)+1)
+                r = r+ff(n)*zr(jvGeom-1+2*(n-1)+1)
             end do
 !
             ASSERT(r .gt. 0d0)
@@ -200,13 +185,13 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
 !           CE SERA FAIT PLUS TARD AVEC JAC = JAC X R
         end if
 ! -     CALCUL DE DEPS
-        call xcinem(axi, igeom, nnop, nnops, ideplp, &
+        call xcinem(axi, jvGeom, nnop, nnops, ideplp, &
                     ndim, he, &
                     nfiss, nfh, singu, ddls, ddlm, &
                     fk, dkdgl, ff, dfdi, f, &
                     deps, rbid33, heavn)
 ! -     CALCUL DE EPS
-        call xcinem(axi, igeom, nnop, nnops, idepl, &
+        call xcinem(axi, jvGeom, nnop, nnops, idepl, &
                     ndim, he, &
                     nfiss, nfh, singu, ddls, ddlm, &
                     fk, dkdgl, ff, dfdi, f, &
@@ -303,15 +288,19 @@ subroutine xxnmpl(elrefp, elrese, ndim, coorse, igeom, &
         sigma = 0.d0
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(idecpg+kpg, ksp, BEHinteg)
+        call behaviourSetParaPoin(idecpg+kpg, ksp, BEHInteg)
 
 ! ----- Integrate
-        call nmcomp(BEHinteg, &
-                    fami, idecpg+kpg, ksp, ndim, typmod, &
-                    imate, compor, carcri, instam, instap, &
-                    6, eps, deps, 6, sign, &
-                    vi(1, kpg), option, angmas, &
-                    sigma, vip(1, kpg), 36, dsidep, codret)
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    6, eps, deps, &
+                    6, sign, &
+                    vi(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    36, dsidep, codret)
+
 ! ----- Rigidity matrix
         if (lMatr) then
             do n = 1, nnop

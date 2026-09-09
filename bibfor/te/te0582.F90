@@ -40,7 +40,7 @@ subroutine te0582(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: nbNode, nbFourier, nbDof
 !
 ! --------------------------------------------------------------------------------------------------

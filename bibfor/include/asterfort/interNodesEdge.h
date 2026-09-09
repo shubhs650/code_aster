@@ -27,10 +27,10 @@ interface
         real(kind=8), intent(in) :: proj_tole
         integer(kind=8), intent(in) :: elem_dime
         character(len=8), intent(in) :: elem_mast_code, elem_slave_code
-        real(kind=8), intent(in) :: proj_coor(elem_dime-1,9)
+        real(kind=8), intent(in) :: proj_coor(2,9)
         integer(kind=8), intent(in) :: nb_node_proj
         integer(kind=8), intent(inout) :: inte_neigh(4), nb_poin_inte
-        real(kind=8), intent(out) :: poin_inte(elem_dime-1,16)
-        real(kind=8), intent(out) :: poin_inte_ori(elem_dime-1,16)
+        real(kind=8), intent(out) :: poin_inte(2,16)
+        real(kind=8), intent(out) :: poin_inte_ori(2,16)
     end subroutine interNodesEdge
 end interface

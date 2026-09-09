@@ -54,7 +54,6 @@ subroutine op0019()
 #include "asterfort/ace_get_node_reparti.h"
 #include "asterfort/as_allocate.h"
 #include "asterfort/as_deallocate.h"
-#include "asterfort/assert.h"
 #include "asterfort/checkCaraElem.h"
 #include "asterfort/coqucf.h"
 #include "asterfort/detrsd.h"
@@ -154,7 +153,6 @@ subroutine op0019()
 !   Mémorisation des informations pour ne plus le refaire
     info_concept%nomu = nomu
     info_concept%concept = concep
-    info_concept%commande = cmd
     info_concept%modele = nomo
     info_concept%maillage = noma
     info_concept%IsParaMesh = isParallelMesh(noma)

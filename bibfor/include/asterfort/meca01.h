@@ -17,13 +17,13 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine meca01(optio0, nbordr, jordr, nchar, jcha,&
-                      kcha, tbgrca, resuco, resuc1,&
-                      leres1, noma, modele, ligrmo, mate,&
+    subroutine meca01(optionZ, nbStore, listStore, nchar, jcha, &
+                      kcha, tbgrca, resuco, resuc1, &
+                      leres1, noma, modele, ligrmo, mate, &
                       cara, chvarc, codret)
-        character(len=*) :: optio0
-        integer(kind=8) :: nbordr
-        integer(kind=8) :: jordr
+        character(len=*) :: optionZ
+        integer(kind=8) :: nbStore
+        integer(kind=8), pointer :: listStore(:)
         integer(kind=8) :: nchar
         integer(kind=8) :: jcha
         character(len=19) :: kcha

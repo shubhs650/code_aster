@@ -17,10 +17,10 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504
 !
-subroutine equthm(ds_thm, option, j_mater, &
+subroutine equthm(ds_thm, option, &
                   lMatr, lSigm, &
                   lVari, lMatrPred, &
-                  typmod, angl_naut, parm_theta, &
+                  typmod, parm_theta, &
                   ndim, nbvari, &
                   kpi, npg, &
                   dimdef, dimcon, &
@@ -33,25 +33,24 @@ subroutine equthm(ds_thm, option, j_mater, &
                   r, drds, dsde, retcom)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/comthm.h"
-#include "asterfort/thmComputeResidual.h"
 #include "asterfort/thmComputeMatrix.h"
+#include "asterfort/thmComputeResidual.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
     character(len=16), intent(in) :: option
     aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
-    integer(kind=8), intent(in) :: j_mater
     character(len=8), intent(in) :: typmod(2)
-    real(kind=8), intent(in)  :: angl_naut(3), parm_theta
+    real(kind=8), intent(in) :: parm_theta
     integer(kind=8), intent(in) :: ndim, nbvari
     integer(kind=8), intent(in) :: npg, kpi
     integer(kind=8), intent(in) :: dimdef, dimcon
     integer(kind=8), intent(in) :: mecani(5), press1(7), press2(7), tempe(5), second(5)
-    real(kind=8), intent(in) :: carcri(*)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     real(kind=8), intent(in) :: defgem(dimdef), defgep(dimdef)
     real(kind=8), intent(inout) :: congem(dimcon), congep(dimcon)
     real(kind=8), intent(in) :: vintm(nbvari)
@@ -71,9 +70,7 @@ subroutine equthm(ds_thm, option, j_mater, &
 !
 ! IO  ds_thm           : datastructure for THM
 ! In  option           : name of option- to compute
-! In  j_mater          : coded material address
 ! In  typmod           : type of modelization (TYPMOD2)
-! In  angl_naut        : nautical angles
 ! In  parm_theta       : parameter PARM_THETA
 ! In  ndim             : dimension of space (2 or 3)
 ! In  nbvari           : total number of internal state variables
@@ -114,7 +111,7 @@ subroutine equthm(ds_thm, option, j_mater, &
     drds(1:dimdef+1, 1:dimcon) = 0.d0
     dsde(1:dimcon, 1:dimdef) = 0.d0
     r(1:dimdef+1) = 0.d0
-    gravity(:) = 0.d0
+    gravity = 0.d0
     retcom = 0
 
 ! - Address in generalized strains vector
@@ -152,8 +149,7 @@ subroutine equthm(ds_thm, option, j_mater, &
     call comthm(ds_thm, &
                 lMatr, lSigm, &
                 lVari, lMatrPred, &
-                option, j_mater, &
-                typmod, angl_naut, &
+                option, typmod, &
                 ndim, nbvari, &
                 dimdef, dimcon, &
                 adcome, adcote, adcp11, adcp12, adcp21, adcp22, adco2nd, &
@@ -165,7 +161,6 @@ subroutine equthm(ds_thm, option, j_mater, &
                 vintm, vintp, &
                 time_prev, time_curr, &
                 dsde, gravity, retcom)
-
     if (retcom .ne. 0) then
         goto 99
     end if
@@ -181,7 +176,7 @@ subroutine equthm(ds_thm, option, j_mater, &
                                 r)
     end if
 
-! - Compute derivative
+! - Compute jacobian
     if (lMatr) then
         call thmComputeMatrix(ds_thm, parm_theta, gravity, &
                               ndim, &

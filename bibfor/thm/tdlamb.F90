@@ -16,10 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine tdlamb(ds_thm, angl_naut, ndim, tdlamt)
+subroutine tdlamb(ds_thm, anglNaut, ndim, tdlamt)
 !
     use THM_type
-!
     implicit none
 !
 #include "asterfort/matrot.h"
@@ -27,7 +26,7 @@ subroutine tdlamb(ds_thm, angl_naut, ndim, tdlamt)
 #include "asterfort/THM_type.h"
 !
     type(THM_DS), intent(in) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3)
+    real(kind=8), intent(in) :: anglNaut(3)
     integer(kind=8), intent(in) :: ndim
     real(kind=8), intent(out) :: tdlamt(ndim, ndim)
 !
@@ -40,7 +39,7 @@ subroutine tdlamb(ds_thm, angl_naut, ndim, tdlamt)
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
+! In  anglNaut        : nautical angles
 !                        (1) Alpha - clockwise around Z0
 !                        (2) Beta  - counterclockwise around Y1
 !                        (1) Gamma - clockwise around X
@@ -70,14 +69,14 @@ subroutine tdlamb(ds_thm, angl_naut, ndim, tdlamt)
             tdlamti(1, 1) = ds_thm%ds_material%ther%dlambda_tl
             tdlamti(2, 2) = ds_thm%ds_material%ther%dlambda_tl
             tdlamti(3, 3) = ds_thm%ds_material%ther%dlambda_tn
-            call matrot(angl_naut, passag)
+            call matrot(anglNaut, passag)
             call utbtab('ZERO', 3, 3, tdlamti, passag, work, tk2)
             tdlamt = tk2
         end if
     else if (ds_thm%ds_material%ther%cond_type .eq. THER_COND_ORTH) then
         tdlamti(1, 1) = ds_thm%ds_material%ther%dlambda_tl
         tdlamti(2, 2) = ds_thm%ds_material%ther%dlambda_tt
-        call matrot(angl_naut, passag)
+        call matrot(anglNaut, passag)
         call utbtab('ZERO', 3, 3, tdlamti, passag, work, tk2)
         tdlamt(1, 1) = tk2(1, 1)
         tdlamt(2, 2) = tk2(2, 2)

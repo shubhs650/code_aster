@@ -71,12 +71,12 @@ class FieldOnCells : public DataField {
      * @brief Constructor with given name
      * @param name Jeveux name of the field
      */
-    FieldOnCells( const std::string name )
+    FieldOnCells( const std::string name, const FiniteElementDescriptorPtr fed = nullptr )
         : DataField( name, "CHAM_ELEM" ),
           _descriptor( JeveuxVectorLong( getName() + ".CELD" ) ),
           _reference( JeveuxVectorChar24( getName() + ".CELK" ) ),
           _values( JeveuxVector< ValueType >( getName() + ".CELV" ) ),
-          _dofDescription( nullptr ),
+          _dofDescription( fed ),
           _DCEL( nullptr ) {};
 
     /** @brief Constructor with automatic name */
@@ -84,9 +84,7 @@ class FieldOnCells : public DataField {
 
     /** @brief Constructor with automatic name and FE Descriptor */
     FieldOnCells( const FiniteElementDescriptorPtr FEDesc )
-        : FieldOnCells( ResultNaming::getNewResultName() ) {
-        setDescription( FEDesc );
-    };
+        : FieldOnCells( ResultNaming::getNewResultName(), FEDesc ) {};
 
     /** @brief Constructor with automatic name and model */
     FieldOnCells( const ModelPtr model ) : FieldOnCells( model->getFiniteElementDescriptor() ) {};
@@ -149,6 +147,15 @@ class FieldOnCells : public DataField {
     FieldOnCells( const FieldOnCells &toCopy )
         : FieldOnCells( DataStructureNaming::getNewName(), toCopy ) {};
 
+    /** @brief restricted constructor (Set) and method (Get) to support pickling */
+    FieldOnCells( const py::tuple &tup )
+        : FieldOnCells( tup[0].cast< std::string >(),
+                        tup[1].cast< FiniteElementDescriptorPtr >() ) {
+        this->updateValuePointers();
+    };
+
+    py::tuple _getState() const { return py::make_tuple( getName(), getDescription() ); };
+
     /**
      * @brief Wrap of copy constructor
      */
@@ -198,9 +205,7 @@ class FieldOnCells : public DataField {
     };
 
     /** @brief Get datastructure for dynamic fields (as VARI_ELGA) */
-    std::shared_ptr< SimpleFieldOnCells< ASTERINTEGER > > getExtentedInformations() const {
-        return _DCEL;
-    };
+    auto getExtentedInformations() const { return _DCEL; };
 
     /** @brief Set datastructure for dynamic fields (as VARI_ELGA) */
     void
@@ -372,6 +377,20 @@ class FieldOnCells : public DataField {
     const JeveuxVector< ValueType > &getValues() const {
         _values->updateValuePointer();
         return _values;
+    }
+
+    /**
+     * @brief Get the values of the field for some dofs
+     * @param cmps the dofs to extract
+     *
+     */
+    std::vector< ValueType > getValues( const VectorLong &dofs ) const {
+        std::vector< ValueType > result;
+        result.reserve( dofs.size() );
+        _values->updateValuePointer();
+        for ( auto &dof : dofs )
+            result.push_back( ( *_values )[dof] );
+        return result;
     }
 
     /**

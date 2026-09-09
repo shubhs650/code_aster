@@ -16,35 +16,32 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc0040(fami, kpg, ksp, ndim, imate,&
-                    compor, carcri, instam, instap, neps, &
-                    epsm, deps, nsig, sigm, nvi, &
-                    vim, option, angmas, sigp, vip, &
-                    typmod, icomp, ndsde, dsidep, codret)
+    subroutine lc0040(fami, kpg, ksp, ndim, imate, &
+                      carcri, instam, instap, neps, &
+                      epsm, deps, nsig, sigm, nvi, vim, &
+                      option, sigp, vip, typmod, &
+                      ndsde, dsidep, codret)
         character(len=*) :: fami
         integer(kind=8) :: kpg
         integer(kind=8) :: ksp
         integer(kind=8) :: ndim
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
-        real(kind=8) :: instam
-        real(kind=8) :: instap
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        real(kind=8) :: instam, instap
         integer(kind=8) :: neps
         real(kind=8) :: epsm(*)
         real(kind=8) :: deps(*)
         integer(kind=8) :: nsig
         real(kind=8) :: sigm(*)
         integer(kind=8) :: nvi
-        real(kind=8) :: vim(*)
+        real(kind=8) :: vim(nvi)
         character(len=16) :: option
-        real(kind=8) :: angmas(*)
         real(kind=8) :: sigp(*)
-        real(kind=8) :: vip(*)
+        real(kind=8) :: vip(nvi)
         character(len=8) :: typmod(*)
-        integer(kind=8) :: icomp
         integer(kind=8) :: ndsde
         real(kind=8) :: dsidep(*)
         integer(kind=8) :: codret

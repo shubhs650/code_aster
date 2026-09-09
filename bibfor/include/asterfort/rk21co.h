@@ -15,28 +15,25 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine rk21co(fami, kpg, ksp, rela_comp, mod,&
-                      imat, matcst, nbcomm, cpmono, nfs,&
-                      nsg, toutms, nvi, nmat, y,&
-                      kp, ee, a, h, pgl,&
-                      nbphas, cothe, coeff, dcothe, dcoeff,&
-                      coel, x, pas, neps, epsd,&
-                      detot, nhsr, numhsr, hsr, itmax,&
+    subroutine rk21co(materPara, &
+                      relaComp, typmod1, &
+                      matcst, nbcomm, cpmono, nfs, &
+                      nsg, toutms, nvi, nmat, y, &
+                      kp, ee, a, h, pgl, &
+                      nbphas, cothe, coeff, dcothe, dcoeff, &
+                      coel, x, pas, neps, epsd, &
+                      detot, nhsr, numhsr, hsr, itmax, &
                       toler, iret)
+        use MaterialPara_type
+        type(Material_Para), intent(in) :: materPara
+        character(len=16), intent(in) :: relaComp
+        character(len=8), intent(in) :: typmod1
         integer(kind=8) :: nhsr
         integer(kind=8) :: nmat
         integer(kind=8) :: nvi
         integer(kind=8) :: nsg
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
-        character(len=16) :: rela_comp
-        character(len=8) :: mod
-        integer(kind=8) :: imat
         character(len=3) :: matcst
         integer(kind=8) :: nbcomm(nmat, 3)
         character(len=24) :: cpmono(5*nmat+1)

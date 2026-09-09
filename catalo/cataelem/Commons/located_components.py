@@ -150,32 +150,10 @@ CFREQR = LocatedComponents(phys=PHY.FREQ_R, type="ELEM", components=("FREQ",))
 # Field for time
 MTEMPSR = LocatedComponents(phys=PHY.INST_R, type="ELEM", components=("INST",))
 
-# Field for material orientation in 3D (ANGLE_MASSIF)
-CCAMA3D = LocatedComponents(
+# Field for material orientation
+CCAMASS = LocatedComponents(
     phys=PHY.CAMA_R, type="ELEM", components=("C", "ALPHA", "BETA", "KAPPA", "X", "Y", "Z")
 )
-
-# Field for material orientation in 2D (ANGLE_MASSIF)
-CCAMA2D = LocatedComponents(
-    phys=PHY.CAMA_R, type="ELEM", components=("C", "ALPHA", "BETA", "KAPPA", "X", "Y", "Z")
-)
-
-# Field for RESI_REFE_RELA/EFFORT
-CRESEFF = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("EFFORT",))
-
-# Field for RESI_REFE_RELA/EFFORT+MOMENT
-CRESEFM = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("EFFORT", "MOMENT"))
-
-# Field for RESI_REFE_RELA/THM
-CRESTHM = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("SIGM", "FHYDR[2]", "FTHERM"))
-
-# Field for RESI_REFE_RELA/THM_DIL
-CRESTHD = LocatedComponents(
-    phys=PHY.PREC_R, type="ELEM", components=("SIGM", "EPSI", "FHYDR[2]", "FTHERM", "LAG_GV")
-)
-
-# Field for RESI_REFE_RELA/STRESS
-CRESSIG = LocatedComponents(phys=PHY.PREC_R, type="ELEM", components=("SIGM"))
 
 # For energy (isoparametric elements)
 CENEISO = LocatedComponents(phys=PHY.ENER_R, type="ELEM", components=("TOTALE",))
@@ -220,6 +198,27 @@ CHECHPF = LocatedComponents(phys=PHY.COEH_F, type="ELEM", components=("H",))
 # Field for normal exchange in thermic (coefficient/real)
 CHECHPR = LocatedComponents(phys=PHY.COEH_R, type="ELEM", components=("H",))
 
+# Field for RESI_REFE_RELA COMPONENT NAMES (ALL COMPONENTS, CONSISTENT WITH CRESIREF)
+CRESICMP = LocatedComponents(phys=PHY.RESICMP, type="ELEM", components=("X[11]",))
+
+# Field for RESI_REFE_RELA VALUES (ALL COMPONENTS)
+CRESIREF = LocatedComponents(
+    phys=PHY.RESIREF,
+    type="ELEM",
+    components=(
+        "SIGM",
+        "EPSI",
+        "FLUXTHER",
+        "FLUXHYD[2]",
+        "EFFORT",
+        "MOMENT",
+        "VARI",
+        "DEPL",
+        "LAGR",
+        "PI",
+    ),
+)
+
 # Field for normal exchange in thermic (temperature/function)
 CTEMPEF = LocatedComponents(phys=PHY.TEMP_F, type="ELEM", components=("TEMP",))
 
@@ -242,6 +241,41 @@ CINDICR = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X[2]",))
 
 # Field for parameters of indicator (AFFE_MODELE)
 CCHCKPR = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X[2]",))
+
+# Field for parameters of mechanical plate (DKT/DKTG/DST/Q4G/Q4GG)
+CSHLDKT = LocatedComponents(
+    phys=PHY.CACOQU_R, type="ELEM", components=("EP", "ALPHA", "BETA", "CTOR", "EXCENT", "INERTIE")
+)
+
+# Field for parameters of mechanical plate (MITC)
+CSHLMITC = LocatedComponents(phys=PHY.CACOQU_R, type="ELEM", components=("EP",))
+
+# Field for parameters of mechanical plate (COQUE_3D)
+CSHL3D = LocatedComponents(
+    phys=PHY.CACOQU_R,
+    type="ELEM",
+    components=("EP", "ALPHA", "BETA", "KAPPA", "CTOR", "EXCENT", "INERTIE"),
+)
+
+# Field for parameters of mechanical plate (COQUE_AXIS)
+CSHLAXI = LocatedComponents(phys=PHY.CACOQU_R, type="ELEM", components=("EP", "KAPPA", "C_METR"))
+
+# Field for parameters of grid (GRILLE_EXCENTRE/GRILLE_MEMBRANE)
+CGRID = LocatedComponents(
+    phys=PHY.CACOQU_R, type="ELEM", components=("SECT_L", "ALPHA", "BETA", "DIST_N", "CTOR")
+)
+
+# Field for parameters of membrane (MEMBRANE)
+CMEMB = LocatedComponents(
+    phys=PHY.CACOQU_R, type="ELEM", components=("EP", "ALPHA", "BETA", "TENS")
+)
+
+# Field for parameters of thermal plate (COQUE_AXIS/COQUE_PLAN)
+CSHLTH1 = LocatedComponents(phys=PHY.CACOQU_R, type="ELEM", components=("EP",))
+
+# Field for parameters of thermal plate (COQUE)
+CSHLTH2 = LocatedComponents(phys=PHY.CACOQU_R, type="ELEM", components=("EP", "ALPHA", "BETA"))
+
 
 CNEUTR1 = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X1",))
 
@@ -552,10 +586,6 @@ CFLAPLA = LocatedComponents(phys=PHY.FLAPLA, type="ELEM", components=("NOMAIL", 
 
 CFORCEC = LocatedComponents(
     phys=PHY.FORC_C, type="ELEM", components=("FX", "FY", "FZ", "MX", "MY", "MZ", "REP")
-)
-
-CFRELEC = LocatedComponents(
-    phys=PHY.FLAP_R, type="ELEM", components=("X1", "Y1", "Z1", "X2", "Y2", "Z2", "CODE")
 )
 
 CFTRC = LocatedComponents(phys=PHY.ADRSJEVN, type="ELEM", components=("I[2]",))
@@ -877,8 +907,10 @@ EVITEFR = LocatedComponents(
 # Located components - ELNO - Field on nodes by element
 # ----------------------------------------------------------------------------------------------
 # For TOU_INI_ELNO
-ENNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELNO", components=("X[30]",))
-ENNEUT_R = LocatedComponents(phys=PHY.NEUT_R, type="ELNO", components=("X[30]",))
+ENTINIF = LocatedComponents(phys=PHY.NEUT_F, type="ELNO", components=("X[30]",))
+ENTINIR = LocatedComponents(phys=PHY.NEUT_R, type="ELNO", components=("X[30]",))
+ENTINII = LocatedComponents(phys=PHY.NEUT_I, type="ELNO", components=("X[30]",))
+
 
 # For stresses (Real-3D)
 ESIG3DR = LocatedComponents(
@@ -1096,9 +1128,6 @@ EEFGENOQ = LocatedComponents(phys=PHY.SIEF_R, type="ELNO", components=("MT", "MF
 
 EEINST_R = LocatedComponents(phys=PHY.INST_R, type="ELNO", components=("INST",))
 
-EENEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELNO", components=("X[30]",))
-
-EENEUT_R = LocatedComponents(phys=PHY.NEUT_R, type="ELNO", components=("X[30]",))
 
 EERRENOT = LocatedComponents(
     phys=PHY.ERRE_R,
@@ -1182,6 +1211,8 @@ EGGAU3D = LocatedComponents(
 # For TOU_INI_ELGA
 EGTINIF = LocatedComponents(phys=PHY.NEUT_F, type="ELGA", location="RIGI", components=("X[30]",))
 EGTINIR = LocatedComponents(phys=PHY.NEUT_R, type="ELGA", location="RIGI", components=("X[30]",))
+EGTINII = LocatedComponents(phys=PHY.NEUT_I, type="ELGA", location="RIGI", components=("X[30]",))
+
 EGTINIV = LocatedComponents(
     phys=PHY.VALO_R, type="ELGA", location="RIGI", components=("VALEUR", "GRAD_X", "GRAD_Y")
 )
@@ -1364,6 +1395,10 @@ EFOR2DR = LocatedComponents(phys=PHY.FORC_R, type="ELGA", location="RIGI", compo
 EFOR3DR = LocatedComponents(
     phys=PHY.FORC_R, type="ELGA", location="RIGI", components=("FX", "FY", "FZ")
 )
+
+# For nodal forces (Real-3D)
+ENFOR3R = LocatedComponents(phys=PHY.FORC_R, type="ELNO", components=("FX", "FY", "FZ"))
+
 
 # For body source in thermic
 ESOURCR = LocatedComponents(phys=PHY.SOUR_R, type="ELGA", location="RIGI", components=("SOUR",))

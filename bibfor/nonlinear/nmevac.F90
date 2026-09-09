@@ -27,12 +27,10 @@ subroutine nmevac(sddisc, sderro, i_fail_acti, nume_inst, iterat, &
 #include "asterfort/assert.h"
 #include "asterfort/getFailAction.h"
 #include "asterfort/getFailEvent.h"
-#include "asterfort/nmadcp.h"
 #include "asterfort/nmdeco.h"
 #include "asterfort/nmecev.h"
 #include "asterfort/nmeraz.h"
 #include "asterfort/nmerge.h"
-#include "asterfort/nmitsp.h"
 #include "asterfort/utmess.h"
 #include "event_def.h"
 !
@@ -65,10 +63,11 @@ subroutine nmevac(sddisc, sderro, i_fail_acti, nume_inst, iterat, &
 !     1 - ON REFAIT LE PAS DE TEMPS
 !     2 - ON CONTINUE LA BOUCLE DE NEWTON (ITERATIONS EN PLUS)
 !     3 - L'ACTION A ECHOUE
+!     5 - ON ARRETE LE CALCUL ET ON ARCHIVE LE DERNIER PAS DE TEMPS
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: retsup, retpen, retdec, failType, actionType
+    integer(kind=8) :: retdec, failType, actionType
     aster_logical :: trydec, litmax
 !
 ! --------------------------------------------------------------------------------------------------
@@ -93,36 +92,12 @@ subroutine nmevac(sddisc, sderro, i_fail_acti, nume_inst, iterat, &
         call utmess('I', 'MECANONLINE10_30')
         retact = 3
         trydec = ASTER_FALSE
-    else if (actionType .eq. FAIL_ACT_ITER) then
-        ASSERT(iterat .ge. 0)
-        if (litmax) then
-            call utmess('I', 'MECANONLINE10_32')
-            call nmitsp(ds_print_, sddisc, iterat, retsup)
-        else
-            retsup = 0
-        end if
-        if (retsup .eq. 0) then
-            trydec = ASTER_TRUE
-        else if (retsup .eq. 1) then
-            retact = 2
-        else
-            ASSERT(ASTER_FALSE)
-        end if
     else if (actionType .eq. FAIL_ACT_CUT) then
         trydec = ASTER_TRUE
-    else if (actionType .eq. FAIL_ACT_ADAPT_COEF) then
-        call utmess('I', 'MECANONLINE10_35')
-        call nmadcp(sddisc, ds_contact_, i_fail_acti, retpen)
-        trydec = ASTER_FALSE
-        if (retpen .eq. 0) then
-            retact = 3
-        else if (retpen .eq. 1) then
-            retact = 1
-        else
-            ASSERT(ASTER_FALSE)
-        end if
     else if (actionType .eq. FAIL_ACT_CONTINUE) then
         retact = 0
+    else if (actionType .eq. FAIL_ACT_ARCHI) then
+        retact = 5
     else
         ASSERT(ASTER_FALSE)
     end if

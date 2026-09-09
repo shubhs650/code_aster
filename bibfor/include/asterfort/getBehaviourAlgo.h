@@ -15,20 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-!
 #include "asterf_types.h"
 !
 interface
-    subroutine getBehaviourAlgo(plane_stress, rela_comp   ,&
-                                rela_code_py, meca_code_py,&
-                                keywf       , i_comp      ,&
-                                algo_inte   , algo_inte_r)
-        aster_logical, intent(in) :: plane_stress
-        character(len=16), intent(in) :: rela_comp
-        character(len=16), intent(in) :: rela_code_py
-        character(len=16), intent(in) :: meca_code_py
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
+    subroutine getBehaviourAlgo(lPlaneStress, relaComp, &
+                                relaCompPY, relaMecaPY, &
+                                factorKeyword, iFactorKeyword, &
+                                algo_inte, algo_inte_r)
+        aster_logical, intent(in) :: lPlaneStress
+        character(len=16), intent(in) :: relaComp, relaCompPY, relaMecaPY
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
         character(len=16), intent(out) :: algo_inte
         real(kind=8), intent(out) :: algo_inte_r
     end subroutine getBehaviourAlgo

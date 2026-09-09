@@ -18,8 +18,8 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine getExternalStrainModel(defo_comp, strain_model)
-        character(len=16), intent(in) :: defo_comp
-        integer(kind=8), intent(out) :: strain_model
+    subroutine getExternalStrainModel(defoComp, strainMGIS)
+        character(len=16), intent(in) :: defoComp
+        integer(kind=8), intent(out) :: strainMGIS
     end subroutine getExternalStrainModel
 end interface

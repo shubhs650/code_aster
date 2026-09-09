@@ -25,7 +25,7 @@
 #
 #   Vérification du comportement mécanique avec endommagement + puis fluage
 #
-# 1 : compression / Sigma 1d / Epsi  diagonal / Contrainte imposée
+# 2 : compression / Sigma 3d / Epsi  nul
 #
 # --------------------------------------------------------------------------------------------------
 DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"))
@@ -39,6 +39,8 @@ DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"))
 #
 # !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !! !!
 #
+import numpy as np
+
 
 MAIL = LIRE_MAILLAGE(FORMAT="ASTER")
 
@@ -55,14 +57,12 @@ MBETRAG = DEFI_MATERIAU(
         ENDO_SIGUT=-3.18e06,  # [Pa] si < 0 plus d'endommagement
         ENDO_DRUPRA=0.15,
         # Fluage
-        FLUA_SPH_KR=89000.0e06,  # [Pa]
-        FLUA_SPH_KI=22000.0e06,  # [Pa]
-        FLUA_SPH_NR=156000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_SPH_NI=410000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_DEV_KR=42000.0e06,  # [Pa]
-        FLUA_DEV_KI=22000.0e06,  # [Pa]
-        FLUA_DEV_NR=-117000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
-        FLUA_DEV_NI=-840000.0e06,  # [Pa.J] si NR et NI < 0 plus de fluage
+        FLUA_SPH_KR=-89000.0e06,  # [Pa]   si NR et NI et KR < 0, arrêt du fluage
+        FLUA_SPH_NR=-156000.0e06,  # [Pa.J] si NR et NI et KR < 0, arrêt du fluage
+        FLUA_SPH_NI=-410000.0e06,  # [Pa.J] si NR et NI et KR < 0, arrêt du fluage
+        FLUA_DEV_KR=-42000.0e06,  # [Pa]   si NR et NI et KR < 0, arrêt du fluage
+        FLUA_DEV_NR=-117000.0e06,  # [Pa.J] si NR et NI et KR < 0, arrêt du fluage
+        FLUA_DEV_NI=-840000.0e06,  # [Pa.J] si NR et NI et KR < 0, arrêt du fluage
         # Avancement de la RAG
         GEL_ALPHA0=1.0e-04,  # si 0 plus d'avancement
         GEL_TREF=25.0,  # [°C]
@@ -183,406 +183,177 @@ BR_PRCAP = RECU_FONCTION(
     RESULTAT=RESU, NOM_CHAM="VARI_ELGA", GROUP_MA="M1", POINT=1, NOM_VARI="BR_PRCAP"
 )
 
+temps_tests = np.array([10.0, 40.0, 80.0, 100.0, 110.0, 200.0])
+val_NR_BR_AVCHI = [
+    4.981672300000e-03,
+    5.361980200000e-01,
+    0.59382808034267,
+    0.5938301328580,
+    0.59384230907776,
+    7.000000000000e-01,
+]
+val_NR_BR_PRGEL = [
+    0.0,
+    2.097875634596e06,
+    2.457487221338e06,
+    2.457500026087e06,
+    2.457576008645e06,
+    3.120000000000e06,
+]
+val_NR_BR_PRCAP = [
+    -2.810249100000e06,
+    -2.529791200000e06,
+    -2.861817600000e06,
+    -2.142428500000e06,
+    -2.142428500000e06,
+    -2.142428528563e06,
+]
+val_NR_SIXX = [
+    2810249.099279279355,
+    431915.61173248011619,
+    404330.38291293894872,
+    -315071.4975538989529,
+    -315147.48011006461456,
+    -977571.47143986402079,
+]
+val_NR_SIYY = [
+    2810249.099279279355,
+    431915.61173248011619,
+    404330.38291293894872,
+    -315071.4975538989529,
+    -315147.48011006461456,
+    -977571.47143986402079,
+]
+val_NR_SIZZ = [
+    2810249.099279279355,
+    431915.61173248011619,
+    404330.38291293894872,
+    -315071.4975538989529,
+    -315147.48011006461456,
+    -977571.47143986402079,
+]
 
-TEST_FONCTION(
-    VALEUR=(
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=10.00,
-            VALE_CALC=4.981672300000e-03,
-            VALE_REFE=4.981207356948e-03,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=5.361980200000e-01,
-            VALE_REFE=5.361979299970e-01,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=5.924644400000e-01,
-            VALE_REFE=5.924644217241e-01,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=5.938280800000e-01,
-            VALE_REFE=5.938195769343e-01,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=5.938301300000e-01,
-            VALE_REFE=5.938216310035e-01,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=5.938423100000e-01,
-            VALE_REFE=5.938338086705e-01,
-        ),
-        _F(
-            FONCTION=BR_AVCHI,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=7.000000000000e-01,
-            VALE_REFE=7.000000000002e-01,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=2.097875600000e06,
-            VALE_REFE=2.101217954854e06,
-            PRECISION=1.7e-03,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=2.448978100000e06,
-            VALE_REFE=2.448598919982e06,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=2.457487200000e06,
-            VALE_REFE=2.460563938661e06,
-            PRECISION=1.4e-03,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=2.457500000000e06,
-            VALE_REFE=2.455008850947e06,
-            PRECISION=1.1e-03,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=2.457576000000e06,
-            VALE_REFE=2.455084251465e06,
-            PRECISION=1.1e-03,
-        ),
-        _F(
-            FONCTION=BR_PRGEL,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=3.120000000000e06,
-            VALE_REFE=3.112433957654e06,
-            PRECISION=2.7e-03,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=10.00,
-            VALE_CALC=-2.810249100000e06,
-            VALE_REFE=-2.810249099279e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=-2.529791200000e06,
-            VALE_REFE=-2.529791246328e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=-2.400000000000e06,
-            VALE_REFE=-2.400000000000e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=-2.861817600000e06,
-            VALE_REFE=-2.861817604251e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=-2.142428500000e06,
-            VALE_REFE=-2.142428528563e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=-2.142428500000e06,
-            VALE_REFE=-2.142428528563e06,
-        ),
-        _F(
-            FONCTION=BR_PRCAP,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=-2.142428500000e06,
-            VALE_REFE=-2.142428528563e06,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=10.00,
-            VALE_CALC=2.768662500000e06,
-            VALE_REFE=2.810249099279e06,
-            PRECISION=1.6e-02,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=3.819406100000e05,
-            VALE_REFE=4.285732914740e05,
-            PRECISION=1.2e-01,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=-9.909395700000e04,
-            VALE_REFE=-4.859891998248e04,
-            PRECISION=1.1e00,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=3.541599600000e05,
-            VALE_REFE=4.012536655895e05,
-            PRECISION=1.3e-01,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=-3.652431000000e05,
-            VALE_REFE=-3.125803223844e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=-3.653191600000e05,
-            VALE_REFE=-3.126557229023e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIXX,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=-1.027743200000e06,
-            VALE_REFE=-9.700054290914e05,
-            PRECISION=6.5e-02,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=10.00,
-            VALE_CALC=2.768662500000e06,
-            VALE_REFE=2.810249099279e06,
-            PRECISION=1.6e-02,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=3.819406100000e05,
-            VALE_REFE=4.285732914740e05,
-            PRECISION=1.2e-01,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=-9.909395700000e04,
-            VALE_REFE=-4.859891998248e04,
-            PRECISION=1.1e00,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=3.541599600000e05,
-            VALE_REFE=4.012536655895e05,
-            PRECISION=1.3e-01,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=-3.652431000000e05,
-            VALE_REFE=-3.125803223844e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=-3.653191600000e05,
-            VALE_REFE=-3.126557229023e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIYY,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=-1.027743200000e06,
-            VALE_REFE=-9.700054290914e05,
-            PRECISION=6.5e-02,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=10.00,
-            VALE_CALC=2.768662500000e06,
-            VALE_REFE=2.810249099279e06,
-            PRECISION=1.6e-02,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=40.00,
-            VALE_CALC=3.819406100000e05,
-            VALE_REFE=4.285732914740e05,
-            PRECISION=1.2e-01,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=50.00,
-            VALE_CALC=-9.909395700000e04,
-            VALE_REFE=-4.859891998248e04,
-            PRECISION=1.1e00,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=80.00,
-            VALE_CALC=3.541599600000e05,
-            VALE_REFE=4.012536655895e05,
-            PRECISION=1.3e-01,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=100.00,
-            VALE_CALC=-3.652431000000e05,
-            VALE_REFE=-3.125803223844e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=110.00,
-            VALE_CALC=-3.653191600000e05,
-            VALE_REFE=-3.126557229023e05,
-            PRECISION=1.9e-01,
-        ),
-        _F(
-            FONCTION=SIZZ,
-            NOM_PARA="INST",
-            CRITERE="RELATIF",
-            REFERENCE="ANALYTIQUE",
-            VALE_PARA=200.00,
-            VALE_CALC=-1.027743200000e06,
-            VALE_REFE=-9.700054290914e05,
-            PRECISION=6.5e-02,
-        ),
-    )
+analy_BR_AVCHI = [0.00499878, 0.53595897, 0.59373457, 0.59374018, 0.59387783, 0.70007016]
+analy_BR_PRGEL = np.array(
+    [0.0, 2096383.97470061, 2456903.73459854, 2456938.75040395, 2457797.63638326, 3120437.8194528]
 )
+analy_BR_PRCAP = np.array(
+    [
+        -2810249.09927928,
+        -2529791.24632844,
+        -2861817.60425084,
+        -2142428.52856285,
+        -2142428.52856285,
+        -2142428.52856285,
+    ]
+)
+analy_SIXX = [
+    2810249.09927928,
+    433407.27162783,
+    404913.86965229,
+    -314510.22184109,
+    -315369.1078204,
+    -978009.29088995,
+]
+analy_SIYY = analy_SIXX
+analy_SIZZ = analy_SIXX
 
+tests_AVCHI = [
+    _F(
+        FONCTION=BR_AVCHI,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_BR_AVCHI[i],
+        VALE_REFE=analy_BR_AVCHI[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(len(temps_tests))
+]
+
+tests_BR_PRGEL = [
+    _F(
+        FONCTION=BR_PRGEL,
+        NOM_PARA="INST",
+        CRITERE="ABSOLU",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[0],
+        VALE_CALC=val_NR_BR_PRGEL[0],
+        VALE_REFE=analy_BR_PRGEL[0],
+        PRECISION=5.0e-3,
+    )
+] + [
+    _F(
+        FONCTION=BR_PRGEL,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_BR_PRGEL[i],
+        VALE_REFE=analy_BR_PRGEL[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(1, len(temps_tests))
+]
+
+tests_BR_PRCAP = [
+    _F(
+        FONCTION=BR_PRCAP,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_BR_PRCAP[i],
+        VALE_REFE=analy_BR_PRCAP[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(len(temps_tests))
+]
+tests_SIXX = [
+    _F(
+        FONCTION=SIXX,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_SIXX[i],
+        VALE_REFE=analy_SIXX[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(len(temps_tests))
+]
+
+tests_SIYY = [
+    _F(
+        FONCTION=SIYY,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_SIYY[i],
+        VALE_REFE=analy_SIYY[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(len(temps_tests))
+]
+
+tests_SIZZ = [
+    _F(
+        FONCTION=SIZZ,
+        NOM_PARA="INST",
+        CRITERE="RELATIF",
+        REFERENCE="SOURCE_EXTERNE",
+        VALE_PARA=temps_tests[i],
+        VALE_CALC=val_NR_SIZZ[i],
+        VALE_REFE=analy_SIZZ[i],
+        PRECISION=5.0e-3,
+    )
+    for i in range(len(temps_tests))
+]
+
+tests = tests_AVCHI + tests_BR_PRGEL + tests_BR_PRCAP + tests_SIXX + tests_SIYY + tests_SIZZ
+
+TEST_FONCTION(VALEUR=tests)
 
 FIN()

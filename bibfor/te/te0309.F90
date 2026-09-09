@@ -49,7 +49,7 @@ subroutine te0309(option, nomte)
 !
     real(kind=8) :: normal(3)
     integer(kind=8) :: index, kp
-    real(kind=8) :: mass(MAX_BS, MAX_BS)
+    real(kind=8) :: mass(MAX_BS_CG, MAX_BS_CG)
     real(kind=8) :: valQP(MAX_QP)
 !-----------------------------------------------------------------------
     call FESkin%init()

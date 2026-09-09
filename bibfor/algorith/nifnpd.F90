@@ -27,9 +27,10 @@ subroutine nifnpd(ndim, nno1, nno2, nno3, npg, &
 #include "asterfort/dfdmip.h"
 #include "asterfort/nmepsi.h"
 #include "asterfort/r8inir.h"
+#include "MeshTypes_type.h"
 #include "blas/ddot.h"
     integer(kind=8) :: ndim, nno1, nno2, nno3, npg, iw, idff1
-    integer(kind=8) :: vu(3, 27), vg(27), vp(27)
+    integer(kind=8) :: vu(3, MT_NNOMAX), vg(MT_NNOMAX), vp(MT_NNOMAX)
     real(kind=8) :: geomi(ndim, nno1)
     real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg), vff3(nno3, npg)
     real(kind=8) :: sig(2*ndim+1, npg), ddl(*), vect(*)
@@ -64,12 +65,12 @@ subroutine nifnpd(ndim, nno1, nno2, nno3, npg, &
     aster_logical :: axi, grand
     integer(kind=8) :: nddl, g
     integer(kind=8) :: sa, ra, na, ia, kk
-    real(kind=8) :: deplm(3*27), gonfm(27), gm, r
-!    real(kind=8) :: presm(27), pm
+    real(kind=8) :: deplm(3*MT_NNOMAX), gonfm(MT_NNOMAX), gm, r
+!    real(kind=8) :: presm(MT_NNOMAX), pm
     real(kind=8) :: dff1(nno1, ndim)
     real(kind=8) :: fm(3, 3)
     real(kind=8) :: w
-    real(kind=8) :: rac2, def(6, 27, 3)
+    real(kind=8) :: rac2, def(6, MT_NNOMAX, 3)
     real(kind=8) :: epsm(6), sigma(6)
     real(kind=8) :: divum
     real(kind=8) :: t1, t2

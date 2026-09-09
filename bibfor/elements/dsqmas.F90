@@ -15,9 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dsqmas(xyzl, option, pgl, mas, ener)
+!
+subroutine dsqmas(plateCara, plateOrie, &
+                  xyzl, option, pgl, &
+                  mas, ener)
+!
+    use plate_type
     implicit none
+!
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterc/r8gaem.h"
@@ -43,19 +48,21 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
 #include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
     real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
     character(len=16) :: option
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     MATRICE MASSE DE L'ELEMENT DE PLAQUE DSQ
-!     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT MAS    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_CIN (ECIN_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8) :: ndim, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
     integer(kind=8) :: i, j, k, i1, i2, int, ii(8), jj(8), ll(16)
-    integer(kind=8) :: multic, p, jdepg, jcoqu, j1, j2, jvitg, iret
+    integer(kind=8) :: multic, p, jdepg, j1, j2, jvitg, iret
     real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dc(2, 2), dci(2, 2)
     real(kind=8) :: dmc(3, 2), dfc(3, 2)
     real(kind=8) :: hft2(2, 6), hmft2(2, 6), flex(12, 12)
@@ -66,7 +73,7 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
     real(kind=8) :: masloc(300), masglo(300), rof, wgtmf
     real(kind=8) :: zero, unquar, undemi, un, neuf, douze, excent, xinert
     real(kind=8) :: coefm, wgtf, wgtm, detj, wgt, roe, rho, epais
-    real(kind=8) :: qsi, eta, jacob(5), caraq4(25), t2iu(4), t2ui(4), t1ve(9)
+    real(kind=8) :: qsi, eta, jacob(5), caraq4(25)
     character(len=3) :: stopz
     aster_logical :: coupmf, exce, iner
 !     ------------------------------------------------------------------
@@ -74,9 +81,10 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
     data(ii(k), k=1, 8)/1, 10, 19, 28, 37, 46, 55, 64/
     data(jj(k), k=1, 8)/5, 14, 23, 32, 33, 42, 51, 60/
     data(ll(k), k=1, 16)/3, 7, 12, 16, 17, 21, 26, 30, 35, 39, 44, 48, 49, 53, 58, 62/
-!     ------------------------------------------------------------------
 !
-    call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg, &
+! --------------------------------------------------------------------------------------------------
+!
+    call elrefe_info(fami='RIGI', ndim=ndim, nnos=nnos, npg=npg, &
                      jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, jdfd2=idfd2, &
                      jgano=jgano)
 !
@@ -87,21 +95,17 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
     neuf = 9.0d0
     douze = 12.0d0
 !
-    excent = zero
-!
-    call dxroep(rho, epais)
+    call dxroep(plateCara, rho, epais)
     roe = rho*epais
     rof = rho*epais*epais*epais/douze
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-    xinert = zr(jcoqu+5)
-!
-    exce = .false.
-    iner = .false.
-    if (abs(excent) .gt. un/r8gaem()) exce = .true.
-    if (abs(xinert) .gt. un/r8gaem()) iner = .true.
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+    xinert = plateCara%inerRota
+
+! - Flags
+    exce = (abs(excent) .gt. un/r8gaem())
+    iner = (abs(xinert) .gt. un/r8gaem())
     if (.not. iner) rof = 0.0d0
 !
 ! --- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE :
@@ -111,9 +115,10 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
 ! --- CALCUL DES MATRICES DE RIGIDITE DU MATERIAU EN FLEXION,
 ! --- MEMBRANE ET CISAILLEMENT INVERSEE :
 !     ---------------------------------
-    call dxmate('RIGI', df, dm, dmf, dc, &
-                dci, dmc, dfc, nno, pgl, &
-                multic, coupmf, t2iu, t2ui, t1ve)
+    call dxmate(plateCara, plateOrie, &
+                'RIGI', df, dm, dmf, dc, &
+                dci, dmc, dfc, &
+                multic, coupmf)
 !
 ! --- INITIALISATIONS :
 !     ---------------
@@ -329,13 +334,12 @@ subroutine dsqmas(xyzl, option, pgl, mas, ener)
     if ((option .eq. 'MASS_MECA') .or. (option .eq. 'M_GAMMA')) then
         call dxqloc(flex, memb, mefl, ctor, mas)
 !
-    else if (option .eq. 'MASS_MECA_DIAG' .or.&
- &         option .eq. 'MASS_MECA_EXPLI') then
+    else if (option .eq. 'MASS_MECA_DIAG' .or. &
+             option .eq. 'MASS_MECA_EXPLI') then
         call dxqloc(flex, memb, mefl, ctor, masloc)
         wgt = caraq4(21)*roe
         call utpslg(4, 6, pgl, masloc, masglo)
-        call dialum(4, 6, 24, wgt, masglo, &
-                    mas)
+        call dialum(4, 6, 24, wgt, masglo, mas)
 !
     else if (option .eq. 'ECIN_ELEM') then
         stopz = 'ONO'

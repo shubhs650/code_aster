@@ -15,7 +15,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1501
+! aslint: disable=W1501,W0413
 !
 subroutine nmccam(fami, kpg, ksp, ndim, &
                   typmod, imate, carcri, &
@@ -37,12 +37,11 @@ subroutine nmccam(fami, kpg, ksp, ndim, &
 #include "asterfort/Behaviour_type.h"
 !
     character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: kpg
-    integer(kind=8), intent(in) :: ksp
+    integer(kind=8), intent(in) :: kpg, ksp
     integer(kind=8) :: ndim, imate, retcom
     character(len=8) :: typmod(*)
     character(len=16) :: option
-    real(kind=8) :: carcri(3)
+    real(kind=8) :: carcri(CARCRI_SIZE)
     real(kind=8) :: deps(6), deuxmu
     real(kind=8) :: sigm(6), pcrm(7), sigp(6), pcrp(7), dsidep(6, 6)
 ! ----------------------------------------------------------------------

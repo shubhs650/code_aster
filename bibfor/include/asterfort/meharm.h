@@ -15,13 +15,11 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine meharm(modele, nh, chharm)
-        character(len=*) :: modele
-        integer(kind=8) :: nh
-        character(len=24) :: chharm
+    subroutine meharm(modelZ, numeHarm, chharm)
+        character(len=*), intent(in) :: modelZ
+        integer(kind=8), intent(in) :: numeHarm
+        character(len=24), intent(out) :: chharm
     end subroutine meharm
 end interface

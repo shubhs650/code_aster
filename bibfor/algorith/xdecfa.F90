@@ -39,6 +39,7 @@ subroutine xdecfa(elp, nno, igeom, jlsn, jlst, &
 #include "asterfort/xnewto.h"
 #include "asterfort/xnormv.h"
 #include "blas/ddot.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: npi, noeud(9), npis
     integer(kind=8) :: igeom, jlsn, jlst, zxain
@@ -78,9 +79,9 @@ subroutine xdecfa(elp, nno, igeom, jlsn, jlst, &
 !     ----------------------------------------------------------------
 !
     real(kind=8) :: p(ndim), newpt(ndim), newptref(ndim), cenref(ndim)
-    real(kind=8) :: norme, geom(ndim*nno), ff(27), cenfi(ndim), tabls(20)
+    real(kind=8) :: norme, geom(ndim*nno), ff(MT_NNOMAX), cenfi(ndim), tabls(20)
     real(kind=8) :: x(ndim), xref(ndim), miref(ndim), mifis(ndim), ptxx(3*ndim)
-    real(kind=8) :: vectn(ndim), ksi(ndim), dff(3, 27)
+    real(kind=8) :: vectn(ndim), ksi(ndim), dff(3, MT_NNOMAX)
     real(kind=8) :: epsmax, cridist, a, b, c, ab(ndim), bc(ndim), gradlsn(ndim)
     real(kind=8) :: normfa(ndim), det, tempo, temp1(ndim), temp2(ndim), temp3(4)
     integer(kind=8) :: k, ii, jj, j, ni, kk, ibid, num(8)

@@ -135,13 +135,6 @@ cata_msg = {
  augmenter la limite actuelle (5)
 """
     ),
-    69: _(
-        """
- trop de familles de systèmes de glissement.
-Ce message est un message d'erreur développeur.
-Contactez le support technique.
-"""
-    ),
     70: _(
         """
  Le nombre de système de glissement est égal à 0

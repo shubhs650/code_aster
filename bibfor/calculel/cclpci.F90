@@ -23,6 +23,7 @@ subroutine cclpci(option, &
                   nbParaIn, lpain, lchin)
 !
     use HHO_precalc_module, only: hhoAddInputField
+    use coorSyst_module, only: getOrieField
     implicit none
 !
 #include "asterfort/alchml.h"
@@ -169,6 +170,9 @@ subroutine cclpci(option, &
 
         else if (cataInType .eq. 'CARA') then
             fieldIn = caraElemZ(1:8)//cataInName(1:16)
+
+        else if (cataInType .eq. 'ORIE') then
+            call getOrieField(caraElemZ, cataInName, fieldIn)
 
         else if (cataInType .eq. 'VOLA') then
             fieldIn = cataInName

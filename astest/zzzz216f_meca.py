@@ -78,25 +78,19 @@ def coupled_mechanics(cpl, UNITE_MA, test_vale):
         def __init__(self, cpl):
             """cpl (ExternalCoupling): coupler."""
 
-            self._medcpl = cpl.medcpl
+            self.cpl = cpl
             self.result = None
 
-        def run_iteration(self, i_iter, current_time, delta_t, fluid_forces):
+        def run_iteration(self, i_iter, current_time, delta_t):
             """Execute one iteration.
 
             Arguments:
                 i_iter (int): Iteration number if the current time_step.
                 current_time (float): Current time.
                 delta_t (float): Time step.
-                fluid_forces (MEDCouplingFieldDouble): fluid forces field.
-
-            Returns:
-                bool: True if solver has converged at the current time step, else False.
-                dict[*MEDCouplingFieldDouble*]: Output fields, on nodes with keys "mesh_displacement"
-                and "mesh_velocity".
             """
 
-            FORCE = self._medcpl.import_fluidforces(fluid_forces, MOSOLIDE, current_time)
+            FORCE = self.cpl.import_fluidLoad(MOSOLIDE, current_time)
 
             FORC = FORCE.getField("FSUR_3D", current_time, "INST")
 
@@ -132,13 +126,11 @@ def coupled_mechanics(cpl, UNITE_MA, test_vale):
             )
 
             displ = self.result.getField("DEPL", self.result.getLastIndex())
-            mc_displ = self._medcpl.export_displacement(displ)
+            self.cpl.export_displacement(displ)
 
             velo = displ.copy()
             velo.setValues(0.0)
-            mc_velo = self._medcpl.export_velocity(velo)
-
-            return {"mesh_displacement": mc_displ, "mesh_velocity": mc_velo}
+            self.cpl.export_velocity(velo)
 
     ################################################################################
     # loop on time steps

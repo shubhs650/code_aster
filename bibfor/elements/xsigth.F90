@@ -19,6 +19,8 @@
 subroutine xsigth(ndim, lonch, time, nbsig, sigth)
 !
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterfort/assert.h"
@@ -30,8 +32,6 @@ subroutine xsigth(ndim, lonch, time, nbsig, sigth)
 #include "asterfort/epstmc.h"
 #include "asterfort/iselli.h"
 #include "asterfort/jevech.h"
-#include "asterfort/get_elas_id.h"
-#include "asterfort/tecach.h"
 #include "jeveux.h"
 !
     integer(kind=8) :: ndim, nbsig, lonch(10)
@@ -56,27 +56,29 @@ subroutine xsigth(ndim, lonch, time, nbsig, sigth)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8), parameter :: anglNaut(3) = 0.d0
     integer(kind=8), parameter :: ksp = 1
     real(kind=8) :: epsiTher(6), d(36)
-    integer(kind=8) :: nse, idecpg, idebs, iret, kpg, i, ise, npg, j
-    integer(kind=8) :: jvMater, irese, nno, ibid, kpgXFEM
+    integer(kind=8) :: nse, idecpg, idebs, kpg, i, ise, npg, j
+    integer(kind=8) :: jvMaterc, irese, nno, kpgXFEM
     character(len=8) :: elrefp
-    integer(kind=8) :: elasID
     type(All_Varc_Strain) :: allVarcStrain
     character(len=8), parameter :: elrese(6) = (/'SE2', 'TR3', 'TE4', 'SE3', 'TR6', 'T10'/)
     character(len=8), parameter :: fami(6) = (/'BID ', 'XINT', 'XINT', 'BID ', 'XINT', 'XINT'/)
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call elref1(elrefp)
 
-!   ON AUTORISE UNIQUEMENT L'ISOTROPIE
-    call jevech('PMATERC', 'L', jvMater)
-    call get_elas_id(zi(jvMater), elasID)
-    ASSERT(elasID .eq. ELAS_ISOT)
-    call tecach('ONO', 'PCAMASS', 'L', iret, iad=ibid)
-    ASSERT(iret .ne. 0)
+! - Get material parameters
+    call jevech('PMATERC', 'L', jvMaterc)
+
+! - Initializations of material parameters on current cell
+    call initParaCell('XFEM', zi(jvMaterc), materPara)
+    ASSERT(materPara%elasID .eq. ELAS_ISOT)
+
+! - No definition of local coordinate system
+    call initLCSNone(materPara)
 
 !   SOUS-ELEMENT DE REFERENCE : RECUP DE NNO ET NPG
     if (.not. iselli(elrefp)) then
@@ -105,21 +107,22 @@ subroutine xsigth(ndim, lonch, time, nbsig, sigth)
 ! ----- Loop on XFEM Gauss points
         do kpgXFEM = 1, npg
             kpg = idecpg+kpgXFEM
-!
-!         CALCUL DES DEFORMATIONS THERMIQUES EPSTH
+
+! --------- Initializations of material parameters on current integration point
+            call initParaPoin(kpg, ksp, materPara)
+
+! --------- Compute thermal strains
             epsiTher = 0.d0
-            call epstmc('XFEM', '+', kpg, ksp, ndim, &
-                        time, anglNaut, zi(jvMater), &
+            call epstmc(materPara, "+", time, ndim, &
                         VARC_STRAIN_TEMP, allVarcStrain, &
                         epsiTher)
-!
-!         CALCUL DE LA MATRICE DE HOOKE (MATERIAU ISOTROPE)
+
+! --------- CALCUL DE LA MATRICE DE HOOKE
             d = 0.d0
-            call dmatmc('XFEM', zi(jvMater), time, '+', &
-                        kpg, ksp, anglNaut, nbsig, &
-                        d)
-!
-!         CONTRAINTES THERMIQUES AU PG COURANT
+            call dmatmc(materPara, "+", time, &
+                        nbsig, d)
+
+! --------- CONTRAINTES THERMIQUES AU PG COURANT
             do i = 1, nbsig
                 do j = 1, nbsig
                     sigth(idebs+nbsig*(kpgXFEM-1)+i) = sigth(idebs+nbsig*(kpgXFEM-1)+i)+ &

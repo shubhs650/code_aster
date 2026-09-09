@@ -63,8 +63,8 @@ subroutine dfllec(sdlist, dtmin)
     character(len=16) :: subd_method, subd_auto
     integer(kind=8) :: subd_pas, subd_niveau
     real(kind=8) :: subd_niveau_r, subd_niveau_maxi
-    real(kind=8) :: pcent_iter_plus, pene_maxi, resi_glob_maxi
-    real(kind=8) :: coef_maxi, subd_inst, subd_duree
+    real(kind=8) :: pene_maxi, resi_glob_maxi
+    real(kind=8) :: subd_inst, subd_duree
     aster_logical :: l_save, l_fail_error
     integer(kind=8) :: i_last, iplus
     integer(kind=8), pointer :: v_work(:) => null()
@@ -184,8 +184,7 @@ subroutine dfllec(sdlist, dtmin)
                         action_typek, &
                         subd_method, subd_pas_mini, &
                         subd_niveau, subd_pas, &
-                        subd_auto, subd_inst, subd_duree, &
-                        pcent_iter_plus, coef_maxi)
+                        subd_auto, subd_inst, subd_duree)
             l_save = .true.
         end if
 
@@ -196,8 +195,7 @@ subroutine dfllec(sdlist, dtmin)
                         event_typek, vale_ref, nom_cham, nom_cmp, &
                         crit_cmp, lst_loca, etat_loca, pene_maxi, resi_glob_maxi, &
                         action_typek, subd_method, subd_auto, subd_pas_mini, &
-                        subd_pas, subd_niveau, pcent_iter_plus, coef_maxi, &
-                        subd_inst, subd_duree)
+                        subd_pas, subd_niveau, subd_inst, subd_duree)
         end if
         if (iplus .ne. 0) then
             goto 157

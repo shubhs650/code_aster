@@ -15,14 +15,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-! aslint: disable=W1504,C1505,W1306
+! aslint: disable=W1504,W1306
 !
-subroutine cgfint(ndim, nno1, nno2, npg, wref, &
-                  vff1, vff2, dffr1, geom, tang, &
-                  typmod, option, mat, comporKit, lgpg, &
-                  carcri, instam, instap, ddlm, ddld, &
-                  iu, iuc, im, a, sigm, &
-                  vim, sigp, vip, matr, vect, &
+subroutine cgfint(BEHInteg, &
+                  typmod, option, &
+                  comporKit, carcrikit, &
+                  ndim, nno1, nno2, npg, &
+                  wref, vff1, vff2, dffr1, &
+                  geom, tang, &
+                  instam, instap, &
+                  ddlm, ddld, &
+                  iu, iuc, im, a, &
+                  lgpg, sigm, vim, &
+                  sigp, vip, &
+                  matr, vect, &
                   codret)
 !
     use Behaviour_type
@@ -31,31 +37,34 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 !
 #include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/cgcine.h"
 #include "asterfort/codere.h"
 #include "asterfort/nmcomp.h"
 #include "asterfort/nmiclg.h"
 #include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
-#include "asterfort/Behaviour_type.h"
 #include "asterfort/utmess.h"
-    character(len=8) :: typmod(2)
-    character(len=16) :: option, comporKit(COMPOR_SIZE)
 !
-    integer(kind=8) :: ndim, nno1, nno2, npg, mat, lgpg, iu(3, 3), iuc(3), im(3)
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: option, comporKit(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcrikit(CARCRI_SIZE)
+    integer(kind=8) :: ndim, nno1, nno2, npg, lgpg, iu(3, 3), iuc(3), im(3)
     integer(kind=8) :: codret
     real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg), geom(ndim, nno1), wref(npg)
-    real(kind=8) :: carcri(CARCRI_SIZE), instam, instap, sigm(3, npg)
+    real(kind=8) :: instam, instap, sigm(3, npg)
     real(kind=8) :: ddlm(nno1*(ndim+1)+nno2), ddld(nno1*(ndim+1)+nno2)
     real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg), vect(nno1*(ndim+1)+nno2)
     real(kind=8) :: dffr1(nno1, npg), tang(*), sigp(3, npg), matr(*)
     real(kind=8) :: a
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
 !   RAPH_MECA, RIGI_MECA_* ET FULL_MECA_* POUR L'ELEMENT CABLE/GAINE
-!     INSPIRE DE EIFINT
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  NDIM    : DIMENSION DE L'ESPACE
 ! IN  NNO1    : NOMBRE DE NOEUDS (FAMILLE U)
 ! IN  NNO2    : NOMBRE DE NOEUDS (FAMILLE L)
@@ -68,8 +77,6 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 ! IN  TANG    : TANGENTE AUX NOEUDS
 ! IN  TYPMOD  : TYPE DE MODELISATION
 ! IN  OPTION  : OPTION DE CALCUL
-! IN  MAT     : MATERIAU CODE
-! IN  COMPOR  : COMPORTEMENT
 ! IN  LGPG    : LONGUEUR DU TABLEAU DES VARIABLES INTERNES
 ! IN  CRIT    : CRITERES DE CONVERGENCE LOCAUX
 ! IN  INSTAM  : INSTANT PRECEDENT
@@ -87,16 +94,21 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 ! OUT MATR    : MATRICE DE RIGIDITE   (RIGI_MECA_* ET FULL_MECA_*)
 ! OUT VECT    : FORCES INTERIEURES    (RAPH_MECA   ET FULL_MECA_*)
 ! OUT CODRET  : CODE RETOUR
+!
 ! --------------------------------------------------------------------------------------------------
+!
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter:: nepsSheath = 2, nsigSheath = 1, ndsdeSheath = 2
     integer(kind=8), parameter :: ksp = 1
-    character(len=4), parameter :: fami = "RIGI"
-! --------------------------------------------------------------------------------------------------
-    aster_logical     :: lMatr, lSigm, lVari
+    integer(kind=8), parameter :: nbProp = 1
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'PENA_LAGR'/)
+    aster_logical  :: lMatr, lSigm, lVari
     character(len=16) :: relaSheath, relaCable
     integer(kind=8) :: numeSheath, nbviSheath, nbviCable
     aster_logical :: resi, rigi
-    integer(kind=8) :: nddl, g, cod(npg), n, i, m, j, kk, codm(1)
+    integer(kind=8) :: nddl, kpg, cod(npg), n, i, m, j, kk
     integer(kind=8) :: nume
     real(kind=8) :: r, mu, epsm, deps, wg, l(3), de, ddedt, t1
     real(kind=8) :: epsmSheath(nepsSheath), depsSheath(nepsSheath)
@@ -104,36 +116,23 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
     real(kind=8) :: dsdeSheath(nsigSheath, nepsSheath)
     real(kind=8) :: b(4, 3), gliss
     real(kind=8) :: sigcab, dsidep, dde(nepsSheath), ddedn, courb
-    real(kind=8) :: val(1)
-    character(len=16) :: nom(1), comporSheath(COMPOR_SIZE)
+    character(len=16) :: comporSheath(COMPOR_SIZE)
     character(len=1) :: poum
-    type(Behaviour_Integ) :: BEHinteg
-!
-    data nom/'PENA_LAGR'/
 ! ----------------------------------------------------------------------
 !
-!
+
 ! - INITIALISATION
-!
     resi = option(1:4) .eq. 'FULL' .or. option(1:4) .eq. 'RAPH'
     rigi = option(1:4) .eq. 'FULL' .or. option(1:4) .eq. 'RIGI'
     nddl = nno1*(ndim+1)+nno2
     cod = 0
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              comporKit, carcri, &
-                              instam, instap, &
-                              fami, mat, &
-                              BEHinteg)
-
 ! - Prepare compor maps
     ASSERT(comporKit(RELA_NAME) .eq. 'KIT_CG')
     relaSheath = comporKit(SHEATH_NAME)
     relaCable = comporKit(CABLE_NAME)
+
+! - Get parameters
     read (comporKit(NUME), '(I16)') nume
     read (comporKit(SHEATH_NUME), '(I16)') numeSheath
     read (comporKit(SHEATH_NVAR), '(I16)') nbviSheath
@@ -151,24 +150,23 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
     lSigm = L_SIGM(option)
     lVari = L_VARI(option)
     lMatr = L_MATR(option)
-!
-!
-! - CALCUL POUR CHAQUE POINT DE GAUSS
-!
-    do g = 1, npg
-!
-!      CALCUL DES ELEMENTS GEOM DE L'EF AU POINT DE GAUSS CONSIDERE
-!
-        call cgcine(ndim, nno1, vff1(1, g), wref(g), dffr1(1, g), &
+
+    do kpg = 1, npg
+
+! ----- Set main parameters for behaviour (on point)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
+
+! ----- CALCUL DES ELEMENTS GEOM DE L'EF AU POINT DE GAUSS CONSIDERE
+        call cgcine(ndim, nno1, vff1(1, kpg), wref(kpg), dffr1(1, kpg), &
                     geom, tang, wg, l, b, &
                     courb)
-!
+
 !      CALCUL DU DEPLACEMENT TANGENTIEL DE LA GAINE (UPROJ)
-!                DEPLACEMENT DU CABLE               (UCAB)
+!                DEPLACEMENT D
+! ---------------U CABLE               (UCAB)
 !             DE LA DEFORMATION DANS LE CABLE       (EPSCAB)
 !             DU LAGRANGE                           (MU)
 !         AU POINT DE GAUSS CONSIDERE
-!
         gliss = 0.d0
         epsm = 0.d0
         deps = 0.d0
@@ -185,23 +183,26 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 !
         mu = 0.d0
         do n = 1, nno2
-            mu = mu+vff2(n, g)*(ddlm(im(n))+ddld(im(n)))
+            mu = mu+vff2(n, kpg)*(ddlm(im(n))+ddld(im(n)))
         end do
 !
 !
 !      LOI DE COMPORTEMENT DU CABLE
 !         SORTIE DE CONTRAINTE DANS LE CABLE     (SIGCAB)
 !                DES VARIABLES INTERNES DU CABLE (VIP)
-!                DE LA TANGENTE D(SIGCAB)/D(EPSCAB)
+!                DE LA TANGENT
+! ---------------E D(SIGCAB)/D(EPSCAB)
 !
         if (relaCable .eq. 'ELAS' .or. relaCable .eq. 'VMIS_ISOT_TRAC' .or. &
             relaCable .eq. 'VMIS_ISOT_LINE' .or. &
             relaCable .eq. 'CORR_ACIER' .or. relaCable .eq. 'VMIS_CINE_LINE' .or. &
-            relaCable .eq. 'PINTO_MENEGOTTO' .or. relaCable .eq. 'VMIS_ASYM_LINE' .or. &
-            relaCable .eq. 'SANS') then
-            call nmiclg('RIGI', g, 1, option, relaCable, &
-                        mat, epsm, deps, sigm(1, g)/a, vim(1, g), &
-                        sigcab, vip(1, g), dsidep, carcri, codret)
+            relaCable .eq. 'VMIS_ASYM_LINE' .or. relaCable .eq. 'SANS') then
+            call nmiclg(BEHInteg%materPara, &
+                        option, relaCable, carcriKit, &
+                        epsm, deps, &
+                        sigm(1, kpg)/a, vim(1, kpg), &
+                        sigcab, vip(1, kpg), dsidep, &
+                        codret)
         else
             call utmess('F', 'CABLE0_26')
         end if
@@ -225,28 +226,36 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
             poum = '+'
         end if
 !
-        call rcvalb('RIGI', g, 1, poum, mat, &
-                    ' ', 'CABLE_GAINE_FROT', 0, ' ', [0.d0], &
-                    1, nom, val, codm, 2)
-        r = val(1)
+        call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                    BEHInteg%materPara%schemePara%kpg, &
+                    BEHInteg%materPara%schemePara%ksp, &
+                    poum, &
+                    BEHInteg%materPara%jvMaterCode, &
+                    ' ', 'CABLE_GAINE_FROT', &
+                    0, ' ', [0.d0], &
+                    nbProp, propName, propVale, &
+                    propCode, 2)
+        r = propVale(1)
 
-! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(g, ksp, BEHinteg)
-        BEHinteg%behavESVA%behavESVAOther%tenscab = a*sigcab
-        BEHinteg%behavESVA%behavESVAOther%curvcab = courb
+! ----- Set cable parameters (on point)
+        BEHInteg%behavESVA%behavESVAOther%tenscab = a*sigcab
+        BEHInteg%behavESVA%behavESVAOther%curvcab = courb
 !
         de = 0.d0
         epsmSheath = [mu, gliss]
         depsSheath = [0.d0, 0.d0]
         sigmSheath = [0.d0]
-        call nmcomp(BEHinteg, &
-                    fami, g, ksp, ndim, typmod, &
-                    mat, comporSheath, carcri, instam, instap, &
-                    nepsSheath, epsmSheath, depsSheath, nsigSheath, sigmSheath, &
-                    vim(nbviCable+1, g), option, [0.d0, 0.d0, 0.d0], &
-                    sigpSheath, vip(nbviCable+1, g), ndsdeSheath, dsdeSheath, cod(g))
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    comporSheath, carcrikit, multComp, &
+                    nepsSheath, epsmSheath, depsSheath, &
+                    nsigSheath, sigmSheath, &
+                    vim(nbviCable+1, kpg), &
+                    sigpSheath, vip(nbviCable+1, kpg), &
+                    ndsdeSheath, dsdeSheath, cod(kpg))
 
-        if (cod(g) .ne. 0) goto 999
+        if (cod(kpg) .ne. 0) goto 999
         if (lSigm) de = sigpSheath(1)
         if (lMatr) dde = dsdeSheath(1, :)
 !
@@ -256,26 +265,26 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 !
 !        STOCKAGE DES CONTRAINTES
 !        CONVENTION DE RANGEMENT SIGP(1,2,3) EXPLICITE CI-DESSOUS
-            sigp(1, g) = sigcab*a
-            sigp(2, g) = mu+r*(gliss-de)
-            sigp(3, g) = gliss-de
+            sigp(1, kpg) = sigcab*a
+            sigp(2, kpg) = mu+r*(gliss-de)
+            sigp(3, kpg) = gliss-de
 !
 !        VECTEUR FINT:U ET UC
             do n = 1, nno1
                 do i = 1, ndim
                     kk = iu(i, n)
-                    t1 = b(i, n)*sigp(1, g)
+                    t1 = b(i, n)*sigp(1, kpg)
                     vect(kk) = vect(kk)+wg*t1
                 end do
                 kk = iuc(n)
-                t1 = b(4, n)*sigp(1, g)+l(n)*sigp(2, g)
+                t1 = b(4, n)*sigp(1, kpg)+l(n)*sigp(2, kpg)
                 vect(kk) = vect(kk)+wg*t1
             end do
 !
 !        VECTEUR FINT:M
             do n = 1, nno2
                 kk = im(n)
-                t1 = vff2(n, g)*sigp(3, g)
+                t1 = vff2(n, kpg)*sigp(3, kpg)
                 vect(kk) = vect(kk)+wg*t1
             end do
 !
@@ -330,10 +339,10 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 !        MATRICE K:UC(N),MU(M)
             do n = 1, nno1
                 do m = 1, nno2
-                    t1 = l(n)*vff2(m, g)*(1.d0-r*ddedt)
+                    t1 = l(n)*vff2(m, kpg)*(1.d0-r*ddedt)
                     kk = (iuc(n)-1)*nddl+im(m)
                     matr(kk) = matr(kk)+wg*t1
-                    t1 = t1-vff2(m, g)*ddedn*dsidep*b(4, n)
+                    t1 = t1-vff2(m, kpg)*ddedn*dsidep*b(4, n)
                     kk = (im(m)-1)*nddl+iuc(n)
                     matr(kk) = matr(kk)+wg*t1
                 end do
@@ -342,7 +351,7 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
 !        MATRICES K:MU(N),MU(M)
             do n = 1, nno2
                 do m = 1, nno2
-                    t1 = -vff2(n, g)*ddedt*vff2(m, g)
+                    t1 = -vff2(n, kpg)*ddedt*vff2(m, kpg)
                     kk = (im(n)-1)*nddl+im(m)
                     matr(kk) = matr(kk)+wg*t1
                 end do
@@ -352,7 +361,7 @@ subroutine cgfint(ndim, nno1, nno2, npg, wref, &
             do n = 1, nno1
                 do i = 1, ndim
                     do m = 1, nno2
-                        t1 = -vff2(m, g)*ddedn*dsidep*b(i, n)
+                        t1 = -vff2(m, kpg)*ddedn*dsidep*b(i, n)
                         kk = (im(m)-1)*nddl+iu(i, n)
                         matr(kk) = matr(kk)+wg*t1
                     end do

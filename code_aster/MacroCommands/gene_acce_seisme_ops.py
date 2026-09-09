@@ -144,10 +144,10 @@ class GeneAcceParameters:
                 corr_keys["RATIO_HV"] = kwargs.get("RATIO_HV")
         elif "MATR_COHE" in kwargs:
             ckeys = kwargs.get("MATR_COHE")[0]
-            corr_keys = ckeys.cree_dict_valeurs(ckeys.mc_liste)
+            corr_keys = ckeys
         elif "PHASE" in kwargs:
             ckeys = kwargs.get("PHASE")[0]
-            corr_keys = ckeys.cree_dict_valeurs(ckeys.mc_liste)
+            corr_keys = ckeys
             corr_keys["TYPE"] = "PHASE"
         else:
             corr_keys = {}
@@ -157,7 +157,7 @@ class GeneAcceParameters:
         if kwargs.get("DSP"):
             self.cas = "DSP"
             GeneratorKeys = kwargs.get("DSP")[0]
-            method_keys = GeneratorKeys.cree_dict_valeurs(GeneratorKeys.mc_liste)
+            method_keys = GeneratorKeys
             if "DSP" in others:
                 others.remove("DSP")
         else:
@@ -189,7 +189,7 @@ class GeneAcceParameters:
                     others.remove("SPEC_UNIQUE")
                 self.simulation_keys.update({"SPEC_METHODE": "SPEC_UNIQUE"})
 
-            method_keys = GeneratorKeys.cree_dict_valeurs(GeneratorKeys.mc_liste)
+            method_keys = GeneratorKeys
 
         self.method_keys = {}
         for key in method_keys:

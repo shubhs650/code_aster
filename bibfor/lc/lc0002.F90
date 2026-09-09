@@ -19,13 +19,14 @@
 !
 subroutine lc0002(fami, kpg, ksp, ndim, imate, l_epsi_varc, &
                   compor, carcri, instam, instap, neps, &
-                  epsm, deps, nsig, sigm, vim, &
+                  epsm, deps, nsig, sigm, nvi, vim, &
                   option, sigp, vip, typmod, ndsde, &
                   dsidep, codret)
 !
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/nmisot.h"
 !
     aster_logical, intent(in) :: l_epsi_varc
@@ -34,19 +35,17 @@ subroutine lc0002(fami, kpg, ksp, ndim, imate, l_epsi_varc, &
     integer(kind=8), intent(in) :: ksp
     integer(kind=8), intent(in) :: ndim
     integer(kind=8), intent(in) :: imate
-    character(len=16), intent(in) :: compor(*)
-    real(kind=8), intent(in) :: carcri(*)
-    real(kind=8), intent(in) :: instam
-    real(kind=8), intent(in) :: instap
+    character(len=16), intent(in) :: compor(COMPOR_SIZE), option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8), intent(in) :: instam, instap
     integer(kind=8), intent(in) :: neps
     real(kind=8), intent(in) :: epsm(neps)
     real(kind=8), intent(in) :: deps(neps)
-    integer(kind=8), intent(in) :: nsig
+    integer(kind=8), intent(in) :: nsig, nvi
     real(kind=8), intent(in) :: sigm(nsig)
-    real(kind=8), intent(in) :: vim(*)
-    character(len=16), intent(in) :: option
+    real(kind=8), intent(in) :: vim(nvi)
     real(kind=8), intent(out) :: sigp(nsig)
-    real(kind=8), intent(out) :: vip(*)
+    real(kind=8), intent(out) :: vip(nvi)
     character(len=8), intent(in) :: typmod(*)
     integer(kind=8), intent(in) :: ndsde
     real(kind=8), intent(out) :: dsidep(ndsde)
@@ -60,8 +59,13 @@ subroutine lc0002(fami, kpg, ksp, ndim, imate, l_epsi_varc, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16) :: relaComp
+!
+! --------------------------------------------------------------------------------------------------
+!
+    relaComp = compor(RELA_NAME)
     call nmisot(fami, kpg, ksp, ndim, typmod, l_epsi_varc, &
-                imate, compor(1), carcri, deps, sigm, &
+                imate, relaComp, carcri, deps, sigm, &
                 vim, option, sigp, vip, dsidep, &
                 codret)
 !

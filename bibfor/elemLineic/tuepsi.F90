@@ -45,7 +45,7 @@ subroutine tuepsi(nbNode, nbFourier, nbDof)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = "RIGI"
+    character(len=8), parameter :: fami = "RIGI"
     integer(kind=8) :: jvf, jdfde, jdfd2, jcoopg, jpoids
     integer(kind=8) :: jvDisp
     real(kind=8) :: dispLoca(nbDof)

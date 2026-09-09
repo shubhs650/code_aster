@@ -18,6 +18,7 @@
 !
 subroutine checkCaraElem(modelZ, caraElemZ)
 !
+    use coorSyst_module, only: setOrieFields
     implicit none
 !
 #include "asterf_types.h"
@@ -26,6 +27,7 @@ subroutine checkCaraElem(modelZ, caraElemZ)
 #include "asterfort/mecact.h"
 #include "asterfort/nmiret.h"
 #include "asterfort/pipeElem_type.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/utmess.h"
 !
     character(len=*), intent(in) :: modelZ, caraElemZ
@@ -43,12 +45,14 @@ subroutine checkCaraElem(modelZ, caraElemZ)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    character(len=16), parameter :: option = "VERI_CARA_ELEM"
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 2
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
     character(len=8) :: model, caraElem, mesh, answer
     character(len=24) :: modelLigrel
-    character(len=16), parameter :: option = "VERI_CARA_ELEM"
-    integer(kind=8), parameter :: nbIn = 4, nbOut = 2
-    character(len=8) :: lpain(nbIn), lpaout(nbOut)
-    character(len=24) :: lchin(nbIn), lchout(nbOut)
     character(len=24), parameter :: paraCheck = "&&OP0019.PARACHECK"
     integer(kind=8), parameter :: nbCmp = 2
     character(len=8), parameter :: cmpName(nbCmp) = (/"X1", "X2"/)
@@ -74,25 +78,27 @@ subroutine checkCaraElem(modelZ, caraElemZ)
                     ncmp=nbCmp, lnomcmp=cmpName, vr=cmpVale)
 
 ! ----- Input fields
-        lpain(1) = 'PCACOQU'
-        lchin(1) = caraElem//'.CARCOQUE'
-        lpain(2) = 'PCAGEPO'
-        lchin(2) = caraElem//'.CARGEOPO'
-        lpain(3) = 'PCAORIE'
-        lchin(3) = caraElem//'.CARORIEN'
-        lpain(4) = 'PCHCKPR'
-        lchin(4) = paraCheck
+        lpain(1) = 'PCHCKPR'
+        lchin(1) = paraCheck(1:19)
+        nbFieldIn = 1
+
+! ----- Add fields for structural elements
+        call setStructFields(caraElem, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! ----- Add fields for orientation
+        call setOrieFields(nbFieldInMax, lpain, lchin, &
+                           nbFieldIn, caraElem)
 
 ! ----- Output fields
-        lchout(1) = codret
+        lchout(1) = codret(1:19)
         lpaout(1) = 'PCODRET'
-        lchout(2) = indicr
+        lchout(2) = indicr(1:19)
         lpaout(2) = 'PINDICR'
 
 ! ----- Computation
         call calcul('C', option, modelLigrel, &
-                    nbIn, lchin, lpain, &
-                    nbOut, lchout, lpaout, &
+                    nbFieldIn, lchin, lpain, &
+                    nbFieldOut, lchout, lpaout, &
                     'V', 'OUI')
 
 ! ----- Return code

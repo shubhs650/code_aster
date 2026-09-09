@@ -15,13 +15,13 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine betjpl(BEHinteg, &
+! aslint: disable=W0413
+!
+subroutine betjpl(BEHInteg, &
                   mod, nmat, mater, sig, vin, &
                   dsde)
 !
     use Behaviour_type
-!
     implicit none
 !
 !       BETON_DOUBLE_DP: LOI ELASTO PLASTIQUE AVEC DOUBLE CRITERE DE
@@ -44,7 +44,7 @@ subroutine betjpl(BEHinteg, &
 #include "asterfort/lcprte.h"
 #include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     integer(kind=8) :: nmat, nseuil
     real(kind=8) :: un, zero, rac2, deux, trois
     parameter(deux=2.d0)
@@ -59,7 +59,7 @@ subroutine betjpl(BEHinteg, &
 !
     character(len=8) :: mod
     real(kind=8) :: trav1(6), trav2(6), pi0(6), dev(6)
-    real(kind=8) :: sigeq, p, matr1(6, 6)
+    real(kind=8) :: sigeq, matr1(6, 6)
     real(kind=8) :: fc, ft, beta, kuc, kut, ke
     real(kind=8) :: a, b, c, d
     real(kind=8) :: pc, pt, dfcdlc, dftdlt, dfcds(6), dftds(6)
@@ -107,7 +107,7 @@ subroutine betjpl(BEHinteg, &
 !
 ! --  CALCUL DES ECROUISSAGES ET DERIVES DES COURBES D'ADOUCISSEMENT
 !
-    call betfpp(BEHinteg, &
+    call betfpp(BEHInteg, &
                 mater, nmat, pc, pt, &
                 nseuil, fc, ft, dfcdlc, dftdlt, &
                 kuc, kut, ke)

@@ -139,9 +139,34 @@ class MEFL_HEXA20P(Element):
                 (SP.PCODRET, LC.ECODRET),
             ),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((SP.PGEOM_R, LC.CGEOM3D),)),
-        OP.TOU_INI_ELGA(te=99, para_out=((SP.PGEOM_R, LC.EGGEO3D),)),
-        OP.TOU_INI_ELNO(te=99, para_out=((SP.PGEOM_R, LC.EGEOM3D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELGA(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.EGGEO3D),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.EGEOM3D),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
         OP.VERI_JACOBIEN(
             te=328, para_in=((SP.PGEOMER, LC.EGEOM3D),), para_out=((SP.PCODRET, LC.ECODRET),)
         ),
@@ -279,9 +304,34 @@ class MEFL_FACE3P(Element):
             para_in=((SP.PGEOMER, LC.EGEOM3D), (SP.PMATERC, LC.CMATERC), (SP.PONDECR, LC.EONDEPR)),
             para_out=((SP.PMATUUR, MMATUUR),),
         ),
-        OP.TOU_INI_ELEM(te=99, para_out=((SP.PGEOM_R, LC.CGEOM3D),)),
-        OP.TOU_INI_ELGA(te=99, para_out=((SP.PGEOM_R, LC.EGGEO3D),)),
-        OP.TOU_INI_ELNO(te=99, para_out=((SP.PGEOM_R, LC.EGEOM3D),)),
+        OP.TOU_INI_ELEM(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
+        ),
+        OP.TOU_INI_ELGA(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.EGGEO3D),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
+            ),
+        ),
+        OP.TOU_INI_ELNO(
+            te=99,
+            para_out=(
+                (SP.PGEOM_R, LC.EGEOM3D),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
+            ),
+        ),
     )
 
 

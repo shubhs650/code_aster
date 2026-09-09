@@ -1520,26 +1520,6 @@ FACY_R = PhysicalQuantity(
 """,
 )
 
-
-FLAP_R = PhysicalQuantity(
-    type="R",
-    components=("X1", "Y1", "Z1", "X2", "Y2", "Z2", "CODE"),
-    comment="""  FLAP_R Type:R Application de la force de Laplace ( FORCE_ELEC )
-       X1 : coordonnee X d'un point du conducteur 1
-       Y1 : coordonnee Y d'un point du conducteur 1
-       Z1 : coordonnee Z d'un point du conducteur 1
-       X2 : coordonnee X d'un point du conducteur 2
-       Y2 : coordonnee Y d'un point du conducteur 2
-       Z2 : coordonnee Z d'un point du conducteur 2
-       CODE = 10 : composantes de la force Laplace (X1, Y1, Z1 et X2=Y2=Y3=0)
-            = 11 : TRANS
-            = 12 : DIST
-            = 2 : INFI
-            = 3 : FINI
-""",
-)
-
-
 FER1_R = PhysicalQuantity(
     type="R",
     components=(
@@ -2709,34 +2689,6 @@ PRAC_R = PhysicalQuantity(
 """,
 )
 
-PREC_R = PhysicalQuantity(
-    type="R",
-    components=(
-        "SIGM",
-        "EPSI",
-        "FHYDR[2]",
-        "FTHERM",
-        "VARI",
-        "EFFORT",
-        "MOMENT",
-        "DEPL",
-        "LAG_GV",
-        "PI",
-    ),
-    comment="""Reference values for SIGM_REFE_RELA
-       SIGM : for stress
-       EPSI : for strain
-       FHYDR1 : for pressure 1 (THM)
-       FHYDR2 : for pressure 2 (THM)
-       FTHERM : for temperature (THM)
-       VARI : for internal state variable
-       EFFORT : for force
-       MOMENT : for moment
-       DEPL : displacement
-       LAG_GV :
-       PI     :
-""",
-)
 
 PRES_C = PhysicalQuantity(
     type="C",
@@ -2875,6 +2827,42 @@ RCCM_R = PhysicalQuantity(
        SALT : amplitude de la contrainte
        U_TOTAL : facteur d'usage
        TYPEKE : type de calcul de KE: soit KE_MECA, soit KE_MIXTE
+""",
+)
+
+RESICMP = PhysicalQuantity(
+    type="K8",
+    components=("X[11]",),  # should be consistent with RESIREF
+    comment="""  RESICMP Type:K8 Noms des composantes de RESIREFE
+""",
+)
+
+RESIREF = PhysicalQuantity(
+    type="R",
+    components=(
+        "SIGM",
+        "EPSI",
+        "FLUXTHER",
+        "FLUXHYD[2]",
+        "EFFORT",
+        "MOMENT",
+        "VARI",
+        "DEPL",
+        "LAGR",
+        "PI",
+    ),
+    comment="""Reference values for SIGM_REFE_RELA
+       SIGM     : for stress
+       EPSI     : for strain
+       FLUXTHER : for temperature (THM)
+       FLUXHYD1 : for pressure 1 (THM)
+       FLUXHYD2 : for pressure 2 (THM)
+       EFFORT   : for force
+       MOMENT   : for moment
+       VARI     : for internal state variable
+       DEPL     : displacement
+       LAGR     : for Lagrange multiplier
+       PI       :
 """,
 )
 

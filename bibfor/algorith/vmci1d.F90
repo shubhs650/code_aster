@@ -15,29 +15,33 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine vmci1d(fami, kpg, ksp, imate, em, &
-                  ep, sigm, deps, vim, option, &
-                  materi, sigp, vip, dsde)
 !
+subroutine vmci1d(materPara, &
+                  option, materPoin, &
+                  em, ep, &
+                  sigm, deps, vim, &
+                  sigp, vip, dsde)
+!
+    use MaterialPara_type
     implicit none
+!
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
-    integer(kind=8) :: kpg, ksp, imate
-    real(kind=8) :: ep, em, sigm, deps, sigp, dsde
-    real(kind=8) :: vim(*), vip(*)
+!
+    type(Material_Para), intent(in) :: materPara
     character(len=16) :: option
-    character(len=*) :: fami, materi
+    character(len=*) :: materPoin
+    real(kind=8) :: ep, em
+    real(kind=8) :: sigm, deps, vim(*)
+    real(kind=8) :: sigp, vip(*), dsde
 !
 ! --------------------------------------------------------------------------------------------------
 !
 !           PLASTICITE VON MISES CINEMATIQUE LINEAIRE EN 1D
 !              FORTEMENT INSPIRE DE NM1DCI
-!  IN
-!        FAMI   : FAMILLE DU POINT DE GAUSS
-!        KPG    : NUMERO DU POINT DE GAUSS
-!        KSP    : NUMERO DU SOUS-POINT DE GAUSS / FIBRE
-!        IMATE  : POINTEUR MATERIAU CODE
+!
+! --------------------------------------------------------------------------------------------------
+!
 !        EM     : MODULE D YOUNG MOINS
 !        EP     : MODULE D YOUNG PLUS
 !        SIGM   : CONTRAINTE AU TEMPS MOINS
@@ -58,41 +62,57 @@ subroutine vmci1d(fami, kpg, ksp, imate, em, &
 !       idiss : dissipation plastique
 !       iwthe : dissipation thermodynamique
 !       i..m  : ecrouissage cinematique
+!
 ! --------------------------------------------------------------------------------------------------
+!
 !   index des variables internes
 !           'CRITSIG', 'CRITEPS', 'EPSPEQ', 'INDIPLAS', 'DISSIP', 'DISSTHER',
 !           'XCINXX',  'XCINYY',  'XCINZZ', 'XCINXY', 'XCINXZ', 'XCINYZ',
     integer(kind=8), parameter :: icels = 1, icelu = 2, iepsq = 3, iplas = 4, idiss = 5, iwthe = 6
     integer(kind=8), parameter :: ixxm = 7
     integer(kind=8), parameter :: nbvari = 12
-! --------------------------------------------------------------------------------------------------
-    real(kind=8)        :: sigy, sieleq, sige, dp, etm, etp, xp, xm, hm, hp, sgels, epelu
-    character(len=16)   :: valkm(3)
-    integer(kind=8)             :: icodre(4)
-    real(kind=8)        :: valres(4)
-    character(len=16)   :: nomecl(4)
 !
-    data nomecl/'D_SIGM_EPSI', 'SY', 'SIGM_LIM', 'EPSI_LIM'/
+    integer(kind=8), parameter :: nbProp = 4
+    character(len=16), parameter :: propName(nbProp) = (/'D_SIGM_EPSI', 'SY         ', &
+                                                         'SIGM_LIM   ', 'EPSI_LIM   '/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: sigy, sieleq, sige, dp, etm, etp, xp, xm, hm, hp, sgels, epelu
+    character(len=16) :: valkm(3)
+!
 ! --------------------------------------------------------------------------------------------------
-!   instant -
-    call rcvalb(fami, kpg, ksp, '-', imate, materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                1, nomecl, valres, icodre, 1)
-    etm = valres(1)
+!
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '-', materPara%jvMaterCode, &
+                materPoin, 'ECRO_LINE', &
+                0, ' ', [0.d0], &
+                1, propName, propVale, &
+                propCode, 1)
+    etm = propVale(1)
     hm = em*etm/(em-etm)
-!   instant +
-    call rcvalb(fami, kpg, ksp, '+', imate, materi, 'ECRO_LINE', 0, ' ', [0.d0], &
-                4, nomecl, valres, icodre, 1)
+
+    call rcvalb(materPara%schemePara%fami, &
+                materPara%schemePara%kpg, &
+                materPara%schemePara%ksp, &
+                '+', materPara%jvMaterCode, &
+                materPoin, 'ECRO_LINE', &
+                0, ' ', [0.d0], &
+                nbProp, propName, propVale, &
+                propCode, 1)
+
 !   vérification que SIGM_LIM, EPSI_LIM sont présents
-    if (icodre(3)+icodre(4) .ne. 0) then
+    if (propCode(3)+propCode(4) .ne. 0) then
         valkm(1) = 'VMIS_CINE_GC'
-        valkm(2) = nomecl(3)
-        valkm(3) = nomecl(4)
+        valkm(2) = propName(3)
+        valkm(3) = propName(4)
         call utmess('F', 'COMPOR1_76', nk=3, valk=valkm)
     end if
-    etp = valres(1)
-    sigy = valres(2)
-    sgels = valres(3)
-    epelu = valres(4)
+    etp = propVale(1)
+    sigy = propVale(2)
+    sgels = propVale(3)
+    epelu = propVale(4)
 !
     hp = ep*etp/(ep-etp)
     xm = vim(ixxm)

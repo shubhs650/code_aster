@@ -1,4 +1,4 @@
-! --------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 ! Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
 ! This file is part of code_aster.
 !
@@ -14,11 +14,34 @@
 !
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
-! --------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 
 subroutine te0559(option, nomte)
+    use resi_refe_module, only: RESI_REFE
     implicit none
-#include "asterfort/utmess.h"
-    character(len=16) :: nomte, option
-    call utmess('F', 'FERMETUR_8')
+#include "asterf_types.h"
+#include "jeveux.h"
+#include "asterfort/tecach.h"
+    character(len=16) :: option, nomte
+! --------------------------------------------------------------------------------------------------
+! REALISE LES OPTIONS :
+!     REFE_FORC_NODA pour les éléments de BARRE
+! --------------------------------------------------------------------------------------------------
+! IN OPTION    : K16 :  OPTION DE CALCUL
+! IN NOMTE     : K16 : NOM DU TYPE ELEMENT
+! --------------------------------------------------------------------------------------------------
+    integer(kind=8) :: iret, itab(2), jv_vectur, nddl
+    real(kind=8):: forref
+    type(RESI_REFE):: refe
+! --------------------------------------------------------------------------------------------------
+    call refe%Init(nomte)
+    forref = refe%GetRef('EFFORT')
+    call refe%Check()
+    call tecach('OOO', 'PVECTUR', 'E', iret, nval=2, itab=itab)
+    jv_vectur = itab(1)
+    nddl = itab(2)
+
+    ! pour éviter d'avoir zéro dans les directions perpendiculaires à la barre
+    zr(jv_vectur:jv_vectur-1+nddl) = forref
+
 end subroutine

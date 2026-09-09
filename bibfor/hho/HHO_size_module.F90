@@ -159,17 +159,18 @@ contains
 !
 !===================================================================================================
 !
-    subroutine hhoMecaNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, gbs, gbs_sym)
+    subroutine hhoMecaNLDofs(hhoCell, hhoData, cbs, fbs, total_dofs, gbs, gbs_sym, gbs_axis)
 !
         implicit none
 !
         type(HHO_Cell), intent(in)          :: hhoCell
         type(HHO_Data), intent(in)          :: hhoData
-        integer(kind=8), intent(out)                :: cbs
-        integer(kind=8), intent(out)                :: fbs
-        integer(kind=8), intent(out)                :: total_dofs
-        integer(kind=8), intent(out)                :: gbs
-        integer(kind=8), intent(out)                :: gbs_sym
+        integer(kind=8), intent(out)        :: cbs
+        integer(kind=8), intent(out)        :: fbs
+        integer(kind=8), intent(out)        :: total_dofs
+        integer(kind=8), intent(out)        :: gbs
+        integer(kind=8), intent(out)        :: gbs_sym
+        integer(kind=8), intent(out)        :: gbs_axis
 !
 ! --------------------------------------------------------------------------------------------------
 !   HHO - mechanics
@@ -182,6 +183,7 @@ contains
 !   Out total_dofs  : number of total dofs
 !   Out gbs         : number of gradient dofs
 !   Out gbs_sym     : number of symmetric gradient dofs
+!   Out gbs_axis     : number of axis gradient dofs
 ! --------------------------------------------------------------------------------------------------
 !
         integer(kind=8) :: ndim, gbs_comp
@@ -191,7 +193,7 @@ contains
         gbs_comp = binomial(hhoData%grad_degree()+ndim, hhoData%grad_degree())
 ! ---- number of dofs
         call hhoMecaDofs(hhoCell, hhoData, cbs, fbs, total_dofs)
-        call hhoMecaGradDofs(hhoCell, hhoData, gbs, gbs_sym)
+        call hhoMecaGradDofs(hhoCell, hhoData, gbs, gbs_sym, gbs_axis)
 !
     end subroutine
 !
@@ -368,14 +370,15 @@ contains
 !
 !===================================================================================================
 !
-    subroutine hhoMecaGradDofs(hhoCell, hhoData, gbs, gbs_sym)
+    subroutine hhoMecaGradDofs(hhoCell, hhoData, gbs, gbs_sym, gbs_axis)
 !
         implicit none
 !
         type(HHO_Cell), intent(in)  :: hhoCell
         type(HHO_Data), intent(in)  :: hhoData
-        integer(kind=8), intent(out)        :: gbs
-        integer(kind=8), intent(out)        :: gbs_sym
+        integer(kind=8), intent(out) :: gbs
+        integer(kind=8), intent(out) :: gbs_sym
+        integer(kind=8), intent(out) :: gbs_axis
 !
 ! --------------------------------------------------------------------------------------------------
 !   HHO - mechanics
@@ -385,6 +388,7 @@ contains
 !   In hhoData      : information on HHO methods
 !   Out gbs         : number of grad dofs
 !   Out gbs_sym     : number of symmetric grad dofs
+!   Out gbs_axis     : number of axis gradient dofs
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -403,6 +407,14 @@ contains
         else
             ASSERT(ASTER_FALSE)
         end if
+!
+        if (hhoCell%l_axis) then
+            gbs_axis = gbs_comp
+        else
+            gbs_axis = 0
+        end if
+        gbs = gbs+gbs_axis
+        gbs_sym = gbs_sym+gbs_axis
 !
     end subroutine
 !

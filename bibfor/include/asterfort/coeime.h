@@ -18,18 +18,17 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine coeime(ds_thm, j_mater, nomail, option,&
-                      lSigm, lVari, lMatr,&
+    subroutine coeime(ds_thm, &
+                      lSigm, lVari, lMatr, &
+                      option, &
                       ndim, dimdef, dimcon, &
-                      addeme, addep1,&
-                      nbvari, npg, npi,&
-                      defgep, defgem, sigm, sigp, varim,&
-                      varip, ouvh, tlint, drde, kpi,&
+                      addeme, addep1, &
+                      nbvari, npg, npi, &
+                      defgep, defgem, sigm, sigp, varim, &
+                      varip, ouvh, tlint, drde, kpi, &
                       retcom)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        character(len=8), intent(in) :: nomail
         character(len=16), intent(in) :: option
         aster_logical, intent(in) :: lSigm, lVari, lMatr
         integer(kind=8), intent(in) :: ndim, dimcon, dimdef

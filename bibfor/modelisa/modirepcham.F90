@@ -15,24 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine modirepcham(resuou, resuin)
 !
+subroutine modirepcham(fieldOut, fieldIn)
 !
-! --------------------------------------------------------------------------------------------------
-!
-!     COMMANDE : MODI_REPERE / CHAM_GD
-!
-!   in
-!       resuin  : Nom du champ en entrée
-!   out
-!       resuou  : Nom du champ en sortie
-! --------------------------------------------------------------------------------------------------
-!
+    use coorSyst_module, only: setOrieFields
     implicit none
-    character(len=19) :: resuou, resuin
 !
-#include "jeveux.h"
 #include "asterfort/calcul.h"
 #include "asterfort/cesvar.h"
 #include "asterfort/checkConsistencyLigrel.h"
@@ -47,34 +35,43 @@ subroutine modirepcham(resuou, resuin)
 #include "asterfort/jemarq.h"
 #include "asterfort/mecoor.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
+!
+    character(len=19), intent(in) :: fieldOut, fieldIn
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: ifm, niv, nret, iret
-    character(len=8) :: maillage, carelem, caramail, caramodel
-    character(len=16) :: repere
-    character(len=19) :: chpass
-    character(len=24) :: ligrel, option
-!   Pour calcul
-    character(len=8) :: lpain(4), lpaou(4)
-    character(len=24) :: lchin(4), lchou(4), chgeom
-!   Pour les messages
-!     integer ::  vali(2)
-    character(len=80) :: valk(3)
+!     COMMANDE : MODI_REPERE / CHAM_GD
 !
+!   in
+!       fieldIn  : Nom du champ en entrée
+!   out
+!       fieldOut  : Nom du champ en sortie
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldOut = 1, nbFieldInMax = 100
+    character(len=8) :: lpaout(nbFieldOut), lpain(nbFieldInMax)
+    character(len=19) :: lchout(nbFieldOut), lchin(nbFieldInMax)
+    integer(kind=8) :: nbFieldIn
+    integer(kind=8) :: ifm, niv, nret, iret
+    character(len=8) :: mesh, caraElem, caraElemMesh, caraElemModel
+    character(len=16) :: repere
+    character(len=19), parameter :: chpass = '&&REPCHA.MATPASS'
+    character(len=24) :: ligrel, option
+    character(len=24) :: chgeom
     aster_logical :: lreuse, lret
+!
 ! --------------------------------------------------------------------------------------------------
 !
     call jemarq()
-!
     call infmaj()
     call infniv(ifm, niv)
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
+    lreuse = (fieldIn .eq. fieldOut)
 
-    lreuse = .false.
-    if (resuin .eq. resuou) then
-        lreuse = .true.
-    end if
-!
 !   Définition du repère utilisé
     call getvtx(' ', 'REPERE', scal=repere, nbret=nret)
     if (nret .eq. 0 .and. .not. lreuse) then
@@ -82,83 +79,94 @@ subroutine modirepcham(resuou, resuin)
     else if (repere .ne. 'GLOBAL_UTIL' .and. .not. lreuse) then
         call utmess('F', 'MODELISA3_3')
     end if
+
 !   Lecture du concept CARA_ELEM
-    call getvid(' ', 'CARA_ELEM', scal=carelem, nbret=nret)
+    call getvid(' ', 'CARA_ELEM', scal=caraElem, nbret=nret)
     if (nret .eq. 0 .and. .not. lreuse) then
         call utmess('F', 'MODELISA3_7')
     end if
-!
+
 !   Informations sur le champ en entrée.
-!    call dismoi('TYPE_CHAMP', resuin, 'CHAMP', repk=tychamp)
-!    call dismoi('NOM_PARAM',  resuin, 'CHAMP', repk=nompar)
-    call dismoi('NOM_OPTION', resuin, 'CHAMP', repk=option)
-    call dismoi('NOM_LIGREL', resuin, 'CHAMP', repk=ligrel)
-    call dismoi('NOM_MAILLA', resuin, 'CHAMP', repk=maillage)
-!   Le champ doit être crée avec INI_SP_RIGI
+    call dismoi('NOM_OPTION', fieldIn, 'CHAMP', repk=option)
+    call dismoi('NOM_LIGREL', fieldIn, 'CHAMP', repk=ligrel)
+    call dismoi('NOM_MAILLA', fieldIn, 'CHAMP', repk=mesh)
     if (option .ne. 'INI_SP_RIGI') then
         call utmess('F', 'MODELISA3_1')
     end if
 !
 ! --------------------------------------------------------------------------------------------------
 !   Vérification que CARCOQUE existe
-    call exisd('CARTE', carelem//'.CARCOQUE', iret)
+    call exisd('CARTE', caraElem//'.CARCOQUE', iret)
     if (iret .eq. 0) then
-        valk(1) = carelem
-        valk(2) = 'EP, ALPHA, BETA'
-        call utmess('F', 'MODELISA3_4', nk=2, valk=valk)
+        call utmess('F', 'MODELISA3_4')
     end if
 !   Vérification que CANBSP existe
-    call exisd('CHAM_ELEM', carelem//'.CANBSP', iret)
+    call exisd('CHAM_ELEM', caraElem//'.CANBSP', iret)
     if (iret .eq. 0) then
-        valk(1) = carelem
-        valk(2) = 'COQ_NCOU'
-        call utmess('F', 'MODELISA3_4', nk=2, valk=valk)
+        call utmess('F', 'MODELISA3_4')
     end if
-!   Nom du maillage sous-jacent à la carte. Le même que celui du champ.
-    call dismoi('NOM_MAILLA', carelem, 'CARA_ELEM', repk=caramail)
-    if (maillage .ne. caramail) then
-        valk(1) = maillage
-        valk(2) = caramail
-        call utmess('F', 'MODELISA3_5', nk=2, valk=valk)
+
+!   Nom du mesh sous-jacent à la carte. Le même que celui du champ.
+    call dismoi('NOM_MAILLA', caraElem, 'CARA_ELEM', repk=caraElemMesh)
+    if (mesh .ne. caraElemMesh) then
+        call utmess('F', 'MODELISA3_5')
     end if
+
 !   Nom du modèle sous-jacent à CARA_ELEM. Le même que celui du champ.
-    call dismoi('NOM_MODELE', carelem, 'CARA_ELEM', repk=caramodel)
-    call checkConsistencyLigrel(caramodel, ligrel, lret)
+    call dismoi('NOM_MODELE', caraElem, 'CARA_ELEM', repk=caraElemModel)
+    call checkConsistencyLigrel(caraElemModel, ligrel, lret)
     if (.not. lret) then
-        valk(1) = resuin
-        valk(2) = carelem
-        valk(2) = caramodel
-        call utmess('F', 'MODELISA3_6', nk=3, valk=valk)
+        call utmess('F', 'MODELISA3_6')
     end if
 !
 ! --------------------------------------------------------------------------------------------------
 !   Matrice de passage du repère global vers le repère utilisateur
-    chpass = '&&REPCHA.MATPASS'
-!
+
+! - Set input fields
     call mecoor(ligrel, chgeom)
-    lchin(1) = chgeom
-    lpain(1) = 'PGEOMER'
-    lchin(2) = carelem//'.CARCOQUE'
-    lpain(2) = 'PCACOQU'
-!
-    lchou(1) = chpass
-    lpaou(1) = 'PMATPASS'
-!
-    call calcul('C', 'REPERE_LOCAL', ligrel, 2, lchin, &
-                lpain, 1, lchou, lpaou, 'V', 'NON')
+    nbFieldIn = 1
+    lpain(nbFieldIn) = 'PGEOMER'
+    lchin(nbFieldIn) = chgeom(1:19)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElem)
+! - Set output field
+    lchout(1) = chpass
+    lpaout(1) = 'PMATPASS'
+
+! - Compute
+    call calcul('C', 'REPERE_LOCAL', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'V', 'NON')
+
 ! --------------------------------------------------------------------------------------------------
 !   Changement de repère
-    lchin(1) = chpass
-    lpain(1) = 'PMATPASS'
-    lchin(2) = resuin(1:8)
-    lpain(2) = 'PSIEFR'
-!
-    lchou(1) = resuou
-    lpaou(1) = 'PCONTPR'
-!
-    call cesvar(carelem, ' ', ligrel, lchou(1))
-    call calcul('C', 'MODI_REPERE', ligrel, 2, lchin, &
-                lpain, 1, lchou, lpaou, 'G', 'NON')
+
+    lpain = " "
+    lchin = " "
+    lpaout = " "
+    lchout = " "
+
+! - Set input fields
+    nbFieldIn = 1
+    lchin(nbFieldIn) = chpass
+    lpain(nbFieldIn) = 'PMATPASS'
+    nbFieldIn = nbFieldIn+1
+    lchin(nbFieldIn) = fieldIn
+    lpain(nbFieldIn) = 'PSIEFR'
+
+! - Set output field
+    lchout(1) = fieldOut
+    lpaout(1) = 'PCONTPR'
+    call cesvar(caraElem, ' ', ligrel, lchout(1))
+
+! - Compute
+    call calcul('C', 'MODI_REPERE', ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                'G', 'NON')
 !
 ! --------------------------------------------------------------------------------------------------
 !   Ménage

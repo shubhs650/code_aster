@@ -23,7 +23,6 @@ import cataelem.Commons.physical_quantities as PHY
 import cataelem.Commons.parameters as SP
 import cataelem.Commons.attributes as AT
 
-
 PCOMPOR = InputParameter(phys=PHY.COMPOR)
 
 PVARCPR = InputParameter(phys=PHY.VARI_R)
@@ -33,7 +32,7 @@ PAMORFL = InputParameter(phys=PHY.NEUT_I)
 
 PCAORIE = InputParameter(
     phys=PHY.CAORIE_R,
-    container="CARA!.CARORIEN",
+    container="ORIE!.CARORIEN",
     comment="""  PCAORIE : ORIENTATION LOCALE D'UN ELEMENT DE POUTRE OU DE TUYAU  """,
 )
 
@@ -64,5 +63,9 @@ AMOR_MECA = Option(
         CondCalcul("+", ((AT.FSI, "OUI"), (AT.BORD, "-1"), (AT.FORMULATION, "U_PSI"))),
         CondCalcul("-", ((AT.PHENO, "ME"), (AT.MODELI, "D2D"))),
         CondCalcul("-", ((AT.PHENO, "ME"), (AT.MODELI, "D3D"))),
+        # CondCalcul("-", ((AT.PHENO, "ME"), (AT.TYPMOD2, "INTERFAC"))),
+        CondCalcul("-", ((AT.PHENO, "ME"), (AT.INTERFACE, "OUI"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "ELEMJOIN"))),
+        CondCalcul("+", ((AT.PHENO, "ME"), (AT.TYPMOD2, "EJ_HYME"))),
     ),
 )

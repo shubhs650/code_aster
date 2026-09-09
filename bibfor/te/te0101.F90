@@ -17,7 +17,11 @@
 ! --------------------------------------------------------------------
 !
 subroutine te0101(option, nomte)
+!
+    use plate_type
+    use plateGeom_module, only: getCara, compCoorSystNone
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/codent.h"
 #include "asterfort/cq3d2d.h"
@@ -46,7 +50,6 @@ subroutine te0101(option, nomte)
     integer(kind=8) :: i, ind, itemps, j, l, nbddl, nbnoso
     integer(kind=8) :: nbres, nbv, nbvar, ndimax
     real(kind=8) :: un
-!-----------------------------------------------------------------------
     parameter(ndimax=27)
     parameter(nbres=24)
     parameter(nbvar=2)
@@ -63,12 +66,15 @@ subroutine te0101(option, nomte)
     real(kind=8) :: cour, cosa, sina
     real(kind=8) :: matref(3), matele(3)
     real(kind=8) :: valpar(nbvar), tempe, instan
-    real(kind=8) :: rigith(ndimax, ndimax)
-    integer(kind=8) :: imate, icacoq, ibid
+    real(kind=8) :: rigith(ndimax, ndimax), thickness
+    integer(kind=8) :: imate, ibid
     integer(kind=8) :: nno, kp, npg1, npg2, gi, pi, gj, pj, k, imattt, ndim, nnos
     integer(kind=8) :: ipoids, ivf, idfde, igeom, jgano, jgano2
     integer(kind=8) :: ndim2, nno2, nnos2
+    type(plateCara_Para) :: plateCara
+    type(plateOrie_Para) :: plateOrie
 !
+! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, npg=npg1, &
                      jpoids=ipoids, jvf=ivf, jdfde=idfde, jgano=jgano)
@@ -118,15 +124,16 @@ subroutine te0101(option, nomte)
 ! --- RECUPERATION DU MATERIAU :
 !     ------------------------
     call jevech('PMATERC', 'L', imate)
-!
-! --- RECUPERATION DE L'EPAISSEUR DE LA COQUE ET DES 2 ANGLES
-! --- PERMETTANT DE PASSER DU REPERE GLOBAL AU REPERE DE REFERENCE
-! --- TANGENT A LA COQUE :
-!     ------------------
-    call jevech('PCACOQU', 'L', icacoq)
-!
+
+! - Get plate parameters
+    call getCara(plateCara, plateOrie)
+
+! - No global<=>local transformation
+    call compCoorSystNone(plateOrie)
+
+    thickness = plateCara%thick
+
 ! --- RECUPERATION DE L'INSTANT DU CALCUL
-!     ---------------------------------------
     call jevech('PINSTR', 'L', itemps)
     valpar(1) = zr(itemps)
 !
@@ -154,7 +161,7 @@ subroutine te0101(option, nomte)
 ! ---   DETERMINATION DE LA ROTATION FAISANT PASSER DU REPERE
 ! ---   DE REFERENCE AU REPERE DE L'ELEMENT :
 !       -----------------------------------
-        call mudirx(nbnoso, zr(igeom), 3, zr(icacoq+1), zr(icacoq+2), &
+        call mudirx(nbnoso, zr(igeom), 3, plateOrie%alpha, plateOrie%beta, &
                     axe, ang)
 !
 ! ---   NOM DES COMPOSANTES DU TENSEUR DE CONDUCTIVITE HOMOGENEISE :
@@ -232,7 +239,7 @@ subroutine te0101(option, nomte)
 !
 ! ---   DEMI-EPAISSEUR  :
 !       --------------
-        h = zr(icacoq)/deux
+        h = thickness/deux
 !
 ! ---   TENSEUR DE CONDUCTIVITE MEMBRANAIRE :
 !       -----------------------------------
@@ -329,7 +336,7 @@ subroutine te0101(option, nomte)
 ! ---   DETERMINATION DE LA ROTATION FAISANT PASSER DU REPERE
 ! ---   DE REFERENCE AU REPERE DE L'ELEMENT :
 !       -----------------------------------
-        call mudirx(nbnoso, zr(igeom), 3, zr(icacoq+1), zr(icacoq+2), &
+        call mudirx(nbnoso, zr(igeom), 3, plateOrie%alpha, plateOrie%beta, &
                     axe, ang)
 !
 ! ---   PASSAGE DU REPERE DE REFERENCE AU REPERE DE L'ELEMENT :

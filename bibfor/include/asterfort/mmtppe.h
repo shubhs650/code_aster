@@ -16,14 +16,15 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 !
 interface
     subroutine mmtppe(ndim       , nne      , nnm   , nnl     , nbdm  ,&
                       i_reso_geom, l_large_slip, &
-                      jeusup   , &
+                      jeusup     , &
                       tau1       , tau2     ,&
                       ffe        , ffm      , dffm    , ddffm , ffl   ,&
-                      jeu      , djeut   ,&
+                      jeu        , djeut   ,&
                       dlagrc     , dlagrf   , &
                       norm       , mprojn   , mprojt  ,&
                       mprt1n     , mprt2n   , mprnt1  , mprnt2,&
@@ -37,7 +38,8 @@ interface
         aster_logical, intent(in) :: l_large_slip
         real(kind=8), intent(in) :: jeusup
         real(kind=8), intent(in) :: tau1(3), tau2(3)
-        real(kind=8), intent(in) :: ffe(9), ffm(9), dffm(2,9), ddffm(3, 9), ffl(9)
+        real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9)
+        real(kind=8), intent(in) :: dffm(2,MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
         real(kind=8), intent(out) :: jeu
         real(kind=8), intent(out) :: djeut(3), dlagrc, dlagrf(2)
         real(kind=8), intent(out) :: norm(3)

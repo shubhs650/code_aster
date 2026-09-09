@@ -17,13 +17,16 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine nmfihm(ndim, nddl, nno1, nno2, npg,&
-                      lgpg, ipg, wref, vff1, vff2,&
-                      idf2, dffr2, mate, option, geom,&
-                      ddlm, ddld, iu, ip, sigm,&
-                      sigp, vect, matr, vim, vip,&
-                      tm, tp, carcri, compor, typmod,&
+    subroutine nmfihm(BEHInteg, &
+                      ndim, nddl, nno1, nno2, npg, &
+                      lgpg, ipg, wref, vff1, vff2, &
+                      idf2, dffr2, option, geom, &
+                      ddlm, ddld, iu, ip, sigm, &
+                      sigp, vect, matr, vim, vip, &
+                      tm, tp, carcri, compor, typmod, &
                       lVect, lMatr, lSigm, codret)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
         integer(kind=8) :: lgpg
         integer(kind=8) :: npg
         integer(kind=8) :: nno2
@@ -36,7 +39,6 @@ interface
         real(kind=8) :: vff2(nno2, npg)
         integer(kind=8) :: idf2
         real(kind=8) :: dffr2(ndim-1, nno2, npg)
-        integer(kind=8) :: mate
         real(kind=8) :: geom(ndim, nno2)
         real(kind=8) :: ddlm(nddl)
         real(kind=8) :: ddld(nddl)

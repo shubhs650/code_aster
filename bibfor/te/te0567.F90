@@ -33,6 +33,7 @@ subroutine te0567(nomopt, nomte)
 #include "asterfort/lclaze.h"
 #include "asterfort/mmmtdb.h"
 #include "asterfort/lcmatr.h"
+#include "MeshTypes_type.h"
 !
     character(len=16), intent(in) :: nomopt, nomte
 !
@@ -54,11 +55,11 @@ subroutine te0567(nomopt, nomte)
     aster_logical :: l_norm_smooth
     aster_logical :: l_axis, debug, l_upda_jaco
     character(len=8) :: elem_slav_code, elem_mast_code
-    real(kind=8) :: elem_mast_coor(27), elem_slav_coor(27)
-    real(kind=8) :: elem_mast_init(27), elem_slav_init(27)
-    real(kind=8) :: elem_mast_coop(27), elem_slav_coop(27)
-    real(kind=8) :: poin_inte_sl(16)
-    real(kind=8) :: poin_inte_ma(16)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D), elem_slav_coor(3, MT_NNOMAX2D)
+    real(kind=8) :: elem_mast_init(3, MT_NNOMAX2D), elem_slav_init(3, MT_NNOMAX2D)
+    real(kind=8) :: elem_mast_coop(3, MT_NNOMAX2D), elem_slav_coop(3, MT_NNOMAX2D)
+    real(kind=8) :: poin_inte_sl(2, 8)
+    real(kind=8) :: poin_inte_ma(2, 8)
     integer(kind=8) :: nb_poin_inte
     character(len=8) :: elga_fami_slav, elga_fami_mast
     real(kind=8) :: mmat(55, 55)
@@ -70,10 +71,10 @@ subroutine te0567(nomopt, nomte)
 ! - Initializations
 !
     mmat(1:55, 1:55) = 0.d0
-    elem_mast_coor(1:27) = 0.d0
-    elem_mast_coop(1:27) = 0.d0
-    elem_slav_coor(1:27) = 0.d0
-    elem_slav_coop(1:27) = 0.d0
+    elem_mast_coor = 0.d0
+    elem_mast_coop = 0.d0
+    elem_slav_coor = 0.d0
+    elem_slav_coop = 0.d0
     debug = ASTER_FALSE
     ASSERT(nomopt .eq. 'RIGI_CONT')
 !

@@ -15,13 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
 subroutine ejcine_hm(ndim, axi, nno1, nno2, vff1, &
-                     vff2, wref, dffr2, geom, ang, &
+                     vff2, wref, dffr2, geom, anglNautPg, &
                      wg, b)
 !
-!
     implicit none
+    !
 #include "asterf_types.h"
 #include "asterfort/dfdm1d.h"
 #include "asterfort/matrot.h"
@@ -31,7 +32,7 @@ subroutine ejcine_hm(ndim, axi, nno1, nno2, vff1, &
 #include "blas/ddot.h"
     aster_logical :: axi
     integer(kind=8) :: ndim, nno1, nno2
-    real(kind=8) :: wref, vff1(nno1), vff2(nno2), geom(ndim, nno2), ang(*)
+    real(kind=8) :: wref, vff1(nno1), vff2(nno2), geom(ndim, nno2), anglNautPg(*)
     real(kind=8) :: dffr2(ndim-1, nno2), wg, b(3, 3, 2*nno1)
 !-----------------------------------------------------------------------
 !  MATRICE CINEMATIQUE POUR LES ELEMENTS D'INTERFACE (EN UN PG DONNE)
@@ -95,7 +96,7 @@ subroutine ejcine_hm(ndim, axi, nno1, nno2, vff1, &
         b_n = to_blas_int(nno2)
         b_incx = to_blas_int(nang)
         b_incy = to_blas_int(1)
-        angloc(i) = ddot(b_n, ang(i), b_incx, vff2, b_incy)
+        angloc(i) = ddot(b_n, anglNautPg(i), b_incx, vff2, b_incy)
     end do
 !
 !    CALCUL DE LA MATRICE DE ROTATION GLOBAL -> LOCAL

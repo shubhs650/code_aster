@@ -53,6 +53,7 @@ subroutine nmleeb(sderro, loopName, loopState)
 !               'EVEN' - EVENEMENT PENDANT LA BOUCLE
 !               'ERRE' - ON STOPPE LA BOUCLE : ERREUR TRAITEE
 !               'STOP' - ON STOPPE LA BOUCLE : ERREUR NON TRAITEE
+!               'ARCH' - ON ARCHIVE LE DERNIER PAS DE TEMPS ET ON ARRETE LE CALCUL
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -100,6 +101,8 @@ subroutine nmleeb(sderro, loopName, loopState)
         loopState = 'STOP'
     else if (convState .eq. LOOP_STATE_CTCD) then
         loopState = 'CTCD'
+    else if (convState .eq. LOOP_STATE_ARCH) then
+        loopState = 'ARCH'
     else
         ASSERT(ASTER_FALSE)
     end if

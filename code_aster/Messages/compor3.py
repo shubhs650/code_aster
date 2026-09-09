@@ -203,7 +203,7 @@ Vous ne pouvez pas poursuivre avec un calcul sans RAG.
     52: _(
         """
 Loi de comportement BETON_RAG :
-Vous voulez activer le phénomène de RAG, il faut donner un champ de séchage ET de température .
+Vous voulez activer le phénomène de RAG, il faut donner un champ de séchage ET de température.
  """
     ),
     53: _(
@@ -217,6 +217,12 @@ Le coefficient %(k1)s vaut %(r1)f. Il doit être dans l'intervalle [%(r2)f , %(r
 Loi de comportement BETON_RAG :
 Le(s) paramètre(s) %(k1)s est/sont hors du domaine de validité.
  """
+    ),
+    55: _(
+        """
+Loi de comportement BETON_RAG :
+Vous ne pouvez pas activer ou désactiver la non-linéarité visqueuse en cours de calcul.
+Soit le paramètre FLUA_KAPPAI a été précisé alors qu'il ne devait pas l'être, soit il n'a pas été précisé alors qu'il devait l'être."""
     ),
     83: _(
         """

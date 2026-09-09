@@ -15,13 +15,12 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vdxrep(nomte, epais, xi)
-        character(len=16) :: nomte
-        real(kind=8) :: epais
-        real(kind=8) :: xi(3, 9)
+    subroutine vdxrep(plateOrie, nomte, epais, nodeCoor)
+        use plate_type
+        type(plateOrie_Para), intent(inout) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        real(kind=8), intent(in) :: epais, nodeCoor(3, 9)
     end subroutine vdxrep
 end interface

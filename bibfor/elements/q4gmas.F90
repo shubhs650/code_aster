@@ -15,9 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine q4gmas(xyzl, option, pgl, mas, ener)
+!
+subroutine q4gmas(plateCara, &
+                  xyzl, option, pgl, &
+                  mas, ener)
+!
+    use plate_type
     implicit none
+!
 #include "jeveux.h"
 #include "asterfort/dialum.h"
 #include "asterfort/dxqloc.h"
@@ -34,17 +39,19 @@ subroutine q4gmas(xyzl, option, pgl, mas, ener)
 #include "asterfort/utmess.h"
 #include "asterfort/utpslg.h"
 #include "asterfort/utpvgl.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
     real(kind=8) :: xyzl(3, *), pgl(*), mas(*), ener(*)
     character(len=16) :: option
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     MATRICE MASSE DE L'ELEMENT DE PLAQUE Q4GAMMA (W LINEAIRE)
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     ------------------------------------------------------------------
-!     IN  XYZL   : COORDONNEES LOCALES DES QUATRE NOEUDS
-!     IN  OPTION : OPTION RIGI_MECA OU EPOT_ELEM
-!     IN  PGL    : MATRICE DE PASSAGE GLOBAL/LOCAL
-!     OUT MAS    : MATRICE DE RIGIDITE
-!     OUT ENER   : TERMES POUR ENER_CIN (ECIN_ELEM)
-!     ------------------------------------------------------------------
-    integer(kind=8) :: i, j, k, int, jcoqu, jdepg, ii(8), jj(8), ll(16)
+    integer(kind=8) :: i, j, k, int, jdepg, ii(8), jj(8), ll(16)
     integer(kind=8) :: ndim, nno, nnos, npg, ipoids, icoopg, ivf, idfdx, idfd2, jgano
     integer(kind=8) :: jvitg, iret
     real(kind=8) :: flex(12, 12), bc(2, 12)
@@ -53,11 +60,11 @@ subroutine q4gmas(xyzl, option, pgl, mas, ener)
     real(kind=8) :: rho, epais, roe, ctor, excent, detj, wgt, zero, coefm
     real(kind=8) :: caraq4(25), jacob(5), qsi, eta
     character(len=3) :: stopz
-!     ------------------------------------------------------------------
     data(ii(k), k=1, 8)/1, 10, 19, 28, 37, 46, 55, 64/
     data(jj(k), k=1, 8)/5, 14, 23, 32, 33, 42, 51, 60/
     data(ll(k), k=1, 16)/3, 7, 12, 16, 17, 21, 26, 30, 35, 39, 44, 48, 49, 53, 58, 62/
-!     ------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami='RIGI', ndim=ndim, nno=nno, nnos=nnos, &
                      npg=npg, jpoids=ipoids, jcoopg=icoopg, jvf=ivf, jdfde=idfdx, &
@@ -65,17 +72,12 @@ subroutine q4gmas(xyzl, option, pgl, mas, ener)
 !
     zero = 0.0d0
 !
-    call dxroep(rho, epais)
+    call dxroep(plateCara, rho, epais)
     roe = rho*epais
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    ctor = zr(jcoqu+3)
-    excent = zr(jcoqu+4)
-!
-! --- ON NE CALCULE PAS ENCORE LA MATRICE DE MASSE D'UN ELEMENT
-! --- DE PLAQUE EXCENTRE, ON S'ARRETE EN ERREUR FATALE :
-!     ------------------------------------------------
-!
+    ctor = plateCara%coefRigiDRZ
+    excent = plateCara%offset
+
 !     ----- CALCUL DES GRANDEURS GEOMETRIQUES SUR LE QUADRANGLE --------
     call gquad4(xyzl, caraq4)
 !
@@ -121,18 +123,16 @@ subroutine q4gmas(xyzl, option, pgl, mas, ener)
             memb(i, j) = coefm*amemb((j-1)*8+i)
         end do
     end do
-!
+
     if ((option .eq. 'MASS_MECA') .or. (option .eq. 'M_GAMMA')) then
         call dxqloc(flex, memb, mefl, ctor, mas)
-!
-    else if (option .eq. 'MASS_MECA_DIAG' .or.&
- &         option .eq. 'MASS_MECA_EXPLI') then
+    else if (option .eq. 'MASS_MECA_DIAG' .or. &
+             option .eq. 'MASS_MECA_EXPLI') then
         call dxqloc(flex, memb, mefl, ctor, masloc)
         wgt = caraq4(21)*roe
         call utpslg(4, 6, pgl, masloc, masglo)
-        call dialum(4, 6, 24, wgt, masglo, &
-                    mas)
-!
+        call dialum(4, 6, 24, wgt, masglo, mas)
+
     else if (option .eq. 'ECIN_ELEM') then
         stopz = 'ONO'
 ! IRET NE PEUT VALOIR QUE 0 (TOUT VA BIEN) OU 2 (CHAMP NON FOURNI)

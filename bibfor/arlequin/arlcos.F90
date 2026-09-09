@@ -24,6 +24,7 @@ subroutine arlcos(numa, connex, loncum, coord, dime, &
 !
 #include "jeveux.h"
 #include "asterfort/assert.h"
+#include "MeshTypes_type.h"
 !
     integer(kind=8) :: numa, connex(*), loncum(*)
     integer(kind=8) :: dime
@@ -55,7 +56,7 @@ subroutine arlcos(numa, connex, loncum, coord, dime, &
     jdec = loncum(numa)
     nbno = loncum(numa+1)-jdec
 !
-    if ((nbno < 1) .or. (nbno > 27)) then
+    if ((nbno < 1) .or. (nbno > MT_NNOMAX)) then
         ASSERT(.false.)
     end if
 !

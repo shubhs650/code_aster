@@ -19,6 +19,7 @@
 
 import glob
 import os
+import random
 
 import numpy as NP
 

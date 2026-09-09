@@ -115,7 +115,7 @@ def Mazars_Unil(DMATER, args):
         AMOR_HYST      =
     """
     #
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
     #
     # Obligatoire : Règlement de codification
     Regle = MATER["CODIFICATION"]
@@ -250,7 +250,7 @@ def Beton_GLRC(DMATER, args):
 
     """
     #
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
     #
     # Obligatoire : Règlement de codification
     Regle = MATER["CODIFICATION"]
@@ -316,7 +316,7 @@ def Acier_Cine_Line(DMATER, args):
         AMOR_HYST      =
     """
     #
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
     # Obligatoire E
     E = MATER["E"]
     # Obligatoire SY
@@ -420,7 +420,7 @@ def Endo_Fiss_Exp(DMATER, args):
       REST_RIGI_FC   = Restauration de rigidité pour eps=fc/E (0=sans)
     """
     #
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
     # Lecture et interprétation des paramètres utilisateurs
     E = float(MATER["E"])
     NU = float(MATER["NU"])
@@ -503,7 +503,7 @@ def Endo_Loca_Exp(DMATER, args):
       REST_RIGI_FC   = Restauration de rigidité pour eps=fc/E (0=sans)
     """
 
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
 
     # Lecture et interprétation des paramètres utilisateurs
     E = float(MATER["E"])
@@ -570,7 +570,7 @@ def Endo_Loca_TC(DMATER, args):
       TAU_REGU_VISC  = Temps caractéristique de la régularisation visqueuse
     """
 
-    MATER = DMATER.cree_dict_valeurs(DMATER.mc_liste)
+    MATER = DMATER
 
     # Lecture et interprétation des paramètres utilisateurs
     fc = float(MATER["FC"])

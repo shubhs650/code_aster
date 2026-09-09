@@ -40,24 +40,17 @@ MODI_REPERE / CHAMP_GD
     ),
     4: _(
         """
-MODI_REPERE / CHAMP_GD
-    Le CARA_ELEM <%(k1)s> doit avoir des caractéristiques de coques, du type :
-        %(k2)s
+Le CARA_ELEM doit avoir des caractéristiques de coque.
 """
     ),
     5: _(
         """
-MODI_REPERE / CHAMP_GD
-    Les maillages doivent être identique :
-        Le CHAMP     est bâti sur le maillage %(k1)s.
-        Le CARA_ELEM est bâti sur le maillage %(k2)s.
+Les maillages du champ et du CARA_ELEM doivent être identiques.
 """
     ),
     6: _(
         """
-MODI_REPERE / CHAMP_GD
-    Le CHAMP %(k1)s et le CARA_ELEM %(k2)s doivent être bâti sur le même modèle.
-        Le CARA_ELEM est bâti sur le modèle %(k3)s.
+Les modèles du champ et du CARA_ELEM doivent être identiques.
 """
     ),
     7: _(

@@ -17,15 +17,13 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine thmEvalConductivity(ds_thm  , &
-                                   angl_naut, ndim  , j_mater,&
-                                   satur    , phi   , &
-                                   lambs    , dlambs, lambp , dlambp,&
-                                   tlambt   , tlamct, tdlamt)
+    subroutine thmEvalConductivity(ds_thm, &
+                                   ndim, &
+                                   satur, phi, &
+                                   lambs, dlambs, lambp, dlambp, &
+                                   tlambt, tlamct, tdlamt)
         use THM_type
         type(THM_DS), intent(in) :: ds_thm
-        integer(kind=8), intent(in) :: j_mater
-        real(kind=8), intent(in) :: angl_naut(3)
         integer(kind=8), intent(in) :: ndim
         real(kind=8), intent(in) :: satur, phi
         real(kind=8), intent(out) :: lambs, dlambs

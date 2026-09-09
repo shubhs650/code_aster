@@ -16,18 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
+subroutine comp_meca_read(lInitialState, prepMapCompor, model)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
+#include "asterc/lccree.h"
+#include "asterc/lcdiscard.h"
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/comp_meca_deflc.h"
 #include "asterfort/comp_meca_incr.h"
 #include "asterfort/comp_meca_l.h"
 #include "asterfort/comp_meca_rkit.h"
+#include "asterfort/comp_read_mesh.h"
 #include "asterfort/compGetMecaPart.h"
 #include "asterfort/compGetRelation.h"
 #include "asterfort/dismoi.h"
@@ -36,9 +38,9 @@ subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
 #include "asterfort/getvtx.h"
 #include "asterfort/jeveuo.h"
 !
-    aster_logical, intent(in) :: l_etat_init
+    aster_logical, intent(in) :: lInitialState
     type(BehaviourPrep_MapCompor), intent(inout) :: prepMapCompor
-    character(len=8), intent(in), optional :: model
+    character(len=8), intent(in) :: model
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -48,19 +50,23 @@ subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  l_etat_init      : .true. if initial state is defined
+! In  lInitialState    : .true. if initial state is defined
 ! IO  prepMapCompor    : datastructure to construct COMPOR map
 ! In  model            : model
 !
 ! --------------------------------------------------------------------------------------------------
 !
     character(len=16), parameter:: factorKeyword = 'COMPORTEMENT'
+    character(len=24), parameter :: cellAffeJv = '&&CARCREAD.LIST'
+    aster_logical :: lAllCellAffe
+    integer(kind=8) :: nbCellAffe
     character(len=8) :: mesh
     integer(kind=8) :: iFactorKeyword, nbFactorKeyword, iret
-    character(len=16) :: defo_comp, rela_comp, type_cpla, mult_comp, type_comp, meca_comp
-    character(len=16) :: post_iter, defo_ldc, rigi_geom, regu_visc, post_incr
-    character(len=16) :: kit_comp(4), answer
-    character(len=19) :: modelLigrel
+    character(len=16) :: defoComp, relaComp, typeCpla, multComp, typeComp, relaMeca
+    character(len=16) :: postIter, defoLdc, rigiGeom, reguVisc, postIncr
+    character(len=16) :: kitComp(4), answer
+    character(len=16) :: relaCompPY
+    character(len=19) :: modelFED
     aster_logical :: l_cristal, l_kit, lTotalStrain
     integer(kind=8), pointer :: modelCell(:) => null()
 !
@@ -71,108 +77,118 @@ subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
     lTotalStrain = ASTER_FALSE
 
 ! - Pointer to list of elements in model
-    if (present(model)) then
-        call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelLigrel)
-        call jeveuo(modelLigrel//'.TYFE', 'L', vi=modelCell)
-        call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
-    end if
+    call dismoi('NOM_LIGREL', model, 'MODELE', repk=modelFED)
+    call jeveuo(modelFED//'.TYFE', 'L', vi=modelCell)
+    call dismoi('NOM_MAILLA', model, 'MODELE', repk=mesh)
 
 ! - Read informations
     do iFactorKeyword = 1, nbFactorKeyword
 ! ----- Get RELATION from command file
-        rela_comp = 'VIDE'
-        call compGetRelation(factorKeyword, iFactorKeyword, rela_comp)
+        relaComp = 'VIDE'
+        call compGetRelation(factorKeyword, iFactorKeyword, relaComp)
 
 ! ----- Detection of specific cases
-        call comp_meca_l(rela_comp, 'KIT', l_kit)
-        call comp_meca_l(rela_comp, 'CRISTAL', l_cristal)
+        call comp_meca_l(relaComp, 'KIT', l_kit)
+        call comp_meca_l(relaComp, 'CRISTAL', l_cristal)
 
 ! ----- Get DEFORMATION from command file
-        defo_comp = 'VIDE'
-        call getvtx(factorKeyword, 'DEFORMATION', iocc=iFactorKeyword, scal=defo_comp)
+        defoComp = 'VIDE'
+        call getvtx(factorKeyword, 'DEFORMATION', iocc=iFactorKeyword, scal=defoComp)
 
 ! ----- Get RIGI_GEOM from command file
-        rigi_geom = ' '
+        rigiGeom = ' '
         call getvtx(factorKeyword, 'RIGI_GEOM', iocc=iFactorKeyword, &
-                    scal=rigi_geom, nbret=iret)
+                    scal=rigiGeom, nbret=iret)
         if (iret .eq. 0) then
-            rigi_geom = 'VIDE'
+            rigiGeom = 'VIDE'
         end if
 
 ! ----- Post-treatment at each Newton iteration
-        post_iter = 'VIDE'
+        postIter = 'VIDE'
         call getvtx(factorKeyword, 'POST_ITER', iocc=iFactorKeyword, &
-                    scal=post_iter, nbret=iret)
+                    scal=postIter, nbret=iret)
         if (iret .eq. 0) then
-            post_iter = 'VIDE'
+            postIter = 'VIDE'
         end if
 
 ! ----- Viscuous regularization
-        regu_visc = 'VIDE'
+        reguVisc = 'VIDE'
         call getvtx(factorKeyword, 'REGU_VISC', iocc=iFactorKeyword, scal=answer, nbret=iret)
         if (iret .eq. 1) then
             if (answer .eq. 'OUI') then
-                regu_visc = 'REGU_VISC_ELAS'
+                reguVisc = 'REGU_VISC_ELAS'
             elseif (answer .eq. 'NON') then
-                regu_visc = 'VIDE'
+                reguVisc = 'VIDE'
             else
                 ASSERT(ASTER_FALSE)
             end if
         end if
 
 ! ----- Post-treatment at each time step
-        post_incr = "VIDE"
+        postIncr = "VIDE"
         call getvtx(factorKeyword, 'POST_INCR', iocc=iFactorKeyword, &
-                    scal=post_incr, nbret=iret)
+                    scal=postIncr, nbret=iret)
         if (iret .eq. 0) then
-            post_incr = 'VIDE'
+            postIncr = 'VIDE'
         end if
 
 ! ----- For KIT
-        kit_comp = 'VIDE'
+        kitComp = 'VIDE'
         if (l_kit) then
-            call comp_meca_rkit(factorKeyword, iFactorKeyword, rela_comp, kit_comp, l_etat_init)
+            call comp_meca_rkit(factorKeyword, iFactorKeyword, relaComp, kitComp)
         end if
 
 ! ----- Get mechanical part of behaviour
-        meca_comp = 'VIDE'
-        call compGetMecaPart(rela_comp, kit_comp, meca_comp)
+        relaMeca = 'VIDE'
+        call compGetMecaPart(relaComp, kitComp, relaMeca)
+
+! ----- Coding comportment (Python)
+        call lccree(1, relaComp, relaCompPY)
 
 ! ----- Get multi-material *CRISTAL
-        mult_comp = 'VIDE'
+        multComp = 'VIDE'
         if (l_cristal) then
-            call getvid(factorKeyword, 'COMPOR', iocc=iFactorKeyword, scal=mult_comp)
+            call getvid(factorKeyword, 'COMPOR', iocc=iFactorKeyword, scal=multComp)
         end if
 
+! ----- Get affectation
+        call comp_read_mesh(mesh, factorKeyword, iFactorKeyword, &
+                            cellAffeJv, lAllCellAffe, nbCellAffe)
+
 ! ----- Get parameters for external programs (MFRONT/UMAT)
-        type_cpla = 'VIDE'
-        call getExternalBehaviourPara(mesh, modelCell, rela_comp, defo_comp, kit_comp, &
-                                      prepMapCompor%prepExte(iFactorKeyword), &
+        typeCpla = 'VIDE'
+        call getExternalBehaviourPara(mesh, modelCell, &
+                                      cellAffeJv, lAllCellAffe, nbCellAffe, &
+                                      relaComp, relaCompPY, relaMeca, defoComp, &
                                       factorKeyword, iFactorKeyword, &
-                                      type_cpla_out_=type_cpla)
+                                      prepMapCompor%prepExte(iFactorKeyword))
+        typeCpla = prepMapCompor%prepExte(iFactorKeyword)%cplaMGIS
 
 ! ----- Select type of behaviour (incremental or total)
-        type_comp = 'VIDE'
-        call comp_meca_incr(rela_comp, defo_comp, type_comp, l_etat_init)
+        typeComp = 'VIDE'
+        call comp_meca_incr(lInitialState, relaComp, defoComp, typeComp)
 
 ! ----- Select type of strain (mechanical or total) from catalog
-        defo_ldc = 'VIDE'
-        call comp_meca_deflc(rela_comp, defo_comp, defo_ldc)
-        lTotalStrain = defo_ldc .eq. 'TOTALE'
+        defoLdc = 'VIDE'
+        call comp_meca_deflc(relaComp, defoComp, defoLdc)
+        lTotalStrain = defoLdc .eq. 'TOTALE'
+
+! ----- Discard
+        call lcdiscard(relaCompPY)
 
 ! ----- Save parameters
-        prepMapCompor%prepPara(iFactorKeyword)%rela_comp = rela_comp
-        prepMapCompor%prepPara(iFactorKeyword)%meca_comp = meca_comp
-        prepMapCompor%prepPara(iFactorKeyword)%defo_comp = defo_comp
-        prepMapCompor%prepPara(iFactorKeyword)%type_comp = type_comp
-        prepMapCompor%prepPara(iFactorKeyword)%type_cpla = type_cpla
-        prepMapCompor%prepPara(iFactorKeyword)%kit_comp = kit_comp
-        prepMapCompor%prepPara(iFactorKeyword)%mult_comp = mult_comp
-        prepMapCompor%prepPara(iFactorKeyword)%post_iter = post_iter
-        prepMapCompor%prepPara(iFactorKeyword)%defo_ldc = defo_ldc
-        prepMapCompor%prepPara(iFactorKeyword)%rigi_geom = rigi_geom
-        prepMapCompor%prepPara(iFactorKeyword)%regu_visc = regu_visc
-        prepMapCompor%prepPara(iFactorKeyword)%post_incr = post_incr
+        prepMapCompor%prepPara(iFactorKeyword)%rela_Comp = relaComp
+        prepMapCompor%prepPara(iFactorKeyword)%meca_comp = relaMeca
+        prepMapCompor%prepPara(iFactorKeyword)%defo_Comp = defoComp
+        prepMapCompor%prepPara(iFactorKeyword)%type_comp = typeComp
+        prepMapCompor%prepPara(iFactorKeyword)%type_cpla = typeCpla
+        prepMapCompor%prepPara(iFactorKeyword)%kit_Comp = kitComp
+        prepMapCompor%prepPara(iFactorKeyword)%mult_comp = multComp
+        prepMapCompor%prepPara(iFactorKeyword)%post_iter = postIter
+        prepMapCompor%prepPara(iFactorKeyword)%defo_ldc = defoLdc
+        prepMapCompor%prepPara(iFactorKeyword)%rigi_geom = rigiGeom
+        prepMapCompor%prepPara(iFactorKeyword)%regu_visc = reguVisc
+        prepMapCompor%prepPara(iFactorKeyword)%post_incr = postIncr
         prepMapCompor%prepPara(iFactorKeyword)%lTotalStrain = lTotalStrain
     end do
 
@@ -180,12 +196,12 @@ subroutine comp_meca_read(l_etat_init, prepMapCompor, model)
         WRITE (6, *) "Données lues: ", nbFactorKeyword, " occurrences."
         do iFactorKeyword = 1, nbFactorKeyword
             WRITE (6, *) "- Occurrence : ", iFactorKeyword
-            WRITE (6, *) "--- rela_comp : ", prepMapCompor%prepPara(iFactorKeyword)%rela_comp
-            WRITE (6, *) "--- meca_comp : ", prepMapCompor%prepPara(iFactorKeyword)%meca_comp
-            WRITE (6, *) "--- defo_comp : ", prepMapCompor%prepPara(iFactorKeyword)%defo_comp
+            WRITE (6, *) "--- relaComp : ", prepMapCompor%prepPara(iFactorKeyword)%rela_Comp
+            WRITE (6, *) "--- relaMeca : ", prepMapCompor%prepPara(iFactorKeyword)%meca_comp
+            WRITE (6, *) "--- defoComp : ", prepMapCompor%prepPara(iFactorKeyword)%defo_Comp
             WRITE (6, *) "--- type_comp : ", prepMapCompor%prepPara(iFactorKeyword)%type_comp
             WRITE (6, *) "--- type_cpla : ", prepMapCompor%prepPara(iFactorKeyword)%type_cpla
-            WRITE (6, *) "--- kit_comp  : ", prepMapCompor%prepPara(iFactorKeyword)%kit_comp
+            WRITE (6, *) "--- kitComp  : ", prepMapCompor%prepPara(iFactorKeyword)%kit_Comp
             WRITE (6, *) "--- mult_comp : ", prepMapCompor%prepPara(iFactorKeyword)%mult_comp
             WRITE (6, *) "--- post_iter : ", prepMapCompor%prepPara(iFactorKeyword)%post_iter
             WRITE (6, *) "--- defo_ldc  : ", prepMapCompor%prepPara(iFactorKeyword)%defo_ldc

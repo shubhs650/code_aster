@@ -18,12 +18,16 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine vdesga(kwgt, nb1, nb2, &
-                      vectt, disp, btild, &
-                      hasTemp_, alpha_, tempKpg_, siefKpg_, &
-                      epsiKpg_)
-        integer(kind=8), intent(in) :: kwgt, nb1, nb2
-        real(kind=8), intent(in) :: vectt(3, 3), disp(42), btild(5, 42)
+    subroutine vdesga(plateCara, plateOrie, &
+                      kwgt, nb1, &
+                      disp, btild, vectBaseKpg, &
+                      hasTemp_, alpha_, tempKpg_, &
+                      siefKpg_, epsiKpg_)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: kwgt, nb1
+        real(kind=8), intent(in) :: disp(42), btild(5, 42), vectBaseKpg(3, 3)
         aster_logical, optional, intent(in) :: hasTemp_
         real(kind=8), optional, intent(in) :: alpha_, tempKpg_
         real(kind=8), optional, intent(out) :: siefKpg_(6, *), epsiKpg_(6, *)

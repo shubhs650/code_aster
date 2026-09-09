@@ -821,6 +821,15 @@ Subclasses of :py:class:`~code_aster.Objects.DataStructure`
 
 
 ********************************************************************************
+:py:class:`~code_aster.Objects.GeneralizedLoad` object
+********************************************************************************
+
+.. autoclass:: code_aster.Objects.GeneralizedLoad
+   :show-inheritance:
+   :members:
+
+
+********************************************************************************
 :py:class:`~code_aster.Objects.GeneralizedModeResult` object
 ********************************************************************************
 

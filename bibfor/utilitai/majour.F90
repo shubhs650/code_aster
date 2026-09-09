@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine majour(neq, lgrot, lendo, sdnume, chaini, &
+subroutine majour(neq, lgrot, sdnume, chaini, &
                   chadel, coef, chamaj, ordre)
 !
 !
@@ -29,7 +29,7 @@ subroutine majour(neq, lgrot, lendo, sdnume, chaini, &
 #include "asterfort/jeveuo.h"
 #include "asterfort/nmgrot.h"
     character(len=19) :: sdnume
-    aster_logical :: lgrot, lendo
+    aster_logical :: lgrot
     integer(kind=8) :: neq, ordre
     real(kind=8) :: chaini(*), chadel(*), chamaj(*), coef
 !
@@ -63,13 +63,10 @@ subroutine majour(neq, lgrot, lendo, sdnume, chaini, &
 !
 !
 !
-    integer(kind=8) :: iran(3), i, icomp, endo
+    integer(kind=8) :: iran(3), i, icomp
     real(kind=8) :: theta(3), deldet(3)
     integer(kind=8) :: ptdo, indic1, indic2
-    real(kind=8) :: stok
-    real(kind=8) :: zero
     integer(kind=8), pointer :: ndro(:) => null()
-    parameter(zero=0.0d+0)
 !
 ! ----------------------------------------------------------------------
 !
@@ -83,51 +80,7 @@ subroutine majour(neq, lgrot, lendo, sdnume, chaini, &
         call jeveuo(sdnume//'.NDRO', 'L', vi=ndro)
     end if
 !
-    if (lendo) then
-        call jeveuo(sdnume(1:19)//'.ENDO', 'E', endo)
-    end if
-!
-    if (.not. lgrot .and. lendo) then
-        do i = 1, neq
-            stok = chaini(i)
-            chamaj(i) = chaini(i)+coef*chadel(i)
-            if (zi(endo+i-1) .ne. 0) then
-!
-!           ON IMPOSE L'ACCROISSEMENT DE L'ENDO
-!
-                if (ordre .eq. 0) then
-                    if (chamaj(i) .le. zero) then
-                        indic1 = indic1+1
-                        chamaj(i) = 0.d0
-                        chadel(i) = -stok/coef
-                        zi(endo+i-1) = 2
-                    else
-                        zi(endo+i-1) = 1
-                        ptdo = ptdo+1
-                    end if
-                end if
-!
-!           ON IMPOSE L'ENDO <= 1
-!
-                if (ordre .eq. 1) then
-                    if (chamaj(i) .ge. 1.d0) then
-                        indic2 = indic2+1
-                        chamaj(i) = 1.d0
-                        chadel(i) = (1.d0-stok)/coef
-                    end if
-                end if
-!
-            end if
-!
-        end do
-!
-!        IF (ORDRE.EQ.0) THEN
-!          WRITE(6,*) 'NB_NO_ENDO=', PTDO
-!          WRITE(6,*) 'INDIC1=', INDIC1
-!          WRITE(6,*) 'INDIC2=', INDIC2
-!        ENDIF
-!
-    else if (.not. lgrot) then
+    if (.not. lgrot) then
         do i = 1, neq
             chamaj(i) = chaini(i)+coef*chadel(i)
         end do

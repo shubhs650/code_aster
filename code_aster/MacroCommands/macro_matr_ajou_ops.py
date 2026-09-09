@@ -160,7 +160,7 @@ def macro_matr_ajou_ops(
     #  commande CALC_MATR_AJOU, calcul de la masse ajoutee
 
     if MATR_MASS_AJOU is not None:
-        solveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+        solveur = SOLVEUR[0]
         mostcles = {}
         if NUME_DDL_GENE is not None:
             mostcles["NUME_DDL_GENE"] = NUME_DDL_GENE
@@ -234,7 +234,7 @@ def macro_matr_ajou_ops(
     #  ---------------------------------------------------------------
     #  calcul amortissement proprement dit
     if MATR_AMOR_AJOU is not None:
-        solveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+        solveur = SOLVEUR[0]
         mostcles = {}
         if NUME_DDL_GENE is not None:
             mostcles["NUME_DDL_GENE"] = NUME_DDL_GENE
@@ -262,7 +262,7 @@ def macro_matr_ajou_ops(
     #  ---------------------------------------------------------------
     #  calcul de la rigidite ajoutee
     if MATR_RIGI_AJOU is not None:
-        solveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+        solveur = SOLVEUR[0]
         mostcles = {}
         if NUME_DDL_GENE is not None:
             mostcles["NUME_DDL_GENE"] = NUME_DDL_GENE
@@ -291,7 +291,7 @@ def macro_matr_ajou_ops(
     #  boucle sur le nombre de vecteurs a projeter, commande CALC_FORC_AJOU
     if FORC_AJOU is not None:
         for FORCAJ in FORC_AJOU:
-            solveur = SOLVEUR[0].cree_dict_valeurs(SOLVEUR[0].mc_liste)
+            solveur = SOLVEUR[0]
             mostcles = {}
             if NUME_DDL_GENE is not None:
                 mostcles["NUME_DDL_GENE"] = NUME_DDL_GENE

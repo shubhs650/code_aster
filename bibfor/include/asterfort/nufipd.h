@@ -16,16 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nufipd(ndim, nno1, nno2, npg, iw,&
-                      vff1, vff2, idff1, vu, vp,&
-                      geomi, typmod, option, mate, compor,&
-                      lgpg, carcri, instm, instp, ddlm,&
-                      ddld, angmas, sigm, vim, sigp,&
-                      vip, mini, vect,&
-                      matr, codret,&
+    subroutine nufipd(BEHInteg, &
+                      ndim, nno1, nno2, npg, iw, &
+                      vff1, vff2, idff1, vu, vp, &
+                      geomi, typmod, option, compor, &
+                      lgpg, carcri, instm, instp, ddlm, &
+                      ddld, sigm, vim, sigp, &
+                      vip, mini, vect, &
+                      matr, codret, &
                       lSigm, lVect, lMatr)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(inout) :: BEHInteg
         integer(kind=8) :: lgpg
         integer(kind=8) :: npg
         integer(kind=8) :: nno2
@@ -38,16 +42,14 @@ interface
         integer(kind=8) :: vu(3, 27)
         integer(kind=8) :: vp(27)
         real(kind=8) :: geomi(ndim, nno1)
-        character(len=8) :: typmod(*)
+        character(len=8) :: typmod(2)
         character(len=16) :: option
-        integer(kind=8) :: mate
-        character(len=16) :: compor(*)
-        real(kind=8) :: carcri(*)
+        character(len=16) :: compor(COMPOR_SIZE)
+        real(kind=8) :: carcri(CARCRI_SIZE)
         real(kind=8) :: instm
         real(kind=8) :: instp
         real(kind=8) :: ddlm(*)
         real(kind=8) :: ddld(*)
-        real(kind=8) :: angmas(*)
         real(kind=8) :: sigm(2*ndim+1, npg)
         real(kind=8) :: vim(lgpg, npg)
         real(kind=8) :: sigp(2*ndim+1, npg)

@@ -15,30 +15,38 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine mbxchg(option, fami, nddl, nno, ncomp, kpg, npg, iepsin, itemps, ipoids, igeom, &
-                  imate, ipesa, ivectu, jvSief, vff, dff, alpha, beta)
 !
+subroutine mbxchg(plateOrie, &
+                  option, fami, &
+                  nddl, nno, ncomp, kpg, npg, &
+                  jvEpsi, jvInst, ipoids, jvGeom, &
+                  jvMaterc, jvPesa, jvVect, jvSief, &
+                  vff, dff)
+!
+    use plate_type
+    use resi_refe_module, only: RESI_REFE
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8vide.h"
 #include "asterfort/assert.h"
 #include "asterfort/fointe.h"
 #include "asterfort/mbcine.h"
 #include "asterfort/mbrigi.h"
-#include "asterfort/r8inir.h"
 #include "asterfort/rcvalb.h"
-#include "asterfort/terefe.h"
 #include "asterfort/verift.h"
+#include "jeveux.h"
 !
-    character(len=16) :: option
-    character(len=4) :: fami
-    integer(kind=8) :: nddl, nno, ncomp, npg
-    integer(kind=8) :: kpg
-    integer(kind=8) :: ipoids, igeom, imate, ipesa, iepsin, itemps
-    integer(kind=8) :: ivectu, jvSief
-    real(kind=8) :: dff(2, nno), alpha, beta, vff(nno)
-! ----------------------------------------------------------------------
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=16), intent(in) :: option
+    character(len=8), intent(in) :: fami
+    integer(kind=8), intent(in) :: nddl, nno, ncomp, npg
+    integer(kind=8), intent(in) :: kpg
+    integer(kind=8), intent(in) :: ipoids, jvGeom, jvMaterc, jvPesa, jvEpsi, jvInst
+    integer(kind=8), intent(in) :: jvVect, jvSief
+    real(kind=8), intent(in) :: dff(2, nno), vff(nno)
+!
+! --------------------------------------------------------------------------------------------------
+!
 !    - FONCTION REALISEE:  CALCUL DES OPTIONS DE DE CHARGEMENT :
 !                                  - CHAR_MECA_EPSI_R
 !                                  - CHAR_MECA_EPSI_F
@@ -47,7 +55,9 @@ subroutine mbxchg(option, fami, nddl, nno, ncomp, kpg, npg, iepsin, itemps, ipoi
 !                                  - FORC_NODA
 !                                  - REFE_FORC_NODA
 !                          POUR LES MEMBRANES EN PETITES DEFORMATIONS
-! ----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  OPTION       OPTION DE CALCUL
 ! IN  FAMI         NOM DE LA FAMILLE DE POINTS DE GAUSS :
 !                  'RIGI','MASS',..
@@ -67,149 +77,116 @@ subroutine mbxchg(option, fami, nddl, nno, ncomp, kpg, npg, iepsin, itemps, ipoi
 ! IN  ICONTM       ADRESSE DANS ZR DU TABLEAU PCONMR
 ! IN  VFF          VALEURS DES FONCTIONS DE FORME
 ! IN  DFF          DERIVEE DES F. DE FORME
-! IN  ALPHA, BETA  ANGLES NAUTIQUES ORIENTANT LE COMPORTEMENT
-!                        ORTHOTROPE DE LA MEMBRANE (EN RADIAN)
 !
-! OUT ***          ***
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: nbPara = 4
+    character(len=8), parameter :: paraName(nbPara) = (/'X   ', 'Y   ', 'Z   ', &
+                                                        'INST'/)
+    real(kind=8) :: paraVale(nbPara)
+    integer(kind=8), parameter :: nbProp = 1
+    character(len=8), parameter :: propName(nbProp) = (/'RHO'/)
+    real(kind=8) :: propVale(nbProp)
+    integer(kind=8) :: propCode(nbProp)
     integer(kind=8) :: i, n, c, cc, ier
-    integer(kind=8) :: codres(2)
     real(kind=8) :: b(3, 3, 9), jac
-    real(kind=8) :: rig(3, 3), rho(1)
-    real(kind=8) :: epsthe, epsref, sgmref, sig(3)
-    character(len=8) :: nompar(4)
-    real(kind=8) :: valpar(4)
+    real(kind=8) :: matrRigi(3, 3), rho
+    real(kind=8) :: epsthe, sgmref, sig(3), alpha, beta
     real(kind=8) :: xgau, ygau, zgau, epsinif(3)
+    type(RESI_REFE):: refe
+!
+! --------------------------------------------------------------------------------------------------
+!
+    ASSERT(plateOrie%lUpdate)
+    alpha = plateOrie%alpha
+    beta = plateOrie%beta
 
-!
-! - CALCUL DE LA MATRICE "B" :
-!   DEPL NODAL --> DEFORMATIONS MEMBRANAIRES ET JACOBIEN
-!
-    call mbcine(nno, zr(igeom), dff, alpha, beta, &
+! - CALCUL DE LA MATRICE "B"
+    call mbcine(plateOrie, &
+                nno, zr(jvGeom), dff, &
                 b, jac)
-!
-! - BRANCHEMENT DES DIFFERENTES OPTIONS
-!
+
     if ((option .eq. 'FORC_NODA') .or. (option .eq. 'CHAR_MECA_TEMP_R') .or. &
         (option(1:15) .eq. 'CHAR_MECA_EPSI_')) then
-!
-! ---   FORC_NODA : IL SUFFIT DE RECOPIER SIGMA
-!
         if (option .eq. 'FORC_NODA') then
             do c = 1, ncomp
                 sig(c) = zr(jvSief+(kpg-1)*ncomp+c-1)
             end do
-!
-! ---   CHAR_MECA_EPSI_R : SIG = RIG*EPSIN
-!
+
         else if (option .eq. 'CHAR_MECA_EPSI_R') then
-!
-            call mbrigi(fami, kpg, imate, rig)
-!
-            call r8inir(3, 0.d0, sig, 1)
+            call mbrigi(fami, kpg, jvMaterc, matrRigi)
+            sig = 0.d0
             do c = 1, ncomp
                 do cc = 1, ncomp
-                    sig(c) = sig(c)+zr(iepsin+ncomp*(kpg-1)+cc-1)*rig(cc, c)
+                    sig(c) = sig(c)+zr(jvEpsi+ncomp*(kpg-1)+cc-1)*matrRigi(cc, c)
                 end do
             end do
-!
-        else if (option .eq. 'CHAR_MECA_EPSI_F') then
-!
-            call mbrigi(fami, kpg, imate, rig)
-!
-            call r8inir(3, 0.d0, sig, 1)
 
-            nompar(1) = 'X'
-            nompar(2) = 'Y'
-            nompar(3) = 'Z'
-            nompar(4) = 'INST'
-            valpar(4) = zr(itemps)
+        else if (option .eq. 'CHAR_MECA_EPSI_F') then
+            call mbrigi(fami, kpg, jvMaterc, matrRigi)
+            sig = 0.d0
+            paraVale(4) = zr(jvInst)
             xgau = 0.d0
             ygau = 0.d0
             zgau = 0.d0
-!
             do i = 1, nno
-                xgau = xgau+vff(i)*zr(igeom-1+1+3*(i-1))
-                ygau = ygau+vff(i)*zr(igeom-1+2+3*(i-1))
-                zgau = zgau+vff(i)*zr(igeom-1+3+3*(i-1))
+                xgau = xgau+vff(i)*zr(jvGeom-1+1+3*(i-1))
+                ygau = ygau+vff(i)*zr(jvGeom-1+2+3*(i-1))
+                zgau = zgau+vff(i)*zr(jvGeom-1+3+3*(i-1))
             end do
-!
-            valpar(1) = xgau
-            valpar(2) = ygau
-            valpar(3) = zgau
-!
-            call fointe('FM', zk8(iepsin), 4, nompar, valpar, epsinif(1), ier)
-            call fointe('FM', zk8(iepsin+1), 4, nompar, valpar, epsinif(2), ier)
-            call fointe('FM', zk8(iepsin+2), 4, nompar, valpar, epsinif(3), ier)
-!
+            paraVale(1) = xgau
+            paraVale(2) = ygau
+            paraVale(3) = zgau
+            call fointe('FM', zk8(jvEpsi), 4, paraName, paraVale, epsinif(1), ier)
+            call fointe('FM', zk8(jvEpsi+1), 4, paraName, paraVale, epsinif(2), ier)
+            call fointe('FM', zk8(jvEpsi+2), 4, paraName, paraVale, epsinif(3), ier)
             do c = 1, ncomp
                 do cc = 1, ncomp
-                    sig(c) = sig(c)+epsinif(cc)*rig(cc, c)
+                    sig(c) = sig(c)+epsinif(cc)*matrRigi(cc, c)
                 end do
             end do
 
-!
-! ---   CHAR_MECA_TEMP_R : SIG = RIG*EPSTHE
-!
         else if (option .eq. 'CHAR_MECA_TEMP_R') then
-!
-            call verift(fami, kpg, 1, '+', zi(imate), &
+            call verift(fami, kpg, 1, '+', zi(jvMaterc), &
                         epsth_=epsthe)
-!
-            call mbrigi(fami, kpg, imate, rig)
-!
-            call r8inir(3, 0.d0, sig, 1)
+            call mbrigi(fami, kpg, jvMaterc, matrRigi)
+            sig = 0.d0
             do c = 1, ncomp
-                sig(c) = epsthe*(rig(1, c)+rig(2, c))
+                sig(c) = epsthe*(matrRigi(1, c)+matrRigi(2, c))
             end do
-!
         end if
-!
         do n = 1, nno
             do i = 1, nddl
                 do c = 1, ncomp
-                    zr(ivectu+(n-1)*nddl+i-1) = zr(ivectu+(n-1)* &
-                                                   nddl+i-1)+b(c, i, n)*sig(c)*zr(ipoids+kpg-1)* &
-                                                jac
+                    zr(jvVect+(n-1)*nddl+i-1) = zr(jvVect+(n-1)* &
+                                                   nddl+i-1)+b(c, i, n)*sig(c)*zr(ipoids+kpg-1)*jac
                 end do
             end do
         end do
-!
-! - REFE_FORC_NODA : ON CALCULE DES FORCES DE REFERENCE
-!
+
     else if (option .eq. 'REFE_FORC_NODA') then
-!
-        call terefe('EPSI_REFE', 'MEMBRANE', epsref)
-        if (epsref .eq. r8vide()) then
-            ASSERT(.false.)
-        end if
-!
-        call mbrigi(fami, kpg, imate, rig)
-!
-! ---   ON CALCULE UN ORDRE DE GRANDEUR DE LA CONTRAINTE MEMBRANAIRE
-        sgmref = epsref*(rig(1, 1)+rig(2, 2))/2.d0
+        call refe%Init('MEMBRANE')
+        sgmref = refe%GetRef('SIGM')
+        call refe%Check()
         ASSERT(sgmref .gt. 0.d0)
-!
         do n = 1, nno
             do i = 1, nddl
-                zr(ivectu+(n-1)*nddl+i-1) = zr(ivectu+(n-1)*nddl+i-1)+sgmref*sqrt(abs(jac) &
-                                                                                  )/npg
+                zr(jvVect+(n-1)*nddl+i-1) = zr(jvVect+(n-1)*nddl+i-1)+ &
+                                            sgmref*sqrt(abs(jac))/npg
             end do
         end do
-!
-! - CHAR_MECA_PESA_R
-!
+
     else if (option .eq. 'CHAR_MECA_PESA_R') then
-        call rcvalb(fami, kpg, 1, '+', zi(imate), &
-                    ' ', 'ELAS_MEMBRANE', 0, ' ', [0.d0], &
-                    1, 'RHO', rho, codres, 1)
+        call rcvalb(fami, kpg, 1, '+', &
+                    zi(jvMaterc), ' ', 'ELAS_MEMBRANE', &
+                    0, ' ', [0.d0], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        rho = propVale(1)
         do n = 1, nno
             do i = 1, nddl
-                zr(ivectu+(n-1)*nddl+i-1) = zr( &
-                                            ivectu+(n-1)*nddl+i-1)+rho(1)*zr(ipesa)*zr(ip&
-                                            &esa+i)*vff(n)*zr(ipoids+kpg-1 &
-                                            )*jac
+                zr(jvVect+(n-1)*nddl+i-1) = zr(jvVect+(n-1)*nddl+i-1)+ &
+                                            rho*zr(jvPesa)*zr(jvPesa+i)*vff(n)*zr(ipoids+kpg-1)*jac
             end do
         end do
     end if

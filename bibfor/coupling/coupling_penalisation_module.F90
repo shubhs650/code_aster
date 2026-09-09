@@ -43,7 +43,7 @@ module coupling_penalisation_module
 #include "asterfort/jevech.h"
 #include "asterfort/readVector.h"
 #include "blas/dsymv.h"
-#include "FE_basis_module.h"
+#include "FE_module.h"
 !
 ! --------------------------------------------------------------------------------------------------
 !

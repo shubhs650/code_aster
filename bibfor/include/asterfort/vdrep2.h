@@ -15,17 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine vdrep2(alpha, beta, zilzi, zrlzr, matevn,&
-                      matevg)
-        real(kind=8) :: alpha
-        real(kind=8) :: beta
-        integer(kind=8) :: zilzi(*)
-        real(kind=8) :: zrlzr(*)
-        real(kind=8) :: matevn(2, 2, 1)
-        real(kind=8) :: matevg(2, 2, 1)
+    subroutine vdrep2(alphaIn, betaIn, nb2, npgsr, desr, &
+                      matevn, matevg_)
+        real(kind=8), intent(in) :: alphaIn, betaIn
+        integer(kind=8), intent(in) :: nb2, npgsr
+        real(kind=8), intent(in) :: desr(*)
+        real(kind=8), intent(out) :: matevn(2, 2, 1)
+        real(kind=8), optional, intent(out) :: matevg_(2, 2, 1)
     end subroutine vdrep2
 end interface

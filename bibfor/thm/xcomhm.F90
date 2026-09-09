@@ -18,36 +18,36 @@
 ! aslint: disable=W1504,W1306
 !
 subroutine xcomhm(ds_thm, &
-                  option, j_mater, time_curr, &
+                  option, time_curr, &
                   ndim, dimdef, dimcon, nbvari, &
                   addeme, adcome, addep1, adcp11, &
                   addep2, addete, defgem, &
                   defgep, congem, congep, vintm, &
-                  vintp, dsde, gravity, retcom, kpi, &
-                  npg, dimenr, &
-                  angl_naut, yaenrh, adenhy, nfh)
+                  vintp, dsde, gravity, retcom, &
+                  kpg, npg, dimenr, &
+                  yaenrh, adenhy, nfh)
 !
+    use MaterialPara_module
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
 #include "asterfort/calcva.h"
+#include "asterfort/tebiot.h"
+#include "asterfort/thmEvalGravity.h"
+#include "asterfort/thmGetParaBiot.h"
+#include "asterfort/thmGetParaElas.h"
+#include "asterfort/thmGetParaHydr.h"
+#include "asterfort/thmGetParaTher.h"
+#include "asterfort/thmGetPermeabilityTensor.h"
+#include "asterfort/thmMatrHooke.h"
 #include "asterfort/xcalfh.h"
 #include "asterfort/xcalme.h"
 #include "asterfort/xhmsat.h"
-#include "asterfort/thmGetParaBiot.h"
-#include "asterfort/thmGetParaElas.h"
-#include "asterfort/thmGetParaTher.h"
-#include "asterfort/thmGetParaHydr.h"
-#include "asterfort/thmMatrHooke.h"
-#include "asterfort/thmGetPermeabilityTensor.h"
-#include "asterfort/thmEvalGravity.h"
-#include "asterfort/tebiot.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    integer(kind=8) :: retcom, kpi, npg, nfh
-    integer(kind=8) :: ndim, dimdef, dimcon, nbvari, j_mater
+    integer(kind=8) :: retcom, kpg, npg, nfh
+    integer(kind=8) :: ndim, dimdef, dimcon, nbvari
     integer(kind=8) :: addeme, addep1, addep2, addete
     integer(kind=8) :: adcome, adcp11
     real(kind=8) :: defgem(1:dimdef), defgep(1:dimdef), congep(1:dimcon)
@@ -58,7 +58,6 @@ subroutine xcomhm(ds_thm, &
     integer(kind=8) :: yaenrh, adenhy
     real(kind=8) :: dsde(1:dimcon, 1:dimenr)
     real(kind=8) :: gravity(3)
-    real(kind=8) :: angl_naut(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -100,7 +99,7 @@ subroutine xcomhm(ds_thm, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    real(kind=8) :: p1, dp1, grap1(3), p2, dp2, grap2(3), t, dt, grat(3)
+    real(kind=8) :: p1, dp1, gradP1(3), p2, dp2, gradP2(3), temp, dtemp, gradTemp(3)
     real(kind=8) :: phi, rho11, epsv, deps(6), depsv
     real(kind=8) :: satur, endo
     real(kind=8) :: tbiot(6)
@@ -109,45 +108,37 @@ subroutine xcomhm(ds_thm, &
 ! --------------------------------------------------------------------------------------------------
 !
     retcom = 0
-!
+
 ! - Update unknowns
-!
     call calcva(ds_thm, ndim, &
                 defgem, defgep, &
                 addeme, addep1, addep2, addete, &
                 depsv, epsv, deps, &
-                t, dt, grat, &
-                p1, dp1, grap1, &
-                p2, dp2, grap2, &
+                temp, dtemp, gradTemp, &
+                p1, dp1, gradP1, &
+                p2, dp2, gradP2, &
                 retcom)
     if (retcom .ne. 0) then
         goto 99
     end if
-!
-! - Get hydraulic parameters
-!
-    call thmGetParaHydr(j_mater, ds_thm)
-!
-! - Get Biot parameters (for porosity evolution)
-!
-    call thmGetParaBiot(j_mater, ds_thm)
-!
-! - Compute Biot tensor
-!
-    call tebiot(ds_thm, angl_naut, tbiot)
-!
-! - Get elastic parameters
-!
-    call thmGetParaElas(j_mater, kpi, t, ndim, ds_thm)
-    call thmMatrHooke(ds_thm, angl_naut)
-!
-! - Get thermic parameters
-!
-    call thmGetParaTher(j_mater, kpi, t, ds_thm)
 
-! ======================================================================
-! --- CALCUL DES RESIDUS ET DES MATRICES TANGENTES ---------------------
-! ======================================================================
+! - Get hydraulic parameters
+    call thmGetParaHydr(ds_thm)
+
+! - Get Biot parameters (for porosity evolution), paraThetaCpl
+    call thmGetParaBiot(ds_thm)
+
+! - Compute Biot tensor
+    call tebiot(ds_thm, tbiot)
+
+! - Get elastic parameters
+    call thmGetParaElas(temp, ndim, ds_thm)
+    call thmMatrHooke(ds_thm)
+
+! - Get thermic parameters
+    call thmGetParaTher(temp, ds_thm)
+
+! - Compute generalized stresses and matrix for coupled quantities
     call xhmsat(ds_thm, option, &
                 ndim, dimenr, &
                 dimcon, nbvari, addeme, &
@@ -156,44 +147,41 @@ subroutine xcomhm(ds_thm, &
                 vintp, dsde, epsv, depsv, &
                 dp1, phi, rho11, &
                 satur, retcom, tbiot, &
-                angl_naut, yaenrh, adenhy, nfh)
+                yaenrh, adenhy, nfh)
     if (retcom .ne. 0) then
         goto 99
     end if
-! ======================================================================
-! --- CALCUL DES GRANDEURS MECANIQUES PURES
-! SI ON EST SUR UN POINT DE GAUSS (POUR L'INTEGRATION REDUITE)
-!  C'EST A DIRE SI KPI<NPG
-! ======================================================================
-    if (ds_thm%ds_elem%l_dof_meca .and. kpi .le. npg) then
-        call xcalme(ds_thm, option, ndim, dimenr, &
+
+! - Main select subroutine to integrate mechanical behaviour
+    if (ds_thm%ds_elem%l_dof_meca .and. kpg .le. npg) then
+        call xcalme(ds_thm, &
+                    option, ndim, dimenr, &
                     dimcon, addeme, adcome, congep, &
-                    dsde, deps, angl_naut)
+                    dsde, deps)
         if (retcom .ne. 0) then
             goto 99
         end if
     end if
-!
+
 ! - Get permeability tensor
-!
     if ((option(1:9) .eq. 'FULL_MECA') .or. (option(1:9) .eq. 'RAPH_MECA')) then
         endo = vintp(1)
     else
         endo = vintm(1)
     end if
-    call thmGetPermeabilityTensor(ds_thm, ndim, angl_naut, j_mater, phi, endo, &
+    call thmGetPermeabilityTensor(ds_thm, &
+                                  ndim, phi, endo, &
                                   tperm)
-!
+
 ! - Compute gravity
-!
-    call thmEvalGravity(j_mater, time_curr, gravity)
-! ======================================================================
-! --- CALCUL DES FLUX HYDRAULIQUES UNIQUEMENT
-! ======================================================================
+    call thmEvalGravity(ds_thm, time_curr, gravity)
+
+! - Compute flux and stress for hydraulic
     if ((ds_thm%ds_elem%l_dof_pre1) .and. (yaenrh .eq. 1)) then
-        call xcalfh(ds_thm, option, ndim, dimcon, &
+        call xcalfh(ds_thm, &
+                    option, ndim, dimcon, &
                     addep1, adcp11, addeme, congep, dsde, &
-                    grap1, rho11, gravity, tperm, &
+                    gradP1, rho11, gravity, tperm, &
                     dimenr, &
                     adenhy, nfh)
         if (retcom .ne. 0) then

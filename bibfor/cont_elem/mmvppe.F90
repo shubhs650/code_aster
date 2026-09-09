@@ -44,6 +44,7 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
 #include "asterfort/mmmjeu.h"
 #include "asterfort/mmcalg.h"
 #include "asterfort/mmreac.h"
+#include "MeshTypes_type.h"
 #include "Contact_type.h"
 !
     integer(kind=8), intent(in) :: ndim, nne, nnm, nnl, nbdm
@@ -51,7 +52,8 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
     aster_logical, intent(in) :: l_large_slip
     real(kind=8), intent(in) :: jeusup
     real(kind=8), intent(in) :: tau1(3), tau2(3)
-    real(kind=8), intent(in) :: ffe(9), ffm(9), ffl(9), dffm(2, 9), ddffm(3, 9)
+    real(kind=8), intent(in) :: ffe(MT_NNOMAX2D), ffm(MT_NNOMAX2D), ffl(MT_NNOMAX2D)
+    real(kind=8), intent(in) :: dffm(2, MT_NNOMAX2D), ddffm(3, MT_NNOMAX2D)
     real(kind=8), intent(out) :: jeu
     real(kind=8), intent(out) :: djeut(3), djeu(3), dlagrc, dlagrf(2)
     real(kind=8), intent(out) :: norm(3)
@@ -110,7 +112,7 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
 !
     integer(kind=8) :: jv_disp_incr, jv_disp
     real(kind=8) :: ppe
-    real(kind=8) :: ddepmam(9, 3)
+    real(kind=8) :: ddepmam(3, MT_NNOMAX2D)
     real(kind=8) :: geomm(3), geome(3)
     real(kind=8) :: ddeple(3), ddeplm(3)
     real(kind=8) :: deplme(3), deplmm(3)
@@ -119,11 +121,8 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
     real(kind=8) :: a(2, 2), ha(2, 2), h(2, 2), hah(2, 2)
     real(kind=8) :: mprnt1(3, 3), mprnt2(3, 3)
     real(kind=8) :: vech1(3), vech2(3)
-    real(kind=8) :: elem_slav_init(9, 3), elem_mast_init(9, 3)
-    real(kind=8) :: elem_slav_coor(9, 3), elem_mast_coor(9, 3)
-    real(kind=8) :: elem_slav_temp(nne, ndim), elem_mast_temp(nnm, ndim)
-    real(kind=8) :: elem_slav_tem2(nne, ndim), elem_mast_tem2(nnm, ndim)
-    integer(kind=8) :: i_dime, i_nne, i_nnm
+    real(kind=8) :: elem_slav_init(3, MT_NNOMAX2D), elem_mast_init(3, MT_NNOMAX2D)
+    real(kind=8) :: elem_slav_coor(3, MT_NNOMAX2D), elem_mast_coor(3, MT_NNOMAX2D)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -134,6 +133,8 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
 !
     elem_slav_coor = 0.d0
     elem_mast_coor = 0.d0
+    elem_slav_init = 0.d0
+    elem_mast_init = 0.d0
 !
 ! - Coefficient to update geometry
 !
@@ -146,36 +147,16 @@ subroutine mmvppe(ndim, nne, nnm, nnl, nbdm, &
 !
     call lcgeominit(ndim, &
                     nne, nnm, &
-                    elem_mast_temp, elem_slav_temp)
-    elem_slav_init(:, :) = 0.d0
-    elem_mast_init(:, :) = 0.d0
-    do i_dime = 1, ndim
-        do i_nne = 1, nne
-            elem_slav_init(i_nne, i_dime) = elem_slav_temp(i_nne, i_dime)
-        end do
-        do i_nnm = 1, nnm
-            elem_mast_init(i_nnm, i_dime) = elem_mast_temp(i_nnm, i_dime)
-        end do
-    end do
+                    elem_mast_init, elem_slav_init)
 !
 ! - Update geometry
 !
     call mmreac(ndim, nne, nnm, &
                 jv_disp, jv_disp_incr, ppe, &
-                elem_slav_temp, elem_mast_temp, &
-                elem_slav_tem2, elem_mast_tem2, &
+                elem_slav_init, elem_mast_init, &
+                elem_slav_coor, elem_mast_coor, &
                 nbdm_=nbdm, &
                 ddepmam_=ddepmam)
-    elem_slav_coor(:, :) = 0.d0
-    elem_mast_coor(:, :) = 0.d0
-    do i_dime = 1, ndim
-        do i_nne = 1, nne
-            elem_slav_coor(i_nne, i_dime) = elem_slav_tem2(i_nne, i_dime)
-        end do
-        do i_nnm = 1, nnm
-            elem_mast_coor(i_nnm, i_dime) = elem_mast_tem2(i_nnm, i_dime)
-        end do
-    end do
 !
 ! - Compute local basis
 !

@@ -21,7 +21,7 @@ subroutine nxinit(mesh, model, materField, &
                   caraElem, compor, listLoad, &
                   para, nume_dof, &
                   sddisc, ds_inout, sdobse, &
-                  time, ds_algopara, &
+                  timeMap, ds_algopara, &
                   ds_algorom, ds_print, vhydr, &
                   l_stat, l_evol, l_rom, &
                   l_line_search, lnkry, l_dry)
@@ -53,7 +53,7 @@ subroutine nxinit(mesh, model, materField, &
     character(len=19), intent(in) :: sddisc
     type(NL_DS_InOut), intent(inout) :: ds_inout
     character(len=19), intent(out) :: sdobse
-    character(len=24), intent(out) :: time
+    character(len=24), intent(out) :: timeMap
     type(NL_DS_AlgoPara), intent(inout) :: ds_algopara
     type(ROM_DS_AlgoPara), intent(inout) :: ds_algorom
     type(NL_DS_Print), intent(inout) :: ds_print
@@ -75,14 +75,14 @@ subroutine nxinit(mesh, model, materField, &
 ! In  caraElem         : name of elementary characteristics (field)
 ! In  compor           : name of comportment definition (field)
 ! In  listLoad         : name of datastructure for list of loads
-! In  para             : parameters for time
+! In  para             : parameters for timeMap
 !                            (1) THETA
 !                            (2) DELTA
 ! Out nume_dof         : name of numbering object (NUME_DDL)
-! In  sddisc           : datastructure for time discretization
+! In  sddisc           : datastructure for timeMap discretization
 ! IO  ds_inout         : datastructure for input/output management
 ! Out sdobse           : datastructure for observation parameters
-! Out time             : name of field to save time parameters
+! Out timeMap          : name of field to save timeMap parameters
 ! In  ds_algopara      : datastructure for algorithm parameters
 ! IO  ds_algorom       : datastructure for ROM parameters
 ! IO  ds_print         : datastructure for printing parameters
@@ -103,7 +103,7 @@ subroutine nxinit(mesh, model, materField, &
     l_stat = ASTER_FALSE
     l_evol = ASTER_FALSE
     result = ds_inout%result
-    time = result(1:8)//'.CHTPS'
+    timeMap = result(1:8)//'.CHTPS'
 !
 ! - Active functionnalities
 !

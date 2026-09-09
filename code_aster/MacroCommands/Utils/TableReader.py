@@ -22,10 +22,10 @@ import os
 import re
 from pprint import pformat
 
-
 from ...Objects.table_py import Table
 from ...Utilities import cut_long_lines, maximize_lines
 from ...Utilities.misc import _printDBG, set_debug
+from ...Supervis import AsterError
 
 # Aster type : regular expression
 FMT = {"I": r"([0-9\-\+]+)", "R": r"([0-9\.,\-\+eEdD]+)", "K": "(.{%(len)s})"}
@@ -128,7 +128,7 @@ class TableReaderFree(TableReader):
         nbtab = len(stat)
         _printDBG("Nombre de blocs lus :", nbtab, pformat(stat))
         if nblock > nbtab:
-            raise error("TABLE0_10", None, (nblock, nbtab))
+            CA.AsterError("TABLE0_10: nblock is greater than nbtab")
         return stat[nblock - 1]
 
     def extract_lines(self, stat):
@@ -159,7 +159,7 @@ class TableReaderFree(TableReader):
         line_para = self.lines.pop(0)
         para = msplit(line_para, self.sep)
         if len(para) != nbcol:
-            raise error("TABLE0_43", line_para, nbcol)
+            raise CA.AsterError("TABLE0_43: Parameter length mismatch")
         # if sep != ' ', parameter may contain a space (not valid in Table)
         para = [p.replace(" ", "_") for p in para]
         if callable(check_para):
@@ -208,7 +208,7 @@ class TableReaderAster(TableReader):
         l_txttab = re_split_tab.findall(self.text)
         nbtab = len(l_txttab)
         if nblock > nbtab:
-            raise error("TABLE0_10", None, (nblock, nbtab))
+            raise CA.AsterError("TABLE0_10: nblock is greater than nbtab")
         self.text = l_txttab[nblock - 1]
         _printDBG("TEXT:", self.text)
 
@@ -233,12 +233,15 @@ class TableReaderAster(TableReader):
         mat = re.search(self.re_line, line)
         _printDBG(line, len(para), mat)
         if mat is None or len(para) != len(mat.groups()):
-            lerr = [error("TABLE0_11", vali=i + 1), error("TABLE0_13", vali=len(para))]
+            lerr = [
+                CA.AsterError("TABLE0_11: Error in line %d" % (i + 1)),
+                CA.AsterError("TABLE0_13: Parameter length mismatch"),
+            ]
             if mat is not None:
-                lerr.append(error("TABLE0_12", vali=len(mat.groups())))
+                lerr.append(CA.AsterError("TABLE0_12: Incorrect number of groups"))
             else:
-                lerr.append(error("TABLE0_15", valk=(line, self.re_line)))
-            raise error(lerr)
+                lerr.append(CA.AsterError("TABLE0_15: Invalid line format"))
+            raise CA.AsterError(" | ".join([str(err) for err in lerr]))
         return mat.groups()
 
     def read(self, nblock, check_para=None):

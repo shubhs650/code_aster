@@ -17,7 +17,7 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306
 !
-subroutine nmelas_incr(BEHinteg, &
+subroutine nmelas_incr(BEHInteg, &
                        fami, kpg, ksp, typmod, &
                        jvMaterCode, deps, sigm, option, sigp, &
                        vip, dsidep)
@@ -35,7 +35,7 @@ subroutine nmelas_incr(BEHinteg, &
 #include "asterfort/verifs.h"
 #include "asterfort/verift.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg, ksp
     character(len=8), intent(in) :: typmod(*)
@@ -89,13 +89,13 @@ subroutine nmelas_incr(BEHinteg, &
     ! Caracteristiques elastiques t- et t+
 
     call get_elas_para(fami, jvMaterCode, '-', kpg, ksp, elasID, elasKeyword, e_=em, nu_=num, &
-                       BEHinteg=BEHinteg)
+                       BEHInteg=BEHInteg)
     lambdam = em*num/((1-2*num)*(1+num))
     deuxmum = em/(1+num)
     troiskm = em/(1-2*num)
 
     call get_elas_para(fami, jvMaterCode, '+', kpg, ksp, elasID, elasKeyword, e_=ep, nu_=nup, &
-                       BEHinteg=BEHinteg)
+                       BEHInteg=BEHInteg)
     lambdap = ep*nup/((1-2*nup)*(1+nup))
     deuxmup = ep/(1+nup)
     troiskp = ep/(1-2*nup)

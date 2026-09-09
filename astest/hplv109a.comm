@@ -17,9 +17,6 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
-from code_aster.CodeCommands import *
-from code_aster.Objects import *
-
 DEBUT(CODE="OUI", ERREUR=_F(ALARME="ALARME"))
 
 ACIER = INCLUDE_MATERIAU(

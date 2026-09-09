@@ -21,8 +21,7 @@ interface
                       action_typek, &
                       subd_methode, subd_pas_mini, &
                       subd_niveau, subd_pas, &
-                      subd_auto, subd_inst, subd_duree, &
-                      pcent_iter_plus, coef_maxi)
+                      subd_auto, subd_inst, subd_duree)
         character(len=16), intent(in) :: factorKeyword
         integer(kind=8), intent(in) :: i_fail
         real(kind=8), intent(in) :: dtmin
@@ -34,7 +33,5 @@ interface
         character(len=16), intent(out) :: subd_auto
         real(kind=8), intent(out) :: subd_inst
         real(kind=8), intent(out) :: subd_duree
-        real(kind=8), intent(out) :: pcent_iter_plus
-        real(kind=8), intent(out) :: coef_maxi
     end subroutine dfllac
 end interface

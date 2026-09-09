@@ -113,20 +113,6 @@ Ces valeurs sont donc mises à zéro et ne doivent pas être prises en compte.
  nombre de couches limite a 30 pour les coques 1d
 """
     ),
-    51: _(
-        """
- Le nombre de couches défini dans DEFI_COMPOSITE et dans AFFE_CARA_ELEM dans n'est pas cohérent.
- Nombre de couches dans DEFI_COMPOSITE: %(i1)d
- Nombre de couches dans AFFE_CARA_ELEM: %(i2)d
-"""
-    ),
-    52: _(
-        """
- L'épaisseur totale des couches définie dans DEFI_COMPOSITE et celle définie dans AFFE_CARA_ELEM ne sont pas cohérentes.
- Épaisseur totale des couches dans DEFI_COMPOSITE: %(r1)f
- Épaisseur dans AFFE_CARA_ELEM: %(r2)f
-"""
-    ),
     56: _(
         """
  valeur utilisateur de RHO nulle

@@ -61,7 +61,7 @@ subroutine te0346(option, nomte)
     integer(kind=8) :: igeom, imate, icontm, iorien, iinstp
     integer(kind=8) :: ideplm, ideplp, iinstm, ivectu, icontp, imat
     integer(kind=8) :: istrxm, istrxp, ldep, codret
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=16), pointer :: compor(:) => null()
     character(len=16) :: rela_comp, defo_comp
     aster_logical :: reactu

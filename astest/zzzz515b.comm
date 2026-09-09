@@ -1,0 +1,747 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(
+    CODE="OUI",
+    DEBUG=_F(SDVERI="OUI"),
+    IMPR_MACRO="OUI",
+    IGNORE_ALARM=("MECANONLINE5_32", "MECANONLINE5_57"),
+)
+
+# Test de CALC_ENDO avec mélange de modélisation et avec options par défaut
+# Identique à zzzz515a, mais on utilise la définition par défaut des observations et du paramétrage de DEFI_LIST_INST
+# VARC et chargement fonctions du temps
+# Fonctionnalités examinées :
+#  1) Vérification analytique des chargements imposés au cours du transitoire
+#  2) Non régression sur les contraintes calculées au cours du transitoire
+#  3) Non régression sur la table d'observation
+# On doit retrouver les mêmes valeurs que zzzz515a
+# Pas de test sur les instants fictifs car non archivés
+
+# ----------------------------------------------------------------------
+# Paramètres. Unités : mm, MPa, s
+# ----------------------------------------------------------------------
+
+UIMP = 2.0e-3  # déplacement d'allongement imposé (comme L=1 mm, la déformation vaut aussi uimp) (linéaire entre 0 et 100 s)
+TIMP = 100  # élévation de température (linéaire entre 0 et 100 s)
+CIMP = 50  # concentration en eau imposée (linéaire entre 0 et 100 s)
+EIMP = 5.0e-4  # déformation anélastique imposée dans la direction yy
+
+##Materiau béton
+b_young = 40.2e3
+b_nu = 0.19
+b_rho = 2.410e-9
+b_ft = 4.65
+b_fc = 63.7
+b_gf = 73 * b_fc**0.18 / 1000
+b_p = 1.5
+b_dist_fiss = 225.0
+
+alpha = 1.0e-5
+kdessic = 3.6e-6
+
+##Viscosité et paramétrage de la stabilisation
+b_tau_reguvisc = 1.0
+b_coeff_rigi_regu_visc = 0.001
+prec_dam = 0.1
+
+duree_rampe = 1
+duree_equil = 10
+nbr_sequ_equil = 50  ##Nombre max de sequences d'equilibrage
+
+##Convergence
+r_conv = 1e-2
+r_stab = r_conv
+
+##Matériau acier
+a_young = 200e3
+a_nu = 0.3
+a_sy = 500
+a_rho = 7.800e-9
+
+ma_me = LIRE_MAILLAGE(INFO=2)
+
+mo_me = AFFE_MODELE(
+    MAILLAGE=ma_me,
+    AFFE=(
+        _F(PHENOMENE="MECANIQUE", MODELISATION="3D", GROUP_MA="massif"),
+        _F(PHENOMENE="MECANIQUE", MODELISATION="DKT", GROUP_MA="coque"),
+        _F(PHENOMENE="MECANIQUE", MODELISATION="GRILLE_MEMBRANE", GROUP_MA="grille"),
+        _F(PHENOMENE="MECANIQUE", MODELISATION="GRILLE_EXCENTRE", GROUP_MA="grille_excentree"),
+        _F(PHENOMENE="MECANIQUE", MODELISATION="BARRE", GROUP_MA="barre"),
+        _F(PHENOMENE="MECANIQUE", MODELISATION="DIS_T", GROUP_MA="ressort"),
+    ),
+)
+
+prop_eltc = DEFI_MATER_GC(
+    ENDO_LOCA_TC=_F(
+        E=b_young,
+        NU=b_nu,
+        FT=b_ft,
+        FC=b_fc,
+        SIGM_COMP_SEUIL=b_fc * 0.4,
+        GF=b_gf,
+        COEF_ECRO_TRAC=b_p,
+        DIST_FISSURE=b_dist_fiss,
+    )
+)
+
+beton = DEFI_MATERIAU(
+    ELAS=_F(E=b_young, NU=b_nu, RHO=b_rho, ALPHA=alpha, K_DESSIC=kdessic),
+    VISC_ELAS=_F(TAU=b_tau_reguvisc, K=b_coeff_rigi_regu_visc * b_young),
+    ENDO_LOCA_TC=_F(
+        FC=prop_eltc.getValueReal("ENDO_LOCA_TC", "FC"),
+        SIGM_COMP_SEUIL=prop_eltc.getValueReal("ENDO_LOCA_TC", "SIGM_COMP_SEUIL"),
+        FT=prop_eltc.getValueReal("ENDO_LOCA_TC", "FT"),
+        ENER_TRAC_RUPT_N=prop_eltc.getValueReal("ENDO_LOCA_TC", "ENER_TRAC_RUPT_N"),
+        COEF_ECRO_TRAC=prop_eltc.getValueReal("ENDO_LOCA_TC", "COEF_ECRO_TRAC"),
+        TAU_REGU_VISC=b_tau_reguvisc,
+    ),
+)
+
+acier = DEFI_MATERIAU(
+    ELAS=_F(E=a_young, NU=a_nu, ALPHA=alpha),
+    ECRO_LINE=_F(SY=a_sy, D_SIGM_EPSI=0),
+    VISC_ELAS=_F(TAU=1.0, K=1.0e-6),  # Sans influence, pour tester détection TAU
+)
+
+
+cara_me = AFFE_CARA_ELEM(
+    MODELE=mo_me,
+    BARRE=_F(GROUP_MA="barre", SECTION="GENERALE", CARA="A", VALE=1.0),
+    COQUE=_F(GROUP_MA="coque", EPAIS=7.0, COEF_RIGI_DRZ=0, COQUE_NCOU=1, VECTEUR=(1, 0, 0)),
+    GRILLE=(
+        _F(GROUP_MA="grille", SECTION=1.0, VECT_1=(0, 1, 0)),
+        _F(GROUP_MA="grille_excentree", SECTION=1.0, VECT_1=(0, 1, 0), EXCENTREMENT=0.0),
+    ),
+    DISCRET=_F(GROUP_MA="ressort", CARA="K_T_D_N", VALE=(a_young, a_young, a_young)),
+)
+
+
+liaison_me = AFFE_CHAR_MECA(
+    MODELE=mo_me,
+    DDL_IMPO=(
+        _F(GROUP_MA="massif_s", DY=0),
+        _F(GROUP_MA="massif_o", DX=0),
+        _F(GROUP_MA="massif_b", DZ=0),
+        _F(GROUP_MA="massif_n", DY=UIMP),
+        _F(GROUP_MA="coque", DRZ=0),
+        _F(GROUP_MA="coque_s", DY=0, DZ=0, DRX=0),
+        _F(GROUP_MA="coque_o", DX=0),
+        _F(GROUP_MA="coque_n", DY=UIMP),
+        _F(GROUP_MA="grille", DZ=0),
+        _F(GROUP_MA="grille_s", DY=0),
+        _F(GROUP_MA="grille_o", DX=0),
+        _F(GROUP_MA="grille_n", DY=UIMP),
+        _F(GROUP_MA="grille_e", DX=0),
+        _F(GROUP_MA="grille_excentree", DZ=0, DRX=0, DRY=0, DRZ=0),
+        _F(GROUP_MA="grille_excentree_s", DY=0),
+        _F(GROUP_MA="grille_excentree_o", DX=0),
+        _F(GROUP_MA="grille_excentree_n", DY=UIMP),
+        _F(GROUP_MA="grille_excentree_e", DX=0),
+        _F(GROUP_MA="barre", DZ=0, DX=0),
+        _F(GROUP_NO="barre_s", DY=0),
+        _F(GROUP_NO="barre_n", DY=UIMP),
+        _F(GROUP_NO="ressort", DX=0, DY=UIMP, DZ=0),
+    ),
+    DOUBLE_LAGRANGE="NON",
+)
+
+
+champ_mask_0 = CREA_CHAMP(
+    OPERATION="AFFE",
+    TYPE_CHAM="ELNO_TEMP_R",
+    MODELE=mo_me,
+    AFFE=(
+        _F(GROUP_MA="massif", NOM_CMP="TEMP", VALE=0),
+        _F(GROUP_MA="coque", NOM_CMP="TEMP", VALE=0),
+        _F(GROUP_MA="grille", NOM_CMP="TEMP", VALE=0),
+        _F(GROUP_MA="grille_excentree", NOM_CMP="TEMP", VALE=0),
+        _F(GROUP_MA="barre", NOM_CMP="TEMP", VALE=0),
+        _F(GROUP_MA="ressort", NOM_CMP="TEMP", VALE=0),
+    ),
+    PROL_ZERO="OUI",
+)
+
+
+champ_zero = CREA_CHAMP(
+    OPERATION="ASSE",
+    TYPE_CHAM="ELNO_TEMP_R",
+    AFFE_SP=_F(CARA_ELEM=cara_me),
+    MODELE=mo_me,
+    ASSE=(
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="massif", NOM_CMP="TEMP"),
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="coque", NOM_CMP="TEMP"),
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="grille", NOM_CMP="TEMP"),
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="grille_excentree", NOM_CMP="TEMP"),
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="barre", NOM_CMP="TEMP"),
+        _F(CHAM_GD=champ_mask_0, GROUP_MA="ressort", NOM_CMP="TEMP"),
+    ),
+    PROL_ZERO="OUI",
+)
+
+
+champ_chaud = CREA_CHAMP(
+    OPERATION="AFFE",
+    TYPE_CHAM="ELNO_TEMP_R",
+    AFFE_SP=_F(CARA_ELEM=cara_me),
+    MODELE=mo_me,
+    AFFE=(
+        _F(GROUP_MA="massif", NOM_CMP="TEMP", VALE=TIMP),
+        _F(GROUP_MA="coque", NOM_CMP="TEMP", VALE=TIMP),
+        _F(GROUP_MA="grille", NOM_CMP="TEMP", VALE=TIMP),
+        _F(GROUP_MA="grille_excentree", NOM_CMP="TEMP", VALE=TIMP),
+        _F(GROUP_MA="barre", NOM_CMP="TEMP", VALE=TIMP),
+        _F(GROUP_MA="ressort", NOM_CMP="TEMP", VALE=TIMP),
+    ),
+    PROL_ZERO="OUI",
+)
+
+
+evol_th_me = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_THER",
+    AFFE=(
+        _F(NOM_CHAM="TEMP", CHAM_GD=champ_zero, INST=0, MODELE=mo_me),
+        _F(NOM_CHAM="TEMP", CHAM_GD=champ_chaud, INST=100, MODELE=mo_me),
+    ),
+)
+
+champ_zero_sech = CREA_CHAMP(
+    OPERATION="ASSE",
+    TYPE_CHAM="ELNO_TEMP_R",
+    AFFE_SP=_F(CARA_ELEM=cara_me),
+    MODELE=mo_me,
+    ASSE=(_F(CHAM_GD=champ_mask_0, GROUP_MA="massif", NOM_CMP="SECH"),),
+    PROL_ZERO="OUI",
+)
+
+champ_chaud_sech = CREA_CHAMP(
+    OPERATION="AFFE",
+    TYPE_CHAM="ELNO_TEMP_R",
+    AFFE_SP=_F(CARA_ELEM=cara_me),
+    MODELE=mo_me,
+    AFFE=(_F(GROUP_MA="massif", NOM_CMP="SECH", VALE=CIMP),),
+    PROL_ZERO="OUI",
+)
+
+
+evol_sech_me = CREA_RESU(
+    OPERATION="AFFE",
+    TYPE_RESU="EVOL_SECH",
+    AFFE=(
+        _F(NOM_CHAM="SECH", CHAM_GD=champ_zero_sech, INST=0, MODELE=mo_me),
+        _F(NOM_CHAM="SECH", CHAM_GD=champ_chaud_sech, INST=100, MODELE=mo_me),
+    ),
+)
+
+
+epsa = CREA_CHAMP(
+    TYPE_CHAM="ELNO_EPSI_R",
+    OPERATION="AFFE",
+    MODELE=mo_me,
+    AFFE=(
+        _F(
+            GROUP_MA="massif",
+            NOM_CMP=("EPXX", "EPYY", "EPZZ", "EPXY", "EPXZ", "EPYZ"),
+            VALE=(0, EIMP, 0, 0, 0, 0),
+        ),
+    ),
+    PROL_ZERO="OUI",
+)
+
+fictif = DEFI_MATERIAU(ELAS=_F(E=0, NU=0))
+
+
+mate_pur = AFFE_MATERIAU(
+    MODELE=mo_me,
+    AFFE=(
+        _F(GROUP_MA="massif", MATER=beton),
+        _F(GROUP_MA="coque", MATER=acier),
+        _F(GROUP_MA="grille", MATER=acier),
+        _F(GROUP_MA="grille_excentree", MATER=acier),
+        _F(GROUP_MA="barre", MATER=acier),
+        _F(GROUP_MA="ressort", MATER=fictif),
+    ),
+)
+
+
+mate_me = AFFE_MATERIAU(
+    MODELE=mo_me,
+    CHAM_MATER=mate_pur,
+    AFFE_VARC=(
+        _F(NOM_VARC="TEMP", EVOL=evol_th_me, VALE_REF=0),
+        _F(NOM_VARC="SECH", EVOL=evol_sech_me, VALE_REF=0),
+        _F(NOM_VARC="EPSA", CHAM_GD=epsa, GROUP_MA="massif"),
+    ),
+)
+
+
+inst_me = DEFI_LIST_REEL(VALE=(0, 25, 50, 75, 100))
+
+inst_visc = DEFI_LIST_REEL(
+    VALE=(duree_rampe, duree_rampe + duree_equil, duree_rampe + duree_equil * nbr_sequ_equil)
+)
+
+fonction_charge = DEFI_FONCTION(NOM_PARA="INST", ABSCISSE=[0, 100], ORDONNEE=[0, 1])
+
+evol_me = CALC_ENDO(
+    MODELE=mo_me,
+    CHAM_MATER=mate_me,
+    CARA_ELEM=cara_me,
+    EXCIT=_F(CHARGE=liaison_me, FONC_MULT=fonction_charge),
+    COMPORTEMENT=(
+        _F(GROUP_MA="massif", RELATION="ENDO_LOCA_TC", REGU_VISC="OUI"),
+        _F(GROUP_MA="coque", RELATION="VMIS_ISOT_LINE", RESI_CPLAN_MAXI=r_conv / 100),
+        _F(GROUP_MA="grille", RELATION="GRILLE_ISOT_LINE"),
+        _F(GROUP_MA="grille_excentree", RELATION="GRILLE_ISOT_LINE"),
+        _F(GROUP_MA="barre", RELATION="VMIS_ISOT_LINE"),
+        _F(GROUP_MA="ressort", RELATION="ELAS"),
+    ),
+    INCREMENT=_F(LIST_INST=inst_me),
+    NEWTON=_F(MATRICE="TANGENTE"),
+    SOLVEUR=_F(ELIM_LAGR="NON"),
+    CONVERGENCE=_F(
+        RESI_REFE_RELA=r_conv, SIGM_REFE=b_ft, EFFORT_REFE=700, MOMENT_REFE=4900, ITER_GLOB_MAXI=10
+    ),
+    ENDO_VISC=_F(LIST_INST=inst_visc, TABLE=CO("tab_obs")),
+)
+
+# -----------------------------------------
+CALC_CHAMP(
+    reuse=evol_me,
+    RESULTAT=evol_me,
+    DEFORMATION=("EPSI_ELGA", "EPSI_ELNO"),
+    VARI_INTERNE=("VARC_ELGA", "VARC_ELNO"),
+    GROUP_MA=("massif", "grille", "grille_excentree", "coque"),
+)
+
+IMPR_RESU(
+    UNITE=6,
+    FORMAT="RESULTAT",
+    RESU=(_F(RESULTAT=evol_me, NOM_CHAM=("VARC_ELGA", "EPSI_ELGA", "SIEF_ELGA")),),
+)
+
+##################################################################################
+##                  Tests analytiques sur les chargements appliqués
+##################################################################################
+
+# Test des variables de commandes TEMP et SECH variables
+# Instants physiques
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="TEMP",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.25 * TIMP,
+            VALE_CALC=0.25 * TIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=50,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="TEMP",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.5 * TIMP,
+            VALE_CALC=0.5 * TIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=75,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="TEMP",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.75 * TIMP,
+            VALE_CALC=0.75 * TIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="TEMP",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=1.0 * TIMP,
+            VALE_CALC=1.0 * TIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="SECH",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.25 * CIMP,
+            VALE_CALC=0.25 * CIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=50,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="SECH",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.5 * CIMP,
+            VALE_CALC=0.5 * CIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=75,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="SECH",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.75 * CIMP,
+            VALE_CALC=0.75 * CIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="VARC_ELGA",
+            NOM_CMP="SECH",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=1.0 * CIMP,
+            VALE_CALC=1.0 * CIMP,
+            CRITERE="RELATIF",
+        ),
+    )
+)
+
+# Test de la déformation imposée
+# Instants physiques
+TEST_RESU(
+    RESU=(
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=0.25 * UIMP,
+            VALE_CALC=0.25 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_REFE=0.25 * UIMP,
+            VALE_CALC=0.25 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EXX",
+            GROUP_MA="grille",
+            POINT=1,
+            VALE_REFE=0.25 * UIMP,
+            VALE_CALC=0.25 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EXX",
+            GROUP_MA="grille_excentree",
+            POINT=1,
+            VALE_REFE=0.25 * UIMP,
+            VALE_CALC=0.25 * UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_REFE=UIMP,
+            VALE_CALC=UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EPYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_REFE=UIMP,
+            VALE_CALC=UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EXX",
+            GROUP_MA="grille",
+            POINT=1,
+            VALE_REFE=UIMP,
+            VALE_CALC=UIMP,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            REFERENCE="ANALYTIQUE",
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="EPSI_ELGA",
+            NOM_CMP="EXX",
+            GROUP_MA="grille_excentree",
+            POINT=1,
+            VALE_REFE=UIMP,
+            VALE_CALC=UIMP,
+            CRITERE="RELATIF",
+        ),
+    )
+)
+
+##################################################################################
+##                  Tests de non régression sur les contraintes
+##################################################################################
+TEST_RESU(
+    RESU=(
+        ##Massif
+        _F(
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_CALC=-11.85433167,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=50,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_CALC=-3.610697,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=75,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_CALC=4.6312717,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="massif",
+            POINT=1,
+            VALE_CALC=0.8436879023,
+            CRITERE="RELATIF",
+        ),
+        ##Coque
+        _F(
+            INST=25,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_CALC=50,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=50,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_CALC=100,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=75,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_CALC=150,
+            CRITERE="RELATIF",
+        ),
+        _F(
+            INST=100,
+            RESULTAT=evol_me,
+            NOM_CHAM="SIEF_ELGA",
+            NOM_CMP="SIYY",
+            GROUP_MA="coque",
+            POINT=1,
+            SOUS_POINT=1,
+            VALE_CALC=200,
+            CRITERE="RELATIF",
+        ),
+    )
+)
+
+#####################################################################################################
+##  Tests de non régression sur les valeurs de la table et les variables internes correspondantes
+#####################################################################################################
+IMPR_TABLE(UNITE=6, TABLE=tab_obs)
+
+##On vérifie que l'état initial d'une séquence de chargement donnée correspond bien à l'instant final de la séquence précédente
+##Instant physique 25
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=25),
+        _F(NOM_PARA="INST_VISC", VALE=0),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=5.58483e-03,
+)
+
+##Instant physique 50
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=50),
+        _F(NOM_PARA="INST_VISC", VALE=-duree_rampe),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=5.58483e-03,
+)
+
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=50),
+        _F(NOM_PARA="INST_VISC", VALE=0),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=7.15600e-03,
+)
+
+##Instant physique 75
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=75),
+        _F(NOM_PARA="INST_VISC", VALE=-duree_rampe),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=7.15600e-03,
+)
+
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=75),
+        _F(NOM_PARA="INST_VISC", VALE=0),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=8.00086e-03,
+)
+
+##Instant physique 100
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=100),
+        _F(NOM_PARA="INST_VISC", VALE=-duree_rampe),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=8.00086e-03,
+)
+
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=100),
+        _F(NOM_PARA="INST_VISC", VALE=0),
+        _F(NOM_PARA="NUME_REUSE", VALE=1),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCELAS_0"),
+    ),
+    VALE_CALC=8.09232e-03,
+)
+
+TEST_TABLE(
+    TABLE=tab_obs,
+    NOM_PARA="VALE",
+    FILTRE=(
+        _F(NOM_PARA="INST", VALE=100),
+        _F(NOM_PARA="INST_VISC", VALE=0),
+        _F(NOM_PARA="NUME_REUSE", VALE=1),
+        _F(NOM_PARA="NOM_OBSERVATION", VALE_K="VISCENDO_0"),
+    ),
+    VALE_CALC=1.95848784,
+)
+
+FIN()

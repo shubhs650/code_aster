@@ -25,7 +25,6 @@ import cataelem.Commons.parameters as SP
 import cataelem.Commons.mesh_types as MT
 from cataelem.Options.options import OP
 
-
 # Elementary characteristics for pipes: radius and thickness
 CCAGEPO = LocatedComponents(phys=PHY.CAGEPO_R, type="ELEM", components=("R1", "EP1"))
 
@@ -400,7 +399,7 @@ class MET3SEG3(Element):
             te=586,
             para_in=(
                 (SP.PCAGEPO, CCAGEPO),
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCAORIE, CCAORIE),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.FULL_MECA.PCOMPOR, LC.CCOMPOR),
@@ -482,7 +481,7 @@ class MET3SEG3(Element):
             te=586,
             para_in=(
                 (SP.PCAGEPO, CCAGEPO),
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCAORIE, CCAORIE),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RAPH_MECA.PCOMPOR, LC.CCOMPOR),
@@ -515,7 +514,8 @@ class MET3SEG3(Element):
                 (OP.REFE_FORC_NODA.PCOMPOR, LC.CCOMPOR),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (OP.REFE_FORC_NODA.PNBSP_I, ENBSP_I),
-                (SP.PREFCO, LC.CRESSIG),
+                (SP.PRESIREF, LC.CRESIREF),
+                (SP.PRESICMP, LC.CRESICMP),
             ),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
@@ -551,7 +551,7 @@ class MET3SEG3(Element):
             te=586,
             para_in=(
                 (SP.PCAGEPO, CCAGEPO),
-                (SP.PCAMASS, LC.CCAMA3D),
+                (SP.PCAMASS, LC.CCAMASS),
                 (SP.PCAORIE, CCAORIE),
                 (SP.PCARCRI, LC.CCARCRI),
                 (OP.RIGI_MECA_TANG.PCOMPOR, LC.CCOMPOR),
@@ -619,7 +619,14 @@ class MET3SEG3(Element):
         ),
         OP.TOU_INI_ELEM(
             te=99,
-            para_out=((OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D), (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I)),
+            para_out=(
+                (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
+                (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
+            ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
@@ -628,16 +635,18 @@ class MET3SEG3(Element):
                 (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
                 (OP.TOU_INI_ELGA.PSIEF_R, LC.EGIG3DR),
                 (OP.TOU_INI_ELGA.PVARI_R, LC.ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PPRES_R, LC.EPRE3DR),
                 (OP.TOU_INI_ELNO.PSIEF_R, LC.ESIG3DR),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARI_ELNO(

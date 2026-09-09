@@ -39,7 +39,7 @@ subroutine te0006(option, nomte)
     real(kind=8) :: somme(6), xx
     aster_logical :: laxi
 !
-    character(len=4) :: fami
+    character(len=8) :: fami
 !
     fami = 'RIGI'
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, nnos=nnos, &

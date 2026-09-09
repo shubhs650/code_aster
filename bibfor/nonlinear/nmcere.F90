@@ -104,7 +104,7 @@ subroutine nmcere(model, nume_dof, ds_material, cara_elem, ds_constitutive, &
     integer(kind=8), parameter :: phaseType = CORR_NEWTON
     integer(kind=8) :: ifm, niv
     integer(kind=8), parameter :: zvalin = 28, zsolal = 17
-    aster_logical :: lgrot, lendo
+    aster_logical :: lgrot
     integer(kind=8) :: neq, nmax
     character(len=19) :: cnfext
     character(len=19) :: valint(zvalin)
@@ -132,7 +132,6 @@ subroutine nmcere(model, nume_dof, ds_material, cara_elem, ds_constitutive, &
 ! - Initializations
 !
     lgrot = isfonc(list_func_acti, 'GD_ROTA')
-    lendo = isfonc(list_func_acti, 'ENDO_NO')
     ddep = '&&CNCETA.CHP0'
     depdet = '&&CNCETA.CHP1'
     depplt = '&&CNCETA.CHP2'
@@ -173,14 +172,14 @@ subroutine nmcere(model, nume_dof, ds_material, cara_elem, ds_constitutive, &
 !
     call jeveuo(depdel(1:19)//'.VALE', 'L', vr=depdl)
     call jeveuo(depdet(1:19)//'.VALE', 'E', vr=depdt)
-    call majour(neq, lgrot, lendo, sdnume, depdl, &
+    call majour(neq, lgrot, sdnume, depdl, &
                 ddepl, 1.d0, depdt, 0)
 !
 ! --- MISE A JOUR DU DEPLACEMENT DEPPLT = DEPPLU+DDEP
 !
     call jeveuo(depplu(1:19)//'.VALE', 'L', vr=deppl)
     call jeveuo(depplt(1:19)//'.VALE', 'E', vr=deppt)
-    call majour(neq, lgrot, lendo, sdnume, deppl, &
+    call majour(neq, lgrot, sdnume, deppl, &
                 ddepl, 1.d0, deppt, 1)
 !
 ! --- RECONSTRUCTION DES VARIABLES CHAPEAUX

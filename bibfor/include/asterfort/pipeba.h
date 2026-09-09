@@ -22,10 +22,10 @@ interface
                       dtau, copilo)
         integer(kind=8), intent(in) :: ndim
         integer(kind=8), intent(in) :: mate
-        real(kind=8), intent(in) :: sup(ndim)
-        real(kind=8), intent(in) :: sud(ndim)
-        real(kind=8), intent(in) :: vim
+        real(kind=8), intent(in) :: sup(:)
+        real(kind=8), intent(in) :: sud(:)
+        real(kind=8), intent(in) :: vim(:)
         real(kind=8), intent(in) :: dtau
-        real(kind=8), intent(out) :: copilo(5)
+        real(kind=8), intent(out) :: copilo(:)
     end subroutine pipeba
 end interface

@@ -9,7 +9,7 @@ P testlist submit verification sequential
 # aslint: disable=E2003
 A args --hide-command --post=vale_calc
 
-F comm supv004a.comm D 1
+F comm supv004a.py D 1
 F nom supv004a_basics.py D 0
 F nom supv004a_miss.py D 0
 F nom supv004a_solvers.py D 0

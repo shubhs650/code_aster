@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine mat_proto(BEHinteg, &
+subroutine mat_proto(BEHInteg, &
                      fami, kpg, ksp, poum, jvMaterCode, relaComp, &
                      nprops, props)
 !
@@ -31,7 +31,7 @@ subroutine mat_proto(BEHinteg, &
 #include "asterfort/rcadlv.h"
 #include "jeveux.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*), intent(in) :: fami
     integer(kind=8), intent(in) :: kpg, ksp
     character(len=1), intent(in) :: poum
@@ -48,7 +48,7 @@ subroutine mat_proto(BEHinteg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  BEHinteg         : parameters for integration of behaviour
+! In  BEHInteg         : parameters for integration of behaviour
 !       in   fami      : famille de point de gauss (rigi,mass,...)
 !       in   kpg,ksp   : numero du (sous)point de gauss
 !       in   poum      : '+' /'-'
@@ -77,7 +77,7 @@ subroutine mat_proto(BEHinteg, &
     nbPara = 0
     paraName = " "
     paraVale = 0.d0
-    if (BEHinteg%behavPara%lElasIsMeta) then
+    if (BEHInteg%materPara%lElasIsMeta) then
         call metaGetType(metaType, nbPhases)
         if (nbPhases .ne. 0) then
             call metaGetPhase(fami, poum, kpg, ksp, metaType, &
@@ -88,17 +88,17 @@ subroutine mat_proto(BEHinteg, &
         end if
     end if
 
-    if (.not. BEHinteg%behavESVA%lGeomInESVA) then
+    if (.not. BEHInteg%behavESVA%lGeomInESVA) then
         ASSERT(fami .ne. 'XFEM')
         nbPara = nbPara+1
         paraName(nbPara) = "X"
-        paraVale(nbPara) = BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 1)
+        paraVale(nbPara) = BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 1)
         nbPara = nbPara+1
         paraName(nbPara) = "Y"
-        paraVale(nbPara) = BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 2)
+        paraVale(nbPara) = BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 2)
         nbPara = nbPara+1
         paraName(nbPara) = "Z"
-        paraVale(nbPara) = BEHinteg%behavESVA%behavESVAGeom%coorElga(kpg, 3)
+        paraVale(nbPara) = BEHInteg%behavESVA%behavESVAGeom%coorElga(kpg, 3)
     end if
     ASSERT(nbPara .le. nbParaMaxi)
     call rcadlv(fami, kpg, ksp, poum, jvMaterCode, ' ', relaComp, &

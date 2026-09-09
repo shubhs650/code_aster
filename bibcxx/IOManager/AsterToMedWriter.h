@@ -55,7 +55,7 @@ class AsterToMedWriter {
 
     bool _printMeshFromList( const BaseMesh &, const std::filesystem::path &filename,
                              const VectorLong &nodeList, const VectorLong &cellList, bool local,
-                             const std::string &meshName );
+                             const std::string &meshName, const std::string &mode = "a" );
 
     void _sortCellsByType( const VectorLong &cellVector, JeveuxVectorLong cellTypeVec,
                            VectorOfVectorsLong &cellIdByType ) const;
@@ -76,36 +76,40 @@ class AsterToMedWriter {
 #ifdef ASTER_HAVE_MED
     /** @brief print Mesh object */
     bool printMesh( const Mesh &, const std::filesystem::path &filename, bool local = true,
-                    const std::string &meshName = "" );
+                    const std::string &meshName = "", const std::string &mode = "a" );
 #ifdef ASTER_HAVE_MPI
     /** @brief print ParallelMesh object */
     bool printMesh( const ParallelMesh &, const std::filesystem::path &filename, bool local = true,
-                    const std::string &meshName = "" );
+                    const std::string &meshName = "", const std::string &mode = "a" );
 
     /** @brief print ConnectionMesh object */
     bool printMesh( const ConnectionMesh &, const std::filesystem::path &filename,
-                    bool local = true, const std::string &meshName = "" );
+                    bool local = true, const std::string &meshName = "",
+                    const std::string &mode = "a" );
 #endif
     /** @brief print MeshPtr object */
     bool printMesh( const MeshPtr &mesh, const std::filesystem::path &filename, bool local = true,
-                    const std::string &meshName = "" ) {
+                    const std::string &meshName = "", const std::string &mode = "a" ) {
         return printMesh( *mesh, filename, local, meshName );
     };
 #ifdef ASTER_HAVE_MPI
     /** @brief print ParallelMeshPtr object */
     bool printMesh( const ParallelMeshPtr &mesh, const std::filesystem::path &filename,
-                    bool local = true, const std::string &meshName = "" ) {
+                    bool local = true, const std::string &meshName = "",
+                    const std::string &mode = "a" ) {
         return printMesh( *mesh, filename, local, meshName );
     };
 
     /** @brief print ConnectionMeshPtr object */
     bool printMesh( const ConnectionMeshPtr &mesh, const std::filesystem::path &filename,
-                    bool local = true, const std::string &meshName = "" ) {
+                    bool local = true, const std::string &meshName = "",
+                    const std::string &mode = "a" ) {
         return printMesh( *mesh, filename, local, meshName );
     };
 #endif
     /** @brief print ResultPtr object */
-    bool printResult( const ResultPtr &, const std::filesystem::path &filename, bool local = true );
+    bool printResult( const ResultPtr &, const std::filesystem::path &filename, bool local = true,
+                      const std::string &mode = "a" );
 #endif
 };
 

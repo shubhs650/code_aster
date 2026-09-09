@@ -127,32 +127,14 @@ cata_msg = {
  <Action> On arrête le calcul.
  """
     ),
-    32: _(
-        """
- <Action> On essaie d'autoriser des itérations de Newton supplémentaires.
-"""
-    ),
     33: _(
         """
  <Action> On essaie de découper le pas de temps.
 """
     ),
-    35: _(
-        """
- <Action> On essaie d'adapter le coefficient de pénalisation.
- """
-    ),
     36: _(
         """
  <Erreur> Échec dans la condensation statique pour la modélisation HHO
 """
-    ),
-    44: _(
-        """ <Action><Échec> On ne peut plus adapter le coefficient de pénalisation (on atteint COEF_MAXI)."""
-    ),
-    45: _(""" <Action> On a adapté le coefficient de pénalisation."""),
-    46: _(
-        """          Sur la zone <%(i1)d>, le coefficient de pénalisation adapté vaut <%(r1)13.6G>.
- """
     ),
 }

@@ -57,7 +57,7 @@ contains
 !
         type(HHO_Quadrature), intent(in) :: hhoQuad
         type(HHO_basis_face), intent(inout) :: hhoBasisFace
-        real(kind=8), intent(in) :: ValuesQP(MAX_QP_FACE)
+        real(kind=8), intent(in) :: ValuesQP(MSIZE_QP_FACE)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_FACE_SCAL)
 ! --------------------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ contains
 !
         type(HHO_Face), intent(in) :: hhoFace
         type(HHO_Quadrature), intent(in) :: hhoQuad
-        real(kind=8), intent(in) :: ValuesQP(MAX_QP_FACE)
+        real(kind=8), intent(in) :: ValuesQP(MSIZE_QP_FACE)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_FACE_SCAL)
 ! --------------------------------------------------------------------------------------------------
@@ -137,7 +137,7 @@ contains
 !
         type(HHO_Face), intent(in) :: hhoFace
         type(HHO_Quadrature), intent(in) :: hhoQuad
-        real(kind=8), intent(in) :: ValuesQP(3, MAX_QP_FACE)
+        real(kind=8), intent(in) :: ValuesQP(3, MSIZE_QP_FACE)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_FACE_VEC)
 !
@@ -156,7 +156,7 @@ contains
 !
         type(HHO_basis_face) :: hhoBasisFace
         integer(kind=8) :: size, idir, begin, i
-        real(kind=8) :: Values(MAX_QP_FACE), rhs_dir(MSIZE_FACE_SCAL)
+        real(kind=8) :: Values(MSIZE_QP_FACE), rhs_dir(MSIZE_FACE_SCAL)
 !
 ! -- init face basis
         call hhoBasisFace%initialize(hhoFace)
@@ -187,7 +187,7 @@ contains
 !
         type(HHO_Quadrature), intent(in) :: hhoQuad
         type(HHO_basis_cell), intent(inout) :: hhoBasisCell
-        real(kind=8), intent(in) :: ValuesQP(MAX_QP_CELL)
+        real(kind=8), intent(in) :: ValuesQP(MSIZE_QP_CELL)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_CELL_SCAL)
 !
@@ -235,7 +235,7 @@ contains
 !
         type(HHO_Cell), intent(in) :: hhoCell
         type(HHO_Quadrature), intent(in) :: hhoQuad
-        real(kind=8), intent(in) :: ValuesQP(MAX_QP_CELL)
+        real(kind=8), intent(in) :: ValuesQP(MSIZE_QP_CELL)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_CELL_SCAL)
 !
@@ -271,7 +271,7 @@ contains
 !
         type(HHO_Cell), intent(in) :: hhoCell
         type(HHO_Quadrature), intent(in) :: hhoQuad
-        real(kind=8), intent(in) :: ValuesQP(3, MAX_QP_CELL)
+        real(kind=8), intent(in) :: ValuesQP(3, MSIZE_QP_CELL)
         integer(kind=8), intent(in) :: degree
         real(kind=8), intent(out) :: rhs(MSIZE_CELL_VEC)
 !
@@ -289,7 +289,7 @@ contains
 !
         type(HHO_basis_cell) :: hhoBasisCell
         integer(kind=8) :: size, idir, begin, i
-        real(kind=8) :: Values(MAX_QP_CELL), rhs_dir(MSIZE_CELL_SCAL)
+        real(kind=8) :: Values(MSIZE_QP_CELL), rhs_dir(MSIZE_CELL_SCAL)
 !
 ! -- init face basis
         call hhoBasisCell%initialize(hhoCell)

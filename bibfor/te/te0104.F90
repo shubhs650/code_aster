@@ -212,9 +212,6 @@ subroutine te0104(option, nomte)
 !
 !
         call jevete('&INEL.'//nomte(1:8)//'.DEMR', ' ', mzr)
-!CC     CALL JEVECH('PCACOQU','L',ICACOQ)
-!
-!CC     EP=ZR(ICACOQ)
 !
         long = ( &
                zr(igeom+3)-zr(igeom))**2+(zr(igeom+3+1)-zr(igeom+1))**2+(zr(igeom+3+2)-zr(ig&

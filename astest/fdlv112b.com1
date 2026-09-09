@@ -131,7 +131,6 @@ CALC_MISS(
         FREQ_MAX=3.0,
         FREQ_PAS=2.9,
         Z0=5.0,
-        SURF="NON",
         AUTO="OUI",
         OPTION_DREF="NON",
         OPTION_RFIC="NON",

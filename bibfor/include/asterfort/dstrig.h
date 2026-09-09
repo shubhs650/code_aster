@@ -15,13 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dstrig(nomte, xyzl, option, pgl, rig,&
-                      ener)
-        character(len=16) :: nomte
+    subroutine dstrig(plateCara, plateOrie, &
+                      xyzl, option, pgl, &
+                      rig, ener)
+        use plate_type
+        type(plateOrie_Para), intent(in) :: plateOrie
+        type(plateCara_Para), intent(in) :: plateCara
         real(kind=8) :: xyzl(3, *)
         character(len=16) :: option
         real(kind=8) :: pgl(*)

@@ -15,35 +15,34 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine nmvprk(fami, kpg, ksp, ndim, typmod,&
-                      imat, comp, crit, timed, timef,&
-                      neps, epsdt, depst, sigd, nvi, vind,&
-                      opt, angmas, sigf, vinf, dsde,&
-                      iret, mult_comp_)
+    subroutine nmvprk(BEHinteg, &
+                      option, typmod, ndim, &
+                      compor, carcri, &
+                      instam, instap, &
+                      neps, epsdt, depst, sigd, &
+                      nvi, vind, sigf, &
+                      vinf, dsde, iret, multComp_)
+        use Behaviour_type
+        type(Behaviour_Integ), intent(in) :: BEHinteg
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: option
+        character(len=8), intent(in) :: typmod(2)
+        real(kind=8), intent(in) :: instam, instap
+        integer(kind=8), intent(in) :: nvi
+        character(len=16), optional, intent(in) :: multComp_
         integer(kind=8) :: neps
-        character(len=*) :: fami
-        integer(kind=8) :: kpg
-        integer(kind=8) :: ksp
         integer(kind=8) :: ndim
-        character(len=8) :: typmod(*)
-        integer(kind=8) :: imat
-        character(len=16) :: comp(*)
-        real(kind=8) :: crit(*)
-        real(kind=8) :: timed
-        real(kind=8) :: timef
         real(kind=8) :: epsdt(neps)
         real(kind=8) :: depst(neps)
         real(kind=8) :: sigd(6)
-        integer(kind=8), intent(in):: nvi
         real(kind=8) :: vind(*)
-        character(len=16) :: opt
-        real(kind=8) :: angmas(*)
         real(kind=8) :: sigf(6)
         real(kind=8) :: vinf(*)
         real(kind=8) :: dsde(6, *)
         integer(kind=8) :: iret
-        character(len=16), optional, intent(in) :: mult_comp_
     end subroutine nmvprk
 end interface

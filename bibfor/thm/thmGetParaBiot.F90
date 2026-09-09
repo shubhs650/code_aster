@@ -16,10 +16,11 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmGetParaBiot(j_mater, ds_thm)
+subroutine thmGetParaBiot(ds_thm)
 !
+    use Behaviour_type
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -27,7 +28,6 @@ subroutine thmGetParaBiot(j_mater, ds_thm)
 #include "asterfort/rcvala.h"
 #include "asterfort/THM_type.h"
 !
-    integer(kind=8), intent(in) :: j_mater
     type(THM_DS), intent(inout) :: ds_thm
 !
 ! --------------------------------------------------------------------------------------------------
@@ -38,51 +38,44 @@ subroutine thmGetParaBiot(j_mater, ds_thm)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  j_mater          : coded material address
 ! IO  ds_thm           : datastructure for THM
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8), parameter :: nb_resu = 4
-    integer(kind=8) :: icodre(nb_resu)
-    real(kind=8) :: resu_vale(nb_resu)
-    character(len=16), parameter :: resu_name(nb_resu) = (/'BIOT_COEF', 'BIOT_L   ', &
-                                                           'BIOT_N   ', 'BIOT_T   '/)
+    integer(kind=8), parameter :: nbProp = 4
+    integer(kind=8) :: propCode(nbProp)
+    real(kind=8) :: propVale(nbProp)
+    character(len=16), parameter :: propName(nbProp) = (/'BIOT_COEF', 'BIOT_L   ', &
+                                                         'BIOT_N   ', 'BIOT_T   '/)
     real(kind=8) :: emmag, phi0
     real(kind=8), parameter :: eps = 1.d-21
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    resu_vale(:) = r8nnem()
-!
-! - Read resumeters
-!
-    call rcvala(j_mater, ' ', 'THM_DIFFU', &
+    propVale(:) = r8nnem()
+
+    call rcvala(ds_thm%ds_behaviour%BEHInteg%materPara%jvMaterCode, &
+                ' ', 'THM_DIFFU', &
                 0, ' ', [0.d0], &
-                nb_resu, resu_name, resu_vale, &
-                icodre, 0, nan='OUI')
-!
-! - Set resumeters
-!
-    ds_thm%ds_material%biot%coef = resu_vale(1)
-    ds_thm%ds_material%biot%l = resu_vale(2)
-    ds_thm%ds_material%biot%n = resu_vale(3)
-    ds_thm%ds_material%biot%t = resu_vale(4)
-!
+                nbProp, propName, propVale, &
+                propCode, 0, nan='OUI')
+    ds_thm%ds_material%biot%coef = propVale(1)
+    ds_thm%ds_material%biot%l = propVale(2)
+    ds_thm%ds_material%biot%n = propVale(3)
+    ds_thm%ds_material%biot%t = propVale(4)
+
 ! - Type
-!
-    if (icodre(1) .eq. 0) then
+    if (propCode(1) .eq. 0) then
         ds_thm%ds_material%biot%type = BIOT_TYPE_ISOT
     else
-        if (icodre(4) .eq. 0) then
+        if (propCode(4) .eq. 0) then
             ds_thm%ds_material%biot%type = BIOT_TYPE_ORTH
         else
             ds_thm%ds_material%biot%type = BIOT_TYPE_ISTR
         end if
     end if
-!
+
 ! - If small storage coefficient
-!
     if (ds_thm%ds_material%hydr%l_emmag) then
         emmag = ds_thm%ds_material%hydr%emmag
         phi0 = ds_thm%ds_parainit%poro_init

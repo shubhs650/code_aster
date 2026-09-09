@@ -983,7 +983,7 @@ contains
         type(HHO_Face) :: hhoFace
         type(HHO_Quadrature) :: hhoQuadFace, hhoQuadCell
         integer(kind=8) :: cbs, fbs, total_dofs, idim, iFace, nbpara, ind
-        real(kind=8) :: FuncValuesQP(3, MAX_QP_FACE), FuncValuesCellQP(3, MAX_QP_CELL)
+        real(kind=8) :: FuncValuesQP(3, MSIZE_QP_FACE), FuncValuesCellQP(3, MSIZE_QP_CELL)
         real(kind=8) :: rhs_face(MSIZE_FACE_VEC), rhs_cell(MSIZE_CELL_VEC)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1032,7 +1032,7 @@ contains
 !
                     call hhoFuncFScalEvalQp(hhoQuadFace, nomFunc(idim, iFace), nbpara, nompar, &
                                             valpar, hhoCell%ndim, &
-                                            FuncValuesQp(idim, 1:MAX_QP_FACE))
+                                            FuncValuesQp(idim, 1:MSIZE_QP_FACE))
 !
                 end if
             end do
@@ -1056,7 +1056,7 @@ contains
             if (nomFunc(idim, hhoCell%nbfaces+1) .ne. '&&FOZERO') then
                 call hhoFuncFScalEvalQp(hhoQuadCell, nomFunc(idim, hhoCell%nbfaces+1), nbpara, &
                                         nompar, valpar, hhoCell%ndim, &
-                                        FuncValuesCellQP(idim, 1:MAX_QP_CELL))
+                                        FuncValuesCellQP(idim, 1:MSIZE_QP_CELL))
             end if
         end do
 !
@@ -1096,7 +1096,7 @@ contains
         type(HHO_Face) :: hhoFace
         type(HHO_Quadrature) :: hhoQuadFace, hhoQuadCell
         integer(kind=8) :: cbs, fbs, total_dofs, idim, iFace, ind, ndim
-        real(kind=8) :: FuncValuesQP(3, MAX_QP_FACE), FuncValuesCellQP(3, MAX_QP_CELL)
+        real(kind=8) :: FuncValuesQP(3, MSIZE_QP_FACE), FuncValuesCellQP(3, MSIZE_QP_CELL)
         real(kind=8) :: rhs_face(MSIZE_FACE_VEC), rhs_cell(MSIZE_CELL_VEC)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1188,7 +1188,7 @@ contains
         type(HHO_Face) :: hhoFace
         type(HHO_Quadrature) :: hhoQuadFace, hhoQuadCell
         integer(kind=8) :: cbs, fbs, total_dofs, iFace, ind
-        real(kind=8) :: FuncValuesQP(MAX_QP_FACE), FuncValuesCellQP(MAX_QP_CELL)
+        real(kind=8) :: FuncValuesQP(MSIZE_QP_FACE), FuncValuesCellQP(MSIZE_QP_CELL)
         real(kind=8) :: rhs_face(MSIZE_FACE_SCAL), rhs_cell(MSIZE_CELL_SCAL)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -1216,9 +1216,10 @@ contains
 !
 ! -------------- Compute L2 projection
 !
-            call hhoL2ProjFaceScal(hhoFace, hhoQuadFace, FuncValuesQP, hhoData%face_degree(), &
-                                   rhs_face)
+            call hhoL2ProjFaceScal(hhoFace, hhoQuadFace, FuncValuesQP, &
+                                   hhoData%face_degree(), rhs_face)
             call dcopy_1(fbs, rhs_face, rhs_cine(ind))
+!
             ind = ind+fbs
         end do
 !
@@ -1271,7 +1272,7 @@ contains
         type(HHO_Face) :: hhoFace
         type(HHO_Quadrature) :: hhoQuadFace, hhoQuadCell
         integer(kind=8) :: cbs, fbs, total_dofs, iFace, nbpara, ind
-        real(kind=8) :: FuncValuesQP(MAX_QP_FACE), FuncValuesCellQP(MAX_QP_CELL)
+        real(kind=8) :: FuncValuesQP(MSIZE_QP_FACE), FuncValuesCellQP(MSIZE_QP_CELL)
         real(kind=8) :: rhs_face(MSIZE_FACE_SCAL), rhs_cell(MSIZE_CELL_SCAL)
 !
 ! --------------------------------------------------------------------------------------------------

@@ -19,9 +19,10 @@
 subroutine btsig(lonlig, loncol, jacgau, bmat, sigma, bsigma)
     implicit none
 #include "MeshTypes_type.h"
+#include "FE_module.h"
 !
     integer(kind=8), intent(in) :: loncol, lonlig
-    real(kind=8), intent(in) :: jacgau, bmat(loncol, 3*MT_NNOMAX3D), sigma(loncol)
+    real(kind=8), intent(in) :: jacgau, bmat(loncol, MAX_BV_CG), sigma(loncol)
     real(kind=8), intent(out) :: bsigma(*)
 !
     integer(kind=8) :: i, j

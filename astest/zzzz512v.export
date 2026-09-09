@@ -7,4 +7,4 @@ P testlist submit verification parallel
 
 F comm zzzz512v.py D 1
 F mmed zzzz512v.mmed D 20
-F datg zzzz512f.datg D 25
+F datg zzzz512v.datg D 25

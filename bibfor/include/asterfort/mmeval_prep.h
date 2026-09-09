@@ -21,6 +21,7 @@
 #include "asterf_types.h"
 !
 interface
+#include "MeshTypes_type.h"
     subroutine mmeval_prep(mesh   , time_curr  , model_ndim     , ds_contact,&
                             i_zone         ,&
                            ksipc1 , ksipc2     , ksipr1         , ksipr2    ,&
@@ -47,7 +48,7 @@ interface
         integer(kind=8), intent(in) :: elem_slav_nbno
         integer(kind=8), intent(in) :: elem_slav_indx
         character(len=8), intent(in) :: elem_slav_type
-        real(kind=8), intent(in) :: elem_slav_coor(27)
+        real(kind=8), intent(in) :: elem_slav_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_mast_nume
         real(kind=8), intent(in) :: lagr_cont_node(9)
         real(kind=8), intent(out) :: norm(3)

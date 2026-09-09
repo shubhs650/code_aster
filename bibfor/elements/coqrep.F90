@@ -16,33 +16,44 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine coqrep(pgl, alpha, beta, t2iu, t2ui, &
-                  c, s)
+subroutine coqrep(pgl, alpha, beta, &
+                  t2iu_, t2ui_, &
+                  c_, s_)
+!
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/utmess.h"
+#include "jeveux.h"
 
-    real(kind=8) :: pgl(3, 3), t2iu(*), t2ui(*), alpha, beta, c, s
+    real(kind=8), intent(in) :: pgl(3, 3), alpha, beta
+    real(kind=8), optional, intent(out) :: t2iu_(4), t2ui_(4)
+    real(kind=8), optional, intent(out) :: c_, s_
 !
-!     ------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
+! Compute operators for coordinate transformation
 !
 !         CALCUL DE LA MATRICE DE PASSAGE DU REPERE INTRINSEQUE (ELEMENT) A CELUI
 !         DE L'UTILISATEUR (VARIETE) (LE REPERE DE LA VARIETE EST OBTENU PAR LA MATRICE
 !         DE PASSAGE GLOBAL -> LOCAL) AINSI QUE SON INVERSE
 !
-!         POUR TOUTES LES OPTIONS DE POST TRAITEMENT COQUE
+! --------------------------------------------------------------------------------------------------
 !
-!     ==> ALPHA, BETA EN RADIAN
-!
-!     ------------------------------------------------------------------
     real(kind=8) :: dx, dy, dz, norm
-    real(kind=8) :: ps, pjdx, pjdy, pjdz
-!     LE VECTEUR EST NORME
+    real(kind=8) :: ps, pjdx, pjdy, pjdz, c, s
+    real(kind=8) :: t2iu(4), t2ui(4)
+!
+! --------------------------------------------------------------------------------------------------
+!
+
+!   LE VECTEUR EST NORME
     dx = cos(beta)*cos(alpha)
     dy = cos(beta)*sin(alpha)
     dz = -sin(beta)
+
 !   On vérifie que n = pgl(3,1:3) n'est pas de norme nulle
     norm = sqrt(dot_product(pgl(3, 1:3), pgl(3, 1:3)))
     ASSERT(norm .gt. r8prem())
@@ -74,6 +85,10 @@ subroutine coqrep(pgl, alpha, beta, t2iu, t2ui, &
     t2ui(2) = -s
     t2ui(3) = s
     t2ui(4) = c
-!
+
+    if (present(c_)) c_ = c
+    if (present(s_)) s_ = s
+    if (present(t2iu_)) t2iu_ = t2iu
+    if (present(t2ui_)) t2ui_ = t2ui
 !
 end subroutine

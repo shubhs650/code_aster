@@ -36,10 +36,6 @@ DDL_MECA = LocatedComponents(
     phys=PHY.DEPL_R, type="ELNO", components=("DX", "DY", "DZ", "DRX", "DRY", "DRZ")
 )
 
-CCACOQU = LocatedComponents(
-    phys=PHY.CACOQU_R, type="ELEM", components=("EP", "ALPHA", "BETA", "CTOR", "EXCENT", "INERTIE")
-)
-
 CCAORIE = LocatedComponents(
     phys=PHY.CAORIE_R,
     type="ELEM",
@@ -133,10 +129,6 @@ EFORCNO = LocatedComponents(
 ETHERGA = LocatedComponents(phys=PHY.TEMP_R, type="ELGA", location="RIGI", components=("TEMP",))
 
 ENBSP_I = LocatedComponents(phys=PHY.NBSP_I, type="ELEM", components=("COQ_NCOU",))
-
-ENEU1_R = LocatedComponents(phys=PHY.NEUT_R, type="ELEM", components=("X1",))
-
-ELNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELEM", components=("X[30]",))
 
 EGNEUT_F = LocatedComponents(phys=PHY.NEUT_F, type="ELGA", location="RIGI", components=("X[30]",))
 
@@ -274,7 +266,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_EPSI_R(
             te=35,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PEPSINR, CEPSINR),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -286,7 +278,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_EPSI_F(
             te=35,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PEPSINF, CEPSINF),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -299,7 +291,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_FFCO3D(
             te=32,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PFFCO3D, CFORCEF),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -308,7 +300,7 @@ class MEDSQU4(Element):
         ),
         OP.CHAR_MECA_FRCO3D(
             te=32,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PFRCO3D, EFORCNO), (SP.PGEOMER, LC.EGEOM3D)),
+            para_in=((SP.PCACOQU, LC.CSHLDKT), (SP.PFRCO3D, EFORCNO), (SP.PGEOMER, LC.EGEOM3D)),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_HYDR_R(
@@ -319,7 +311,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_PESA_R(
             te=32,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (SP.PPESANR, LC.CPESANR),
@@ -330,7 +322,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_PRES_F(
             te=32,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PPRESSF, CPRESSF),
                 (SP.PINSTR, LC.MTEMPSR),
@@ -339,7 +331,7 @@ class MEDSQU4(Element):
         ),
         OP.CHAR_MECA_PRES_R(
             te=32,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, LC.EGEOM3D), (SP.PPRESSR, EPRESNO)),
+            para_in=((SP.PCACOQU, LC.CSHLDKT), (SP.PGEOMER, LC.EGEOM3D), (SP.PPRESSR, EPRESNO)),
             para_out=((SP.PVECTUR, MVECTUR),),
         ),
         OP.CHAR_MECA_PRSU_F(
@@ -362,7 +354,7 @@ class MEDSQU4(Element):
         OP.CHAR_MECA_TEMP_R(
             te=35,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.CHAR_MECA_TEMP_R.PNBSP_I, ENBSP_I),
@@ -375,7 +367,7 @@ class MEDSQU4(Element):
         OP.COOR_ELGA(
             te=488,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (OP.COOR_ELGA.PNBSP_I, ENBSP_I),
             ),
@@ -385,7 +377,7 @@ class MEDSQU4(Element):
         OP.DEGE_ELGA(
             te=33,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -396,7 +388,7 @@ class MEDSQU4(Element):
         OP.DEGE_ELNO(
             te=33,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -408,7 +400,7 @@ class MEDSQU4(Element):
         OP.ECIN_ELEM(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -422,7 +414,7 @@ class MEDSQU4(Element):
         OP.EFGE_ELGA(
             te=451,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.EFGE_ELGA.PNBSP_I, ENBSP_I),
                 (SP.PSIEFR, ECONTPG),
@@ -432,7 +424,7 @@ class MEDSQU4(Element):
         OP.EFGE_ELNO(
             te=185,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.EFGE_ELNO.PCOMPOR, LC.CCOMPOR),
                 (OP.EFGE_ELNO.PCONTRR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -449,7 +441,7 @@ class MEDSQU4(Element):
         OP.EFGE_EXCENT(
             te=452,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PEFFOGC, EEFGEPGC),
                 (SP.PEFFOGR, EEFGEPGR),
                 (SP.PEFFONC, EEFGENOC),
@@ -465,7 +457,7 @@ class MEDSQU4(Element):
         OP.ENEL_ELEM(
             te=412,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.ENEL_ELEM.PCOMPOR, LC.CCOMPOR),
                 (OP.ENEL_ELEM.PCONTPR, ECONTPG),
                 (SP.PDEPLR, DDL_MECA),
@@ -481,7 +473,7 @@ class MEDSQU4(Element):
         OP.ENEL_ELGA(
             te=412,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.ENEL_ELGA.PCOMPOR, LC.CCOMPOR),
                 (OP.ENEL_ELGA.PCONTRR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -524,7 +516,7 @@ class MEDSQU4(Element):
         OP.EPOT_ELEM(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -537,7 +529,7 @@ class MEDSQU4(Element):
         OP.EPSI_ELGA(
             te=33,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -572,7 +564,7 @@ class MEDSQU4(Element):
         OP.FERR_ELEM(
             te=146,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.FERR_ELEM.PEFFORR, EEFGENOR),
                 (SP.PFERRA1, LC.CFER1_R),
             ),
@@ -581,7 +573,7 @@ class MEDSQU4(Element):
         OP.FORC_NODA(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PCOMPOR, LC.CCOMPOR),
                 (SP.PSIEFR, ECONTPG),
                 (SP.PDEPLAR, DDL_MECA),
@@ -600,7 +592,7 @@ class MEDSQU4(Element):
         OP.MASS_INER(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.MASS_INER.PNBSP_I, ENBSP_I),
@@ -611,7 +603,7 @@ class MEDSQU4(Element):
         OP.MASS_MECA(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.MASS_MECA.PNBSP_I, ENBSP_I),
@@ -626,7 +618,7 @@ class MEDSQU4(Element):
             te=31,
             para_in=(
                 (SP.PACCELR, DDL_MECA),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.M_GAMMA.PNBSP_I, ENBSP_I),
@@ -642,7 +634,7 @@ class MEDSQU4(Element):
         OP.PAS_COURANT(
             te=404,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.PAS_COURANT.PVARCPR, LC.ZVARCPG),
@@ -652,7 +644,7 @@ class MEDSQU4(Element):
         OP.PREP_VRC(
             te=408,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.PREP_VRC.PINST_R, LC.MTEMPSR),
                 (OP.PREP_VRC.PNBSP_I, ENBSP_I),
                 (SP.PTEMPEF, LC.CTEMPEF),
@@ -665,7 +657,7 @@ class MEDSQU4(Element):
         OP.REFE_FORC_NODA(te=-1),
         OP.REPERE_LOCAL(
             te=134,
-            para_in=((SP.PCACOQU, CCACOQU), (SP.PGEOMER, LC.EGEOM3D)),
+            para_in=((SP.PCACOQU, LC.CSHLDKT), (SP.PGEOMER, LC.EGEOM3D)),
             para_out=(
                 (OP.REPERE_LOCAL.PMATPASS, ECHGREP),
                 (SP.PREPLO1, LC.CGEOM3D),
@@ -677,7 +669,7 @@ class MEDSQU4(Element):
             te=442,
             para_in=(
                 (SP.PANGREP, CCAORIE),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDGGAIN, EDEFGPG),
                 (SP.PDGGAINC, EDEFGPC),
                 (SP.PDGNOIN, EDEFGNO),
@@ -703,7 +695,7 @@ class MEDSQU4(Element):
             te=442,
             para_in=(
                 (SP.PANGREP, CCAORIE),
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PCOGAIN, ECONTPG),
                 (SP.PCONOIN, ECONTNO),
                 (SP.PDEGAIN, EDEFOPG),
@@ -721,7 +713,7 @@ class MEDSQU4(Element):
         OP.RIGI_MECA(
             te=31,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
                 (OP.RIGI_MECA.PNBSP_I, ENBSP_I),
@@ -759,7 +751,7 @@ class MEDSQU4(Element):
         OP.SIEF_ELGA(
             te=33,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (SP.PDEPLAR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM3D),
                 (SP.PMATERC, LC.CMATERC),
@@ -798,7 +790,7 @@ class MEDSQU4(Element):
         OP.TEMP_ELGA(
             te=126,
             para_in=(
-                (SP.PCACOQU, CCACOQU),
+                (SP.PCACOQU, LC.CSHLDKT),
                 (OP.TEMP_ELGA.PNBSP_I, ENBSP_I),
                 (OP.TEMP_ELGA.PVARCPR, LC.ZVARCPG),
             ),
@@ -807,36 +799,41 @@ class MEDSQU4(Element):
         OP.TOU_INI_ELEM(
             te=99,
             para_out=(
-                (OP.TOU_INI_ELEM.PNEUT_F, ELNEUT_F),
-                (SP.PNEU1_R, ENEU1_R),
                 (OP.TOU_INI_ELEM.PGEOM_R, LC.CGEOM3D),
                 (OP.TOU_INI_ELEM.PNBSP_I, ENBSP_I),
                 (OP.TOU_INI_ELEM.PPRES_R, CPRES_R),
+                (OP.TOU_INI_ELEM.PTEMP_R, LC.CTEMPER),
+                (OP.TOU_INI_ELEM.PCAMA_R, LC.CCAMASS),
+                (SP.PNEUT_F, LC.CNTINIF),
+                (SP.PNEUT_R, LC.CNTINIR),
+                (SP.PNEUT_I, LC.CNTINII),
             ),
         ),
         OP.TOU_INI_ELGA(
             te=99,
             para_out=(
-                (OP.TOU_INI_ELGA.PNEUT_F, EGNEUT_F),
-                (OP.TOU_INI_ELGA.PNEUT_R, EGNEUT_R),
                 (OP.TOU_INI_ELGA.PSIEF_R, ECONTPG),
                 (OP.TOU_INI_ELGA.PVARI_R, ZVARIPG),
+                (OP.TOU_INI_ELGA.PNEUT_F, LC.EGTINIF),
+                (OP.TOU_INI_ELGA.PNEUT_R, LC.EGTINIR),
+                (OP.TOU_INI_ELGA.PNEUT_I, LC.EGTINII),
             ),
         ),
         OP.TOU_INI_ELNO(
             te=99,
             para_out=(
                 (OP.TOU_INI_ELNO.PGEOM_R, LC.EGEOM3D),
-                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENNEUT_F),
-                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENNEUT_R),
                 (OP.TOU_INI_ELNO.PPRES_R, EPRESNO),
                 (OP.TOU_INI_ELNO.PSIEF_R, EEFGENOR),
+                (OP.TOU_INI_ELNO.PNEUT_F, LC.ENTINIF),
+                (OP.TOU_INI_ELNO.PNEUT_R, LC.ENTINIR),
+                (OP.TOU_INI_ELNO.PNEUT_I, LC.ENTINII),
             ),
         ),
         OP.VARI_ELNO(te=-1),
         OP.VERI_CARA_ELEM(
             te=119,
-            para_in=((SP.PCACOQU, CCACOQU),),
+            para_in=((SP.PCACOQU, LC.CSHLDKT),),
             para_out=((SP.PCODRET, LC.ECODRET), (SP.PINDICR, LC.CINDICR)),
         ),
         OP.VERI_PLAN(

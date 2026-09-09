@@ -40,6 +40,7 @@ subroutine dtmforc_calcnoli(sd_dtm_, sd_nl_, buffdtm, buffnl, &
 #include "asterfort/dtmforc_galet.h"
 #include "asterfort/dtmforc_ants.h"
 #include "asterfort/dtmforc_flam.h"
+#include "asterfort/dtmforc_deci.h"
 #include "asterfort/dtmforc_decr.h"
 #include "asterfort/dtmforc_dvis.h"
 #include "asterfort/dtmforc_rede.h"
@@ -128,6 +129,10 @@ subroutine dtmforc_calcnoli(sd_dtm_, sd_nl_, buffdtm, buffnl, &
         case (NL_FV_RELATIONSHIP)
             call dtmforc_revi(nl_ind, sd_dtm, sd_nl, buffdtm, buffnl, &
                               vite, fext)
+! !
+        case (NL_DIS_ECRO_CINE)
+            call dtmforc_deci(nl_ind, sd_dtm, sd_nl, buffdtm, buffnl, &
+                              time, dt, depl, fext)
 
             !
         case default

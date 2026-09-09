@@ -16,18 +16,18 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine thmMatrHooke(ds_thm, angl_naut)
+subroutine thmMatrHooke(ds_thm)
 !
+    use MaterialPara_type
     use THM_type
-!
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/ElasticityMaterial_type.h"
 #include "asterfort/matrHooke3d.h"
 #include "asterfort/separ_RI_elas_3D.h"
 !
     type(THM_DS), intent(inout) :: ds_thm
-    real(kind=8), intent(in) :: angl_naut(3)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -38,29 +38,28 @@ subroutine thmMatrHooke(ds_thm, angl_naut)
 ! --------------------------------------------------------------------------------------------------
 !
 ! IO  ds_thm           : datastructure for THM
-! In  angl_naut        : nautical angles
-!                        (1) Alpha - clockwise around Z0
-!                        (2) Beta  - counterclockwise around Y1
-!                        (1) Gamma - clockwise around X
 !
 ! --------------------------------------------------------------------------------------------------
 !
     real(kind=8) :: h(6), hi(6), g, e, nu
     real(kind=8) :: e1i, e2i, e3i, gi
     real(kind=8) :: nu12i, nu13i, nu23i, nui
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! - Prepare Hook matrix coefficient
-!
-    if (ds_thm%ds_material%elas%id .eq. 1) then
+    materPara = ds_thm%ds_behaviour%BEHInteg%materPara
+
+! - Prepare Hooke matrix coefficient
+    if (materPara%elasID .eq. ELAS_ISOT) then
         e = ds_thm%ds_material%elas%e
         nu = ds_thm%ds_material%elas%nu
         g = e/(2.d0*(1.d0+nu))
     else
         g = ds_thm%ds_material%elas%g
     end if
-    call separ_RI_elas_3D(elas_id=ds_thm%ds_material%elas%id, &
+
+    call separ_RI_elas_3D(materPara%elasID, &
                           nu=ds_thm%ds_material%elas%nu, &
                           g=g, nui=nui, gi=gi, &
                           e1=ds_thm%ds_material%elas%e_l, &
@@ -72,10 +71,8 @@ subroutine thmMatrHooke(ds_thm, angl_naut)
                           e1i=e1i, e2i=e2i, e3i=e3i, &
                           nu12i=nu12i, nu13i=nu13i, nu23i=nu23i, &
                           hr=h, hi=hi)
-!
 ! - Compute matrix
-!
-    call matrHooke3d(ds_thm%ds_material%elas%id, angl_naut, &
+    call matrHooke3d(materPara, &
                      h=h, g=g, &
                      g1=ds_thm%ds_material%elas%g_lt, &
                      g2=ds_thm%ds_material%elas%g_ln, &

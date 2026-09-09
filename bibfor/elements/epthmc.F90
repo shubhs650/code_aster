@@ -16,24 +16,25 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine epthmc(fami, nbEpsi, npg, ndim, &
-                  time, anglNaut, jvMaterCode, &
+subroutine epthmc(materPara, time, &
+                  nbEpsi, npg, ndim, &
                   indxVarcStrain, epsiVarc)
 !
     use BehaviourStrain_module
     use BehaviourStrain_type
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
 #include "asterfort/assert.h"
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/epstmc.h"
-#include "asterfort/get_elas_id.h"
 !
-    character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) ::  nbEpsi, npg, ndim
-    real(kind=8), intent(in) :: time, anglNaut(3)
-    integer(kind=8), intent(in) :: jvMaterCode, indxVarcStrain
+    type(Material_Para), intent(inout) :: materPara
+    real(kind=8), intent(in) :: time
+    integer(kind=8), intent(in) :: nbEpsi, npg, ndim
+    integer(kind=8), intent(in) :: indxVarcStrain
     real(kind=8), intent(out) :: epsiVarc(nbEpsi*npg)
 !
 ! --------------------------------------------------------------------------------------------------
@@ -42,22 +43,18 @@ subroutine epthmc(fami, nbEpsi, npg, ndim, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! In  fami             : Gauss family for integration point rule
-! In  nno              : number of nodes
+! IO  materPara        : parameters of material
+! In  time             : given time
 ! In  ndim             : dimension of space
 ! In  nbEpsi           : number of strain tensor components
 ! In  npg              : number of Gauss points
-! In  anglNaut         : nautical angles (for non-isotropic materials)
-! In  time             : given time
-! In  jvMaterCode      : coded material address
 ! In  indxVarcStrain   : index of external state variable
 ! Out epsiVarc         : anelastic strains from all external state variables
 !
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8), parameter :: ksp = 1
-    integer(kind=8) :: kpg, iEpsi, elasID
-    character(len=16) :: elasKeyword
+    integer(kind=8) :: kpg, iEpsi
     real(kind=8) :: epsiVarcKpg(6)
     type(All_Varc_Strain) :: allVarcStrain
 !
@@ -74,14 +71,14 @@ subroutine epthmc(fami, nbEpsi, npg, ndim, &
         allVarcStrain%hasTime = ASTER_TRUE
     end if
 
-! - Get type of elasticity (Isotropic/Orthotropic/Transverse isotropic)
-    call get_elas_id(jvMaterCode, elasID, elasKeyword)
-
 ! - Loop on Gauss points
     do kpg = 1, npg
+! ----- Initializations of material parameters on current integration point
+        call initParaPoin(kpg, ksp, materPara)
+
+! ----- Compute inelastic strains from external state variables on current integration point
         epsiVarcKpg = 0.d0
-        call epstmc(fami, "+", kpg, ksp, ndim, &
-                    time, anglNaut, jvMaterCode, &
+        call epstmc(materPara, "+", time, ndim, &
                     indxVarcStrain, allVarcStrain, &
                     epsiVarcKpg)
         do iEpsi = 1, nbEpsi

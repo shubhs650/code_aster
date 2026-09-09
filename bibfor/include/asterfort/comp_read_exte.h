@@ -17,11 +17,12 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine comp_read_exte(keywf, i_comp, libr_name, subr_name, nb_vari_umat)
-        character(len=16), intent(in) :: keywf
-        integer(kind=8), intent(in) :: i_comp
-        character(len=255), intent(out) :: libr_name
-        character(len=255), intent(out) :: subr_name
-        integer(kind=8), intent(out) :: nb_vari_umat
+    subroutine comp_read_exte(factorKeyword, iFactorKeyword, &
+                              librNameUMAT, subrNameUMAT, nbVariUMAT)
+        character(len=16), intent(in) :: factorKeyword
+        integer(kind=8), intent(in) :: iFactorKeyword
+        character(len=255), intent(out) :: librNameUMAT
+        character(len=255), intent(out) :: subrNameUMAT
+        integer(kind=8), intent(out) :: nbVariUMAT
     end subroutine comp_read_exte
 end interface

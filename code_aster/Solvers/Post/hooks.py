@@ -108,11 +108,7 @@ class ComputeHydr(BaseHook):
         try:
             hydr_prev = current.getState(-1).auxiliary["HYDR_ELGA"]
             hydr_curr = post.computeHydration(
-                current.primal_prev,
-                current.primal_curr,
-                current.time_prev,
-                current.time_curr,
-                hydr_prev,
+                current.U_t, current.U, current.time_prev, current.time_curr, hydr_prev
             )
         except IndexError:
             hydr_curr = current.createFieldOnCells(nl_oper.problem, "ELGA", "HYDR_R")
@@ -146,12 +142,12 @@ class ComputeStress(BaseHook):
         strx_elga = None
         if nl_oper.problem.getModel().existsMultiFiberBeam():
             strx_elga = self._post.computeStructuralStress(
-                current.primal_curr, current.time_curr, current.externVar
+                current.U, current.time_curr, current.externVar
             )
             current.set("STRX_ELGA", strx_elga)
 
         sief_elga = self._post.computeStress(
-            current.primal_curr, current.time_curr, current.externVar, strx_elga
+            current.U, current.time_curr, current.externVar, strx_elga
         )
         current.set("SIEF_ELGA", sief_elga)
         current.stress = sief_elga
@@ -181,7 +177,7 @@ class PostHHO(BaseHook):
             nl_oper (NonLinearOperator): Non linear operator
         """
         current = nl_oper.state
-        hho_field = self._hho.projectOnLagrangeSpace(current.primal_curr)
+        hho_field = self._hho.projectOnLagrangeSpace(current.U)
         current.set(self._field_name, hho_field)
 
 

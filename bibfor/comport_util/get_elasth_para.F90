@@ -16,8 +16,8 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
-                           elas_type, elas_keyword, materi_, temp_vale_, &
+subroutine get_elasth_para(fami, jvMaterCode, poum, kpg, ksp, &
+                           elasID, elasKeyword, materi_, temp_vale_, &
                            alpha, alpha_l, alpha_t, alpha_n, &
                            z_h_r_, deps_ch_tref_)
 !
@@ -28,21 +28,20 @@ subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
 #include "asterfort/rcvalb.h"
 #include "asterfort/tecael.h"
 #include "asterfort/utmess.h"
+#include "asterfort/ElasticityMaterial_type.h"
 !
 !
     character(len=*), intent(in) :: fami
-    integer(kind=8), intent(in) :: j_mater
+    integer(kind=8), intent(in) :: jvMaterCode
     character(len=*), intent(in) :: poum
-    integer(kind=8), intent(in) :: ipg
-    integer(kind=8), intent(in) :: ispg
-    integer(kind=8), intent(in) :: elas_type
-    character(len=16), intent(in) :: elas_keyword
+    integer(kind=8), intent(in) :: kpg
+    integer(kind=8), intent(in) :: ksp
+    integer(kind=8), intent(in) :: elasID
+    character(len=16), intent(in) :: elasKeyword
     character(len=8), optional, intent(in) :: materi_
     real(kind=8), optional, intent(in) :: temp_vale_
     real(kind=8), optional, intent(out) :: alpha(2)
-    real(kind=8), optional, intent(out) :: alpha_l
-    real(kind=8), optional, intent(out) :: alpha_t
-    real(kind=8), optional, intent(out) :: alpha_n
+    real(kind=8), optional, intent(out) :: alpha_l, alpha_t, alpha_n
     real(kind=8), optional, intent(out) :: z_h_r_
     real(kind=8), optional, intent(out) :: deps_ch_tref_
 !
@@ -55,15 +54,15 @@ subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
 ! --------------------------------------------------------------------------------------------------
 !
 ! In  fami         : Gauss family for integration point rule
-! In  j_mater      : coded material address
+! In  jvMaterCode      : coded material address
 ! In  poum         : '-' or '+' for parameters evaluation (previous or current temperature)
-! In  ipg          : current point gauss
-! In  ispg         : current "sous-point" gauss
-! In  elas_type    : Type of elasticity
+! In  kpg          : current point gauss
+! In  ksp         : current "sous-point" gauss
+! In  elasID    : Type of elasticity
 !                       1 - Isotropic
 !                       2 - Orthotropic
 !                       3 - Transverse isotropic
-! In  elas_keyword : keyword factor linked to type of elasticity parameters
+! In  elasKeyword : keyword factor linked to type of elasticity parameters
 ! In  materi       : name of material if multi-material Gauss point (PMF)
 ! In  temp_vale    : specifi temperature (example: mean temperature for structural elements)
 ! Out alpha        : thermic dilatation ratio (isotropic)
@@ -80,16 +79,15 @@ subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    integer(kind=8) :: nbresm
-    parameter(nbresm=4)
-    integer(kind=8) :: icodre(nbresm)
-    character(len=16) :: nomres(nbresm)
-    real(kind=8) :: valres(nbresm)
+    integer(kind=8), parameter :: nbPropMaxi = 4
+    integer(kind=8) :: propCode(nbPropMaxi)
+    character(len=16) :: propName(nbPropMaxi)
+    real(kind=8) :: propVale(nbPropMaxi)
 !
-    character(len=8) :: para_name, materi
+    character(len=8) :: paraName, materi
     character(len=24) :: valk(3)
-    real(kind=8) :: para_vale
-    integer(kind=8) :: nbres, nb_para, i
+    real(kind=8) :: paraVale
+    integer(kind=8) :: nbProp, nbPara, i
     real(kind=8) :: alpha_c, alpha_f, alpha_a
     integer(kind=8) :: iadzi, iazk24
     real(kind=8) :: z_h_r
@@ -97,37 +95,40 @@ subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    nb_para = 0
-    para_name = ' '
-    para_vale = 0.d0
+    nbPara = 0
+    paraName = ' '
+    paraVale = 0.d0
     materi = ' '
     if (present(materi_)) then
         materi = materi_
     end if
     if (present(temp_vale_)) then
-        nb_para = 1
-        para_vale = temp_vale_
-        para_name = 'TEMP'
+        nbPara = 1
+        paraVale = temp_vale_
+        paraName = 'TEMP'
     end if
 !
 ! - Get parameters
 !
-    if (elas_type .eq. 1) then
-        if (elas_keyword .eq. 'ELAS_HYPER') then
+    if (elasID .eq. ELAS_ISOT .or. elasID .eq. ELAS_SHELL .or. &
+        elasID .eq. ELAS_MEMBRANE) then
+        if (elasKeyword .eq. 'ELAS_HYPER') then
             call utmess('F', 'COMPOR5_6')
-        elseif (elas_keyword .eq. 'ELAS_META') then
-            nbres = 4
-            nomres(1) = 'C_ALPHA'
-            nomres(2) = 'F_ALPHA'
-            nomres(3) = 'PHASE_REFE'
-            nomres(4) = 'EPSF_EPSC_TREF'
-            call rcvalb(fami, ipg, ispg, poum, j_mater, &
-                        materi, elas_keyword, nb_para, para_name, [para_vale], &
-                        nbres, nomres, valres, icodre, 1)
-            alpha_c = valres(1)
-            alpha_f = valres(2)
-            z_h_r = valres(3)
-            deps_ch_tref = valres(4)
+        elseif (elasKeyword .eq. 'ELAS_META') then
+            nbProp = 4
+            propName(1) = 'C_ALPHA'
+            propName(2) = 'F_ALPHA'
+            propName(3) = 'PHASE_REFE'
+            propName(4) = 'EPSF_EPSC_TREF'
+            call rcvalb(fami, kpg, ksp, poum, &
+                        jvMaterCode, materi, elasKeyword, &
+                        nbPara, paraName, [paraVale], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
+            alpha_c = propVale(1)
+            alpha_f = propVale(2)
+            z_h_r = propVale(3)
+            deps_ch_tref = propVale(4)
             if (present(alpha)) then
                 alpha(1) = alpha_c
                 alpha(2) = alpha_f
@@ -139,47 +140,54 @@ subroutine get_elasth_para(fami, j_mater, poum, ipg, ispg, &
                 deps_ch_tref_ = deps_ch_tref
             end if
         else
-            nbres = 1
-            nomres(1) = 'ALPHA'
-            call rcvalb(fami, ipg, ispg, poum, j_mater, &
-                        materi, elas_keyword, nb_para, para_name, [para_vale], &
-                        nbres, nomres, valres, icodre, 1)
-            alpha_a = valres(1)
+            nbProp = 1
+            propName(1) = 'ALPHA'
+            call rcvalb(fami, kpg, ksp, poum, &
+                        jvMaterCode, materi, elasKeyword, &
+                        nbPara, paraName, [paraVale], &
+                        nbProp, propName, propVale, &
+                        propCode, 1)
+            alpha_a = propVale(1)
             alpha(1) = alpha_a
             alpha(2) = 0.d0
         end if
-    elseif (elas_type .eq. 2) then
-        nbres = 3
-        nomres(1) = 'ALPHA_L'
-        nomres(2) = 'ALPHA_T'
-        nomres(3) = 'ALPHA_N'
-        call rcvalb(fami, ipg, ispg, poum, j_mater, &
-                    materi, elas_keyword, nb_para, para_name, [para_vale], &
-                    nbres, nomres, valres, icodre, 1)
-        alpha_l = valres(1)
-        alpha_t = valres(2)
-        alpha_n = valres(3)
-    elseif (elas_type .eq. 3) then
-        nbres = 2
-        nomres(1) = 'ALPHA_L'
-        nomres(2) = 'ALPHA_N'
-        call rcvalb(fami, ipg, ispg, poum, j_mater, &
-                    materi, elas_keyword, nb_para, para_name, [para_vale], &
-                    nbres, nomres, valres, icodre, 1)
-        alpha_l = valres(1)
-        alpha_n = valres(2)
+    elseif (elasID .eq. ELAS_ORTH) then
+        nbProp = 3
+        propName(1) = 'ALPHA_L'
+        propName(2) = 'ALPHA_T'
+        propName(3) = 'ALPHA_N'
+        call rcvalb(fami, kpg, ksp, poum, &
+                    jvMaterCode, materi, elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        alpha_l = propVale(1)
+        alpha_t = propVale(2)
+        alpha_n = propVale(3)
+    elseif (elasID .eq. ELAS_ISTR) then
+        nbProp = 2
+        propName(1) = 'ALPHA_L'
+        propName(2) = 'ALPHA_N'
+        call rcvalb(fami, kpg, ksp, poum, &
+                    jvMaterCode, materi, elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
+        alpha_l = propVale(1)
+        alpha_n = propVale(2)
     else
+        WRITE (6, *) "ELAS: ", elasID, elasKeyword
         ASSERT(.false.)
     end if
 !
 ! - Test
 !
-    do i = 1, nbres
-        if (icodre(i) .ne. 0) then
+    do i = 1, nbProp
+        if (propCode(i) .ne. 0) then
             call tecael(iadzi, iazk24)
             valk(1) = zk24(iazk24-1+3)
             valk(2) = 'TEMP'
-            valk(3) = nomres(i)
+            valk(3) = propName(i)
             call utmess('F', 'COMPOR5_32', nk=3, valk=valk)
         end if
     end do

@@ -189,7 +189,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_1800,
-            VALE_CALC=57.36920761113957,
+            VALE_CALC=57.36920752542509,
             VALE_REFE=57.36920761113957,
         ),
         _F(
@@ -198,7 +198,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_2200,
-            VALE_CALC=65.67347370878687,
+            VALE_CALC=65.67347325320841,
             VALE_REFE=65.67347370878687,
         ),
         _F(
@@ -207,7 +207,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_2400,
-            VALE_CALC=69.82560332681098,
+            VALE_CALC=69.8256026394162,
             VALE_REFE=69.82560332681098,
         ),
         _F(
@@ -219,13 +219,14 @@ TEST_RESU(
             VALE_CALC=28.3042683939545,
             VALE_REFE=28.3042683939545,
         ),
+        # not accurate enougth since DIRICHLET value is not imposed strongly in AXIS
         _F(
             GROUP_NO="N3",
             REFERENCE="AUTRE_ASTER",
             NOM_CMP="TEMP",
-            PRECISION=0.150000000000000003,
+            PRECISION=0.10,
             CHAM_GD=TM_0400,
-            VALE_CALC=20.960730586859455,
+            VALE_CALC=21.526830229147006,
             VALE_REFE=20.0,
         ),
         _F(
@@ -279,7 +280,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_2200,
-            VALE_CALC=65.67347370878687,
+            VALE_CALC=65.67347325320841,
             VALE_REFE=65.67347370878687,
         ),
         _F(
@@ -288,7 +289,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_2400,
-            VALE_CALC=69.82560332681098,
+            VALE_CALC=69.8256026394162,
             VALE_REFE=69.82560332681098,
         ),
         _F(
@@ -297,7 +298,7 @@ TEST_RESU(
             NOM_CMP="TEMP",
             PRECISION=0.050000000000000003,
             CHAM_GD=TM_2400,
-            VALE_CALC=69.825603326811,
+            VALE_CALC=69.82560263941626,
             VALE_REFE=69.825603326811,
         ),
     )

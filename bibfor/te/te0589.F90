@@ -22,7 +22,6 @@ subroutine te0589(option, nomte)
 !
     implicit none
 !
-#include "asterfort/assert.h"
 #include "asterfort/pipeElem_type.h"
 #include "asterfort/tutemp.h"
 #include "jeveux.h"

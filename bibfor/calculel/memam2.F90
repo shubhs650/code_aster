@@ -16,11 +16,31 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine memam2(option, modele, mate, mateco, &
-                  cara, compor, time, chacce, &
-                  vecel, basez, ligrez)
+! --------------------------------------------------------------------
+! This file is part of code_aster.
+!
+! code_aster is free software: you can redistribute it and/or modify
+! it under the terms of the GNU General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your optionZ) any later version.
+!
+! code_aster is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+! --------------------------------------------------------------------
+!
+subroutine memam2(optionZ, &
+                  modelZ, materFieldZ, materCodeZ, caraElemZ, &
+                  compor, time, chacceZ, &
+                  vectElemZ, jvBaseZ, ligrelZ)
+!
+    use coorSyst_module, only: setOrieFields
     implicit none
-#include "jeveux.h"
+!
 #include "asterf_types.h"
 #include "asterfort/calcul.h"
 #include "asterfort/corich.h"
@@ -34,14 +54,22 @@ subroutine memam2(option, modele, mate, mateco, &
 #include "asterfort/mecham.h"
 #include "asterfort/memare.h"
 #include "asterfort/reajre.h"
+#include "asterfort/setStructFields.h"
 #include "asterfort/utmess.h"
 #include "asterfort/vrcins.h"
+#include "jeveux.h"
 !
-    real(kind=8) :: time
-    character(len=*) :: option, modele, chacce, mate, mateco, cara, vecel, basez, ligrez
+    character(len=*), intent(in) :: optionZ, modelZ, materFieldZ, materCodeZ, caraElemZ
+    character(len=24), intent(in) :: compor
+    real(kind=8), intent(in) :: time
+    character(len=*), intent(in) :: chacceZ, vectElemZ, jvBaseZ, ligrelZ
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCULE LES VECTEURS ELEMENTAIRES ( MASSE_MECA * CHACCE )
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!
 ! IN  : OPTION : OPTION DE CALCUL
 ! IN  : MODELE : NOM DU MODELE (OBLIGATOIRE)
 ! IN  : MATE   : CARTE DE MATERIAUX
@@ -52,88 +80,92 @@ subroutine memam2(option, modele, mate, mateco, &
 ! IN  : BASEZ  : NOM DE LA BASE
 ! IN  : LIGREZ  : (SOUS-)LIGREL DE MODELE POUR CALCUL REDUIT
 !                  SI ' ', ON PREND LE LIGREL DU MODELE
-! ----------------------------------------------------------------------
-! ----------------------------------------------------------------------
-    character(len=1) :: base
+!
+! --------------------------------------------------------------------------------------------------
+!
+    integer(kind=8), parameter :: nbFieldInMax = 100, nbFieldOut = 1
+    character(len=8) :: lpain(nbFieldInMax), lpaout(nbFieldOut)
+    character(len=19) :: lchin(nbFieldInMax), lchout(nbFieldOut)
+!
+    integer(kind=8) :: nbFieldIn
+    character(len=19), parameter :: chvarc = '&&MEMAM2.VARC'
+    integer(kind=8), parameter :: numeHarm = 0
+    character(len=1) :: jvBase
     character(len=2) :: codret
-    character(len=8) :: lpain(18), lpaout(1), newnom
-    character(len=19) :: chvarc
-    character(len=24) :: ligrmo, lchin(18), lchout(1), compor
-    character(len=24) :: chgeom, chcara(18), chharm, vecelz
-    integer(kind=8) :: icode, iret, nh
-!-----------------------------------------------------------------------
-    data chvarc/'&&MEMAM2.VARC'/
+    character(len=8) :: newnom
+    character(len=24) :: ligrel, chgeom, chharm, vectElem, resuElem
+    integer(kind=8) :: icode, iret
+!
+! --------------------------------------------------------------------------------------------------
+!
     call jemarq()
+
+! - Initializations
     newnom = '.0000000'
-    vecelz = vecel
-    base = basez
-    if (modele(1:1) .eq. ' ') then
+    vectElem = vectElemZ
+    jvBase = jvBaseZ
+    lpain = ' '
+    lchin = ' '
+    lpaout = ' '
+    lchout = ' '
+    if (modelZ(1:1) .eq. ' ') then
         call utmess('F', 'CALCULEL2_82')
     end if
+    ligrel = ligrelZ
+    if (ligrel .eq. ' ') then
+        call dismoi('NOM_LIGREL', modelZ, 'MODELE', repk=ligrel)
+    end if
+
+! - Preparation of input fields
+    call mecham('MASS_MECA', modelZ, numeHarm, &
+                chgeom, chharm, icode)
+
+! - Get external state variable
+    call vrcins(modelZ, materFieldZ, ' ', time, chvarc, codret)
+
+! - Prepare MATR_ELEM
+    call memare(jvBase, vectElemZ, modelZ, optionZ, ASTER_TRUE)
 !
-    nh = 0
-    call mecham('MASS_MECA', modele, cara, nh, chgeom, &
-                chcara, chharm, icode)
-    call vrcins(modele, mate, ' ', time, chvarc, &
-                codret)
-!
-    call memare(base, vecel, modele, option, ASTER_TRUE)
-!
-    call jeexin(vecelz(1:19)//'.RELR', iret)
-    if (iret .gt. 0) call jedetr(vecelz(1:19)//'.RELR')
-    if (icode .eq. 1) goto 10
-!
-    ligrmo = ligrez
-    if (ligrmo .eq. ' ') call dismoi('NOM_LIGREL', modele, 'MODELE', repk=ligrmo)
-!
-    lpaout(1) = 'PVECTUR'
-!
+    call jeexin(vectElem(1:19)//'.RELR', iret)
+    if (iret .gt. 0) call jedetr(vectElem(1:19)//'.RELR')
+    if (icode .eq. 1) then
+        goto 10
+    end if
+
+! - Add input fields
     lpain(1) = 'PGEOMER'
-    lchin(1) = chgeom
+    lchin(1) = chgeom(1:19)
     lpain(2) = 'PMATERC'
-    lchin(2) = mateco
+    lchin(2) = materCodeZ
     lpain(3) = 'PVARCPR'
     lchin(3) = chvarc
-    lpain(4) = 'PCAGNPO'
-    lchin(4) = chcara(6)
-    lpain(5) = 'PCAGEPO'
-    lchin(5) = chcara(5)
-    lpain(6) = 'PCACOQU'
-    lchin(6) = chcara(7)
-    lpain(7) = 'PCADISM'
-    lchin(7) = chcara(3)
-    lpain(8) = 'PCAORIE'
-    lchin(8) = chcara(1)
-    lpain(9) = 'PCASECT'
-    lchin(9) = chcara(8)
-    lpain(10) = 'PCAARPO'
-    lchin(10) = chcara(9)
-    lpain(11) = 'PCACABL'
-    lchin(11) = chcara(10)
-    lpain(12) = 'PCAGNBA'
-    lchin(12) = chcara(11)
-    lpain(13) = 'PCAPOUF'
-    lchin(13) = chcara(13)
-    lpain(14) = 'PACCELR'
-    lchin(14) = chacce
-    lpain(15) = 'PNBSP_I'
-    lchin(15) = chcara(16)
-    lpain(16) = 'PFIBRES'
-    lchin(16) = chcara(17)
-    lpain(17) = 'PCOMPOR'
-    lchin(17) = compor
-    lpain(18) = 'PCINFDI'
-    lchin(18) = chcara(15)
-!
-    lchout(1) = '&&MEMAM2.???????'
+    lpain(4) = 'PACCELR'
+    lchin(4) = chacceZ
+    lpain(5) = 'PCOMPOR'
+    lchin(5) = compor(1:19)
+    nbFieldIn = 5
+
+! - Add fields for structural elements
+    call setStructFields(caraElemZ, nbFieldInMax, lchin, lpain, nbFieldIn)
+
+! - Add fields for orientation
+    call setOrieFields(nbFieldInMax, lpain, lchin, &
+                       nbFieldIn, caraElemZ)
+
+! - Add output field
+    lpaout(1) = 'PVECTUR'
+    resuElem = '&&MEMAM2.???????'
     call gcnco2(newnom)
-    lchout(1) (10:16) = newnom(2:8)
-    call corich('E', lchout(1), ichin_=-1)
-    call calcul('S', option, ligrmo, 18, lchin, &
-                lpain, 1, lchout, lpaout, base, &
-                'OUI')
+    resuElem(10:16) = newnom(2:8)
+    lchout(1) = resuElem(1:19)
+
+    call corich('E', resuElem, ichin_=-1)
+    call calcul('S', optionZ, ligrel, &
+                nbFieldIn, lchin, lpain, &
+                nbFieldOut, lchout, lpaout, &
+                jvBase, 'OUI')
 !
-    call reajre(vecelz, lchout(1), base)
+    call reajre(vectElem, lchout(1), jvBase)
 !
 10  continue
     call detrsd('CHAMP_GD', chvarc)

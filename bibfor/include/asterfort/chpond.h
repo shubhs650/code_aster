@@ -17,16 +17,15 @@
 ! --------------------------------------------------------------------
 
 !
-!
-          interface 
-            subroutine chpond(tych,dejain,chin,cesout,cespoi,ligrel,    &
-     &carele)
-              character(len=4), intent(in) :: tych
-              character(len=4), intent(in) :: dejain
-              character(len=19), intent(in) :: chin
-              character(len=19), intent(in) :: cesout
-              character(len=19), intent(in) :: cespoi
-              character(len=*), intent(in) :: ligrel
-              character(len=8), intent(in) :: carele
-            end subroutine chpond
-          end interface 
+interface
+    subroutine chpond(fieldDisc, dejain, chin, cesout, cespoi, &
+                      ligrelZ, caraElem)
+        character(len=4), intent(in) :: fieldDisc
+        character(len=4), intent(in) :: dejain
+        character(len=19), intent(in) :: chin
+        character(len=19), intent(in) :: cesout
+        character(len=19), intent(in) :: cespoi
+        character(len=*), intent(in) :: ligrelZ
+        character(len=8), intent(in) :: caraElem
+    end subroutine chpond
+end interface

@@ -18,34 +18,32 @@
 #include "asterf_types.h"
 !
 interface
-    subroutine calcco(ds_thm  ,&
-                      lMatr, lSigm, lVari, lMatrPred, angl_naut,&
-                      j_mater ,&
-                      ndim    , nbvari   ,&
-                      dimdef  , dimcon   ,&
-                      adcome  , adcote   , adcp11, adcp12, adcp21, adcp22,&
-                      addeme  , addete   , addep1, addep2,&
-                      temp    , p1       , p2    ,&
-                      dtemp   , dp1      , dp2   ,&
-                      deps    , epsv     , depsv ,&
-                      tbiot   ,&
-                      phi     , rho11    , satur ,nl,&
-                      pad     , pvp      , h11   , h12   ,&
-                      congem  , congep   ,&
-                      vintm   , vintp    , dsde  ,&
+    subroutine calcco(ds_thm, &
+                      lMatr, lSigm, lVari, lMatrPred, &
+                      ndim, nbvari, &
+                      dimdef, dimcon, &
+                      adcome, adcote, adcp11, adcp12, adcp21, adcp22, &
+                      addeme, addete, addep1, addep2, &
+                      temp, p1, p2, &
+                      dtemp, dp1, dp2, &
+                      deps, epsv, depsv, &
+                      tbiot, &
+                      phi, rho11, satur, nl, &
+                      pad, pvp, h11, h12, &
+                      congem, congep, &
+                      vintm, vintp, dsde, &
                       retcom)
         use THM_type
         type(THM_DS), intent(inout) :: ds_thm
         aster_logical, intent(in) :: lMatr, lSigm, lVari, lMatrPred
-        real(kind=8), intent(in) :: angl_naut(3)
-        integer(kind=8), intent(in) :: j_mater, ndim, nbvari
+        integer(kind=8), intent(in) :: ndim, nbvari
         integer(kind=8), intent(in) :: dimdef, dimcon
         integer(kind=8), intent(in) :: adcome, adcote, adcp11, adcp12, adcp21, adcp22
         integer(kind=8), intent(in) :: addeme, addete, addep1, addep2
         real(kind=8), intent(in) :: temp, p1, p2
         real(kind=8), intent(in) :: dtemp, dp1, dp2
         real(kind=8), intent(in) :: epsv, depsv, deps(6), tbiot(6)
-        real(kind=8), intent(out) :: phi, rho11, satur,nl
+        real(kind=8), intent(out) :: phi, rho11, satur, nl
         real(kind=8), intent(out) :: pad, pvp, h11, h12
         real(kind=8), intent(in) :: congem(dimcon)
         real(kind=8), intent(inout) :: congep(dimcon)

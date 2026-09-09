@@ -33,7 +33,6 @@ subroutine eclaty(typeElemName, &
 #include "asterfort/elraca.h"
 #include "asterfort/jedema.h"
 #include "asterfort/jemarq.h"
-#include "asterfort/utmess.h"
 #include "MeshTypes_type.h"
 !
     character(len=16), intent(in) :: typeElemName

@@ -15,14 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine dxefgi(nomte, pgl, epsini, sigt)
-        character(len=16) :: nomte
-        real(kind=8) :: pgl(3, 3)
-        real(kind=8) :: epsini(6)
-        real(kind=8) :: sigt(*)
+    subroutine dxefgi(plateCara, plateOrie, &
+                      npg, epsini, efge)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        integer(kind=8), intent(in) :: npg
+        real(kind=8), intent(in) :: epsini(6)
+        real(kind=8), intent(out) :: efge(*)
     end subroutine dxefgi
 end interface

@@ -17,7 +17,6 @@
 # along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------
 
-from token import OP
 import warnings
 from time import time
 
@@ -84,11 +83,11 @@ validStringOptions = {
 
 Cvr_Rs_Dict = {
     3: "CONVERGED_ATOL",
-    4: "CONVERGED_ATOL_NORMAL",
+    # 4: "CONVERGED_ATOL_NORMAL",
     6: "CONVERGED_CG_CONSTRAINED",
     5: "CONVERGED_CG_NEG_CURVE",
     8: "CONVERGED_HAPPY_BREAKDOWN",
-    0: "CONVERGED_ITERATING",
+    # 0: "CONVERGED_ITERATING",
     4: "CONVERGED_ITS",
     2: "CONVERGED_RTOL",
     1: "CONVERGED_RTOL_NORMAL",
@@ -112,7 +111,6 @@ class RASPENSolver(BaseIterationSolver):
 
     __needs__ = ("problem", "state", "keywords", "oper", "linear_solver")
     solver_type = BaseIterationSolver.SubType.Raspen
-    _primal_incr = _resi_comp = None
     _scaling = _options = None
     _local_solver = None
     rank = Instant = 0
@@ -135,7 +133,6 @@ class RASPENSolver(BaseIterationSolver):
 
     def __init__(self):
         super().__init__()
-        self._primal_incr = self._resi_comp = None
         self._scaling = self._options = None
         self._local_solver = None
 
@@ -206,7 +203,7 @@ class RASPENSolver(BaseIterationSolver):
             p_jac,
             self.oper,
             self.matrix_type,
-            self.state.primal_step,
+            self.state.deltaU,
             DDPart,
             self.current_incr,
             curr_time,
@@ -297,11 +294,11 @@ class _RASPENSolver:
         # Nb of overlap layers
         self.overlap = DDPart.overlap
         # Vecscatter
-        self.vecscatter = self.DDPart.getVecScatter()
+        self.vecscatter = DDPart.getVecScatter()
         # Reads string options values from Petsc
         self.setUpOptions(optionsAndPetscEquivalents, validStringOptions)
         # Local dofs
-        self.local_dofs = self.DDPart.getLocalDofs()
+        self.local_dofs = DDPart.getLocalDofs()
         # Nonoverlapping dofs in local numbering
         self.locNonOvlpDofs = DDPart.local_interior_dofs
         # Nonoverlapping dofs in global numbering
@@ -313,7 +310,7 @@ class _RASPENSolver:
         if self.nbi == 0:
             self.withCoarsePb = False
         # Global size
-        self.glbSize = self.DDPart.getGlobalSize()
+        self.glbSize = DDPart.getGlobalSize()
         # Local sizes
         self.locSize = DDPart.getLocalSize()
         # Local snes
@@ -341,9 +338,9 @@ class _RASPENSolver:
         # Global Jacobian
         self.J = PETSc.Mat().createPython(self.glbSize, comm=MPI.ASTER_COMM_WORLD)
         # Ghost tools
-        self.DDPart.BuildGhostsTools(self.Yloc, self.Res)
+        DDPart.BuildGhostsTools(self.Yloc, self.Res)
         # Multiplicities
-        multiplicity = self.DDPart.getLocalMultiplicity(self.Yloc, self.Res)
+        multiplicity = DDPart.getLocalMultiplicity(self.Yloc, self.Res)
         # Square root of multiplicites
         self.SQMult = np.sqrt(multiplicity)
         # Prefixing local snes
@@ -359,7 +356,6 @@ class _RASPENSolver:
             self.Jloc0 = self.Jloc.duplicate()
             # Number of singular values retained for each subdomain
             self.nb_svs = self.opts.getInt("raspen_nb_sd_singular_vec", 10)
-            print("The number of singular values read from the PETSc options:")
             self.nb_svs = min((self.nbi - 1), self.nb_svs)
             # Append coarse problem type to methode name
             self.methodName += f"_{self.coarseSpaceType}"
@@ -583,7 +579,6 @@ class _RASPENSolver:
                 self.locKsp.setOperators(self.Jloc, self.Jploc)
                 self.Jloc.copy(self.Jloc0)
                 if It == 0 or not self.GCGC.ProlongationIsBuilt:
-                    t_pro = time()
                     prolongBuild = getattr(
                         self.GCGC, "build" + self.coarseSpaceType + "Prolongation"
                     )
@@ -776,12 +771,6 @@ class _RASPENSolver:
         t = time()
         self.glbSnes.solve(rhs, self.glbSol)
         time_exec = time() - t
-        # Write monitoring data in the log file
-        # if self.withCoarsePb:
-        #     print("Total time of assembling:", self.GCGC.assTime,flush=True)
-        #     print("Total time of apply diff:", self.applyDiff,flush=True)
-        #     print("Total time spent in correction:", self.GCGC.corrTime,flush=True)
-        #     print("Total time spent in coarse function:", self.GCGC.funcTime,flush=True)
         if self.rank == 0:
             self.saveTimeStepPerfs(self.glbSnes, time_exec)
 
@@ -789,15 +778,25 @@ class _RASPENSolver:
         """
         Destroys all RASPEN objects
         """
-        self.glbSnes.destroy()
-        self.glbSol.destroy()
-        self.Yloc.destroy()
-        self.Res.destroy()
         self.J.destroy()
+        self.glbSnes.destroy()
+        self.Res.destroy()
+        self.glbSol.destroy()
+        self.locKsp.destroy()
+        self.locSnes.destroy()
+        self.vecscatter.destroy()
+        self.locSol.destroy()
+        self.locSol0.destroy()
+        self.Yloc.destroy()
+
         if self.withCoarsePb:
             self.Jloc0.destroy()
+
         if self.withSubPrecond:
             self.Jp.destroy()
+            self.JpCtx.sksp.destroy()
+            if self.JpCtx.Precond:
+                self.JpCtx.Precond.destroy()
 
 
 class JacCtx:
@@ -924,7 +923,7 @@ class SubJacCtx:
         # The Jacobian context
         self.Jctx = self.Sl.J.getPythonContext()
         # Inherit domain decomposition partitioner
-        self.DDPart = Sl.DDPart
+        self.DDPart = self.Sl.DDPart
         # Subdomain work vector
         self.Yloc = self.Sl.Yloc
         # Boundary ghosts DOFs
@@ -1055,8 +1054,8 @@ class substPrecondCtx:
         # Test local ksp
         try:
             self.Sl.locKsp.solve(self.Sl.Yloc, self.Sl.Yloc)
-        except:
-            raise (RuntimeError("Local snes ksp failed ! "))
+        except Exception:
+            raise RuntimeError("Local snes ksp failed ! ")
 
         # Slicing Local Jacobian only on ghost dofs
         rowsIs = PETSc.IS().createGeneral(np.arange(self.locSize, dtype=np.int32))
@@ -1559,7 +1558,6 @@ class GalerkinCoarseGridCorrection:
         coarseSize = samplMat.getSize()[1]
         intDofs = self.intDofs
         intSize = len(intDofs)
-        maxNNZ = len(NNCols)
         timings["setup_and_parameters"] = time() - start
 
         start = time()
@@ -2211,7 +2209,6 @@ class GalerkinCoarseGridCorrection:
         Performs the coarse correction
         """
         # Build snes if needed
-        tc = time()
         if not self.GCSnes:
             self.GCSnes = self.buildCoarseSnes()
         if Y is None:
@@ -2227,8 +2224,6 @@ class GalerkinCoarseGridCorrection:
         self.coarseProlongation(self.Xc, Y)
         if not reuse:
             return Y
-        # if self.raspen.rank == 0:
-        #     self.corrTime += time()- tc
 
 
 class GalerkinJacCtx:
@@ -2463,13 +2458,12 @@ class RASPENLogger:
 
         inSnes.setMonitor(SnesMonitor)
 
-    def log(self, msg):
-        """
-        Logs monitoring table
-        """
-        tab = tabulate(self.TabData, self.TabHeaders, tablefmt="pretty")
-        self.print_box(msg, extra_content=tab + "\n")
-        return
+    # def log(self, msg):
+    #     """
+    #     Logs monitoring table
+    #     """
+    #     tab = tabulate(self.TabData, self.TabHeaders, tablefmt="pretty")
+    #     self.print_box(msg, extra_content=tab + "\n")
 
     def print_box(self, content, extra_content="", vpad=3, hpad=12, tab=""):
         """

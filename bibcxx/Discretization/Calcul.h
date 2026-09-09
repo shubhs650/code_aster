@@ -167,6 +167,9 @@ class Calcul {
     /** @brief Add input fields for elementary characteristics */
     void addElementaryCharacteristicsField( const ElementaryCharacteristicsPtr elemChara );
 
+    /** @brief Add input fields for orientation */
+    void addOrientationField( const ElementaryCharacteristicsPtr elemChara );
+
     /** @brief Create and add input field for Fourier */
     void addFourierModeField( const ASTERINTEGER &nh );
 

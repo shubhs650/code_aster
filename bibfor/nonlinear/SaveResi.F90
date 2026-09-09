@@ -23,7 +23,6 @@ subroutine SaveResi(ds_conv)
     implicit none
 !
 #include "asterf_types.h"
-#include "asterfort/assert.h"
 !
     type(NL_DS_Conv), intent(inout) :: ds_conv
 !

@@ -17,9 +17,9 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine carc_read(prepMapCarcri, model_)
+    subroutine carc_read(prepMapCarcri, model)
         use BehaviourPrepare_type
         type(BehaviourPrep_MapCarcri), intent(inout) :: prepMapCarcri
-        character(len=8), intent(in), optional :: model_
+        character(len=8), intent(in) :: model
     end subroutine carc_read
 end interface

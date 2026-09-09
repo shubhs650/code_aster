@@ -1,0 +1,91 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------------------------
+#  Test des éléments de barre 3D sur maille quadratique SEG3
+# --------------------------------------------------------------------------------------------------
+
+DEBUT(CODE="OUI", DEBUG=_F(SDVERI="OUI"))
+
+msh = LIRE_MAILLAGE(FORMAT="MED")
+
+mdl = AFFE_MODELE(
+    MAILLAGE=msh, AFFE=_F(GROUP_MA="line", PHENOMENE="MECANIQUE", MODELISATION="BARRE_3D_NL")
+)
+
+cara = (AFFE_CARA_ELEM(MODELE=mdl, BARRE=_F(GROUP_MA="line", SECTION="GENERALE", AIRE=5.0)),)
+
+
+steel = DEFI_MATERIAU(ELAS=_F(E=2.0e5, NU=0.3))
+
+
+mat = AFFE_MATERIAU(MAILLAGE=msh, AFFE=_F(GROUP_MA="line", MATER=steel))
+
+eps = 5e-3
+ux = FORMULE(NOM_PARA="X", VALE="(X-2)*eps", eps=eps)
+uy = FORMULE(NOM_PARA="Y", VALE="(Y-1)*eps", eps=eps)
+zero = DEFI_CONSTANTE(VALE=0)
+
+load = AFFE_CHAR_MECA_F(MODELE=mdl, DDL_IMPO=_F(GROUP_MA="line", DX=ux, DY=uy, DZ=zero))
+
+
+ampl = DEFI_FONCTION(
+    NOM_PARA="INST", VALE=(0.0, 0.0, 1.0, 1.0), PROL_DROITE="LINEAIRE", PROL_GAUCHE="LINEAIRE"
+)
+
+
+time = DEFI_LIST_REEL(DEBUT=0.0, INTERVALLE=(_F(JUSQU_A=1.0, NOMBRE=1),))
+
+disc = DEFI_LIST_INST(
+    METHODE="MANUEL", DEFI_LIST=_F(LIST_INST=time), ECHEC=_F(SUBD_PAS=5, SUBD_NIVEAU=5)
+)
+
+resu = MECA_NON_LINE(
+    MODELE=mdl,
+    CHAM_MATER=mat,
+    CARA_ELEM=cara,
+    EXCIT=_F(CHARGE=load, FONC_MULT=ampl),
+    COMPORTEMENT=_F(GROUP_MA="line", RELATION="ELAS", DEFORMATION="PETIT"),
+    INCREMENT=_F(LIST_INST=disc),
+    NEWTON=_F(PREDICTION="TANGENTE", MATRICE="TANGENTE", REAC_ITER=1),
+    CONVERGENCE=_F(EFFORT_REFE=5e3, RESI_REFE_RELA=1.0e-3),
+)
+
+
+CALC_CHAMP(reuse=resu, RESULTAT=resu, CONTRAINTE="SIEF_NOEU")
+
+
+TEST_RESU(
+    RESU=(
+        _F(
+            RESULTAT=resu,
+            INST=1,
+            NOM_CHAM="SIEF_NOEU",
+            NOM_CMP="N",
+            GROUP_NO="extr",
+            CRITERE="ABSOLU",
+            REFERENCE="ANALYTIQUE",
+            PRECISION=1.0e-6,
+            VALE_CALC=5000,
+            VALE_REFE=5000,
+        ),
+    )
+)
+
+FIN()

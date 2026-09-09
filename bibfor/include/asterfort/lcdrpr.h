@@ -15,18 +15,15 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine lcdrpr(fami, typmod, option, imate, compor, sigm,&
-                      depsm, vim,&
+    subroutine lcdrpr(fami, typmod, option, imate, sigm, &
+                      depsm, vim, &
                       vip, sig, dsidep, iret)
         character(len=*), intent(in) :: fami
         character(len=8) :: typmod(*)
         character(len=16) :: option
         integer(kind=8) :: imate
-        character(len=16) :: compor(*)
         real(kind=8) :: sigm(6)
         real(kind=8) :: depsm(6)
         real(kind=8) :: vim(*)

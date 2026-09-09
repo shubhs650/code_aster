@@ -15,15 +15,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lceiex(fami, kpg, ksp, mat, option,&
-                      mu, su, de, ddedt, vim,&
+    subroutine lceiex(fami, kpg, ksp, mat, option, &
+                      mu, su, de, ddedt, vim, &
                       vip, r, carcri, codret)
         character(len=*) :: fami
-        integer(kind=8) :: kpg,codret
+        integer(kind=8) :: kpg, codret
         integer(kind=8) :: ksp
         integer(kind=8) :: mat
         character(len=16) :: option
@@ -34,6 +33,6 @@ interface
         real(kind=8) :: vim(*)
         real(kind=8) :: vip(*)
         real(kind=8) :: r
-        real(kind=8), intent(in) :: carcri(*)
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     end subroutine lceiex
 end interface

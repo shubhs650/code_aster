@@ -19,10 +19,11 @@
 !
 !
 interface
+#include "MeshTypes_type.h"
     subroutine apdist(elem_type, elem_coor, elem_nbnode, ksi1, ksi2,&
                       poin_coor, dist     , vect_pm)
         character(len=8), intent(in) :: elem_type
-        real(kind=8), intent(in) :: elem_coor(27)
+        real(kind=8), intent(in) :: elem_coor(3,MT_NNOMAX2D)
         integer(kind=8), intent(in) :: elem_nbnode
         real(kind=8), intent(in) :: ksi1
         real(kind=8), intent(in) :: ksi2

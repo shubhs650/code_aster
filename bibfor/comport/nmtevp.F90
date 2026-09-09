@@ -15,15 +15,17 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
-                  imate, compor, crit, instam, instap, &
-                  deps, sigm, vim, option, sigp, &
-                  vip, dsidep, demu, cinco, iret)
+! aslint: disable=W0413
 !
-! aslint: disable=
+subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
+                  imate, relaComp, carcri, instam, instap, &
+                  deps, sigm, vim, option, sigp, &
+                  vip, dsidep, iret)
+!
     implicit none
+!
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/eccook.h"
 #include "asterfort/nmcri9.h"
 #include "asterfort/rcvalb.h"
@@ -32,15 +34,17 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
 #include "asterfort/zerofr.h"
+
     integer(kind=8) :: ndim, imate, kpg, ksp, iret
 !
-    real(kind=8) :: crit(6), instam, instap
-    real(kind=8) :: deps(6), deuxmu, demu, cinco
+    real(kind=8) ::  instam, instap
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8) :: deps(6), deuxmu
     real(kind=8) :: sigm(6), vim(5), sigp(6), vip(5), dsidep(6, 6)
 !
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
+    character(len=16) :: relaComp, option
 ! ----------------------------------------------------------------------
 !     INTEGRATION DE LA LOI DE JOHNSON-COOK
 !     ELEMENTS ISOPARAMETRIQUES EN PETITES DEFORMATIONS
@@ -229,12 +233,6 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
                 epsp0, troom, tmelt, tm, vim(4), &
                 vim(1), vim(3), rp, rprim)
 !
-!
-    demu = deuxmu
-    if (inco) then
-        cinco = (1.d0-2.d0*nu)/nu
-    end if
-!
 !     -- 4 CALCUL DE DEPSMO ET DEPSDV :
 !     --------------------------------
 !
@@ -299,8 +297,8 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
             call eccook(acook, bcook, ccook, npuis, mpuis, &
                         epsp0, troom, tmelt, tp, dinst, &
                         pm, dp0, sigy, rprim0)
-            precr = crit(3)*sigy
-            niter = nint(crit(1))
+            precr = carcri(3)*sigy
+            niter = nint(carcri(1))
 !     -------------------------------------------------------
 !
 ! ---        F0 < 0 , ON CHERCHE DPMAX PAS TROP GRAND TEL QUE FMAX < 0
@@ -356,7 +354,7 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
 !            RESOLUTION 1D
 !     -------------------------------------------------------
 !            RECUPERATION DE L'ALGORITHME DE RESOLUTION 1D
-            call utlcal('VALE_NOM', meth, crit(6))
+            call utlcal('VALE_NOM', meth, carcri(6))
 !     -------------------------------------------------------
             call zerofr(2, meth, nmcri9, 0.d0, dpmax, &
                         precr, niter, dp, iret, iter)
@@ -441,7 +439,7 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
             rp = sqrt(1.5d0*rp)
         else
 !         - - OPTION='FULL_MECA' => SIGMA(T+DT)
-            if (compor(1) (1:5) .eq. 'VMIS_') then
+            if (relaComp(1:5) .eq. 'VMIS_') then
                 do k = 1, ndimsi
                     sigdv(k) = sigpdv(k)
                 end do
@@ -457,7 +455,7 @@ subroutine nmtevp(fami, kpg, ksp, ndim, typmod, &
 !
         a = 1.d0
         if (.not. dech) then
-            if (compor(1) (1:5) .eq. 'VMIS_') then
+            if (relaComp(1:5) .eq. 'VMIS_') then
                 sigeps = 0.d0
                 do k = 1, ndimsi
                     sigeps = sigeps+sigdv(k)*depsdv(k)

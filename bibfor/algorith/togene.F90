@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 
-subroutine togene(dplmod, fphys, fgene, coef)
+subroutine togene(dplmod, fphys, fgene, coef, nbddl_)
     implicit none
 !    Convert into the modal basis a force defined in physical coordinates
 !
@@ -30,18 +30,24 @@ subroutine togene(dplmod, fphys, fgene, coef)
     real(kind=8), intent(in)  :: fphys(:)
     real(kind=8), intent(out) :: fgene(:)
     real(kind=8), optional, intent(in)  :: coef
+    integer(kind=8), intent(in), optional :: nbddl_
 !-----------------------------------------------------------------------
-    integer(kind=8) :: i, j, nbmode
+    integer(kind=8) :: i, j, nbmode, nbddl
     real(kind=8) :: coef_m
 !-----------------------------------------------------------------------
     coef_m = 1.d0
     if (present(coef)) coef_m = coef
+    if (present(nbddl_)) then
+        nbddl = nbddl_
+    else
+        nbddl = 3
+    end if
 
-    nbmode = size(dplmod)/3
+    nbmode = size(dplmod)/nbddl
 
-    do j = 1, 3
+    do j = 1, nbddl
         do i = 1, nbmode
-            fgene(i) = fgene(i)+coef_m*dplmod((i-1)*3+j)*fphys(j)
+            fgene(i) = fgene(i)+coef_m*dplmod((i-1)*nbddl+j)*fphys(j)
         end do
     end do
 

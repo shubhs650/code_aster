@@ -466,7 +466,7 @@ def calc_gp_ops(self, **args):
         #    liste des copeaux
         l_copo_tot = []
         for tmpocc in TRANCHE_3D:
-            dMCT = tmpocc.cree_dict_valeurs(tmpocc.mc_liste)
+            dMCT = tmpocc
             l_copo_tot += dMCT["GROUP_MA"]
 
         # le nombre de copeaux est suppose identique sur toutes les tranches

@@ -17,16 +17,18 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1504,W0413
 !
-subroutine pminit(jvMaterCode, nbVari, &
-                  tablName, tablNbParaMaxi, tablNbPara, tablType, &
+subroutine pminit(tablName, tablNbPara, tablType, &
                   tablParaName, tablParaType, tablVale, &
-                  anglNaut, pgl, lRota, &
-                  epsiPrev, sigmPrev, vim, vip, &
+                  pgl, lRota, &
+                  epsiPrev, sigmPrev, &
+                  nbVari, vim, vip, &
                   loadEpsiType, loadType, loadFunc, coefImpo, &
-                  coefMatrAdim, typeMatrPred, lMatrElas, matrElas, lPrintMatr, option, &
+                  coefAdim, typeMatrPred, lMatrElas, matrElas, lPrintMatr, option, &
                   variName, nbVariTabl, &
-                  sddisc, ds_conv, ds_algopara, sderro)
+                  sddisc, ds_conv, ds_algopara, sderro, materPara)
 !
+    use MaterialPara_module
+    use MaterialPara_type
     use NonLin_Datastructure_type
     implicit none
 !
@@ -38,7 +40,6 @@ subroutine pminit(jvMaterCode, nbVari, &
 #include "asterfort/codent.h"
 #include "asterfort/diinst.h"
 #include "asterfort/dmat3d.h"
-#include "asterfort/eulnau.h"
 #include "asterfort/fointe.h"
 #include "asterfort/fozero.h"
 #include "asterfort/getvid.h"
@@ -58,23 +59,21 @@ subroutine pminit(jvMaterCode, nbVari, &
 #include "asterfort/tbcrsd.h"
 #include "asterfort/utmess.h"
 #include "asterfort/vrcinp.h"
-#include "blas/dcopy.h"
-#include "blas/dscal.h"
 #include "jeveux.h"
 !
-    integer(kind=8), intent(in) :: jvMaterCode, nbVari
+    integer(kind=8), intent(in) :: nbVari
     character(len=8), intent(out) :: tablName
-    integer(kind=8), intent(in) :: tablNbParaMaxi
     integer(kind=8), intent(out) :: tablNbPara, tablType
-    character(len=16), intent(out) :: tablParaName(tablNbParaMaxi), tablParaType(tablNbParaMaxi)
-    real(kind=8), intent(out) :: tablVale(tablNbParaMaxi)
-    real(kind=8), intent(out) :: anglNaut(3), pgl(3, 3)
+    character(len=16), allocatable, intent(out) :: tablParaName(:)
+    character(len=8), allocatable, intent(out) :: tablParaType(:)
+    real(kind=8), allocatable, intent(out) :: tablVale(:)
+    real(kind=8), intent(out) :: pgl(3, 3)
     aster_logical, intent(out) :: lRota
     real(kind=8), intent(out) :: epsiPrev(9), sigmPrev(6)
     real(kind=8), intent(out) :: vim(nbVari), vip(nbVari)
     integer(kind=8), intent(out) :: loadEpsiType, loadType(9)
     character(len=8), intent(out) :: loadFunc(9)
-    real(kind=8), intent(out) :: coefImpo(6, 12), coefMatrAdim
+    real(kind=8), intent(out) :: coefImpo(6, 12), coefAdim
     integer(kind=8), intent(out) :: typeMatrPred
     aster_logical, intent(out) :: lMatrElas
     real(kind=8), intent(out) :: matrElas(6, 6)
@@ -83,9 +82,10 @@ subroutine pminit(jvMaterCode, nbVari, &
     character(len=8), intent(out) :: variName(nbVari)
     integer(kind=8), intent(out) :: nbVariTabl
     character(len=19), intent(out) :: sddisc
-    type(NL_DS_Conv), intent(out) :: ds_conv
-    type(NL_DS_AlgoPara), intent(out) :: ds_algopara
+    type(NL_DS_Conv), intent(inout) :: ds_conv
+    type(NL_DS_AlgoPara), intent(inout) :: ds_algopara
     character(len=24), intent(out) :: sderro
+    type(Material_Para), intent(inout) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -124,9 +124,9 @@ subroutine pminit(jvMaterCode, nbVari, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    integer(kind=8), parameter :: tablNbParaMaxi = 9999
     integer(kind=8), parameter :: ndim = 3
     real(kind=8), parameter  :: rac2 = sqrt(2.d0)
-    integer(kind=8), parameter :: kpg = 1, ksp = 1
     complex(kind=8), parameter :: c16Dummy = (0.d0, 0.d0)
     character(len=4), parameter :: epsiName(6) = (/'EPXX', 'EPYY', 'EPZZ', &
                                                    'EPXY', 'EPXZ', 'EPYZ'/)
@@ -148,17 +148,14 @@ subroutine pminit(jvMaterCode, nbVari, &
     character(len=19) :: listInst
     real(kind=8) :: timePrev, vale, timeInit
     real(kind=8) :: sigmInitVale, epsiInitVale
-    real(kind=8) :: angd(3), ang1(1), anglEuler(3), dsidep(36)
+    real(kind=8) :: ang1(1), dsidep(36)
     real(kind=8) :: sigmInit(6), epsiInit(6), gradInitImpo(9)
     aster_logical :: lSetLinearRela, lGrad
-    blas_int :: b_incx, b_incy, b_n
 !
 ! --------------------------------------------------------------------------------------------------
 !
     tablName = " "
     tablNbPara = 0
-    tablParaName = " "
-    tablParaType = " "
     sddisc = '&&OP0033.SDDISC'
     sderro = '&&OP0033.ERRE.'
 
@@ -228,13 +225,27 @@ subroutine pminit(jvMaterCode, nbVari, &
         call utmess('F', 'COMPOR1_68', si=nbcol)
     end if
 
-! - Number and names of parameters in table
-    tablParaName(1) = 'INST'
+! - Number of parameters in table
     if (tablType .eq. 0) then
         tablNbPara = 1+nbCmpEpsi+6+2+nbVariTabl+1
         if (lPrintMatr) then
             tablNbPara = tablNbPara+36
         end if
+    else
+        tablNbPara = 4
+    end if
+
+! - Allocate objects
+    allocate (tablParaType(tablNbPara))
+    allocate (tablParaName(tablNbPara))
+    allocate (tablVale(tablNbPara))
+    tablParaType(1:tablNbPara) = " "
+    tablParaName(1:tablNbPara) = " "
+    tablVale(1:tablNbPara) = 0.d0
+
+! - Names of parameters in table
+    tablParaName(1) = 'INST'
+    if (tablType .eq. 0) then
         if (lGrad) then
             do i = 1, nbCmpEpsi
                 tablParaName(1+i) = gradName(i)
@@ -264,7 +275,6 @@ subroutine pminit(jvMaterCode, nbVari, &
         tablParaName(tablNbPara) = 'NB_ITER'
         tablParaType(1:tablNbPara) = 'R'
     else
-        tablNbPara = 4
         tablParaName(2) = 'GRANDEUR'
         tablParaName(3) = 'CMP'
         tablParaName(4) = 'VALEUR'
@@ -278,26 +288,13 @@ subroutine pminit(jvMaterCode, nbVari, &
     call tbcrsd(tablName, 'G')
     call tbajpa(tablName, tablNbPara, tablParaName, tablParaType)
 
-! - Get local coordinate system for material parameters
-    anglNaut = 0.d0
-    anglEuler = 0.d0
-    call getvr8('MASSIF', 'ANGL_REP', iocc=1, nbval=3, vect=anglNaut, nbret=n1)
-    if (n1 .gt. 0) then
-        anglNaut(1) = anglNaut(1)*r8dgrd()
-        if (ndim .eq. 3) then
-            anglNaut(2) = anglNaut(2)*r8dgrd()
-            anglNaut(3) = anglNaut(3)*r8dgrd()
-        end if
-    end if
+! - Get local coordinate system
+    call getUserLCSCommand(ndim, materPara%lcsPara)
 
-    call getvr8('MASSIF', 'ANGL_EULER', iocc=1, nbval=3, vect=anglEuler, nbret=n1)
-    if (n1 .gt. 0) then
-        call eulnau(anglEuler, angd)
-        anglNaut(1) = angd(1)*r8dgrd()
-        if (ndim .eq. 3) then
-            anglNaut(2) = angd(2)*r8dgrd()
-            anglNaut(3) = angd(3)*r8dgrd()
-        end if
+    if (nbCmpEpsi .eq. 6) then
+        epsiPrev = 0.d0
+    else
+        epsiPrev = id
     end if
 
 ! - ANGLE DE ROTATION
@@ -306,9 +303,7 @@ subroutine pminit(jvMaterCode, nbVari, &
     call getvr8(' ', 'ANGLE', scal=ang1(1), nbret=n1)
     if ((n1 .ne. 0) .and. (ang1(1) .ne. 0.d0)) then
         lRota = ASTER_TRUE
-        b_n = to_blas_int(1)
-        b_incx = to_blas_int(1)
-        call dscal(b_n, r8dgrd(), ang1(1), b_incx)
+        ang1(1) = ang1(1)*r8dgrd()
         pgl(1, 1) = cos(ang1(1))
         pgl(2, 2) = cos(ang1(1))
         pgl(1, 2) = sin(ang1(1))
@@ -326,19 +321,14 @@ subroutine pminit(jvMaterCode, nbVari, &
                 sigmPrev(i) = sigmInitVale
             end if
         end do
-        b_n = to_blas_int(3)
-        b_incx = to_blas_int(1)
-        call dscal(b_n, rac2, sigmPrev(4), b_incx)
+        sigmPrev(4:6) = sigmPrev(4:6)*rac2
     end if
 
 ! - Get initial state - Strains
     epsiPrev = 0.d0
     if (lGrad) then
         ASSERT(nbCmpEpsi .eq. 9)
-        b_n = to_blas_int(9)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, id, b_incx, epsiPrev, b_incy)
+        epsiPrev = id
     else
         ASSERT(nbCmpEpsi .eq. 6)
         epsiPrev = 0.d0
@@ -351,9 +341,7 @@ subroutine pminit(jvMaterCode, nbVari, &
                 epsiPrev(i) = epsiInitVale
             end if
         end do
-        b_n = to_blas_int(3)
-        b_incx = to_blas_int(1)
-        call dscal(b_n, rac2, epsiPrev(4), b_incx)
+        epsiPrev(4:6) = epsiPrev(4:6)*rac2
     end if
 
 ! - Get initial state - Internal state variables
@@ -464,48 +452,30 @@ subroutine pminit(jvMaterCode, nbVari, &
 
 ! - Set initial state in table
     if (tablType .eq. 0) then
+        tablVale(1) = timeInit
         if (loadEpsiType == 2) then
             ASSERT(nbGradLoad .eq. 9)
-            b_n = to_blas_int(nbCmpEpsi)
-            b_incx = to_blas_int(1)
-            b_incy = to_blas_int(1)
-            call dcopy(b_n, gradInitImpo, b_incx, tablVale(2), b_incy)
+            tablVale(2:2+nbCmpEpsi-1) = gradInitImpo(1:nbCmpEpsi)
         else
             epsiInit(1:6) = epsiPrev(1:6)
-            b_n = to_blas_int(3)
-            b_incx = to_blas_int(1)
-            call dscal(b_n, 1.d0/rac2, epsiInit(4), b_incx)
-            b_n = to_blas_int(nbCmpEpsi)
-            b_incx = to_blas_int(1)
-            b_incy = to_blas_int(1)
-            call dcopy(b_n, epsiInit, b_incx, tablVale(2), b_incy)
+            epsiInit(4:6) = epsiInit(4:6)*1.d0/rac2
+            tablVale(2:2+nbCmpEpsi-1) = epsiInit(1:nbCmpEpsi)
         end if
         sigmInit(1:6) = sigmPrev(1:6)
-        b_n = to_blas_int(3)
-        b_incx = to_blas_int(1)
-        call dscal(b_n, 1.d0/rac2, sigmInit(4), b_incx)
-        b_n = to_blas_int(6)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, sigmInit, b_incx, tablVale(nbCmpEpsi+2), b_incy)
-        tablVale(1+nbCmpEpsi+6+1) = 0.d0
-        tablVale(1+nbCmpEpsi+6+2) = 0.d0
-        b_n = to_blas_int(nbVariTabl)
-        b_incx = to_blas_int(1)
-        b_incy = to_blas_int(1)
-        call dcopy(b_n, vim, b_incx, tablVale(1+nbCmpEpsi+6+3), b_incy)
-        tablVale(1) = timeInit
+        sigmInit(4:6) = sigmInit(4:6)*1.d0/rac2
+        tablVale(2+nbCmpEpsi:2+nbCmpEpsi+6-1) = sigmInit(1:6)
+        tablVale(2+nbCmpEpsi+6) = 0.d0
+        tablVale(2+nbCmpEpsi+7) = 0.d0
+        tablVale(2+nbCmpEpsi+8:2+nbCmpEpsi+8+nbVariTabl-1) = vim(1:nbVariTabl)
+
         if (lPrintMatr) then
             dsidep = 0.d0
-            b_n = to_blas_int(36)
-            b_incx = to_blas_int(1)
-            b_incy = to_blas_int(1)
-            call dcopy(b_n, dsidep, b_incx, tablVale(1+6+6+3+nbVari), b_incy)
+            tablVale(2+nbCmpEpsi+8+nbVariTabl:2+nbCmpEpsi+8+nbVariTabl+36-1) = dsidep(1:36)
         end if
-        tablVale(tablNbPara) = 0
+        tablVale(tablNbPara) = 0.d0
         call tbajli(tablName, tablNbPara, tablParaName, [0], tablVale, [c16Dummy], k8b, 0)
     else
-        tablVale(1) = timeInit
+
         vk8(1) = 'EPSI'
         do i = 1, nbCmpEpsi
             tablVale(2) = epsiPrev(i)
@@ -550,7 +520,6 @@ subroutine pminit(jvMaterCode, nbVari, &
     else if (ds_algopara%matrix_pred .eq. 'EXTRAPOLE') then
         typeMatrPred = -1
     end if
-
 ! - Automatic management of time stepping
     call nmcrsu(sddisc, listInst, ds_conv)
 
@@ -559,16 +528,16 @@ subroutine pminit(jvMaterCode, nbVari, &
 
 ! - Compute elastic matrix
     matrElas = 0.d0
-    call dmat3d('PMAT', jvMaterCode, timePrev, '+', kpg, &
-                ksp, anglNaut, matrElas)
+    call dmat3d(materPara, '+', timePrev, matrElas)
+
 !     DMAT ECRIT MU POUR LES TERMES DE CISAILLEMENT
-    coefMatrAdim = max(matrElas(1, 1), matrElas(2, 2), matrElas(3, 3))
+    coefAdim = max(matrElas(1, 1), matrElas(2, 2), matrElas(3, 3))
     do j = 4, 6
         matrElas(j, j) = matrElas(j, j)*2.d0
-        coefMatrAdim = max(coefMatrAdim, matrElas(j, j))
+        coefAdim = max(coefAdim, matrElas(j, j))
     end do
     if (lSetLinearRela) then
-        coefMatrAdim = 1.d0
+        coefAdim = 1.d0
     end if
 !
 end subroutine

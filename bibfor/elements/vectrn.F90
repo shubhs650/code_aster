@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
+subroutine vectrn(nb2, vectTang, vectNorm, vecthe, vecnph, &
                   blam)
 !
     implicit none
@@ -30,7 +30,7 @@ subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
 !
     integer(kind=8) :: in
 !
-    real(kind=8) :: vectn(9, 3)
+    real(kind=8), intent(in) :: vectNorm(9, 3), vectTang(9, 2, 3)
 !
     real(kind=8) :: vecthe(9, 3)
 !
@@ -43,8 +43,7 @@ subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
     real(kind=8) :: barl(3, 3)
 !
     real(kind=8) :: blam(9, 3, 3)
-!
-    real(kind=8) :: vectpt(9, 2, 3)
+
 !
 !DEB
 !
@@ -64,7 +63,7 @@ subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
 !
 !---------- NORMALE INITIALE
 !
-            vecni(ii) = vectn(in, ii)
+            vecni(ii) = vectNorm(in, ii)
 !
 !---------- VECTEUR DE ROTATION
 !
@@ -72,10 +71,9 @@ subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
 !
 !---------- TERMES DE LA LAMBD0
 !
-            lambd0(ii, 1) = vectpt(in, 1, ii)
-            lambd0(ii, 2) = vectpt(in, 2, ii)
-            lambd0(ii, 3) = vectn(in, ii)
-!
+            lambd0(ii, 1) = vectTang(in, 1, ii)
+            lambd0(ii, 2) = vectTang(in, 2, ii)
+            lambd0(ii, 3) = vectNorm(in, ii)
         end do
 !
 !------- TRANSFORMEE DE LA NORMALE PAR GRANDE ROTATION
@@ -93,24 +91,13 @@ subroutine vectrn(nb2, vectpt, vectn, vecthe, vecnph, &
 !
         call promat(lambda, 3, 3, 3, lambd0, &
                     3, 3, 3, barl)
-!
-!
         do jj = 1, 3
-!
 !---------- EN CHAQUE NOEUD
-!
             vecnph(in, jj) = vecnpi(jj)
-!
             do ii = 1, 3
-!
                 blam(in, ii, jj) = barl(ii, jj)
-!
             end do
-!
         end do
-!
     end do
-!
-!FIN
 !
 end subroutine

@@ -87,7 +87,7 @@ subroutine char_nb_ligf(mesh, keywordfact, type_late, nb_elem_late, nb_noel_maxi
     do iocc = 1, nbocc
         if (type_late .eq. 'Node') then
             call getnode(mesh, keywordfact, iocc, ' ', list_node, &
-                         nb_node, suffix=suffix_local)
+                         nb_node, suffixZ_=suffix_local)
             nb_elem_late = nb_elem_late+nb_node
             nb_noel_maxi = 1
             call jedetr(list_node)

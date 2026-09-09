@@ -83,6 +83,27 @@ subroutine elrfno(elrefz, nno, nnos, ndim, nodeCoor, cellVolu)
         end if
         cellVolu_ = 8.d0
 
+    case ('H10')
+        nno_ = 27
+        ! ne sert que pour passer dans inmat5 sans rien faire
+        nnos_ = 27
+        ndim_ = 3
+        if (present(nodeCoor)) then
+            nodeCoor(1, 1:8) = [-1.d0, +1.d0, +1.d0, -1.d0, -1.d0, +1.d0, +1.d0, -1.d0]
+            nodeCoor(2, 1:8) = [-1.d0, -1.d0, +1.d0, +1.d0, -1.d0, -1.d0, +1.d0, +1.d0]
+            nodeCoor(3, 1:8) = [-1.d0, -1.d0, -1.d0, -1.d0, +1.d0, +1.d0, +1.d0, +1.d0]
+            nodeCoor(1, 9:20) = [0.d0, +1.d0, 0.d0, -1.d0, -1.d0, +1.d0, +1.d0, -1.d0, &
+                                 0.d0, +1.d0, 0.d0, -1.d0]
+            nodeCoor(2, 9:20) = [-1.d0, 0.d0, +1.d0, 0.d0, -1.d0, -1.d0, +1.d0, +1.d0, &
+                                 -1.d0, 0.d0, +1.d0, 0.d0]
+            nodeCoor(3, 9:20) = [-1.d0, -1.d0, -1.d0, -1.d0, 0.d0, 0.d0, 0.d0, 0.d0, &
+                                 +1.d0, +1.d0, +1.d0, +1.d0]
+            nodeCoor(1, 21:27) = [0.d0, 0.d0, +1.d0, 0.d0, -1.d0, 0.d0, 0.d0]
+            nodeCoor(2, 21:27) = [0.d0, -1.d0, 0.d0, +1.d0, 0.d0, 0.d0, 0.d0]
+            nodeCoor(3, 21:27) = [-1.d0, 0.d0, 0.d0, 0.d0, 0.d0, +1.d0, 0.d0]
+        end if
+        cellVolu_ = 8.d0
+
     case ('H20')
         nno_ = 20
         nnos_ = 8

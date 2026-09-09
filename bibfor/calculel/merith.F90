@@ -16,7 +16,7 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine merith(modelZ, loadNameZ, matecoZ, caraElemZ, &
+subroutine merith(modelZ, loadNameZ, materCodeZ, caraElemZ, &
                   timeMapZ, matrElemZ, jvBaseZ)
 !
     implicit none
@@ -33,18 +33,17 @@ subroutine merith(modelZ, loadNameZ, matecoZ, caraElemZ, &
 #include "asterfort/reajre.h"
 #include "jeveux.h"
 !
-    character(len=*), intent(in) :: modelZ, loadNameZ, matecoZ, caraElemZ, jvBaseZ, timeMapZ
+    character(len=*), intent(in) :: modelZ, loadNameZ, materCodeZ, caraElemZ, jvBaseZ, timeMapZ
     character(len=*), intent(inout) :: matrElemZ
-
-! ----------------------------------------------------------------------
 !
-!     CALCUL DES MATRICES ELEMENTAIRES DE RIGIDITE THERMIQUE
-!      MATEL:
-!            ( ISO     , 'RIGIDI_TH'  )
-!            ( CAL_TI  , 'DDLMUR_THER')
-!            ( ISO_FACE, 'RIGITH_COEFR/F' )
+! --------------------------------------------------------------------------------------------------
 !
-!     ENTREES:
+! Pseudo-Thermic for fluid
+!
+! CALCUL DES MATRICES ELEMENTAIRES DE RIGIDITE THERMIQUE
+!
+! --------------------------------------------------------------------------------------------------
+!
 !
 !     LES NOMS QUI SUIVENT SONT LES PREFIXES UTILISATEUR K8:
 !        MODELZ : NOM DU MODELE
@@ -62,20 +61,22 @@ subroutine merith(modelZ, loadNameZ, matecoZ, caraElemZ, &
 !     SORTIES:
 !        MATELZ   : LE MATELE EST REMPLI.
 !
-! ----------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: iResuElem, iret, nbResuElem1, nbResuElem2, indxMatrElem
     character(len=8) :: model, caraElem, loadName
     character(len=19) :: matrElem
     character(len=19), parameter :: matrElem1 = '&MERITH1', matrElem2 = '&MERITH2'
     character(len=1) :: jvBase
-    character(len=24) :: timeMap, resuElemPref, mateco
+    character(len=24) :: timeMap, resuElemPref, materCode
     character(len=24), pointer :: resuElem1(:) => null(), resuElem2(:) => null()
-!-----------------------------------------------------------------------
+!
+! --------------------------------------------------------------------------------------------------
+!
     call jemarq()
 !
     model = modelZ
-    mateco = matecoZ
+    materCode = materCodeZ
     caraElem = caraElemZ
     timeMap = timeMapZ
     jvBase = jvBaseZ
@@ -85,7 +86,7 @@ subroutine merith(modelZ, loadNameZ, matecoZ, caraElemZ, &
 !     -- RIGIDITE CORRESPONDANT AUX ELEMENTS ISO ET AUX ELEMENTS CAL_TI:
     resuElemPref = '&MERITH1'
     indxMatrElem = 0
-    call merit1(model, caraElem, mateco, &
+    call merit1(model, caraElem, materCode, &
                 loadName, &
                 timeMap, matrElem1, resuElemPref, &
                 indxMatrElem, jvBase)

@@ -25,19 +25,20 @@ subroutine apinte_chck2(proj_tole, elem_dime, &
     implicit none
 !
 #include "asterf_types.h"
+#include "MeshTypes_type.h"
 #include "asterfort/assert.h"
 #include "asterfort/reerel.h"
 !
     real(kind=8), intent(in) :: proj_tole
     integer(kind=8), intent(in) :: elem_dime
     integer(kind=8), intent(in) :: elem_sside_nbnode
-    real(kind=8), intent(in) :: elem_sside_coor(3, 9)
+    real(kind=8), intent(in) :: elem_sside_coor(3, MT_NNOMAX2D)
     integer(kind=8), intent(in) :: elem_pside_nbnode
-    real(kind=8), intent(in) :: elem_pside_coor(3, 9)
+    real(kind=8), intent(in) :: elem_pside_coor(3, MT_NNOMAX2D)
     real(kind=8), intent(in) :: norm_pside(3)
     real(kind=8), intent(in) :: norm_sside(3)
     character(len=8), intent(in) :: elem_pside_code
-    real(kind=8), intent(in) :: proj_coor(elem_dime-1, 4)
+    real(kind=8), intent(in) :: proj_coor(2, 4)
     aster_logical, intent(out) :: l_inter
 !
 ! --------------------------------------------------------------------------------------------------

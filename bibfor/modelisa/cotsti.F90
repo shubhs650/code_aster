@@ -22,8 +22,6 @@ function cotsti(typsup)
 !     BUT : DETERMINER LE TYPE "INFORMATIQUE" CORRESPONDANT A
 !           UN TYPE "SUPERVISEUR"
 !======================================================================
-#include "jeveux.h"
-!
     character(len=16) :: typinf
 !----------------------------------------------------------------------
 !
@@ -31,6 +29,8 @@ function cotsti(typsup)
         typinf = 'LISTR8'
     else if (typsup .eq. 'LISTIS_SDASTER') then
         typinf = 'LISTIS'
+    else if (typsup .eq. 'LIST_INST') then
+        typinf = 'LIST_INST'
     else if (typsup .eq. 'MAILLAGE_SDASTER' .or. typsup .eq. 'MAILLAGE'  &
        &.or. typsup .eq. 'MAILLAGE_P') then
         typinf = 'MAILLAGE'

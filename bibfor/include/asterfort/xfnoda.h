@@ -17,24 +17,22 @@
 ! --------------------------------------------------------------------
 #include "asterf_types.h"
 !
-interface 
-    subroutine xfnoda(ds_thm, imate, mecani, press1, enrmec, dimenr,&
-                      dimcon, ndim, dt, fnoevo, congem,&
+interface
+    subroutine xfnoda(ds_thm, &
+                      mecani, press1, enrmec, dimenr, &
+                      dimcon, ndim, congem, &
                       r, enrhyd, nfh)
         use THM_type
-        type(THM_DS), intent(inout) :: ds_thm
+        type(THM_DS), intent(in) :: ds_thm
         integer(kind=8) :: dimcon
         integer(kind=8) :: dimenr
-        integer(kind=8) :: imate
         integer(kind=8) :: mecani(5)
         integer(kind=8) :: press1(7)
         integer(kind=8) :: enrmec(3)
         integer(kind=8) :: ndim
-        real(kind=8) :: dt
-        aster_logical :: fnoevo
         real(kind=8) :: congem(dimcon)
         real(kind=8) :: r(dimenr)
         integer(kind=8) :: enrhyd(3)
         integer(kind=8) :: nfh
     end subroutine xfnoda
-end interface 
+end interface

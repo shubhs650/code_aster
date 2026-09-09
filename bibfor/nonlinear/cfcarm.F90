@@ -34,12 +34,13 @@ subroutine cfcarm(noma, defico, newgeo, posmai, typmai, &
 #include "asterfort/jexnum.h"
 #include "asterfort/mmtypm.h"
 #include "asterfort/int_to_char8.h"
+#include "MeshTypes_type.h"
     character(len=8) :: noma, alias
     character(len=24) :: defico
     character(len=19) :: newgeo
     integer(kind=8) :: posmai, nummai
     integer(kind=8) :: nnomam, ndim
-    real(kind=8) :: coorma(27)
+    real(kind=8) :: coorma(3, MT_NNOMAX2D)
     character(len=8) :: nommai
     character(len=4) :: typmai
 !
@@ -68,7 +69,7 @@ subroutine cfcarm(noma, defico, newgeo, posmai, typmai, &
 !
 !
     integer(kind=8) :: nbnmax
-    parameter(nbnmax=9)
+    parameter(nbnmax=MT_NNOMAX2D)
 !
     integer(kind=8) :: no(nbnmax)
     integer(kind=8) :: ino, jdec
@@ -84,7 +85,7 @@ subroutine cfcarm(noma, defico, newgeo, posmai, typmai, &
 !
 ! --- INITIALISATIONS
 !
-    coorma(1:27) = 0.d0
+    coorma = 0.d0
 !
 ! --- TYPE DE LA MAILLE
 !
@@ -115,9 +116,9 @@ subroutine cfcarm(noma, defico, newgeo, posmai, typmai, &
 ! --- COORDONNEES DES NOEUDS DE LA MAILLE
 !
     do ino = 1, nnomam
-        coorma(3*(ino-1)+1) = vale(1+3*(no(ino)-1))
-        coorma(3*(ino-1)+2) = vale(1+3*(no(ino)-1)+1)
-        coorma(3*(ino-1)+3) = vale(1+3*(no(ino)-1)+2)
+        coorma(1, ino) = vale(1+3*(no(ino)-1))
+        coorma(2, ino) = vale(1+3*(no(ino)-1)+1)
+        coorma(3, ino) = vale(1+3*(no(ino)-1)+2)
     end do
 !
 ! --- NOM DE LA MAILLE

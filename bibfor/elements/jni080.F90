@@ -30,6 +30,7 @@ subroutine jni080(elrefe, nmaxob, liobj, nbobj)
 #include "asterfort/fcesnd.h"
 #include "asterfort/jeexin.h"
 #include "asterfort/mamagi.h"
+#include "MeshTypes_type.h"
 #include "asterfort/wkvect.h"
 !
     character(len=8) :: elrefe
@@ -299,8 +300,8 @@ subroutine jni080(elrefe, nmaxob, liobj, nbobj)
     integer(kind=8) :: lzi, lzr, i1, i2, i3, i4, i5, k, l, ll, m, nbn1, nbn2, kompt
     integer(kind=8) :: jmas, ldesi, ldesr, ljmas
     real(kind=8) :: a, b, aa
-    real(kind=8) :: vfesnd(45)
-    real(kind=8) :: xpg(81), poipg(27), x(2), ff(9), dff(3, 9), xi1, xi2, xi3
+    real(kind=8) :: vfesnd(45), xi1, xi2, xi3
+    real(kind=8) :: xpg(3*MT_NNOMAX3D), poipg(27), x(2), ff(MT_NNOMAX2D), dff(3, MT_NNOMAX2D)
 !
 ! DEB ------------------------------------------------------------------
 !

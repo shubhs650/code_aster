@@ -26,13 +26,14 @@ subroutine mmmjac(l_axis, nb_node, elem_dime, &
 #include "asterf_types.h"
 #include "asterfort/assert.h"
 #include "asterfort/subaco.h"
+#include "MeshTypes_type.h"
 #include "asterfort/sumetr.h"
 !
     aster_logical, intent(in) :: l_axis
     character(len=8), intent(in) :: elem_code
     integer(kind=8), intent(in) :: elem_dime, nb_node
-    real(kind=8), intent(in) :: elem_coor(3, 9)
-    real(kind=8), intent(in) :: ff(9), dff(2, 9)
+    real(kind=8), intent(in) :: elem_coor(3, MT_NNOMAX2D)
+    real(kind=8), intent(in) :: ff(MT_NNOMAX2D), dff(2, MT_NNOMAX2D)
     real(kind=8), intent(out) :: jacobi
     aster_logical, intent(out), optional :: l_axis_warn_
 !

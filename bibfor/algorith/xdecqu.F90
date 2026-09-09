@@ -42,6 +42,7 @@ subroutine xdecqu(nnose, it, ndim, cnset, jlsn, &
 #include "asterfort/xinter.h"
 #include "asterfort/xstjon.h"
 #include "asterfort/xxmmvd.h"
+#include "MeshTypes_type.h"
     integer(kind=8) :: nnose, it, ndim, cnset(*), ninter, igeom, npts, nmilie, mfis
     integer(kind=8) :: jlsn, ifiss, nfiss, nfisc, fisco(*), coupe(nfiss), exit(2), joncno
     real(kind=8) :: pinter(*), ainter(*), pmilie(*), tx(3, 7), txlsn(28)
@@ -80,9 +81,9 @@ subroutine xdecqu(nnose, it, ndim, cnset, jlsn, &
 !     ----------------------------------------------------------------
 !
     real(kind=8) :: a(3), b(3), c(3), m(3), lsna, lsnb, lsnm, tabls(10)
-    real(kind=8) :: alpha, longar, lonref, tampor(4), tabco(30), geom(81)
-    real(kind=8) :: val, rbid, cref(ndim), pinref(18), lsnelp(27)
-    real(kind=8) :: xref(81), ff(27), newpt(ndim), somlsn(nfisc+1)
+    real(kind=8) :: alpha, longar, lonref, tampor(4), tabco(30), geom(3*MT_NNOMAX3D)
+    real(kind=8) :: val, rbid, cref(ndim), pinref(18), lsnelp(MT_NNOMAX)
+    real(kind=8) :: xref(3*MT_NNOMAX3D), ff(MT_NNOMAX), newpt(ndim), somlsn(nfisc+1)
     integer(kind=8) :: ar(12, 3), nbar, nta, ntb, na, nb, ins
     integer(kind=8) :: ia, i, ipi, ibid, pp, pd, k
     integer(kind=8) :: ndime, noeua, noeub, noeuc, im

@@ -38,7 +38,8 @@ subroutine xmase2(elrefp, ndim, coorse, igeom, he, &
 #include "asterfort/iimatu.h"
 #include "asterfort/lteatt.h"
 #include "asterfort/indent.h"
-    integer(kind=8) :: ndim, igeom, imate, nnop, npg, nfh, ddlc, nfe, heavn(27, 5)
+#include "MeshTypes_type.h"
+    integer(kind=8) :: ndim, igeom, imate, nnop, npg, nfh, ddlc, nfe, heavn(MT_NNOMAX, 5)
     integer(kind=8) :: jstno, nnops, ddlm
     character(len=8) :: elrefp
     real(kind=8) :: basloc(6*nnop), he, coorse(*)
@@ -81,7 +82,7 @@ subroutine xmase2(elrefp, ndim, coorse, igeom, he, &
     real(kind=8) :: rho(1)
     real(kind=8) :: xg(ndim), xe(ndim), ff(nnop), jac
     real(kind=8) :: enr(ndim, nnop, 1+nfh+ndim*nfe)
-    real(kind=8) :: fk(27, 3, 3), ka, mu
+    real(kind=8) :: fk(MT_NNOMAX, 3, 3), ka, mu
     integer(kind=8) :: alp, dec(nnop), nn, mn, ii, jj, irese, singu
     integer(kind=8) :: ddln, ij, kddl(ndim, 1+nfh+ndim*nfe)
 !

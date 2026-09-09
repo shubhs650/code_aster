@@ -48,7 +48,6 @@ module FED_module
 #include "asterfort/initel.h"
 #include "asterfort/jecrec.h"
 #include "asterfort/jecroc.h"
-#include "asterfort/jedetr.h"
 #include "asterfort/jedupo.h"
 #include "asterfort/jedup1.h"
 #include "asterfort/jeecra.h"

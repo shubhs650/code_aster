@@ -182,17 +182,17 @@ subroutine dtmprep(sd_dtm_)
 !
     call gettco(basemo, typco)
     if (typco(1:9) .eq. 'MODE_MECA') then
-        write (6, *) 'type mode_meca'
+        ! write (6, *) 'type mode_meca'
         call dismoi('NUME_DDL', basemo, 'RESU_DYNA', repk=numddl)
         call dismoi('NB_EQUA', numddl, 'NUME_DDL', repi=neq)
-        write (6, *) 'neq = ', neq
+        ! write (6, *) 'neq = ', neq
     else if (typco(1:9) .eq. 'MODE_GENE') then
-        write (6, *) 'type mode_gene'
+        ! write (6, *) 'type mode_gene'
         call dismoi('REF_RIGI_PREM', basemo, 'RESU_DYNA', repk=matass)
         call dismoi('NOM_NUME_DDL', matass, 'MATR_ASSE', repk=numddl)
         call jeveuo(numddl(1:14)//'.NUME.NEQU', 'L', vi=nequ)
         neq = nequ(1)
-        write (6, *) 'neq = ', neq
+        ! write (6, *) 'neq = ', neq
     else
 !       --- Substructuring case, basis vectors can not be retrieved
         goto 10

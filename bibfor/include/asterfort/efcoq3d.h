@@ -15,15 +15,23 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine efcoq3d(nomte, nb1, nb2, cara, geom, lzr,& 
-                   chg,matr,effg,                   &
-                   nbcou,npgsn,npgsr,npge,nso,npgt)
-        character(len=16) :: nomte
-        integer(kind=8) :: nb1,nb2,npgsn,nso,nbcou,npgt,npgsr,npge
-        real(kind=8) :: geom(*),cara(*),lzr(*),matr(*),chg(*),effg(*)
+    subroutine efcoq3d(plateCara, plateOrie, &
+                       nomte, nb1, nb2, &
+                       npgsn, npgsr, npge, nso, &
+                       nodeCoor, &
+                       desr, siefElga, matrGano, &
+                       efgeElno)
+        use plate_type
+        type(plateCara_Para), intent(in) :: plateCara
+        type(plateOrie_Para), intent(in) :: plateOrie
+        character(len=16), intent(in) :: nomte
+        integer(kind=8), intent(in) :: nb1, nb2
+        integer(kind=8), intent(in) :: npgsn, npgsr, npge, nso
+        real(kind=8), intent(in) :: nodeCoor(*)
+        real(kind=8), intent(inout) :: desr(*)
+        real(kind=8), intent(in) :: siefElga(*), matrGano(*)
+        real(kind=8), intent(out) :: efgeElno(*)
     end subroutine efcoq3d
 end interface

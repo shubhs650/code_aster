@@ -15,32 +15,31 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
+! aslint: disable=W0413
 !
-subroutine lcejtu(BEHinteg, fami, kpg, ksp, ndim, &
-                  imate, option, epsm, deps, sigm, &
+subroutine lcejtu(BEHInteg, &
+                  ndim, option, epsm, deps, sigm, &
                   sigp, dsidep, vim, vip, typmod, &
                   instam, instap)
 !
-!
     use Behaviour_type
-!
     implicit none
 !
 #include "asterc/r8pi.h"
-#include "asterf_types.h"
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
+#include "asterfort/assert.h"
 #include "asterfort/rcvalb.h"
 #include "asterfort/utmess.h"
-#include "asterfort/assert.h"
 #include "blas/daxpy.h"
 #include "blas/dcopy.h"
-    type(Behaviour_Integ), intent(in) :: BEHinteg
-    integer(kind=8), intent(in) :: imate, ndim, kpg, ksp
+!
+    type(Behaviour_Integ), intent(in) :: BEHInteg
+    integer(kind=8), intent(in) :: ndim
     real(kind=8), intent(in) :: epsm(6), deps(6), sigm(6), vim(*)
     real(kind=8), intent(in) :: instam, instap
-    character(len=8), intent(in) :: typmod(*)
+    character(len=8), intent(in) :: typmod(2)
     character(len=16), intent(in) :: option
-    character(len=*), intent(in) :: fami
     real(kind=8), intent(out) :: vip(*), sigp(6), dsidep(6, 6)
 !-----------------------------------------------------------------------
 !     LOI DE COMPORTEMENT CZM_TURON D'UN JOINT ANISOTROPE
@@ -148,8 +147,13 @@ subroutine lcejtu(BEHinteg, fami, kpg, ksp, ndim, &
         poum = '+'
     end if
 !
-    call rcvalb(fami, kpg, ksp, poum, imate, &
-                ' ', 'RUPT_TURON', 0, ' ', [0.d0], &
+    call rcvalb(BEHInteg%materPara%schemePara%fami, &
+                BEHInteg%materPara%schemePara%kpg, &
+                BEHInteg%materPara%schemePara%ksp, &
+                poum, &
+                BEHInteg%materPara%jvMaterCode, &
+                ' ', 'RUPT_TURON', &
+                0, ' ', [0.d0], &
                 nbpa, nom, val, cod, 2)
 !
 !   * VERIFICATION

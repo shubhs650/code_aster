@@ -17,14 +17,13 @@
 ! --------------------------------------------------------------------
 !
 subroutine dpvpma(mod, imat, nbmat, tempd, materd, &
-                  materf, matcst, ndt, ndi, nvi, &
+                  materf, ndt, ndi, nvi, &
                   indal)
     implicit none
 #include "asterfort/rcvala.h"
     integer(kind=8) :: ndt, ndi, nvi, imat, nbmat
     real(kind=8) :: materd(nbmat, 2), materf(nbmat, 2), tempd
     character(len=8) :: mod
-    character(len=3) :: matcst
 ! ====================================================================
 ! --- RECUPERATION DONNEES MATERIAU POUR DRUCKER PRAGER VISCOPLASTIQUE
 ! --- VISC_DRUC_PRAG -------------------------------------------------
@@ -110,7 +109,6 @@ subroutine dpvpma(mod, imat, nbmat, tempd, materd, &
         materf(ii, 1) = materd(ii, 1)
         materf(ii, 2) = materd(ii, 2)
     end do
-    matcst = 'OUI'
 ! =================================================================
 ! --- NOMBRE DE COMPOSANTES ---------------------------------------
 ! =================================================================

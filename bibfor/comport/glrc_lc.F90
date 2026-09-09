@@ -15,33 +15,39 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine glrc_lc(epsm, deps, vim, option, sig, &
+! aslint: disable=W1504
+!
+subroutine glrc_lc(plateOrie, &
+                   epsm, deps, vim, option, sig, &
                    vip, dsidep, lambda, deuxmu, lamf, &
                    deumuf, gmt, gmc, gf, seuil, &
-                   alf, alfmc, crit, &
+                   alf, alfmc, carcri, &
                    epsic, epsiels, epsilim, codret, &
-                   ep, is_param_opt, val_param_opt, t2iu)
+                   ep, is_param_opt, val_param_opt)
 !
+    use plate_type
     implicit none
 !
 #include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/calc_glrcdm_err.h"
 #include "asterfort/diago2.h"
+#include "asterfort/dxefro.h"
 #include "asterfort/glrc_calc_cst.h"
 #include "asterfort/glrc_calc_eps33.h"
 #include "asterfort/glrc_integ_loc.h"
 #include "asterfort/glrc_sig_mat.h"
-#include "asterfort/r8inir.h"
-#include "asterfort/dxefro.h"
+!
+    type(plateOrie_Para), intent(in) :: plateOrie
     integer(kind=8) :: codret
-    real(kind=8) :: epsm(6), deps(6), vim(*), crit(*), seuil, alfmc
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    real(kind=8) :: epsm(6), deps(6), vim(*), seuil, alfmc
     real(kind=8) :: lambda, deuxmu, lamf, deumuf, alf, gmt, gmc, gf
     real(kind=8) :: epsic, epsiels, epsilim
     real(kind=8) :: sig(6), dsidep(6, 6), vip(*), vecp(2, 2), valp(2)
     character(len=16) :: option
     aster_logical :: is_param_opt(*), l_calc(2)
-    real(kind=8) :: val_param_opt(*), ep, t2iu(4)
+    real(kind=8) :: val_param_opt(*), ep
 ! ----------------------------------------------------------------------
 !
 !      LOI GLOBALE POUR LES PLAQUES/COQUES DKT - GLRC_DM
@@ -109,8 +115,8 @@ subroutine glrc_lc(epsm, deps, vim, option, sig, &
 !
 ! -- INITIALISATION
     if (lelas) then
-        call r8inir(6, 0.d0, epsm, 1)
-        call r8inir(6, 0.d0, deps, 1)
+        epsm = 0.d0
+        deps = 0.d0
     end if
 !
     muf = deumuf*0.5d0
@@ -154,8 +160,8 @@ subroutine glrc_lc(epsm, deps, vim, option, sig, &
 ! --  EVOLUTION DE DA1, DA2 ET EPS33
 !     INTEGRATION DE LA LOI DE COMPORTEMENT
     if (resi) then
-        told = crit(3)
-        kdmax = nint(crit(1))
+        told = carcri(3)
+        kdmax = nint(carcri(1))
 !
         call glrc_integ_loc(lambda, deuxmu, seuil, alf, &
                             alfmc, gmt, gmc, cof1, &
@@ -195,7 +201,7 @@ subroutine glrc_lc(epsm, deps, vim, option, sig, &
 !           passage des deformation dans le repere utilisateur
             eps8(1:6) = eps(1:6)
             eps8(7:8) = 0.d0
-            call dxefro(1, t2iu, eps8, eps8out)
+            call dxefro(1, plateOrie%t2iu, eps8, eps8out)
             epsu(1:6) = eps8out(1:6)
 
             rx = val_param_opt(1)

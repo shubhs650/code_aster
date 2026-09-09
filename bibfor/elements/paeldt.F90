@@ -25,7 +25,7 @@ subroutine paeldt(kpg, ksp, fami, poum, icdmat, &
 !
     integer(kind=8) :: kpg, ksp, icdmat
     character(len=1) :: poum
-    character(len=4) :: fami
+    character(len=8) :: fami
     character(len=8) :: materi
     real(kind=8) :: em, ep, num, nup, depsth
     real(kind=8), intent(out), optional :: tmoins, tplus, trefer

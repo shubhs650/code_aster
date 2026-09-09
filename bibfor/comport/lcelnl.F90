@@ -16,19 +16,20 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine lcelnl(BEHinteg, &
+subroutine lcelnl(BEHInteg, &
                   fami, kpg, ksp, ndim, &
-                  typmod, imate, compor, crit, &
+                  typmod, imate, relaComp, carcri, &
                   option, eps, sig, vi, dsidep, codret)
 !
     use Behaviour_type
-!
     implicit none
 !
-#include "asterf_types.h"
 #include "asterc/r8prem.h"
+#include "asterf_types.h"
 #include "asterfort/assert.h"
+#include "asterfort/Behaviour_type.h"
 #include "asterfort/ecpuis.h"
+#include "asterfort/get_elas_para.h"
 #include "asterfort/nmcri1.h"
 #include "asterfort/nmcri2.h"
 #include "asterfort/rcfonc.h"
@@ -39,14 +40,13 @@ subroutine lcelnl(BEHinteg, &
 #include "asterfort/utmess.h"
 #include "asterfort/verift.h"
 #include "asterfort/zerofr.h"
-#include "asterfort/get_elas_para.h"
 !
-    type(Behaviour_Integ), intent(in) :: BEHinteg
+    type(Behaviour_Integ), intent(in) :: BEHInteg
     character(len=*) :: fami
     character(len=8) :: typmod(*)
-    character(len=16) :: compor(*), option
+    character(len=16), intent(in) :: relaComp, option
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
     integer(kind=8) :: kpg, ksp, ndim, imate, codret
-    real(kind=8) :: crit(*)
     real(kind=8) :: eps(:), sig(:), vi(1), dsidep(:, :)
 
 !     REALISE LA LOI DE HENCKY POUR LES ELEMENTS ISOPARAMETRIQUES
@@ -113,9 +113,9 @@ subroutine lcelnl(BEHinteg, &
     rigi = option .eq. 'RIGI_MECA_TANG' .or. option .eq. 'RIGI_MECA_ELAS'
     ASSERT(resi .or. rigi)
 
-    line = (compor(1) (1:14) .eq. 'ELAS_VMIS_LINE')
-    puis = (compor(1) (1:14) .eq. 'ELAS_VMIS_PUIS')
-    trac = (compor(1) (1:14) .eq. 'ELAS_VMIS_TRAC')
+    line = (relaComp(1:14) .eq. 'ELAS_VMIS_LINE')
+    puis = (relaComp(1:14) .eq. 'ELAS_VMIS_PUIS')
+    trac = (relaComp(1:14) .eq. 'ELAS_VMIS_TRAC')
     ASSERT(line .or. puis .or. trac)
 
     epsi = r8prem()
@@ -151,7 +151,7 @@ subroutine lcelnl(BEHinteg, &
     if (iret .ne. 0) secref = 0.d0
     call get_elas_para(fami, imate, poum, kpg, ksp, &
                        elas_id, elas_keyword, &
-                       e_=e, nu_=nu, BEHinteg=BEHinteg)
+                       e_=e, nu_=nu, BEHInteg=BEHInteg)
     if (line .or. puis) then
         call rcvalb(fami, kpg, ksp, poum, imate, &
                     ' ', 'ELAS', 0, ' ', [0.d0], &
@@ -296,8 +296,8 @@ subroutine lcelnl(BEHinteg, &
             end if
 !         CALCUL DE P (EQUATION PROPRE AUX CONTRAINTES PLANES)
             approx = 2.d0*epseq/3.d0-sigy/1.5d0/deuxmu
-            prec = abs(crit(3))*sigy
-            niter = abs(nint(crit(1)))
+            prec = abs(carcri(3))*sigy
+            niter = abs(nint(carcri(1)))
             call zerofr(0, 'DEKKER', nmcri1, 0.d0, approx, &
                         prec, niter, p, codret, ibid)
             if (codret .ne. 0) goto 999
@@ -336,8 +336,8 @@ subroutine lcelnl(BEHinteg, &
                 rprim0 = unsurn*sigy*coco*(coco*dp0)**(unsurn-1.d0)
                 dp0 = dp0/(1+rprim0/1.5d0/deuxmu)
                 xap = dp0
-                precr = crit(3)*sigy
-                niter = nint(crit(1))
+                precr = carcri(3)*sigy
+                niter = nint(carcri(1))
                 call zerofr(0, 'DEKKER', nmcri2, 0.d0, xap, &
                             precr, niter, p, codret, ibid)
                 if (codret .ne. 0) goto 999

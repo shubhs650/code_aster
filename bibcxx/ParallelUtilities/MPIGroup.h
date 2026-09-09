@@ -47,9 +47,11 @@ class MPIGroup {
     /** @brief MPI current communicator */
     MPI_Comm _groupComm;
     /** @brief booleans to manage groups */
-    bool groupCreated = false;
-    bool newGroupCreated = false;
-    aster_comm_t asterComm;
+    bool _groupCreated = false;
+    bool _newGroupCreated = false;
+    aster_comm_t _asterComm;
+    /** @brief booleans to manage groups */
+    int _groupSize = 0;
 
   public:
     /**
@@ -62,8 +64,14 @@ class MPIGroup {
     /** @brief Build group from parent communicator and proc id list */
     void buildFromProcsVector( const MPI_Comm &parentComm, const VectorInt &procIdVector );
 
+    /** @brief Get aster_comm_t communicator */
+    const aster_comm_t *getAsterCommunicator() const;
+
     /** @brief Get communicator */
     MPI_Comm getCommunicator() const;
+
+    /** @brief Get communicator */
+    int getGroupSize() const { return _groupSize; };
 };
 
 using MPIGroupPtr = std::shared_ptr< MPIGroup >;

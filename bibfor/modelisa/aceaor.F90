@@ -38,6 +38,7 @@ subroutine aceaor(nbocc, infoconcept)
 #include "asterfort/affori.h"
 #include "asterfort/alcart.h"
 #include "asterfort/angvx.h"
+#include "asterfort/carorsolpi.h"
 #include "asterfort/dismoi.h"
 #include "asterfort/getvid.h"
 #include "asterfort/getvr8.h"
@@ -50,13 +51,13 @@ subroutine aceaor(nbocc, infoconcept)
 #include "asterfort/jeveuo.h"
 #include "asterfort/jexnom.h"
 #include "asterfort/jexnum.h"
+#include "asterfort/longeleori.h"
 #include "asterfort/nocart.h"
 #include "asterfort/tbcarapou.h"
 #include "asterfort/utmess.h"
 #include "asterfort/verima.h"
 #include "asterfort/wkvect.h"
 #include "asterfort/int_to_char8.h"
-#include "blas/ddot.h"
 !
 ! --------------------------------------------------------------------------------------------------
     integer(kind=8), parameter :: nbval = 6
@@ -67,7 +68,7 @@ subroutine aceaor(nbocc, infoconcept)
     integer(kind=8) :: jdls, jdme, jdno, jdori, jdtm, jinit
     integer(kind=8) :: jdvlvo, nbmagr, nbmail
     integer(kind=8) :: ncar, ng
-    integer(kind=8) :: no1, no2, ntpoi, ntseg, ntseg3, ntseg4
+    integer(kind=8) :: ntpoi, ntseg, ntseg3, ntseg4
     integer(kind=8) :: nummai, nutyel, nutyma, nbalarme
     integer(kind=8) :: LstElement(NbElement), iele, index1, index2, ace_nu
     integer(kind=8) :: nval, ivr(4)
@@ -78,9 +79,10 @@ subroutine aceaor(nbocc, infoconcept)
     character(len=8)    :: nomsec, nomcara(2)
     character(len=19)   :: tabcar
 ! --------------------------------------------------------------------------------------------------
-    logical :: IsOrientation
-    real(kind=8) :: val(nbval), x1(3), x2(3), x3(3), longseg, longseuil
+    logical :: IsOrientation, IsIntsolpi
+    real(kind=8) :: val(nbval), x3(3), longseg, longseuil
     real(kind=8) :: rddg, alpha, AlphaGeom(2), beta, gamma
+    integer(kind=8) :: ino1, ino2
     character(len=4) :: exituy
     character(len=8) :: nomu, noma, nomo
     character(len=16) :: oricara
@@ -88,7 +90,6 @@ subroutine aceaor(nbocc, infoconcept)
     character(len=24) :: tmpnor, tmpvor, tmpori, tmpini
     character(len=24) :: mlgtma, mlggno, mlggma, mlgcoo, mlgcnx
     character(len=24) :: nommai
-    blas_int :: b_incx, b_incy, b_n
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -140,24 +141,18 @@ subroutine aceaor(nbocc, infoconcept)
         zi(jinit+ii-1) = 0
     end do
 !
-    b_n = to_blas_int(3)
-    b_incx = to_blas_int(1)
-    b_incy = to_blas_int(1)
-!
     do nummai = 1, nbmail
         nutyma = zi(jdtm+nummai-1)
+        nutyel = zi(jdme+nummai-1)
+        IsIntsolpi = .FALSE.
+        ino1 = 1
+        ino2 = 2
+        call carorsolpi(nutyel, elem_supp%catanum, IsIntsolpi, ino1, ino2)
         jad = jdori+(nummai-1)*3
         jin = jinit+(nummai-1)*3
-        if (nutyma .eq. ntseg) then
+        if ((nutyma .eq. ntseg) .or. IsIntsolpi) then
             call jeveuo(jexnum(mlgcnx, nummai), 'L', jdno)
-            no1 = zi(jdno)
-            no2 = zi(jdno+1)
-            do ii = 1, 3
-                x1(ii) = zr(jdco+(no1-1)*3+ii-1)
-                x2(ii) = zr(jdco+(no2-1)*3+ii-1)
-                x3(ii) = x2(ii)-x1(ii)
-            end do
-            longseg = sqrt(ddot(b_n, x3, b_incx, x3, b_incy))
+            call longeleori(jdno, jdco, ino1, ino2, longseg, x3)
             if (longseg .gt. 0.0d0) then
                 call angvx(x3, alpha, beta)
                 zr(jad) = zr(jad)+alpha
@@ -209,11 +204,12 @@ subroutine aceaor(nbocc, infoconcept)
                     nommai = int_to_char8(nummai)
                     call jeveuo(jexnum(mlgcnx, nummai), 'L', jdno)
                     nutyma = zi(jdtm+nummai-1)
+                    nutyel = zi(jdme+nummai-1)
                     jad = jdori+(nummai-1)*3
                     jin = jinit+(nummai-1)*3
                     if ((nutyma .ne. ntseg3) .and. (nutyma .ne. ntseg4)) then
                         call affori('MAILLE', nommai, oricara, val, jad, jin, &
-                                    jdno, jdco, nutyma, ntseg, &
+                                    jdno, jdco, nutyma, ntseg, nutyel, elem_supp%catanum, &
                                     lseuil=longseuil, nbseuil=nbalarme, alphayz=AlphaGeom)
                     end if
                 end do
@@ -321,4 +317,5 @@ subroutine aceaor(nbocc, infoconcept)
     call jedetr(tmpini)
 !
     call jedema()
-end subroutine
+!
+end subroutine aceaor

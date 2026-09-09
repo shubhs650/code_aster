@@ -18,11 +18,10 @@
 !
 interface
     subroutine calc_coor_elga(modelZ, ligrel, chgeom, chgaus, &
-                              cacoquZ_)
+                              caraElemZ_)
         character(len=*), intent(in) :: modelZ
         character(len=19), intent(in) :: ligrel
-        character(len=19), intent(in) :: chgeom
-        character(len=19), intent(in) :: chgaus
-        character(len=*), optional, intent(in) :: cacoquZ_
+        character(len=19), intent(in) :: chgeom, chgaus
+        character(len=*), optional, intent(in) :: caraElemZ_
     end subroutine calc_coor_elga
 end interface

@@ -50,7 +50,7 @@ def macr_spectre_ops(self, **args):
     #
     dplancher = []
     for j in PLANCHER:
-        dplancher.append(j.cree_dict_valeurs(j.mc_liste))
+        dplancher.append(j)
     #
     for plancher in dplancher:
         liste_no = []
@@ -292,7 +292,7 @@ def macr_spectre_ops(self, **args):
                             NAPPE=__moy_z[indexn], VALE_PARA_FONC=AMOR_SPEC[i]
                         )
                     motscles = {}
-                    dI = IMPRESSION[0].cree_dict_valeurs(IMPRESSION[0].mc_liste)
+                    dI = IMPRESSION[0]
                     if "PILOTE" in dI:
                         motscles["PILOTE"] = IMPRESSION["PILOTE"]
                     if IMPRESSION["FORMAT"] != "TABLEAU":
@@ -400,7 +400,7 @@ def macr_spectre_ops(self, **args):
         # Etape 5: Impression des courbes
         if NOM_CHAM == "ACCE" and IMPRESSION is not None:
             motscles = {}
-            dI = IMPRESSION[0].cree_dict_valeurs(IMPRESSION[0].mc_liste)
+            dI = IMPRESSION[0]
             if "PILOTE" in dI:
                 motscles["PILOTE"] = IMPRESSION["PILOTE"]
             if IMPRESSION["FORMAT"] != "TABLEAU":

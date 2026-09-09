@@ -15,14 +15,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
 !
 interface
-    subroutine nmvcmx(mate, mailla, comref, comval)
-        character(len=24) :: mate
-        character(len=8) :: mailla
-        character(len=24) :: comref
-        character(len=19) :: comval
+    subroutine nmvcmx(materField, varcRefe, varc)
+        character(len=24), intent(in) :: materField, varcRefe
+        character(len=19), intent(in) :: varc
     end subroutine nmvcmx
 end interface

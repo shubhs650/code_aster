@@ -19,6 +19,8 @@
 subroutine te0025(option, nomte)
 !
     use BehaviourStrain_module
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterc/r8vide.h"
@@ -26,8 +28,8 @@ subroutine te0025(option, nomte)
 #include "asterfort/Behaviour_type.h"
 #include "asterfort/elrefe_info.h"
 #include "asterfort/epsvmc.h"
-#include "asterfort/getElemOrientation.h"
 #include "asterfort/jevech.h"
+#include "asterfort/lteatt.h"
 #include "asterfort/nbsigm.h"
 #include "asterfort/tecach.h"
 #include "jeveux.h"
@@ -44,21 +46,23 @@ subroutine te0025(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    character(len=4), parameter :: fami = 'RIGI'
+    character(len=8), parameter :: fami = 'RIGI'
     real(kind=8), parameter :: nharm = 0.d0
     integer(kind=8) :: jvGaussWeight, jvBaseFunc, jvDBaseFunc
     integer(kind=8) :: ndim, nno, npg, nbsig, nbEpsi
     integer(kind=8) :: kpg, iret, iEpsi
-    integer(kind=8) :: jvGeom, jvDisp, jvTime, jvEpsi
-    real(kind=8) :: epsi(162), anglNaut(3), time
+    integer(kind=8) :: jvGeom, jvDisp, jvInstr, jvEpsi, jvMaterc
+    real(kind=8) :: epsi(162), time
     integer(kind=8) :: strainType
-    aster_logical :: lStrainMeca
+    aster_logical :: lStrainMeca, lStrainVarc
+    type(Material_Para) :: materPara
 !
 ! --------------------------------------------------------------------------------------------------
 !
     call elrefe_info(fami=fami, ndim=ndim, nno=nno, npg=npg, &
                      jpoids=jvGaussWeight, jvf=jvBaseFunc, jdfde=jvDBaseFunc)
-!
+
+! - Initializations
     nbsig = nbsigm()
     nbEpsi = nbsig
     ASSERT(nbsig .le. 6)
@@ -68,6 +72,9 @@ subroutine te0025(option, nomte)
 ! - Get type of strain from option
     call getStrainType(option, strainType, lStrainMeca)
 
+! - Compute strains from external state variables ?
+    lStrainVarc = lStrainMeca .or. lteatt('C_PLAN', 'OUI')
+
 ! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)
 
@@ -76,20 +83,28 @@ subroutine te0025(option, nomte)
 
 ! - Get current time
     time = r8vide()
-    call tecach('NNO', 'PINSTR', 'L', iret, iad=jvTime)
-    if (jvTime .ne. 0) then
-        time = zr(jvTime)
+    call tecach('NNO', 'PINSTR', 'L', iret, iad=jvInstr)
+    if (jvInstr .ne. 0) then
+        time = zr(jvInstr)
     end if
 
-! - Orthotropic parameters
-    call getElemOrientation(ndim, nno, jvGeom, anglNaut)
+! - Get material parameters
+    if (lStrainVarc) then
+        call jevech('PMATERC', 'L', jvMaterc)
+
+! ----- Initializations of material parameters on current cell
+        call initParaCell(fami, zi(jvMaterc), materPara)
+
+! ----- Set local coordinate system from user
+        call getUserLCS(ndim, nno, jvGeom, materPara%lcsPara)
+    end if
 
 ! - Compute mechanical strains or total strains
-    call epsvmc(fami, nno, ndim, nbEpsi, npg, &
+    call epsvmc(nno, ndim, nbEpsi, npg, &
                 jvGaussWeight, jvBaseFunc, jvDBaseFunc, &
                 zr(jvGeom), zr(jvDisp), &
-                time, anglNaut, nharm, &
-                strainType, lStrainMeca, &
+                time, nharm, &
+                strainType, lStrainMeca, materPara, &
                 epsi)
 
 ! - Save strains

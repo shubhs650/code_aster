@@ -15,13 +15,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1ve, npg)
+! aslint: disable=W0413
+!
+subroutine dxmath(plateCara, plateOrie, &
+                  famiZ, npg, &
+                  df, dm, dmf, &
+                  indith)
+!
+    use plate_type
     implicit none
-#include "jeveux.h"
+!
 #include "asterc/r8dgrd.h"
 #include "asterfort/codent.h"
-#include "asterfort/coqrep.h"
 #include "asterfort/jevech.h"
 #include "asterfort/moytem.h"
 #include "asterfort/r8inir.h"
@@ -29,10 +34,17 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
 #include "asterfort/rcvalb.h"
 #include "asterfort/utbtab.h"
 #include "asterfort/utmess.h"
-    integer(kind=8) :: multic, indith, npg, npgh
-    real(kind=8) :: df(3, 3), dm(3, 3), dmf(3, 3), dmc(3, 2), dfc(3, 2)
-    real(kind=8) :: pgl(3, 3), t2iu(4), t2ui(4), t1ve(9)
-    character(len=4) :: fami
+#include "jeveux.h"
+!
+    type(plateCara_Para), intent(in) :: plateCara
+    type(plateOrie_Para), intent(in) :: plateOrie
+    character(len=*), intent(in) :: famiZ
+    integer(kind=8), intent(in) :: npg
+    real(kind=8), intent(out) :: df(3, 3), dm(3, 3), dmf(3, 3)
+    integer(kind=8), intent(out) :: indith
+!
+! --------------------------------------------------------------------------------------------------
+!
 !     CALCUL DES MATRICES DE COEFFCIENTS THERMOELASTIQUES DE FLEXION,
 !     MEMBRANE, COUPLAGE MEMBRANE-FLEXION POUR UN MATERIAU ISOTROPE OU
 !     MULTICOUCHE
@@ -44,101 +56,79 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
 !     DANS LE CAS OU LE COEFFICIENT DE DILATATION ALPHA N'A
 !     PAS ETE DONNE, INDITH VAUT -1 ET ON  NE CALCULE PAS LES
 !     CONTRAINTES THERMIQUES
-!     ------------------------------------------------------------------
-    integer(kind=8) :: jcoqu, jmate, iret
-    integer(kind=8) :: nbv, i, j, nbpar, elasco, indalf
-    real(kind=8) :: cdf, cdm, valres(56)
-    real(kind=8) :: young, nu, epais, valpar, excent
-    real(kind=8) :: xab1(3, 3), dh(3, 3)
-    real(kind=8) :: s, c
+!
+! --------------------------------------------------------------------------------------------------
+!
+    real(kind=8), parameter :: deux = 2.d0
+    integer(kind=8), parameter :: npgh = 3
+    integer(kind=8), parameter :: nbPara = 1
+    character(len=8), parameter:: paraName = 'TEMP'
+    real(kind=8) :: paraVale
+    integer(kind=8), parameter :: nbPropMaxi = 56
+    real(kind=8) :: propVale(nbPropMaxi)
+    integer(kind=8) :: propCode(nbPropMaxi)
+    character(len=16) :: propName(nbPropMaxi)
+    integer(kind=8) :: nbProp
+    integer(kind=8) :: jvMaterc, iret, multic
+    integer(kind=8) :: i, j, elasco, indalf
+    real(kind=8) :: cdf, cdm
+    real(kind=8) :: young, nu, epais, excent
+    real(kind=8) :: xab1(3, 3)
     real(kind=8) :: alphat
-    real(kind=8) :: alpha, beta
     real(kind=8) :: em, ef, num, nuf
-    real(kind=8) :: deux
-    integer(kind=8) :: icodre(56)
-    character(len=3) :: nume
-    character(len=16) :: nomres(56)
-    character(len=8) :: nompar
-    character(len=32) :: phenom
-!     ------------------------------------------------------------------
+    character(len=3) :: iValStr
+    character(len=8) :: fami
+    character(len=32) :: elasKeyword
+    real(kind=8) :: dmc(3, 2), dfc(3, 2)
 !
-    deux = 2.0d0
-    call r8inir(9, 0.d0, dm, 1)
-    call r8inir(9, 0.d0, df, 1)
-    call r8inir(9, 0.d0, dh, 1)
-    call r8inir(9, 0.d0, dmf, 1)
-    call r8inir(6, 0.d0, dmc, 1)
-    call r8inir(6, 0.d0, dfc, 1)
+! --------------------------------------------------------------------------------------------------
 !
-    call jevech('PCACOQU', 'L', jcoqu)
-    epais = zr(jcoqu)
-    alpha = zr(jcoqu+1)*r8dgrd()
-    beta = zr(jcoqu+2)*r8dgrd()
-    excent = zr(jcoqu+4)
-!
-!
-!     ------------------------------------------------
+    fami = famiZ
+    dm = 0.d0
+    df = 0.d0
+    dmf = 0.d0
     indith = 0
-    call jevech('PMATERC', 'L', jmate)
-    call rccoma(zi(jmate), 'ELAS', 1, phenom, icodre(1))
-    if (phenom .eq. 'ELAS_COQMU') then
-!
-        call coqrep(pgl, alpha, beta, t2iu, t2ui, c, s)
-!
-!       CALCUL DE LA MATRICE T1VE DE PASSAGE D'UNE MATRICE
-!       (3,3) DU REPERE DE LA VARIETE AU REPERE ELEMENT
-        t1ve(1) = c*c
-        t1ve(4) = s*s
-        t1ve(7) = c*s
-        t1ve(2) = t1ve(4)
-        t1ve(5) = t1ve(1)
-        t1ve(8) = -t1ve(7)
-        t1ve(3) = -t1ve(7)-t1ve(7)
-        t1ve(6) = t1ve(7)+t1ve(7)
-        t1ve(9) = t1ve(1)-t1ve(4)
-        nbv = 56
-        do i = 1, nbv
-            call codent(i, 'G', nume)
-            nomres(i) = 'HOM_'//nume
+
+! - Get properties of shell
+    epais = plateCara%thick
+    excent = plateCara%offset
+
+    call jevech('PMATERC', 'L', jvMaterc)
+    call rccoma(zi(jvMaterc), 'ELAS', 1, elasKeyword)
+    if (elasKeyword .eq. 'ELAS_COQMU') then
+        nbProp = 56
+        do i = 1, nbProp
+            call codent(i, 'G', iValStr)
+            propName(i) = 'HOM_'//iValStr
         end do
-!
-    else if (phenom .eq. 'ELAS') then
-        nbv = 3
-        nomres(1) = 'E'
-        nomres(2) = 'NU'
-        nomres(3) = 'ALPHA'
-    else if (phenom .eq. 'ELAS_GLRC') then
-        nbv = 5
-        nomres(1) = 'E_M'
-        nomres(2) = 'NU_M'
-        nomres(3) = 'E_F'
-        nomres(4) = 'NU_F'
-        nomres(5) = 'ALPHA'
-    else if (phenom .eq. 'ELAS_COQUE') then
-!        call utmess('A', 'ELEMENTS_93', sk=phenom)
-!
-        call coqrep(pgl, alpha, beta, t2iu, t2ui, c, s)
-!
-!       CALCUL DE LA MATRICE T1VE DE PASSAGE D'UNE MATRICE
-!       (3,3) DU REPERE DE LA VARIETE AU REPERE ELEMENT
-!
-        t1ve(1) = c*c
-        t1ve(4) = s*s
-        t1ve(7) = c*s
-        t1ve(2) = t1ve(4)
-        t1ve(5) = t1ve(1)
-        t1ve(8) = -t1ve(7)
-        t1ve(3) = -t1ve(7)-t1ve(7)
-        t1ve(6) = t1ve(7)+t1ve(7)
-        t1ve(9) = t1ve(1)-t1ve(4)
-!
-!
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, 0, ' ', [0.0d0], &
-                    1, 'MEMB_L  ', valres(1), icodre, 0)
-        if (icodre(1) .eq. 1) then
-            call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, 0, ' ', [0.0d0], &
-                        1, 'M_LLLL  ', valres(1), icodre, 0)
-            if (icodre(1) .eq. 1) then
+
+    else if (elasKeyword .eq. 'ELAS') then
+        nbProp = 3
+        propName(1) = 'E'
+        propName(2) = 'NU'
+        propName(3) = 'ALPHA'
+
+    else if (elasKeyword .eq. 'ELAS_GLRC') then
+        nbProp = 5
+        propName(1) = 'E_M'
+        propName(2) = 'NU_M'
+        propName(3) = 'E_F'
+        propName(4) = 'NU_F'
+        propName(5) = 'ALPHA'
+
+    else if (elasKeyword .eq. 'ELAS_COQUE') then
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    0, ' ', [0.0d0], &
+                    1, 'MEMB_L  ', propVale(1), &
+                    propCode, 0)
+        if (propCode(1) .eq. 1) then
+            call rcvalb(fami, 1, 1, '+', &
+                        zi(jvMaterc), ' ', elasKeyword, &
+                        0, ' ', [0.0d0], &
+                        1, 'M_LLLL  ', propVale(1), &
+                        propCode, 0)
+            if (propCode(1) .eq. 1) then
                 call utmess('F', 'ELEMENTS_41')
             else
                 elasco = 2
@@ -147,89 +137,89 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
             elasco = 1
         end if
         if (elasco .eq. 1) then
-            nbv = 10
-            nomres(1) = 'MEMB_L  '
-            nomres(2) = 'MEMB_LT '
-            nomres(3) = 'MEMB_T  '
-            nomres(4) = 'MEMB_G_LT'
-            nomres(5) = 'FLEX_L  '
-            nomres(6) = 'FLEX_LT '
-            nomres(7) = 'FLEX_T  '
-            nomres(8) = 'FLEX_G_LT'
-            nomres(9) = 'CISA_L  '
-            nomres(10) = 'CISA_T  '
-            nomres(11) = 'ALPHA   '
+            nbProp = 10
+            propName(1) = 'MEMB_L  '
+            propName(2) = 'MEMB_LT '
+            propName(3) = 'MEMB_T  '
+            propName(4) = 'MEMB_G_LT'
+            propName(5) = 'FLEX_L  '
+            propName(6) = 'FLEX_LT '
+            propName(7) = 'FLEX_T  '
+            propName(8) = 'FLEX_G_LT'
+            propName(9) = 'CISA_L  '
+            propName(10) = 'CISA_T  '
+            propName(11) = 'ALPHA   '
         else if (elasco .eq. 2) then
-            nbv = 33
+            nbProp = 33
             multic = 2
-            nomres(1) = 'M_LLLL  '
-            nomres(2) = 'M_LLTT  '
-            nomres(3) = 'M_LLLT  '
-            nomres(4) = 'M_TTTT  '
-            nomres(5) = 'M_TTLT  '
-            nomres(6) = 'M_LTLT  '
-            nomres(7) = 'F_LLLL  '
-            nomres(8) = 'F_LLTT  '
-            nomres(9) = 'F_LLLT  '
-            nomres(10) = 'F_TTTT  '
-            nomres(11) = 'F_TTLT  '
-            nomres(12) = 'F_LTLT  '
-            nomres(13) = 'MF_LLLL '
-            nomres(14) = 'MF_LLTT '
-            nomres(15) = 'MF_LLLT '
-            nomres(16) = 'MF_TTTT '
-            nomres(17) = 'MF_TTLT '
-            nomres(18) = 'MF_LTLT '
-            nomres(19) = 'MC_LLLZ '
-            nomres(20) = 'MC_LLTZ '
-            nomres(21) = 'MC_TTLZ '
-            nomres(22) = 'MC_TTTZ '
-            nomres(23) = 'MC_LTLZ '
-            nomres(24) = 'MC_LTTZ '
-            nomres(25) = 'FC_LLLZ '
-            nomres(26) = 'FC_LLTZ '
-            nomres(27) = 'FC_TTLZ '
-            nomres(28) = 'FC_TTTZ '
-            nomres(29) = 'FC_LTLZ '
-            nomres(30) = 'FC_LTTZ '
-            nomres(31) = 'C_LZLZ  '
-            nomres(32) = 'C_LZTZ  '
-            nomres(33) = 'C_TZTZ  '
-            nomres(34) = 'ALPHA   '
+            propName(1) = 'M_LLLL  '
+            propName(2) = 'M_LLTT  '
+            propName(3) = 'M_LLLT  '
+            propName(4) = 'M_TTTT  '
+            propName(5) = 'M_TTLT  '
+            propName(6) = 'M_LTLT  '
+            propName(7) = 'F_LLLL  '
+            propName(8) = 'F_LLTT  '
+            propName(9) = 'F_LLLT  '
+            propName(10) = 'F_TTTT  '
+            propName(11) = 'F_TTLT  '
+            propName(12) = 'F_LTLT  '
+            propName(13) = 'MF_LLLL '
+            propName(14) = 'MF_LLTT '
+            propName(15) = 'MF_LLLT '
+            propName(16) = 'MF_TTTT '
+            propName(17) = 'MF_TTLT '
+            propName(18) = 'MF_LTLT '
+            propName(19) = 'MC_LLLZ '
+            propName(20) = 'MC_LLTZ '
+            propName(21) = 'MC_TTLZ '
+            propName(22) = 'MC_TTTZ '
+            propName(23) = 'MC_LTLZ '
+            propName(24) = 'MC_LTTZ '
+            propName(25) = 'FC_LLLZ '
+            propName(26) = 'FC_LLTZ '
+            propName(27) = 'FC_TTLZ '
+            propName(28) = 'FC_TTTZ '
+            propName(29) = 'FC_LTLZ '
+            propName(30) = 'FC_LTTZ '
+            propName(31) = 'C_LZLZ  '
+            propName(32) = 'C_LZTZ  '
+            propName(33) = 'C_TZTZ  '
+            propName(34) = 'ALPHA   '
         end if
-    else if (phenom .eq. 'ELAS_ORTH') then
-        call utmess('F', 'ELEMENTS_91', sk=phenom)
-    else if (phenom .eq. 'ELAS_ISTR') then
-        call utmess('F', 'ELEMENTS_92', sk=phenom)
+    else if (elasKeyword .eq. 'ELAS_ORTH') then
+        call utmess('F', 'ELEMENTS_91', sk=elasKeyword)
+    else if (elasKeyword .eq. 'ELAS_ISTR') then
+        call utmess('F', 'ELEMENTS_92', sk=elasKeyword)
     else
-        call utmess('F', 'ELEMENTS_42', sk=phenom)
+        call utmess('F', 'ELEMENTS_42', sk=elasKeyword)
     end if
-!
-!===============================================================
-!     -- RECUPERATION DE LA TEMPERATURE POUR LE MATERIAU:
-!
-    npgh = 3
-    call moytem(fami, npg, npgh, '+', valpar, iret)
-    nbpar = 1
-    nompar = 'TEMP'
-!===============================================================
-!
-    if (phenom .eq. 'ELAS') then
-!        ------ MATERIAU ISOTROPE ------------------------------------
-!
+
+! - Compute mean temperature (on all point and "sous-point" gauss)
+    call moytem(fami, npg, npgh, '+', paraVale, iret)
+
+! - COmpute elasticity matrix
+    dmc = 0.d0
+    dfc = 0.d0
+    if (elasKeyword .eq. 'ELAS') then
         multic = 0
-!
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    2, nomres, valres, icodre, 1)
-        call rcvalb(fami, 1, 1, '+', zi(jmate), &
-                    ' ', phenom, nbpar, nompar, [valpar], 1, nomres(3), valres(3), icodre(3), 0)
-        if ((icodre(3) .ne. 0) .or. (valres(3) .eq. 0.d0)) then
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    2, propName, propVale, &
+                    propCode, 1)
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    1, propName(3), propVale(3), &
+                    propCode(3), 0)
+        if ((propCode(3) .ne. 0) .or. (propVale(3) .eq. 0.d0)) then
             indith = -1
             goto 90
         end if
-        young = valres(1)
-        nu = valres(2)
-        alphat = valres(3)
+        young = propVale(1)
+        nu = propVale(2)
+        alphat = propVale(3)
         young = young*alphat
 !
 !      ---- CALCUL DE LA MATRICE DE RIGIDITE EN FLEXION --------------
@@ -253,37 +243,43 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
                 df(i, j) = df(i, j)+excent*excent*dm(i, j)
             end do
         end do
-    else if (phenom .eq. 'ELAS_GLRC') then
+    else if (elasKeyword .eq. 'ELAS_GLRC') then
 !        ------ MATERIAU ISOTROPE ------------------------------------
 !
         multic = 0
 !
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    2, nomres, valres, icodre, 1)
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    2, propName, propVale, &
+                    propCode, 1)
 !
-        em = valres(1)
-        num = valres(2)
+        em = propVale(1)
+        num = propVale(2)
 !
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    3, nomres(3), valres(3), icodre(3), 0)
-        if ((icodre(5) .ne. 0) .or. (valres(5) .eq. 0.d0)) then
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    3, propName(3), propVale(3), &
+                    propCode(3), 0)
+        if ((propCode(5) .ne. 0) .or. (propVale(5) .eq. 0.d0)) then
             indith = -1
             goto 90
         end if
 !
-        if (icodre(3) .eq. 0) then
-            ef = valres(3)
+        if (propCode(3) .eq. 0) then
+            ef = propVale(3)
         else
             ef = em
         end if
 !
-        if (icodre(4) .eq. 0) then
-            nuf = valres(4)
+        if (propCode(4) .eq. 0) then
+            nuf = propVale(4)
         else
             nuf = num
         end if
 !
-        alphat = valres(5)
+        alphat = propVale(5)
         em = em*alphat
         ef = ef*alphat
 !
@@ -308,67 +304,74 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
                 df(i, j) = df(i, j)+excent*excent*dm(i, j)
             end do
         end do
-    else if (phenom .eq. 'ELAS_COQUE') then
+
+    else if (elasKeyword .eq. 'ELAS_COQUE') then
         multic = 0
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    nbv, nomres, valres, icodre, 1)
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    nbProp, propName, propVale, &
+                    propCode, 1)
         if (elasco .eq. 1) then
             indalf = 11
         else if (elasco .eq. 2) then
             indalf = 34
         end if
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    1, nomres(indalf), valres(indalf), icodre(indalf), 0)
-        if ((icodre(indalf) .ne. 0) .or. (valres(indalf) .eq. 0.d0)) then
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    1, propName(indalf), propVale(indalf), &
+                    propCode(indalf), 0)
+        if ((propCode(indalf) .ne. 0) .or. (propVale(indalf) .eq. 0.d0)) then
             indith = -1
             goto 90
         end if
-        alphat = valres(indalf)
+        alphat = propVale(indalf)
 !
         if (elasco .eq. 1) then
 !        ---- CALCUL DE LA MATRICE DE RIGIDITE EN MEMBRANE -------------
-            dm(1, 1) = valres(1)*alphat
-            dm(1, 2) = valres(2)*alphat
+            dm(1, 1) = propVale(1)*alphat
+            dm(1, 2) = propVale(2)*alphat
             dm(2, 1) = dm(1, 2)
-            dm(2, 2) = valres(3)*alphat
+            dm(2, 2) = propVale(3)*alphat
 !        ---- CALCUL DE LA MATRICE DE RIGIDITE EN FLEXION --------------
-            df(1, 1) = valres(5)*alphat
-            df(1, 2) = valres(6)*alphat
+            df(1, 1) = propVale(5)*alphat
+            df(1, 2) = propVale(6)*alphat
             df(2, 1) = df(1, 2)
-            df(2, 2) = valres(7)*alphat
+            df(2, 2) = propVale(7)*alphat
 !
         else if (elasco .eq. 2) then
 !
             multic = 2
 !        ---- CALCUL DE LA MATRICE DE RIGIDITE EN MEMBRANE -------------
-            dm(1, 1) = valres(1)*alphat
-            dm(1, 2) = valres(2)*alphat
-            dm(1, 3) = valres(3)*alphat
+            dm(1, 1) = propVale(1)*alphat
+            dm(1, 2) = propVale(2)*alphat
+            dm(1, 3) = propVale(3)*alphat
             dm(2, 1) = dm(1, 2)
             dm(3, 1) = dm(1, 3)
-            dm(2, 2) = valres(4)*alphat
-            dm(2, 3) = valres(5)*alphat
-            dm(3, 3) = valres(6)*alphat
+            dm(2, 2) = propVale(4)*alphat
+            dm(2, 3) = propVale(5)*alphat
+            dm(3, 3) = propVale(6)*alphat
 !        ---- CALCUL DE LA MATRICE DE RIGIDITE EN FLEXION --------------
-            df(1, 1) = valres(7)*alphat
-            df(1, 2) = valres(8)*alphat
-            df(1, 3) = valres(9)*alphat
+            df(1, 1) = propVale(7)*alphat
+            df(1, 2) = propVale(8)*alphat
+            df(1, 3) = propVale(9)*alphat
             df(2, 1) = df(1, 2)
             df(3, 1) = df(1, 3)
-            df(2, 2) = valres(10)*alphat
-            df(2, 3) = valres(11)*alphat
+            df(2, 2) = propVale(10)*alphat
+            df(2, 3) = propVale(11)*alphat
             df(3, 2) = df(2, 3)
-            df(3, 3) = valres(12)*alphat
+            df(3, 3) = propVale(12)*alphat
 !        --- COUPLAGE  MEMBRANE FLEXION --------------------------------
-            dmf(1, 1) = valres(13)*alphat
-            dmf(1, 2) = valres(14)*alphat
-            dmf(1, 3) = valres(15)*alphat
+            dmf(1, 1) = propVale(13)*alphat
+            dmf(1, 2) = propVale(14)*alphat
+            dmf(1, 3) = propVale(15)*alphat
             dmf(2, 1) = dmf(1, 2)
             dmf(3, 1) = dmf(1, 3)
-            dmf(2, 2) = valres(16)*alphat
-            dmf(2, 3) = valres(17)*alphat
+            dmf(2, 2) = propVale(16)*alphat
+            dmf(2, 3) = propVale(17)*alphat
             dmf(3, 2) = dmf(2, 3)
-            dmf(3, 3) = valres(18)*alphat
+            dmf(3, 3) = propVale(18)*alphat
 !
         end if
 !        --- CALCUL DE LA MATRICE DE COUPLAGE MEMBRANE-FLEXION --------
@@ -382,44 +385,50 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
         end do
 !        ----------- MATRICES DANS LE REPERE INTRINSEQUE DE L'ELEMENT --
 !
-        call utbtab('ZERO', 3, 3, dm, t1ve, xab1, dm)
-        call utbtab('ZERO', 3, 3, df, t1ve, xab1, df)
-        call utbtab('ZERO', 3, 3, dmf, t1ve, xab1, dmf)
+        call utbtab('ZERO', 3, 3, dm, plateOrie%t1ve, xab1, dm)
+        call utbtab('ZERO', 3, 3, df, plateOrie%t1ve, xab1, df)
+        call utbtab('ZERO', 3, 3, dmf, plateOrie%t1ve, xab1, dmf)
 !
-    else if (phenom .eq. 'ELAS_COQMU') then
+    else if (elasKeyword .eq. 'ELAS_COQMU') then
 !        ------ MATERIAU MULTICOUCHE -----------------------------------
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    1, nomres(19), valres(19), icodre(19), 0)
-        epais = valres(19)
-        call rcvalb(fami, 1, 1, '+', zi(jmate), ' ', phenom, nbpar, nompar, [valpar], &
-                    27, nomres(30), valres(30), icodre(30), 0)
-        dm(1, 1) = valres(30)
-        dm(1, 2) = valres(31)
-        dm(1, 3) = valres(32)
-        dm(2, 1) = valres(33)
-        dm(2, 2) = valres(34)
-        dm(2, 3) = valres(35)
-        dm(3, 1) = valres(36)
-        dm(3, 2) = valres(37)
-        dm(3, 3) = valres(38)
-        dmf(1, 1) = valres(39)
-        dmf(1, 2) = valres(40)
-        dmf(1, 3) = valres(41)
-        dmf(2, 1) = valres(42)
-        dmf(2, 2) = valres(43)
-        dmf(2, 3) = valres(44)
-        dmf(3, 1) = valres(45)
-        dmf(3, 2) = valres(46)
-        dmf(3, 3) = valres(47)
-        df(1, 1) = valres(48)
-        df(1, 2) = valres(49)
-        df(1, 3) = valres(50)
-        df(2, 1) = valres(51)
-        df(2, 2) = valres(52)
-        df(2, 3) = valres(53)
-        df(3, 1) = valres(54)
-        df(3, 2) = valres(55)
-        df(3, 3) = valres(56)
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    1, propName(19), propVale(19), &
+                    propCode(19), 0)
+        epais = propVale(19)
+        call rcvalb(fami, 1, 1, '+', &
+                    zi(jvMaterc), ' ', elasKeyword, &
+                    nbPara, paraName, [paraVale], &
+                    27, propName(30), propVale(30), &
+                    propCode(30), 0)
+        dm(1, 1) = propVale(30)
+        dm(1, 2) = propVale(31)
+        dm(1, 3) = propVale(32)
+        dm(2, 1) = propVale(33)
+        dm(2, 2) = propVale(34)
+        dm(2, 3) = propVale(35)
+        dm(3, 1) = propVale(36)
+        dm(3, 2) = propVale(37)
+        dm(3, 3) = propVale(38)
+        dmf(1, 1) = propVale(39)
+        dmf(1, 2) = propVale(40)
+        dmf(1, 3) = propVale(41)
+        dmf(2, 1) = propVale(42)
+        dmf(2, 2) = propVale(43)
+        dmf(2, 3) = propVale(44)
+        dmf(3, 1) = propVale(45)
+        dmf(3, 2) = propVale(46)
+        dmf(3, 3) = propVale(47)
+        df(1, 1) = propVale(48)
+        df(1, 2) = propVale(49)
+        df(1, 3) = propVale(50)
+        df(2, 1) = propVale(51)
+        df(2, 2) = propVale(52)
+        df(2, 3) = propVale(53)
+        df(3, 1) = propVale(54)
+        df(3, 2) = propVale(55)
+        df(3, 3) = propVale(56)
 !
 !        --- CALCUL DE LA MATRICE DE COUPLAGE MEMBRANE-FLEXION --------
 !        --- REACTUALISATION DE LA MATRICE DE FLEXION          --------
@@ -432,9 +441,9 @@ subroutine dxmath(fami, epais, df, dm, dmf, pgl, multic, indith, t2iu, t2ui, t1v
         end do
 !        ----------- MATRICES DANS LE REPERE INTRINSEQUE DE L'ELEMENT --
 !
-        call utbtab('ZERO', 3, 3, dm, t1ve, xab1, dm)
-        call utbtab('ZERO', 3, 3, df, t1ve, xab1, df)
-        call utbtab('ZERO', 3, 3, dmf, t1ve, xab1, dmf)
+        call utbtab('ZERO', 3, 3, dm, plateOrie%t1ve, xab1, dm)
+        call utbtab('ZERO', 3, 3, df, plateOrie%t1ve, xab1, df)
+        call utbtab('ZERO', 3, 3, dmf, plateOrie%t1ve, xab1, dmf)
 !
         multic = 1
 !

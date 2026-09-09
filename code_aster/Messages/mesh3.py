@@ -39,6 +39,13 @@ cata_msg = {
     11: _("""Le groupe de mailles %(k1)s n'existe pas dans le maillage."""),
     12: _("""Il ne semble y avoir aucun groupe de mailles dans le maillage."""),
     13: _("""Le groupe de mailles %(k1)s est vide."""),
+    82: _(
+        """L'option ne traite que les mailles HEXA27. Or, d'autres types de mailles volumiques ont été fournis."""
+    ),
+    84: _(
+        """Une des mailles données pour l'orientation des éléments HEXA27 n'est pas une maille volumique. La maille incorrecte est de type :  %(k1)s.
+"""
+    ),
     92: _(
         """L'option ne traite que les mailles linéiques Or, des mailles surfaciques ont été fournies."""
     ),

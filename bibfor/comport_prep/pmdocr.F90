@@ -16,10 +16,9 @@
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
 !
-subroutine pmdocr(carcri)
+subroutine pmdocr(carcriList)
 !
     use BehaviourPrepare_type
-!
     implicit none
 !
 #include "asterf_types.h"
@@ -28,10 +27,10 @@ subroutine pmdocr(carcri)
 #include "asterfort/carc_chck.h"
 #include "asterfort/carc_delete.h"
 #include "asterfort/carc_info.h"
-#include "asterfort/carc_read.h"
+#include "asterfort/carc_read_pt.h"
 #include "asterfort/setBehaviourParaValue.h"
 !
-    real(kind=8), intent(out) :: carcri(CARCRI_SIZE)
+    real(kind=8), intent(out) :: carcriList(CARCRI_SIZE)
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -41,7 +40,7 @@ subroutine pmdocr(carcri)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-! Out carcri           : list of parameters for integration of constitutive law
+! Out carcriList       : list of parameters for integration of constitutive law
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -49,13 +48,13 @@ subroutine pmdocr(carcri)
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    carcri(1:CARCRI_SIZE) = 0.d0
+    carcriList(1:CARCRI_SIZE) = 0.d0
 
-! - Create carcri informations objects
+! - Create carcriList informations objects
     call carc_info(prepMapCarcri)
 
 ! - Read informations from command file
-    call carc_read(prepMapCarcri)
+    call carc_read_pt(prepMapCarcri)
 
 ! - Some checks
     call carc_chck(prepMapCarcri)
@@ -63,7 +62,7 @@ subroutine pmdocr(carcri)
 ! - Set in list
     call setBehaviourParaValue(prepMapCarcri%prepCrit, &
                                prepMapCarcri%parm_theta_thm, prepMapCarcri%parm_alpha_thm, &
-                               carcriList_=carcri(1:CARCRI_SIZE))
+                               carcriList_=carcriList(1:CARCRI_SIZE))
 
 ! - Cleaning
     call carc_delete(prepMapCarcri)

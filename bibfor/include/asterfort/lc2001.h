@@ -17,10 +17,10 @@
 ! --------------------------------------------------------------------
 !
 interface
-    subroutine lc2001(BEHinteg,&
-                      fami, kpg, ksp, ndim, imate,&
-                      neps, deps, nsig, sigm, option,&
-                      angmas, sigp, vip, typmod, ndsde,&
+    subroutine lc2001(BEHinteg, &
+                      fami, kpg, ksp, ndim, imate, &
+                      neps, deps, nsig, sigm, option, &
+                      sigp, nvi, vip, typmod, ndsde, &
                       dsidep, codret)
         use Behaviour_type
         type(Behaviour_Integ), intent(in) :: BEHinteg
@@ -29,17 +29,16 @@ interface
         integer(kind=8), intent(in) :: ksp
         integer(kind=8), intent(in) :: ndim
         integer(kind=8), intent(in) :: imate
-        integer(kind=8), intent(in) :: neps
+        integer(kind=8), intent(in) :: neps, nvi
         real(kind=8), intent(in) :: deps(neps)
         integer(kind=8), intent(in) :: nsig
         real(kind=8), intent(in) :: sigm(nsig)
         character(len=16), intent(in) :: option
-        real(kind=8), intent(in) :: angmas(3)
         real(kind=8), intent(out) :: sigp(nsig)
-        real(kind=8), intent(out) :: vip(1)
+        real(kind=8), intent(out) :: vip(nvi)
         character(len=8), intent(in) :: typmod(*)
         integer(kind=8), intent(in) :: ndsde
-        real(kind=8), intent(out) :: dsidep(nsig,neps)
+        real(kind=8), intent(out) :: dsidep(nsig, neps)
         integer(kind=8), intent(out) :: codret
     end subroutine lc2001
 end interface

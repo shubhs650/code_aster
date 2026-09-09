@@ -37,7 +37,6 @@ subroutine ptforp(itype, option, nomte, a, a2, &
 #include "asterf_types.h"
 #include "jeveux.h"
 #include "asterc/r8miem.h"
-#include "asterfort/assert.h"
 #include "asterfort/fointe.h"
 #include "asterfort/jevech.h"
 #include "asterfort/normev.h"
@@ -55,7 +54,7 @@ subroutine ptforp(itype, option, nomte, a, a2, &
 ! --------------------------------------------------------------------------------------------------
 !
     integer(kind=8) :: icodre(1), ichamp
-    integer(kind=8) :: ifcx, i, ncc, lx, iorien, idepla, ideplp, lmate, lpesa
+    integer(kind=8) :: ifcx, i, ncc, lx, idepla, ideplp, lmate, lpesa
     integer(kind=8) :: lforc, itemps, nbpar, ier, iret, icoer, icoec, iretr, iretc
     integer(kind=8) :: lrota, istrxm, k
 !
@@ -112,7 +111,6 @@ subroutine ptforp(itype, option, nomte, a, a2, &
     w2(:) = 0.0d0
 ! --------------------------------------------------------------------------------------------------
     call jevech('PGEOMER', 'L', lx)
-    call jevech('PCAORIE', 'L', iorien)
 !
     if (option .eq. 'CHAR_MECA_SR1D1D' .or. option .eq. 'CHAR_MECA_SF1D1D') then
         call jevech('PDEPLMR', 'L', idepla)

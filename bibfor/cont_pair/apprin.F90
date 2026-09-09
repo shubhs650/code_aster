@@ -30,6 +30,7 @@ subroutine apprin(mesh, newgeo, pair_tole, nb_elem_mast, &
 #include "asterfort/apcoor.h"
 #include "asterfort/aptype.h"
 #include "asterfort/prjint.h"
+#include "MeshTypes_type.h"
 #include "asterfort/int_to_char8.h"
 !
     character(len=8), intent(in) :: mesh
@@ -73,11 +74,11 @@ subroutine apprin(mesh, newgeo, pair_tole, nb_elem_mast, &
     integer(kind=8) :: elem_type_nume
     integer(kind=8) :: elem_slav_nbnode, elem_slav_dime, elem_slav_nume, elem_slav_indx
     character(len=8) :: elem_slav_type, elem_slav_code
-    real(kind=8) :: elem_slav_coor(27)
+    real(kind=8) :: elem_slav_coor(3, MT_NNOMAX2D)
     integer(kind=8) :: elin_slav_nbnode
     integer(kind=8) :: elem_mast_nbnode, elem_mast_dime, elem_mast_nume, elem_mast_indx
     character(len=8) :: elem_mast_type, elem_mast_code, elem_slav_name, elem_mast_name
-    real(kind=8) :: elem_mast_coor(27)
+    real(kind=8) :: elem_mast_coor(3, MT_NNOMAX2D)
     integer(kind=8) :: elin_mast_nbnode
     character(len=8) :: elin_mast_code, elin_slav_code
     integer(kind=8) :: slav_indx_mini, mast_indx_mini

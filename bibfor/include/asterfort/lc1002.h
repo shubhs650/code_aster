@@ -15,23 +15,22 @@
 ! You should have received a copy of the GNU General Public License
 ! along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
 ! --------------------------------------------------------------------
-
-!
-!
+#include "asterf_types.h"
+#include "asterfort/Behaviour_type.h"
 !
 interface
-    subroutine lc1002(fami, kpg, ksp, ndim, imate,&
-                      compor, carcri, instam, instap, neps,&
-                      epsm, deps, nsig, sigm, vim,&
-                      option, sigp, vip, typmod, ndsde,&
+    subroutine lc1002(fami, kpg, ksp, ndim, imate, &
+                      compor, carcri, instam, instap, neps, &
+                      epsm, deps, nsig, sigm, nvi, vim, &
+                      option, sigp, vip, typmod, ndsde, &
                       dsidep, codret)
         character(len=*), intent(in) :: fami
         integer(kind=8), intent(in) :: kpg
         integer(kind=8), intent(in) :: ksp
         integer(kind=8), intent(in) :: ndim
-        integer(kind=8), intent(in) :: imate
-        character(len=16), intent(in) :: compor(*)
-        real(kind=8), intent(in) :: carcri(*)
+        integer(kind=8), intent(in) :: imate, nvi
+        real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+        character(len=16), intent(in) :: compor(COMPOR_SIZE)
         real(kind=8), intent(in) :: instam
         real(kind=8), intent(in) :: instap
         integer(kind=8), intent(in) :: neps
@@ -39,10 +38,10 @@ interface
         real(kind=8), intent(in) :: deps(neps)
         integer(kind=8), intent(in) :: nsig
         real(kind=8), intent(in) :: sigm(nsig)
-        real(kind=8), intent(in) :: vim(*)
+        real(kind=8), intent(in) :: vim(nvi)
         character(len=16), intent(in) :: option
         real(kind=8), intent(out) :: sigp(nsig)
-        real(kind=8), intent(out) :: vip(*)
+        real(kind=8), intent(out) :: vip(nvi)
         character(len=8), intent(in) :: typmod(*)
         integer(kind=8), intent(in) :: ndsde
         real(kind=8), intent(out) :: dsidep(ndsde)

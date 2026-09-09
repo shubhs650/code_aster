@@ -17,18 +17,25 @@
 ! --------------------------------------------------------------------
 ! aslint: disable=W1306,W1504,W1501
 !
-subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
-                  vff2, idfde2, npg, iw, geom, &
-                  typmod, option, mate, compor, carcri, &
-                  instam, instap, angmas, ddlm, ddld, &
-                  sigm, lgpg, vim, sigp, vip, &
-                  matr, vect, codret, livois, nbvois, &
-                  numa, lisoco, nbsoco, lVari, lSigm, &
-                  lMatr, lVect)
+subroutine nmplgs(BEHInteg, &
+                  ndim, nno1, nno2, npg, &
+                  vff1, idfde1, &
+                  vff2, idfde2, &
+                  iw, geom, &
+                  typmod, option, compor, carcri, &
+                  instam, instap, &
+                  ddlm, ddld, &
+                  lgpg, sigm, vim, &
+                  sigp, vip, &
+                  matr, vect, codret, &
+                  livois, nbvois, &
+                  numa, lisoco, nbsoco, &
+                  lVari, lSigm, lMatr, lVect)
 !
     use Behaviour_type
     use Behaviour_module
-!
+    use MaterialPara_module
+    use MaterialPara_type
     implicit none
 !
 #include "asterf_types.h"
@@ -48,7 +55,23 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
 #include "blas/dcopy.h"
 #include "blas/dscal.h"
 #include "blas/dspev.h"
+#include "MeshTypes_type.h"
 #include "jeveux.h"
+!
+    type(Behaviour_Integ), intent(inout) :: BEHInteg
+    character(len=8), intent(in) :: typmod(2)
+    character(len=16), intent(in) :: option, compor(COMPOR_SIZE)
+    real(kind=8), intent(in) :: carcri(CARCRI_SIZE)
+    integer(kind=8), intent(in) :: ndim, nno1, nno2, npg
+    real(kind=8), intent(in) :: vff1(nno1, npg)
+    integer(kind=8), intent(in) :: idfde1
+    real(kind=8), intent(in) :: vff2(nno2, npg)
+    integer(kind=8), intent(in) :: idfde2
+    integer(kind=8), intent(in) :: iw
+    integer(kind=8), intent(in) :: lgpg
+    real(kind=8) :: ddlm(*), ddld(*), sigm(2*ndim, npg), sigp(2*ndim, npg)
+    real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg), matr(*), vect(*)
+    aster_logical, intent(in) :: lVari, lSigm, lMatr, lVect
 !
 ! --------------------------------------------------------------------------------------------------
 !
@@ -87,43 +110,40 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    common/trucit/iteamm
+    real(kind=8), parameter :: rac2 = sqrt(2.d0)
+    aster_logical, parameter :: grand = ASTER_FALSE, axi = ASTER_FALSE
+    character(len=16), parameter :: multComp = " "
     integer(kind=8), parameter :: ksp = 1
-    character(len=8) :: typmod(2), fami, poum
-    character(len=16) :: option, compor(COMPOR_SIZE)
-    integer(kind=8) :: nbvois, nvoima, numav, iret, nscoma, iteamm
+    integer(kind=8), parameter :: nvoima = 12, nscoma = 4
+    integer(kind=8), parameter :: kpgNonLocal = 1, kspNonLocal = 1
+    character(len=8), parameter :: famiNonLocal = "FPG1"
+    character(len=8), parameter :: poumNonLocal = "+"
+    type(Material_Para) :: materParaNonLocal
+    integer(kind=8) :: nbvois, numav, iret, iteamm
     integer(kind=4) :: reuss
-    parameter(nvoima=12, nscoma=4)
-    integer(kind=8) :: ndim, nno1, nno2, npg, idfde1, idfde2, iw, mate, lgpg, codret
+    integer(kind=8) :: codret
     integer(kind=8) :: livois(1:nvoima), numa
     integer(kind=8) :: nbsoco(1:nvoima), lisoco(1:nvoima, 1:nscoma, 1:2)
-    real(kind=8) :: vff1(nno1, npg), vff2(nno2, npg), geom(ndim, nno1)
-    real(kind=8) :: carcri(CARCRI_SIZE), instam, instap
-    real(kind=8) :: ddlm(*), ddld(*), sigm(2*ndim, npg), sigp(2*ndim, npg)
-    real(kind=8) :: vim(lgpg, npg), vip(lgpg, npg), matr(*), vect(*)
-    real(kind=8) :: dfdi2(nno2, ndim), angmas(3), compar
-    integer(kind=8) :: k2(1), kpg, spt
-    aster_logical :: grand, axi
-    integer(kind=8) :: ndimsi, nddl, g, gg, cod(npg), n, i, m, j, kl, pq, os, kk, vivois
+    real(kind=8) :: geom(ndim, nno1)
+    real(kind=8) :: instam, instap
+    real(kind=8) :: dfdi2(nno2, ndim), compar
+    integer(kind=8) :: k2(1), kpg
+    integer(kind=8) :: ndimsi, nddl, gg, cod(npg), n, i, m, j, kl, pq, os, kk, vivois
     integer(kind=8) :: iu(3, 27), ie(6, 8), kvois, ll
     integer(kind=8) :: nfin, vrarr(nno2), nn, nnn, vivonu, kvoinu, nini, nunu
-    real(kind=8), parameter :: rac2 = sqrt(2.d0)
-    real(kind=8) :: lc(1), c, deplm(3*27), depld(3*27), dfdi1(27, 3), nono
+    real(kind=8) :: lc(1), c, deplm(3*MT_NNOMAX3D), depld(3*MT_NNOMAX3D), dfdi1(27, 3), nono
     real(kind=8) :: r, wg, epsgm(6, 2), epsgd(6, 2), gepsm(6, 3), geps(6, 3)
     real(kind=8) :: f(3, 3)
     real(kind=8) :: b(6, 3, 27), de(6), sigma(6), dsidep(6, 6, 2), t1, t2
     real(kind=8) :: p(6, 6), sigmam(6), epsrss(6), sigell(6), dist(nno2, 2)
     real(kind=8) :: z(3, 3), w(3), work(9), bary(ndim), baryo(ndim), scal(3)
     real(kind=8) :: dirr(ndim)
-    type(Behaviour_Integ) :: BEHinteg
-    aster_logical, intent(in) :: lVari, lSigm, lMatr, lVect
     blas_int :: b_incx, b_incy, b_n
     blas_int :: b_ldz
+    common/trucit/iteamm
 !
 ! --------------------------------------------------------------------------------------------------
 !
-    grand = ASTER_FALSE
-    axi = ASTER_FALSE
     ndimsi = 2*ndim
     nddl = nno1*ndim+nno2*ndimsi
     cod = 0
@@ -132,30 +152,23 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
     epsgm = 0
     epsgd = 0
 
+! - Copy material parameters with other scheme parameters
+    call copyMaterPara(BEHInteg%materPara, famiNonLocal, kpgNonLocal, kspNonLocal, &
+                       materParaNonLocal)
+
 ! - Get length
-    fami = 'FPG1'
-    kpg = 1
-    spt = 1
-    poum = '+'
-    call rcvalb(fami, kpg, spt, poum, mate, &
+    call rcvalb(materParaNonLocal%schemePara%fami, &
+                materParaNonLocal%schemePara%kpg, &
+                materParaNonLocal%schemePara%ksp, &
+                poumNonLocal, &
+                materParaNonLocal%jvMaterCode, &
                 ' ', 'NON_LOCAL', 0, ' ', [0.d0], &
                 1, 'LONG_CARA', lc, k2, 1)
     c = lc(1)**2
 
-! - Initialisation of behaviour datastructure
-    call behaviourInit(BEHinteg)
-
-! - Set main parameters for behaviour (on cell)
-    fami = "RIGI"
-    call behaviourSetParaCell(ndim, typmod, option, &
-                              compor, carcri, &
-                              instam, instap, &
-                              fami, mate, &
-                              BEHinteg)
-
 ! INITIALISATION CAVINI + INCREMENTATION
 ! DU COMPTEUR D'ITERATION + L ELEMENT EST-IL POINTE?
-    call cavini(ndim, nno2, geom, vim, npg, lgpg, mate)
+    call cavini(ndim, nno2, geom, vim, npg, lgpg, BEHInteg%materPara%jvMaterCode)
 !
     nono = 0.d0
     nini = 0
@@ -174,8 +187,7 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
         do kvois = 1, nbvois
 !
             numav = livois(kvois)
-            call tecach('OOO', 'PVARIMP', 'L', iret, iad=vivois, &
-                        numa=numav)
+            call tecach('OOO', 'PVARIMP', 'L', iret, iad=vivois, numa=numav)
             ASSERT(iret .eq. 0)
 !
             if (nint(zr(vivois-1+5)) .eq. numa) then
@@ -516,26 +528,26 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
 !
 ! - CALCUL POUR CHAQUE POINT DE GAUSS
 !
-    do g = 1, npg
+    do kpg = 1, npg
 !
 !      CALCUL DES ELEMENTS GEOMETRIQUES DE L'EF POUR E-BARRE
 !
-        call dfdmip(ndim, nno2, axi, geom, g, &
-                    iw, vff2(1, g), idfde2, r, wg, &
+        call dfdmip(ndim, nno2, axi, geom, kpg, &
+                    iw, vff2(1, kpg), idfde2, r, wg, &
                     dfdi2)
-        call nmepsb(ndim, nno2, axi, vff2(1, g), dfdi2, &
+        call nmepsb(ndim, nno2, axi, vff2(1, kpg), dfdi2, &
                     ddlm, epsgm(1, 2), gepsm)
-        call nmepsb(ndim, nno2, axi, vff2(1, g), dfdi2, &
+        call nmepsb(ndim, nno2, axi, vff2(1, kpg), dfdi2, &
                     ddld, epsgd(1, 2), geps)
 !
 !      CALCUL DES ELEMENTS GEOMETRIQUES DE L'EF POUR U
 !
-        call dfdmip(ndim, nno1, axi, geom, g, &
-                    iw, vff1(1, g), idfde1, r, wg, &
+        call dfdmip(ndim, nno1, axi, geom, kpg, &
+                    iw, vff1(1, kpg), idfde1, r, wg, &
                     dfdi1)
-        call nmepsi(ndim, nno1, axi, grand, vff1(1, g), &
+        call nmepsi(ndim, nno1, axi, grand, vff1(1, kpg), &
                     r, dfdi1, deplm, f, epsgm(:, 1))
-        call nmepsi(ndim, nno1, axi, grand, vff1(1, g), &
+        call nmepsi(ndim, nno1, axi, grand, vff1(1, kpg), &
                     r, dfdi1, depld, f, epsgd(:, 1))
         call nmmabu(ndim, nno1, axi, grand, dfdi1, &
                     b)
@@ -556,29 +568,32 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
         b_n = to_blas_int(ndimsi)
         b_incx = to_blas_int(1)
         b_incy = to_blas_int(1)
-        call dcopy(b_n, sigm(1, g), b_incx, sigmam, b_incy)
+        call dcopy(b_n, sigm(1, kpg), b_incx, sigmam, b_incy)
         b_n = to_blas_int(3)
         b_incx = to_blas_int(1)
         call dscal(b_n, rac2, sigmam(4), b_incx)
         call r8inir(36, 0.d0, p, 1)
         if (nono .gt. 0.d0) then
-            cod(g) = 1
+            cod(kpg) = 1
             goto 999
         end if
 
 ! ----- Set main parameters for behaviour (on point)
-        call behaviourSetParaPoin(g, ksp, BEHinteg)
+        call behaviourSetParaPoin(kpg, ksp, BEHInteg)
 
 ! ----- Integrator
         sigma = 0.d0
         dsidep = 0.d0
-        call nmcomp(BEHinteg, &
-                    fami, g, ksp, ndim, typmod, &
-                    mate, compor, carcri, instam, instap, &
-                    12, epsgm, epsgd, 6, sigmam, &
-                    vim(1, g), option, angmas, &
-                    sigma, vip(1, g), 72, dsidep, cod(g))
-        if (cod(g) .eq. 1) then
+        call nmcomp(BEHInteg, &
+                    ndim, option, typmod, &
+                    instam, instap, &
+                    compor, carcri, multComp, &
+                    12, epsgm, epsgd, &
+                    6, sigmam, &
+                    vim(1, kpg), &
+                    sigma, vip(1, kpg), &
+                    72, dsidep, cod(kpg))
+        if (cod(kpg) .eq. 1) then
             goto 999
         end if
 !
@@ -601,8 +616,8 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
                     kk = ie(kl, n)
                     t1 = 0
                     do pq = 1, ndimsi
-                        t1 = t1+p(kl, pq)*de(pq)*vff2(n, g)
-                        t1 = t1-p(kl, pq)*sigma(pq)*vff2(n, g)
+                        t1 = t1+p(kl, pq)*de(pq)*vff2(n, kpg)
+                        t1 = t1-p(kl, pq)*sigma(pq)*vff2(n, kpg)
                     end do
                     t2 = 0
                     do i = 1, ndim
@@ -619,10 +634,10 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
             b_n = to_blas_int(ndimsi)
             b_incx = to_blas_int(1)
             b_incy = to_blas_int(1)
-            call dcopy(b_n, sigma, b_incx, sigp(1, g), b_incy)
+            call dcopy(b_n, sigma, b_incx, sigp(1, kpg), b_incy)
             b_n = to_blas_int(ndimsi-3)
             b_incx = to_blas_int(1)
-            call dscal(b_n, 1.d0/rac2, sigp(4, g), b_incx)
+            call dscal(b_n, 1.d0/rac2, sigp(4, kpg), b_incx)
         end if
 ! ----- Rigidity matrix
         if (lMatr) then
@@ -661,7 +676,7 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
                             kk = os+iu(j, m)
                             t1 = 0
                             do pq = 1, ndimsi
-                                t1 = t1-dsidep(kl, pq, 1)*b(pq, j, m)*vff2(n, g)
+                                t1 = t1-dsidep(kl, pq, 1)*b(pq, j, m)*vff2(n, kpg)
                             end do
                             matr(kk) = matr(kk)+wg*t1
                         end do
@@ -671,7 +686,7 @@ subroutine nmplgs(ndim, nno1, vff1, idfde1, nno2, &
 !        MATRICE K:E(KL,N),E(PQ,M)
             do n = 1, nno2
                 do m = 1, nno2
-                    t1 = vff2(n, g)*vff2(m, g)
+                    t1 = vff2(n, kpg)*vff2(m, kpg)
                     do i = 1, ndim
                         t1 = t1+c*dfdi2(n, i)*dfdi2(m, i)
                     end do
