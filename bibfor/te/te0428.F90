@@ -64,7 +64,7 @@ subroutine te0428(option, nomte)
 
 ! - Get plate parameters
     call getCara(plateCara, plateOrie)
-    ASSERT(plateCara%type .eq. PLATE_DKT .or. plateCara%type .eq. PLATE_DKTG)
+    ASSERT(plateCara%type .eq. PLATE_DKT .or. plateCara%type .eq. PLATE_DKTG .or. plateCara%type .eq. PLATE_Q4G)
 
 ! - Geometry
     call jevech('PGEOMER', 'L', jvGeom)

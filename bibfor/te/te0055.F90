@@ -24,6 +24,7 @@ subroutine te0055(option, nomte)
     implicit none
 !
 #include "asterfort/assert.h"
+#include "asterfort/plateFollowerPressure.h"
 #include "asterfort/dxbsig.h"
 #include "asterfort/dxqpgl.h"
 #include "asterfort/dxtpgl.h"
@@ -64,6 +65,10 @@ subroutine te0055(option, nomte)
 !
 ! --------------------------------------------------------------------------------------------------
 !
+    if (option .ne. 'REFE_FORC_NODA') then
+        call plateFollowerPressure(option, nomte)
+        return
+    end if
     call elrefe_info(fami=fami, nno=nno)
     ASSERT(nno .eq. 3 .or. nno .eq. 4)
     ASSERT(option .eq. 'REFE_FORC_NODA')

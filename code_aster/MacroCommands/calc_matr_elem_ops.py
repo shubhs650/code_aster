@@ -43,7 +43,15 @@ def calc_matr_elem_ops(self, **args):
         for load in force_list(loads):
             phys_pb.addLoad(load)
 
-    phys_pb.computeListOfLoads()
+    excit = args.get("EXCIT")
+    if excit is not None:
+        for load in force_list(excit):
+            phys_pb.addLoadFromDict(load)
+
+    if excit is not None:
+        phys_pb.computeListOfLoads("STAT_NON_LINE")
+    else:
+        phys_pb.computeListOfLoads()
 
     disc_comp = DiscreteComputation(phys_pb)
 
@@ -83,6 +91,12 @@ def calc_matr_elem_ops(self, **args):
         matr_elem = disc_comp.getGeometricStiffnessMatrix(
             sief_elga, strx_elga, displ, fourier, group_ma
         )
+        if excit is not None:
+            matr_elem_follow = disc_comp.getMechanicalFollowerLoadStiffnessMatrix(
+                displ, time, fourier, group_ma
+            )
+            matr_elem.addElementaryTerm(matr_elem_follow.getElementaryTerms())
+            matr_elem.build()
 
     elif myOption == "RIGI_ROTA":
         matr_elem = disc_comp.getRotationalStiffnessMatrix(group_ma)

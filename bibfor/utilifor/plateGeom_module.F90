@@ -485,8 +485,8 @@ contains
                                vecta)
 !   ------------------------------------------------------------------------------------------------
 ! ----- Parameters
-        integer(kind=8), intent(out) :: nb1, nb2
-        real(kind=8), intent(inout) :: desr(*)
+        integer(kind=8), intent(in) :: nb1, nb2
+        real(kind=8), intent(in) :: desr(*)
         real(kind=8), intent(in) :: nodeCoor(3, 9)
         real(kind=8), intent(out) :: vecta(9, 2, 3)
 ! ----- Locals

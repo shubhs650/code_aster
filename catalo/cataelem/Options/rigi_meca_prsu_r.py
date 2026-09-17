@@ -25,7 +25,7 @@ import cataelem.Commons.attributes as AT
 
 
 RIGI_MECA_PRSU_R = Option(
-    para_in=(SP.PDEPLMR, SP.PDEPLPR, SP.PGEOMER, SP.PPRESSR),
+    para_in=(SP.PCACOQU, SP.PDEPLMR, SP.PDEPLPR, SP.PGEOMER, SP.PPRESSR),
     para_out=(SP.PMATUNS,),
     condition=(
         CondCalcul("+", ((AT.PHENO, "ME"), (AT.BORD, "-1"))),

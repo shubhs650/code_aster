@@ -25,6 +25,7 @@ subroutine dktrge(plateCara, plateOrie, &
 !
 #include "asterc/r8dgrd.h"
 #include "asterfort/assert.h"
+#include "asterfort/plate_type.h"
 #include "asterfort/cosiro.h"
 #include "asterfort/dktbnl.h"
 #include "asterfort/dxefro.h"
@@ -85,13 +86,13 @@ subroutine dktrge(plateCara, plateOrie, &
     nbsp = jtab(7)
     npgh = 3
 !
-    if (isPlateDKT(plateCara)) then
+    if (isPlateDKT(plateCara) .or. plateCara%type .eq. PLATE_Q4G) then
         ASSERT(nbsp .eq. nbLayer*npgh)
         ASSERT(jtab(2) .eq. nbsig*npg)
     end if
 
 ! - Passage des contraintes/efforts généralisés dans le repere paramétrique
-    if (isPlateDKT(plateCara)) then
+    if (isPlateDKT(plateCara) .or. plateCara%type .eq. PLATE_Q4G) then
         call cosiro(plateCara, plateOrie, &
                     'PCONTRR', 'L', 'UI', 'G', &
                     jsigm)
@@ -118,7 +119,7 @@ subroutine dktrge(plateCara, plateOrie, &
         nyy = 0.d0
         nxy = 0.d0
         poids = zr(ipoids+kpg-1)*cara(7)
-        if (isPlateDKT(plateCara)) then
+        if (isPlateDKT(plateCara) .or. plateCara%type .eq. PLATE_Q4G) then
             hb = -h/2
             do iLayer = 1, nbLayer
                 idec = ((kpg-1)*nbLayer+(iLayer-1))*npgh*nbsig
