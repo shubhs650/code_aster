@@ -71,7 +71,7 @@ class MEFLQU4PSI(Element):
             para_in=(
                 (SP.PCOMPOR, LC.CCOMPOR),
                 (SP.PDEPLMR, DDL_MECA),
-                # (SP.PDEPLPR, DDL_MECA),
+                (SP.PDEPLPR, DDL_MECA),
                 (SP.PGEOMER, LC.EGEOM2D),
                 (SP.PMATERC, LC.CMATERC),
             ),
