@@ -3,9 +3,9 @@
 if not defined RUNASTER_ROOT for %%# in ("%~dp0..\..") do set "RUNASTER_ROOT=%%~f#"
 for %%# in ("%RUNASTER_ROOT%\..") do set "PACKAGED_DIR=%%~f#"
 set "EXTERNAL_DIR=%PACKAGED_DIR%\External"
-set "PYTHON_DIR=%EXTERNAL_DIR%\python-3.10.11"
-set "ASTER_PYTHON_DIR=%RUNASTER_ROOT%\Python310\site-packages"
-set "MEDCOUPLING_PY=%EXTERNAL_DIR%\medcoupling-9.11.0\lib\python3.10\site-packages"
+set "PYTHON_DIR=%EXTERNAL_DIR%\python-3.12.10"
+set "ASTER_PYTHON_DIR=%RUNASTER_ROOT%\Python312\site-packages"
+set "MEDCOUPLING_PY=%EXTERNAL_DIR%\medcoupling-9.11.0\lib\python3.12\site-packages"
 
 set "PYTHONIOENCODING=utf-8"
 set "PYTHONUTF8=1"
