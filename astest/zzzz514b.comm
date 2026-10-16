@@ -1,0 +1,96 @@
+# coding=utf-8
+# --------------------------------------------------------------------
+# Copyright (C) 1991 - 2026 - EDF - www.code-aster.org
+# This file is part of code_aster.
+#
+# code_aster is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# code_aster is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with code_aster.  If not, see <http://www.gnu.org/licenses/>.
+# --------------------------------------------------------------------
+
+DEBUT(CODE="OUI", ERREUR=_F(ALARME="EXCEPTION"))
+
+MAIL = LIRE_MAILLAGE(FORMAT="ASTER", UNITE=20)
+
+MODELE = AFFE_MODELE(
+    MAILLAGE=MAIL,
+    AFFE=(_F(GROUP_MA=("GA", "GB"), PHENOMENE="MECANIQUE", MODELISATION="POU_D_T"),),
+)
+
+CARA = AFFE_CARA_ELEM(
+    MODELE=MODELE,
+    POUTRE=(
+        _F(GROUP_MA=("GA", "GB"), SECTION="CERCLE", CARA=("R", "EP"), VALE=(1.0, 1.0)),
+        _F(GROUP_MA="GA", SECTION="COUDE", COEF_FLEX=1.0, INDI_SIGM=2.0),
+        _F(GROUP_MA="GB", SECTION="COUDE", COEF_FLEX=3.5, INDI_SIGM=2.0),
+    ),
+    ORIENTATION=(
+        _F(GROUP_MA="GA", CARA="VECT_Y", VALE=(0.0, 1.0, 0.0)),
+        _F(GROUP_MA="GB", CARA="VECT_Y", VALE=(0.0, 1.0, 0.0)),
+    ),
+)
+
+MATER = DEFI_MATERIAU(ELAS=_F(E=1.0, NU=0.0))
+
+CHMAT = AFFE_MATERIAU(MAILLAGE=MAIL, AFFE=_F(GROUP_MA=("GA", "GB"), MATER=MATER))
+
+BLOC = AFFE_CHAR_MECA(
+    MODELE=MODELE,
+    DDL_IMPO=(
+        _F(GROUP_NO="FIXA", DX=0.0, DY=0.0, DZ=0.0, DRX=0.0, DRY=0.0, DRZ=0.0),
+        _F(GROUP_NO="FIXB", DX=0.0, DY=0.0, DZ=0.0, DRX=0.0, DRY=0.0, DRZ=0.0),
+    ),
+)
+
+LOAD = AFFE_CHAR_MECA(
+    MODELE=MODELE,
+    FORCE_NODALE=(
+        _F(GROUP_NO="TIPA", FZ=-1.0),
+        _F(GROUP_NO="TIPB", FZ=-1.0),
+    ),
+)
+
+RESU = MECA_STATIQUE(
+    MODELE=MODELE,
+    CHAM_MATER=CHMAT,
+    CARA_ELEM=CARA,
+    EXCIT=(_F(CHARGE=BLOC), _F(CHARGE=LOAD)),
+    SOLVEUR=_F(METHODE="MULT_FRONT"),
+)
+
+RESU = CALC_CHAMP(reuse=RESU, RESULTAT=RESU, CONTRAINTE=("SIPO_ELNO", "SIPO_NOEU"))
+
+TAB_SIPO = CREA_TABLE(
+    RESU=_F(
+        RESULTAT=RESU,
+        GROUP_NO=("FIXA", "FIXB"),
+        NOM_CHAM="SIPO_NOEU",
+        NOM_CMP="SMFY",
+        PRECISION=1.0e-12,
+    )
+)
+
+expected_smfy = 8.0 / pi
+
+for node in ("1", "3"):
+    TEST_TABLE(
+        REFERENCE="ANALYTIQUE",
+        CRITERE="ABSOLU",
+        PRECISION=1.0e-10,
+        VALE_CALC=expected_smfy,
+        VALE_REFE=expected_smfy,
+        NOM_PARA="SMFY",
+        TABLE=TAB_SIPO,
+        FILTRE=_F(NOM_PARA="NOEUD", VALE_K=node),
+    )
+
+FIN()

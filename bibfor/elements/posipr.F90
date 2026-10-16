@@ -122,6 +122,7 @@ subroutine posipr(nomte, efge, sipo)
         xiz = xiz/xxz
         xiy2 = xiy2/xxy
         xiz2 = xiz2/xxz
+!       les inerties equivalentes portent deja l'effet d'INDI_SIGM
     end if
 !
 !   caracteristiques des sections cercle et rectangle
