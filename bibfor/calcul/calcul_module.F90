@@ -276,14 +276,12 @@ module calcul_module
 !======================================================================
     integer(kind=8) :: ca_nfpgmx_
     parameter(ca_nfpgmx_=10)
-  integer(kind=8) :: ca_nfpg_, ca_jfpgl_, ca_decala_(ca_nfpgmx_), ca_km_, ca_kp_, ca_kr_, ca_iredec_
+    integer(kind=8) :: ca_nfpg_, ca_jfpgl_, ca_decala_(ca_nfpgmx_), ca_iredec_
 !     ca_nfpg_   : nombre de familles de la famille liste "mater"
 !     ca_jfpgl_  : adresse dans zk8 de la liste des noms des familles
 !     ca_decala_ : tableau des decalage des numeros des pg :
 !         ca_decala_(1) : 0
 !         ca_decala_(k) : nombre cumule des pg des familles (1:k-1)
-!     ca_km_,ca_kp_,ca_kr_ : sauvegarde des numeros d'elements utilises dans
-!                rcvarc. ils evitent des appels couteux a tecach.
 !     ca_iredec_ : 0 : on n'est pas "sous" redece.f
 !               1 : on est  "sous" redece.F90  (voir carr01 ci-dessous)
 !======================================================================
