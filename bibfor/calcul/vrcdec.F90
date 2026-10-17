@@ -19,8 +19,8 @@
 subroutine vrcdec()
 
     use calcul_module, only: ca_decala_, ca_iredec_, ca_jfpgl_, ca_jnolfp_, &
-                             ca_jpnlfp_, ca_km_, ca_kp_, ca_kr_, &
-                             ca_nblfpg_, ca_nfpg_, ca_nomte_, ca_nfpgmx_
+                             ca_jpnlfp_, ca_nblfpg_, ca_nfpg_, ca_nomte_, &
+                             ca_nfpgmx_
 
     implicit none
 !-----------------------------------------------------------------------
@@ -73,12 +73,6 @@ subroutine vrcdec()
         nbpg = tmfpg(nufgpg)
         kpgmat = kpgmat+nbpg
     end do
-
-!   -- remise a zero de km,kp,kr pour que rcvarc n'utilise pas le
-!      resultat d'un tecach inapproprie
-    ca_km_ = 0
-    ca_kp_ = 0
-    ca_kr_ = 0
 
 999 continue
 end subroutine
