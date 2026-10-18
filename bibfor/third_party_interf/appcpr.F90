@@ -336,6 +336,9 @@ subroutine appcpr(kptsc)
         ASSERT(ierr == 0)
         !-----------------------------------------------------------------------
     else if (precon .eq. 'BLOC_LAGR') then
+        if (nbproc .gt. 1) then
+            call utmess('F', 'PETSC_20')
+        end if
         call KSPGetPC(ksp, pc, ierr)
         ASSERT(ierr == 0)
         call PCSetType(pc, PCSHELL, ierr)

@@ -23,6 +23,7 @@ subroutine apmain(action, kptsc, rsolu, vcine, istop, &
 #include "asterf_petsc.h"
     use aster_petsc_module
     use petsc_data_module
+    use saddle_point_data_module, only: clear_augmented_lagrangian_context, clear_saddle_point_context
     use saddle_point_module
     use lmp_module, only: lmp_update
 !
@@ -569,6 +570,8 @@ subroutine apmain(action, kptsc, rsolu, vcine, istop, &
             call KSPDestroy(ksp, ierr)
             ASSERT(ierr .eq. 0)
         end if
+        call clear_augmented_lagrangian_context(nomat)
+        call clear_saddle_point_context(nomat)
 !
 !        -- SUPRESSION DE L'INSTANCE PETSC
         nomats(kptsc) = ' '
