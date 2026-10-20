@@ -193,14 +193,25 @@ class NewtonSolver(BaseIterationSolver, EventSource):
 
         # Specific operations for contact
         self._update_contact_geometry()
-        # Preparation of the linear system
-        jacobian = self._get_jacobian_iteration(matrix, matrix_type)
         # Get scaling for Lagrange (j'aimerais bien m'en débarasser de là)
         scaling = self.oper.getLagrangeScaling(matrix_type)
-        # Compute residual
-        residuals = self._compute_residuals(scaling)
+        # compute residual (only when iterNewton <= 1 or _line_search is not activated)
+        if (self._line_search.isEnabled()) :
+            if (self.current_incr > 1) :
+                residuals = self._line_search.residuals  
+            else :
+                residuals = self._compute_residuals(scaling)
+                self._line_search.residuals = residuals
+        else :
+            residuals = self._compute_residuals(scaling)
         # Evaluate convergence
         resi_fields = self._converg.evalNormResidual(residuals)
+        # Preparation of the linear system : compute jacobian if only "not yet" converged 
+        if not self._converg.isConverged() or force : 
+            jacobian = self._get_jacobian_iteration(matrix, matrix_type)
+        else :
+            jacobian = None
+        # compute the current solution increment
         deltaU = self._compute_primal_incr(residuals, jacobian, force, scaling)
         # evaluate geometric - convergence
         self._converg.evalGeometricResidual(deltaU)

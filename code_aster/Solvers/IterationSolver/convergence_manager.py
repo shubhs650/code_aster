@@ -474,10 +474,7 @@ class ConvergenceManager(ContextMixin):
         eliminatedDofs = self.problem.getDirichletBCDOFs()
 
         residuals.update()
-
-        nume_equa = self.problem.getDOFNumbering().getEquationNumbering()
-        cmp2dof = nume_equa.getDOFFromNodeAndComponent()
-
+        PhyDofs = self.problem.getDOFNumbering().getPhysicalDOFs()
         disc_comp = DiscreteComputation(self.problem)
         varc = None
 
@@ -486,6 +483,25 @@ class ConvergenceManager(ContextMixin):
             and self.problem.getMaterialField().hasExternalStateVariableForLoad()
             and self.problem.isMechanical()
         )
+
+        f_int  = np.array(residuals.resi_dual.getValues())
+        f_cont = np.array(residuals.resi_cont.getValues())
+        f_ext  = np.array(residuals.resi_ext.getValues())
+        
+        ElimDofs = np.where(np.array(eliminatedDofs) == 1)[0] 
+        if (len(ElimDofs) > 0 ):
+            resi_int = np.array(residuals.resi_int.getValues())
+            f_int[ElimDofs]  = -resi_int[ElimDofs]
+            f_cont[ElimDofs] = 0.0
+            f_ext[ElimDofs]  = 0.0
+        
+        if residuals.resi_mass:
+            f_mass = np.array(residuals.resi_mass.getValues())
+            if (len(ElimDofs) > 0 ):
+                f_mass[ElimDofs] = 0.0
+        else :
+            f_mass = 0.0*f_int
+            
         if computeVarc:
             varc = disc_comp.getExternalStateVariablesForces(
                 self.state.time_curr,
@@ -494,30 +510,15 @@ class ConvergenceManager(ContextMixin):
                 self.state.internVar,
                 self.state.getState(-1).dual,
             ).getValues()
-
-        for [_, cmp], ieq in cmp2dof.items():
-            f_int = 0.0
-            f_ext = 0.0
-            f_cont = 0.0
-            f_mass = 0.0
-            f_varc = varc[ieq] if varc else 0.0
-
-            if cmp in ("LAGR_C", "LAGR_F1", "LAGR_F2"):
-                continue
-
-            if eliminatedDofs[ieq] == 1:
-                f_int = -residuals.resi_int[ieq]
-            else:
-                f_int = residuals.resi_dual[ieq]
-                f_cont = residuals.resi_cont[ieq]
-                f_ext = residuals.resi_ext[ieq]
-                if residuals.resi_mass:
-                    f_mass = residuals.resi_mass[ieq]
-
-            value = abs(f_int + f_cont + f_mass - f_ext) + abs(f_varc)
-
-            if scaling < value:
-                scaling = value
+            
+            varc = np.array(varc)
+            
+            value = abs(f_int + f_cont + f_mass - f_ext) + abs(varc)
+        else :
+            value = abs(f_int + f_cont + f_mass - f_ext)
+        
+        scaling = max(value)
+        
 
         return MPI.ASTER_COMM_WORLD.allreduce(scaling, MPI.MAX)
 
