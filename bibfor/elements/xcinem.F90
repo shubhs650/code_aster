@@ -82,7 +82,7 @@ subroutine xcinem(axi, igeom, nnop, nnos, idepl, &
 !
     real(kind=8) :: zero, un, rac2, r, ur
     integer(kind=8) :: i, j, n, p, ig, cpt, nn, hea_se, alp
-    real(kind=8) :: kron(3, 3), tmp, epstab(3, 3)
+    real(kind=8) :: kron(3, 3), tmp, epstab(3, 3), heav
     aster_logical :: ldec
 !
 ! ----------------------------------------------------------------------
@@ -148,16 +148,15 @@ subroutine xcinem(axi, igeom, nnop, nnos, idepl, &
 !
 ! -- DDLS HEAVISIDE
         do ig = 1, nfh
+            heav = xcalc_heav(heavn(n, ig), hea_se, heavn(n, 5))
             do i = 1, ndim
                 cpt = cpt+1
                 do j = 1, ndim
-                    grad(i, j) = grad(i, j)+xcalc_heav(heavn(n, ig), hea_se, heavn(n, 5))*dfdi(n, j&
-                                &)*zr(idepl-1+nn+cpt)
+                    grad(i, j) = grad(i, j)+heav*dfdi(n, j)*zr(idepl-1+nn+cpt)
                 end do
             end do
             if (axi) then
-                ur = ur+ff(n)*zr(idepl-1+nn+ndim*ig+1)*xcalc_heav(heavn(n, ig), hea_se, heavn&
-                     &(n, 5))
+                ur = ur+ff(n)*zr(idepl-1+nn+ndim*ig+1)*heav
             end if
         end do
 !
