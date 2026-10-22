@@ -315,7 +315,7 @@ eel_old.setGlossaryName("ElasticStrain");
 /* ************************************************************************** */
 
 /* Local variables to keep track of the user unit of stress */
-@LocalVariable stress pascal;
+@LocalVariable stress stress_unit;
 
 /* Temperature expressed in Kelvin degrees (°K) */
 @LocalVariable temperature TK;
@@ -407,8 +407,8 @@ eel_old.setGlossaryName("ElasticStrain");
   /* Compute the elastic tensor from Young modulus and Poisson ratio */
   const auto T_ok=max(T_zeroK,T);
   TK=max(temperature(0.0),T_ok-T_zeroK);
-  pascal=min(max(stress(1.0e-18),abs(ONE_PASCAL)),stress(1.0e18));
-  const auto young=max(stress(0.0),stress(1.0)*abs(YOUNG_MODULUS)/pascal);
+  stress_unit=min(max(stress(1.0e-18),abs(ONE_PASCAL)),stress(1.0e18));
+  const auto young=max(stress(0.0),stress(1.0)*abs(YOUNG_MODULUS)/stress_unit);
   const auto poisson=min(max(real(-1.0),POISSON_RATIO),real(0.5));
   const auto ipoi1=real(1.0)/max(real(1.0e-30),real(1.0)+poisson);
   const auto ipoi2=real(1.0)/max(real(1.0e-30),real(0.5)-poisson);
@@ -825,7 +825,7 @@ eel_old.setGlossaryName("ElasticStrain");
       Dt-=Dt_coefficient*(Stensor4::M()+ddp_ddeto_coefficient*(ndir^ndir));
     }
   }
-  Dt*=pascal/stress(1.0);
+  Dt*=stress_unit/stress(1.0);
 
 } /* End of @TangentOperator */
 
@@ -839,7 +839,7 @@ eel_old.setGlossaryName("ElasticStrain");
   {
     eel_old-=(p-p_old)*ndir;
   }
-  sig=(pascal/stress(1.0))*D_elas*eel_old;
+  sig=(stress_unit/stress(1.0))*D_elas*eel_old;
 
 } /* End of @ComputeFinalStress */
 

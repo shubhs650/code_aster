@@ -238,12 +238,23 @@ class RunAster:
         set_num_threads(self.export.get("ncpus", 1))
         # use environment variable to make it works with ipython
         os.environ["PYTHONFAULTHANDLER"] = "1"
-        exitcode = run_command(cmd, exitcode_file=EXITCODE_FILE)
+        tee_file = self._output if RUNASTER_PLATFORM == "win" and self._tee else None
+        output_file = self._output if RUNASTER_PLATFORM == "win" and not self._tee else None
+        exitcode = run_command(
+            cmd,
+            exitcode_file=EXITCODE_FILE,
+            tee_file=tee_file,
+            output_file=output_file,
+        )
         status = self._get_status(exitcode)
         # workaround on windows to write the output into the '.mess' file running by ctest
         if RUNASTER_PLATFORM == "win" and not self._tee:
             with open(self._output, "rb") as fobj:
                 text = fobj.read().decode(errors="replace")
+            # StreamHandler writes through a Windows text stream, which
+            # already converts LF to CRLF.  Replaying existing CRLF verbatim
+            # would therefore produce CR-CR-LF and visually double the lines.
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
             logger.info(text)
 
         msg = f"\nEXECUTION_CODE_ASTER_EXIT_{self.jobnum}={status.exitcode}\n\n"
@@ -356,13 +367,13 @@ class RunAster:
             if not Path(self._output).exists():
                 Path(self._output).touch()
         elif self._tee:
-            orig = " ".join(cmd)
             if RUNASTER_PLATFORM == "linux":
+                orig = " ".join(cmd)
                 cmd = [f"( {orig} ; echo $? > {EXITCODE_FILE} )", "2>&1"]
-            else:
-                cmd = [f"( {orig} & echo %errorlevel% > {EXITCODE_FILE} )"]
-            cmd.extend(["|", "tee", "-a", self._output])
-        else:
+                cmd.extend(["|", "tee", "-a", self._output])
+            # On Windows, keep the raw command. ``run_command`` implements a
+            # native live tee and returns the calculation's own exit status.
+        elif RUNASTER_PLATFORM == "linux":
             cmd.extend([">>", self._output, "2>&1"])
         if RUNASTER_PLATFORM == "linux":
             cmd.insert(0, f"ulimit -c unlimited ; ulimit -t {timeout:.0f} ;")
@@ -414,6 +425,9 @@ class RunAster:
         """
         with open(comm, "rb") as fobj:
             text_init = fobj.read().decode(errors="replace")
+        # Keep the displayed command file compact on Windows.  The terminal
+        # text stream performs its own native newline conversion.
+        text_init = text_init.replace("\r\n", "\n").replace("\r", "\n")
         text = text_init
         if self._chg_procdir:
             text = change_procdir(text)

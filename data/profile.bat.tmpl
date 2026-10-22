@@ -1,10 +1,28 @@
-:: created by waf using data/wscript
+@REM Created by Waf using data/wscript.
+@REM RUNASTER_ROOT may be provided by the caller; derive it if necessary.
+if not defined RUNASTER_ROOT for %%# in ("%~dp0..\..") do set "RUNASTER_ROOT=%%~f#"
+for %%# in ("%RUNASTER_ROOT%\..") do set "PACKAGED_DIR=%%~f#"
+set "EXTERNAL_DIR=%PACKAGED_DIR%\External"
+set "PYTHON_DIR=%EXTERNAL_DIR%\python-3.12.10"
+set "ASTER_PYTHON_DIR=%RUNASTER_ROOT%\Python312\site-packages"
+set "MEDCOUPLING_PY=%EXTERNAL_DIR%\medcoupling-9.11.0\lib\python3.12\site-packages"
 
-set PYTHONPATH=%RUNASTER_ROOT%\lib\aster;%ASTER_ROOT%\lib\python3.7\site-packages;%RUNASTER_ROOT%\medcoupling\lib\python3.7\site-packages;%RUNASTER_ROOT%\med\lib\python3.7\site-packages;%PYTHONPATH%
+set "PYTHONIOENCODING=utf-8"
+set "PYTHONUTF8=1"
+set "PYTHONUNBUFFERED=1"
+set "PYTHONNOUSERSITE=1"
+set "ASTER_ROOT=%RUNASTER_ROOT%"
+set "ASTER_DATADIR=%RUNASTER_ROOT%\share\aster"
+set "ASTER_LIBDIR=%RUNASTER_ROOT%\bin"
+set "ASTER_LOCALEDIR=%RUNASTER_ROOT%\share\locale\aster"
+set "ASTER_ELEMENTSDIR=%RUNASTER_ROOT%\bin"
+set "CC=%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin\gcc.exe"
+set "CXX=%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin\g++.exe"
+set "CPP=%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin\cpp.exe"
+set "AR=%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin\ar.exe"
+set "RANLIB=%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin\ranlib.exe"
+set "MFRONT=%EXTERNAL_DIR%\tfel-4.2.3\bin\mfront.exe"
+set "PYTHONPATH=%ASTER_PYTHON_DIR%;%MEDCOUPLING_PY%;%PYTHONPATH%"
 
-set ASTER_DATADIR=%RUNASTER_ROOT%\share\aster
-set ASTER_LIBDIR=%RUNASTER_ROOT%\lib\aster
-set ASTER_LOCALEDIR=%RUNASTER_ROOT%\share\locale\aster
-set ASTER_ELEMENTSDIR=%RUNASTER_ROOT%\lib\aster
-
-set PATH=%RUNASTER_ROOT%\medcoupling\lib;%RUNASTER_ROOT%\medcoupling\lib\python3.7\site-packages;%RUNASTER_ROOT%\med\lib\python3.7\site-packages;%PATH%
+set "LD_LIBRARY_PATH=%RUNASTER_ROOT%\bin;%ASTER_PYTHON_DIR%;%PYTHON_DIR%;%EXTERNAL_DIR%\hdf5-1.10.5\bin;%EXTERNAL_DIR%\MED-4.2.0\lib;%EXTERNAL_DIR%\medcoupling-9.11.0\lib;%EXTERNAL_DIR%\tfel-4.2.3\bin;%EXTERNAL_DIR%\mgis-2.2\bin;%EXTERNAL_DIR%\ucrt64-runtime\bin"
+set "PATH=%RUNASTER_ROOT%\bin;%EXTERNAL_DIR%\CMake\bin;%ASTER_PYTHON_DIR%;%PYTHON_DIR%;%PYTHON_DIR%\Scripts;%EXTERNAL_DIR%\tfel-4.2.3\bin;%EXTERNAL_DIR%\mgis-2.2\bin;%EXTERNAL_DIR%\medcoupling-9.11.0\bin;%EXTERNAL_DIR%\medcoupling-9.11.0\lib;%MEDCOUPLING_PY%;%EXTERNAL_DIR%\MED-4.2.0\bin;%EXTERNAL_DIR%\MED-4.2.0\lib;%EXTERNAL_DIR%\hdf5-1.10.5\bin;%EXTERNAL_DIR%\scotch-7.0.4\bin;%EXTERNAL_DIR%\ucrt64-runtime\bin;%EXTERNAL_DIR%\ucrt64-runtime\ucrt64\bin;%PATH%"

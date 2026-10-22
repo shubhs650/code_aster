@@ -1,12 +1,20 @@
-echo OFF
-setlocal
-set PYTHONIOENCODING=UTF-8
-chcp 65001
-set RUNASTER_ROOT=%~dp0..
-set PYTHONHOME=%RUNASTER_ROOT%\Python37
-set PYTHONPATH=%RUNASTER_ROOT%\lib\python3.7\site-packages;%RUNASTER_ROOT%\lib\aster
-set PATH=%PYTHONHOME%;%RUNASTER_ROOT%\tools;%PATH%
+@echo off
+setlocal EnableExtensions
 
-call "%RUNASTER_ROOT%\share\aster\profile.bat
+REM Relocatable CTest launcher for the Packaged Windows layout.
+chcp 65001 >NUL
+for %%# in ("%~dp0..") do set "RUNASTER_ROOT=%%~f#"
+for %%# in ("%RUNASTER_ROOT%\..") do set "PACKAGED_DIR=%%~f#"
+set "EXTERNAL_DIR=%PACKAGED_DIR%\External"
+set "PYTHON_DIR=%EXTERNAL_DIR%\python-3.12.10"
 
-python -m run_aster.run_ctest_main %*
+call "%RUNASTER_ROOT%\share\aster\profile.bat"
+
+if not exist "%EXTERNAL_DIR%\CMake\bin\ctest.exe" (
+    echo [ERREUR] CTest absent : "%EXTERNAL_DIR%\CMake\bin\ctest.exe"
+    endlocal & exit /b 1
+)
+
+"%PYTHON_DIR%\python.exe" -m run_aster.run_ctest_main %*
+set "RET=%ERRORLEVEL%"
+endlocal & exit /b %RET%

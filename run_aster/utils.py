@@ -32,10 +32,11 @@ import os
 import os.path as osp
 import shutil
 import stat
+import sys
 from glob import glob
 from pathlib import Path
 from string import Template
-from subprocess import run
+from subprocess import PIPE, STDOUT, Popen, run
 
 try:
     from os import waitstatus_to_exitcode
@@ -165,17 +166,89 @@ def make_writable(filename):
     os.chmod(filename, os.stat(filename).st_mode | stat.S_IWUSR)
 
 
-def run_command(cmd, exitcode_file=None):
+def _windows_argv(cmd):
+    """Remove shell-only quoting from a Windows command argument list."""
+    argv = []
+    for arg in cmd:
+        if len(arg) >= 2 and arg[0] == arg[-1] == '"':
+            arg = arg[1:-1]
+        elif "=\"" in arg and arg.endswith('"'):
+            key, value = arg.split("=", 1)
+            if len(value) >= 2 and value[0] == value[-1] == '"':
+                arg = key + "=" + value[1:-1]
+        argv.append(arg)
+    return argv
+
+
+def _run_with_windows_output(cmd, logfile=None, live=False):
+    """Run a command with an exact return code and optional output capture.
+
+    No command shell is involved: drive-letter paths and ``--link`` arguments
+    are passed unchanged to the child process.  In live mode, each output
+    fragment is both displayed and appended to ``logfile``.  Reading fragments
+    is required for prompts such as ``>>> `` that have no trailing newline.
+    """
+    env = os.environ.copy()
+    env.setdefault("PYTHONUNBUFFERED", "1")
+    argv = _windows_argv(cmd)
+    if not logfile:
+        return Popen(argv, shell=False, env=env).wait()
+
+    if not live:
+        with open(logfile, "ab") as flog:
+            return Popen(argv, shell=False, stdout=flog, stderr=STDOUT, env=env).wait()
+
+    proc = Popen(
+        argv,
+        shell=False,
+        stdout=PIPE,
+        stderr=STDOUT,
+        env=env,
+    )
+    assert proc.stdout is not None
+    console = getattr(sys.stdout, "buffer", None)
+    try:
+        with open(logfile, "ab") as flog:
+            for chunk in iter(lambda: os.read(proc.stdout.fileno(), 4096), b""):
+                flog.write(chunk)
+                flog.flush()
+                if console is not None:
+                    console.write(chunk)
+                    console.flush()
+                else:
+                    sys.stdout.write(chunk.decode(errors="replace"))
+                    sys.stdout.flush()
+    except KeyboardInterrupt:
+        proc.terminate()
+        proc.wait()
+        raise
+    finally:
+        proc.stdout.close()
+    return proc.wait()
+
+
+def run_command(cmd, exitcode_file=None, tee_file=None, output_file=None):
     """Execute a command and duplicate output to `logfile`.
 
     Arguments:
         cmd (list): Command line arguments.
         exitcode_file (str, optional): Read exit code from this file if
             it exists.
+        tee_file (str, optional): On Windows, stream stdout/stderr live to the
+            console and append the same bytes to this file.
+        output_file (str, optional): On Windows, append stdout/stderr to this
+            file without displaying it live.
 
     Returns:
         int: exit code.
     """
+    if RUNASTER_PLATFORM == "win":
+        return _run_with_windows_output(
+            cmd,
+            logfile=tee_file or output_file,
+            live=bool(tee_file),
+        )
+
     # previous revisions used `subprocess.run` but IntelMPI mpiexec does not
     # support the way the process is forked.
     if RUNASTER_PLATFORM == "win" and len(" ".join(cmd)) > 8191:
@@ -230,11 +303,19 @@ def cmd_abspath(prog):
     Returns:
         str: Absolute path to run `prog`.
     """
+    if RUNASTER_PLATFORM == "win" and os.sep not in prog:
+        # ``shutil.which`` applies PATHEXT, so ``python`` correctly resolves
+        # to ``python.exe``.  The previous exact filename test did not.
+        found = shutil.which(prog)
+        if not found and prog.lower() in ("python", "python.exe", "python3", "python3.exe"):
+            # ``python -m run_aster`` already gives us the interpreter that
+            # must execute the calculation, even with a minimal PATH.
+            found = sys.executable
+        if found:
+            return f'"{found}"'
     if os.sep not in prog:
         for path in os.getenv("PATH").split(os.pathsep):
             if osp.isfile(osp.join(path, prog)):
-                if RUNASTER_PLATFORM == "win":
-                    path = path.replace(" ", '" "')
                 prog = osp.join(path, prog)
                 break
     return prog
